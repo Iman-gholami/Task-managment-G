@@ -76,8 +76,8 @@ export default function AppShell({ children }) {
     ["/team", "Team", "team"],
     manager ? ["/performance", "Performance", "perf", [["/performance/overview", "Overview"]]] : [`/performance/employees/${me.id}`, "My Performance", "perf"],
     ["/reports", "Reports", "report"],
-    manager && ["/admin", "Administration", "admin"],
-    ["/account", "Account", "admin"],
+    manager && ["/admin", "Administration", "shield"],
+    ["/account", "Account", "user"],
   ].filter(Boolean);
 
   const jumps = [
@@ -133,7 +133,7 @@ export default function AppShell({ children }) {
         })}
         <div className="sidebar-foot">
           <button className="nav-item" style={{ border: 0, background: "none", width: "100%" }} data-tip="Sign out" onClick={signOut}>
-            <Icon name="side" /><span>Sign out</span>
+            <Icon name="logout" /><span>Sign out</span>
           </button>
           <div className="me"><Avatar id={me.id} /><div className="me-meta">{me.name}<small>{ROLE_LABELS[me.role]} · {me.team}</small></div></div>
         </div>

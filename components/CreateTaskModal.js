@@ -12,7 +12,7 @@ export default function CreateTaskModal() {
   const { createOpen, setCreateOpen, addTask, toast, openPopover, me, users, peopleMap } = useApp();
   const manager = me.role === "soc_manager" || me.role === "security_manager";
   const [busy, setBusy] = useState(false);
-  const [form, setForm] = useState({ ...blank, a: me.id });
+  const [form, setForm] = useState({ ...blank, a: manager ? "" : me.id });
   const [advanced, setAdvanced] = useState(false);
   const [another, setAnother] = useState(false);
   const [error, setError] = useState(false);
@@ -21,7 +21,7 @@ export default function CreateTaskModal() {
 
   useEffect(() => {
     if (!createOpen) return;
-    setForm({ ...blank, a: me.id });
+    setForm({ ...blank, a: manager ? "" : me.id });
     setError(false);
     setAdvanced(false);
     setTimeout(() => titleRef.current?.focus());
@@ -34,6 +34,10 @@ export default function CreateTaskModal() {
     if (!form.title.trim()) {
       setError(true);
       titleRef.current?.focus();
+      return;
+    }
+    if (!form.a) {
+      setError("assignee");
       return;
     }
     if (busy) return;
@@ -64,19 +68,19 @@ export default function CreateTaskModal() {
       <div className="modal" role="dialog" aria-modal="true" aria-label="Create task">
         <div className="modal-body">
           <div className="crumbs" style={{ marginBottom: 12 }}>
-            <span className="badge">{peopleMap[form.a]?.team}</span><Icon name="chev" /><b>New task</b>
+            {form.a && <><span className="badge">{peopleMap[form.a]?.team}</span><Icon name="chev" /></>}<b>New task</b>
           </div>
           <input ref={titleRef} className="title-input" placeholder="Task title" value={form.title} onChange={(e) => { set({ title: e.target.value }); setError(false); }} aria-invalid={error} />
-          {error && <div style={{ color: "var(--danger)", fontSize: 12, marginTop: 2 }}>Add a title to create the task.</div>}
+          {error === true && <div style={{ color: "var(--danger)", fontSize: 12, marginTop: 2 }}>Add a title to create the task.</div>}
           <textarea className="desc-input" placeholder="Add description…" value={form.description} onChange={(e) => set({ description: e.target.value })} />
           <div className="prop-row">
-            <button className="prop" disabled={!manager} title={manager ? undefined : "Analysts create tasks for themselves"} onClick={(e) => openPopover(e.currentTarget, { title: "Assignee", items: peopleItems(users), onPick: (a) => set({ a }), width: 320 })}><Who id={form.a} /></button>
+            <button className="prop" disabled={!manager} title={manager ? undefined : "Analysts create tasks for themselves"} onClick={(e) => openPopover(e.currentTarget, { title: "Assignee", items: peopleItems(users.filter((u) => u.id !== me.id).concat(users.filter((u) => u.id === me.id))), onPick: (a) => { set({ a }); setError(false); }, width: 320 })} style={error === "assignee" ? { boxShadow: "0 0 0 1px var(--danger)" } : undefined}>{form.a ? <Who id={form.a} /> : <><Icon name="user" />Assign to…</>}</button>
             <button className="prop" onClick={(e) => openPopover(e.currentTarget, { title: "Priority", items: prioItems(), onPick: (prio) => set({ prio }) })}><Priority p={form.prio} /></button>
             <button className="prop" onClick={(e) => openPopover(e.currentTarget, { title: "Complexity", items: cxItems(), onPick: (cx) => set({ cx }) })}><Complexity c={form.cx} /></button>
-            <span className="prop"><Icon name="cal" />Start: Today</span>
-            <label className="prop"><Icon name="flag" />Deadline<input type="date" value={form.due} onChange={(e) => set({ due: e.target.value })} style={{ border: 0, background: "none", colorScheme: "inherit", fontSize: 12 }} aria-label="Deadline" /></label>
+                        <label className="prop"><Icon name="flag" />Deadline<input type="date" value={form.due} onChange={(e) => set({ due: e.target.value })} style={{ border: 0, background: "none", colorScheme: "inherit", fontSize: 12 }} aria-label="Deadline" /></label>
             <label className="prop"><input type="checkbox" className="switch" checked={form.review} onChange={(e) => set({ review: e.target.checked })} />Review required</label>
           </div>
+          {error === "assignee" && <div style={{ color: "var(--danger)", fontSize: 12, marginTop: 8 }}>Choose who this task is for.</div>}
           <button className="disclose" onClick={() => setAdvanced(!advanced)} aria-expanded={advanced}>
             <Icon name={advanced ? "down" : "chev"} />Checklist, attachments, external reference
           </button>

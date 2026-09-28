@@ -1,7 +1,7 @@
 "use client";
 
 import { useApp } from "@/components/AppProvider";
-import { CX, PRIO, QUAL, STATUS, TODAY, addDays, fmtDate, initials, isOpen } from "@/lib/format";
+import { CX, PRIO, QUAL, STATUS, TODAY, addDays, dueLabel, fmtDate, initials, isOpen } from "@/lib/format";
 
 export function Status({ s, label }) {
   return <span className="status" data-s={s}>{label ?? STATUS[s]}</span>;
@@ -55,10 +55,11 @@ export function Who({ id, short }) {
 }
 
 export function Due({ task }) {
-  if (task.due === "—") return <span className="muted">—</span>;
-  if (isOpen(task) && task.due < TODAY) return <span className="overdue">{fmtDate(task.due)} · overdue</span>;
-  if (isOpen(task) && task.due <= addDays(TODAY, 2)) return <span className="soon">{fmtDate(task.due)}</span>;
-  return <span className="num">{fmtDate(task.due)}</span>;
+  if (task.due === "—") return <span className="muted">No deadline</span>;
+  const open = isOpen(task);
+  const label = dueLabel(task.due, open);
+  const cls = open && task.due < TODAY ? "overdue" : open && task.due <= addDays(TODAY, 2) ? "soon" : "num";
+  return <span className={cls} title={fmtDate(task.due)}>{label}</span>;
 }
 
 export function Spark({ values, width = 120, height = 28, color = "var(--primary)" }) {

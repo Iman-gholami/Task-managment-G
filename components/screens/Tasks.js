@@ -151,19 +151,20 @@ export default function Tasks({ scope }) {
         ) : view === "board" ? (
           <Board list={list} onOpen={(id) => router.push(`/tasks/${id}`)} />
         ) : grouped && scope !== "my" ? (
-          groups.map(([id, items]) => (
-            <section key={id} style={{ marginTop: 18 }} data-testid={`group-${id}`}>
-              <div className="section-head" style={{ marginBottom: 4, paddingLeft: 12 }}>
-                <Avatar id={id} /><h2 style={{ fontSize: 14 }}>{peopleMap[id]?.name ?? "Unknown"}</h2>
-                <span className="meta">
+          <TaskTable cols={cols} sort={sort} onSort={onSort} groups={groups.map(([id, items]) => ({
+            key: id,
+            items,
+            label: (
+              <span style={{ display: "inline-flex", alignItems: "center", gap: 10 }}>
+                <Avatar id={id} />{peopleMap[id]?.name ?? "Unknown"}
+                <span className="muted" style={{ fontWeight: 400 }}>
                   {items.length} task{items.length === 1 ? "" : "s"}
                   {items.filter((t) => t.status === "review").length > 0 && ` · ${items.filter((t) => t.status === "review").length} in review`}
-                  {items.filter(overdue).length > 0 && <span className="overdue"> · {items.filter(overdue).length} overdue</span>}
                 </span>
-              </div>
-              <TaskTable list={items} cols={cols} sort={sort} onSort={onSort} />
-            </section>
-          ))
+                {items.filter(overdue).length > 0 && <span className="overdue" style={{ fontWeight: 400 }}>· {items.filter(overdue).length} overdue</span>}
+              </span>
+            ),
+          }))} />
         ) : (
           <TaskTable list={list} cols={cols} kb={showKb ? kb : -1} sort={sort} onSort={onSort} />
         )}

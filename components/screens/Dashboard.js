@@ -6,10 +6,10 @@ import { useApp } from "@/components/AppProvider";
 import TaskTable from "@/components/TaskTable";
 import useFetch from "@/components/useFetch";
 import Icon from "@/components/ui/Icon";
-import { Avatar, Distribution, EmptyState, Spark } from "@/components/ui/indicators";
+import { Avatar, Distribution, EmptyState, Spark, Who } from "@/components/ui/indicators";
 import { PeopleTable } from "@/components/screens/Team";
 import { TableSkeleton } from "@/components/screens/Misc";
-import { CX, TODAY, addDays, isOpen, longDate, weekday } from "@/lib/format";
+import { CX, TODAY, addDays, dueLabel, isOpen, longDate, weekday } from "@/lib/format";
 
 export default function Dashboard() {
   const { role } = useApp();
@@ -74,7 +74,7 @@ function AnalystDashboard() {
                   <div style={{ display: "flex", alignItems: "baseline", gap: 8 }}><span style={{ font: "600 24px var(--font-sans)" }} className="num">{done}/{activities.length}</span><span className="sec">activities done</span></div>
                   <div className="progress" style={{ margin: "10px 0 14px" }}><span style={{ width: `${(done / activities.length) * 100}%` }} /></div>
                   <div style={{ fontSize: 13, display: "grid", gap: 8 }}>
-                    <Row k="Remaining" v={remaining.length ? remaining.map((a) => a.title).join(", ") : "None"} />
+                    <Row k="Next" v={remaining.length ? <>{remaining[0].title}{remaining.length > 1 && <span className="muted"> +{remaining.length - 1} more</span>}</> : "All done"} />
                     <Row k="IOCs added" v={iocs} />
                     <Row k="Tickets" v={tickets.length} />
                   </div>
@@ -97,29 +97,33 @@ const Row = ({ k, v }) => (
 
 /** Items a manager should act on, computed from live data. */
 function useAttention(scope) {
-  const { tasks, members, me, peopleMap } = useApp();
+  const { tasks, me, peopleMap } = useApp();
   const inScope = (t) => scope(peopleMap[t.a] ?? { team: t.team });
   const items = [];
-  tasks.filter((t) => isOpen(t) && t.due !== "—" && t.due < TODAY && inScope(t)).forEach((t) => items.push({ icon: "flag", tone: "danger", text: `${t.id} is overdue · ${peopleMap[t.a]?.name}`, label: "Open", href: `/tasks/${t.id}` }));
-  tasks.filter((t) => t.status === "review" && t.a !== me.id && inScope(t)).forEach((t) => items.push({ icon: "tasks", tone: "violet", text: `${t.id} awaiting your review · ${peopleMap[t.a]?.name}`, label: "Review", href: `/tasks/${t.id}` }));
-  tasks.filter((t) => t.status === "blocked" && inScope(t)).forEach((t) => items.push({ icon: "alert", tone: "warning", text: `${t.id} is blocked · ${peopleMap[t.a]?.name}`, label: "Open", href: `/tasks/${t.id}` }));
+  const push = (t, kind, tone, icon, label) => items.push({ t, kind, tone, icon, label, href: `/tasks/${t.id}` });
+  tasks.filter((t) => t.status === "review" && t.a !== me.id && inScope(t)).forEach((t) => push(t, "Waiting for your review", "violet", "tasks", "Review"));
+  tasks.filter((t) => isOpen(t) && t.due !== "—" && t.due < TODAY && inScope(t)).forEach((t) => push(t, dueLabel(t.due), "danger", "flag", "Open"));
+  tasks.filter((t) => t.status === "blocked" && inScope(t)).forEach((t) => push(t, "Blocked", "warning", "alert", "Open"));
   return items;
 }
 
 function AttentionList({ items }) {
   return (
     <>
-      <div className="section-head"><h2>Needs your attention</h2><span className="meta">{items.length} items</span></div>
+      <div className="section-head"><h2>Needs your attention</h2><span className="meta">{items.length ? `${items.length} item${items.length === 1 ? "" : "s"}` : ""}</span></div>
       {items.length === 0 ? (
-        <div className="panel"><EmptyState icon={<Icon name="check" />} title="Nothing needs your attention right now." /></div>
+        <div className="panel"><EmptyState icon={<Icon name="check" />} title="All clear">No reviews waiting, nothing overdue or blocked.</EmptyState></div>
       ) : (
-        <div className="panel" style={{ padding: "4px 14px" }}>
+        <div className="panel" style={{ padding: "2px 0" }}>
           {items.map((it) => (
-            <div key={it.text} style={{ display: "flex", alignItems: "center", gap: 12, height: 44, borderBottom: "1px solid var(--divider)" }}>
+            <Link key={it.kind + it.t.id} href={it.href} className="attn">
               <span style={{ color: `var(--${it.tone})` }}><Icon name={it.icon} /></span>
-              <span style={{ flex: 1 }}>{it.text}</span>
-              <Link className="btn btn-ghost btn-sm" href={it.href}>{it.label}</Link>
-            </div>
+              <span style={{ minWidth: 0, flex: 1 }}>
+                <span className="attn-title">{it.t.title}</span>
+                <span className="attn-meta"><Who id={it.t.a} /> · <span style={{ color: `var(--${it.tone})` }}>{it.kind}</span></span>
+              </span>
+              <span className="btn btn-ghost btn-sm">{it.label}</span>
+            </Link>
           ))}
         </div>
       )}
@@ -144,8 +148,8 @@ function SocDashboard() {
         <Link className="metric link" href="/tasks/assigned"><div className="l">Assigned by me · open</div><div className="v">{tasks.filter((t) => t.createdBy === me.id && t.a !== me.id && isOpen(t)).length}</div></Link>
         <div className={`metric ${attention.some((a) => a.icon === "flag") ? "alert" : ""}`}><div className="l">Overdue</div><div className="v">{attention.filter((a) => a.icon === "flag").length}</div></div>
         <div className="metric"><div className="l">Awaiting your review</div><div className="v">{attention.filter((a) => a.label === "Review").length}</div></div>
-        <div className="metric"><div className="l">MISP IOCs · {month}</div><div className="v">{stats.soc.iocs} <Spark values={stats.soc.iocSeries} width={56} height={20} /></div></div>
-        <div className="metric"><div className="l">Tickets · {month}</div><div className="v">{stats.soc.tickets} <Spark values={stats.soc.ticketSeries} width={56} height={20} /></div></div>
+        <div className="metric"><div className="l">MISP IOCs · {month}</div><div className="v">{stats.soc.iocs} {stats.soc.iocSeries.some(Boolean) && <Spark values={stats.soc.iocSeries} width={56} height={20} />}</div></div>
+        <div className="metric"><div className="l">Tickets · {month}</div><div className="v">{stats.soc.tickets} {stats.soc.ticketSeries.some(Boolean) && <Spark values={stats.soc.ticketSeries} width={56} height={20} />}</div></div>
       </div>
       <div className="grid" style={{ gridTemplateColumns: "minmax(0,1fr) minmax(0,1fr)" }}>
         <section><AttentionList items={attention} /></section>
@@ -196,7 +200,7 @@ function SecurityDashboard() {
                   <td className="title">{t.team}</td><td className="r num">{t.people}</td><td className="r num">{t.completed}</td><td className="r num">{t.hours}</td><td className="r num">{t.active}</td>
                   <td className="r num">{t.overdue ? <span className="overdue">{t.overdue}</span> : <span className="muted">0</span>}</td>
                   <td style={{ width: 200 }}>{t.complexity.some(Boolean) ? <Distribution parts={t.complexity} /> : <span className="muted">—</span>}</td>
-                  <td><Spark values={t.trend} /></td>
+                  <td>{t.trend.some(Boolean) ? <Spark values={t.trend} /> : <span className="muted">—</span>}</td>
                 </tr>
               ))}
             </tbody>

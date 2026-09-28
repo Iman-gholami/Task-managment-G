@@ -8,17 +8,17 @@ import useFetch from "@/components/useFetch";
 import Icon from "@/components/ui/Icon";
 import { Avatar, Complexity, Due, EmptyState, Priority, Quality, Status, Who } from "@/components/ui/indicators";
 import { TableSkeleton } from "@/components/screens/Misc";
-import { STATUS } from "@/lib/format";
+import { STATUS, when } from "@/lib/format";
+import { cxItems, peopleItems } from "@/components/ui/menus";
 import { isManager } from "@/lib/roles";
 import { actionLabel } from "@/lib/workflow";
 
-const when = (s) => (s ? s.replace("T", " ").slice(0, 16) : "—");
 const size = (n) => (n > 1048576 ? `${(n / 1048576).toFixed(1)} MB` : `${Math.max(1, Math.round(n / 1024))} KB`);
 const ext = (name) => (name.split(".").pop() || "file").slice(0, 4).toUpperCase();
 const EXT_COLOR = { DOC: "#2F5FBF", DOCX: "#2F5FBF", XLS: "#1F7A4A", XLSX: "#1F7A4A", PDF: "#B3412F", TXT: "var(--neutral)", SPL: "#3B7D4F" };
 
 export default function TaskDetail({ id }) {
-  const { tasks, updateTask, toast, me, peopleMap, dispatch } = useApp();
+  const { tasks, updateTask, toast, me, peopleMap, openPopover, members } = useApp();
   const { edit, move } = useTaskActions();
   const t = tasks.find((x) => x.id === id);
   const { data, loading, error, setData, reload } = useFetch(t ? `/api/tasks/${id}` : null);
@@ -26,6 +26,7 @@ export default function TaskDetail({ id }) {
   const [draft, setDraft] = useState("");
   const [editing, setEditing] = useState(null);
   const [uploading, setUploading] = useState(false);
+  const [editingDetails, setEditingDetails] = useState(null);
   const fileRef = useRef(null);
   const status = t?.status;
   // Refresh transitions and activity whenever the status changes (approve, return, start…).
@@ -40,6 +41,7 @@ export default function TaskDetail({ id }) {
   }
 
   const canEdit = t.a === me.id || isManager(me);
+  const manager = isManager(me);
   const closed = t.status === "done" || t.status === "cancelled";
   const d = data?.details;
   const transitions = data?.transitions ?? [];
@@ -68,6 +70,7 @@ export default function TaskDetail({ id }) {
     fileRef.current.value = "";
   };
 
+  const canDetail = manager && !closed;
   const doneCount = d?.checklist.filter((c) => c.done).length ?? 0;
   const primary = transitions.filter((s) => !["cancelled", "blocked"].includes(s));
   const secondary = transitions.filter((s) => ["cancelled", "blocked"].includes(s));
@@ -75,11 +78,36 @@ export default function TaskDetail({ id }) {
   return (
     <div className="detail">
       <div className="detail-main">
-        <div className="mono muted" style={{ marginBottom: 8 }}>{t.id} · {t.team}</div>
-        <h1 style={{ font: "var(--text-display)", letterSpacing: "var(--tracking-title)", margin: "0 0 14px" }}>{t.title}</h1>
-        <p className="sec" style={{ fontSize: 14, lineHeight: "22px", maxWidth: 680, whiteSpace: "pre-wrap" }}>
-          {t.description || <span className="muted">No description.</span>}
-        </p>
+        <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 10, minHeight: 32 }}>
+          <Link href={isManager(me) ? "/tasks/assigned" : "/tasks/my"} className="muted" style={{ fontSize: 13 }}>← Tasks</Link>
+          <span className="mono muted">/ {t.id}</span>
+          <div style={{ marginLeft: "auto", display: "flex", gap: 8 }}>
+            {secondary.map((s) => <button key={s} className="btn btn-ghost btn-sm" onClick={(e) => doMove(e.currentTarget, s)}>{actionLabel(t.status, s)}</button>)}
+            {manager && !closed && !editingDetails && <button className="btn btn-secondary btn-sm" onClick={() => setEditingDetails({ title: t.title, description: t.description })}><Icon name="edit" />Edit</button>}
+            {[...primary.slice(1), ...primary.slice(0, 1)].map((s) => (
+              <button key={s} className={`btn ${s === primary[0] ? "btn-primary" : "btn-secondary"}`} onClick={(e) => doMove(e.currentTarget, s)}>
+                {actionLabel(t.status, s) ?? STATUS[s]}
+              </button>
+            ))}
+          </div>
+        </div>
+        {editingDetails ? (
+          <div style={{ display: "grid", gap: 10, marginBottom: 20 }}>
+            <input className="input" style={{ height: 40, font: "600 20px var(--font-sans)" }} value={editingDetails.title} onChange={(e) => setEditingDetails({ ...editingDetails, title: e.target.value })} aria-label="Title" />
+            <textarea className="textarea" style={{ minHeight: 110 }} value={editingDetails.description} onChange={(e) => setEditingDetails({ ...editingDetails, description: e.target.value })} aria-label="Description" placeholder="Description" />
+            <div style={{ display: "flex", gap: 8 }}>
+              <button className="btn btn-primary btn-sm" onClick={async () => { if (await updateTask(t, editingDetails)) { setEditingDetails(null); toast("Task updated"); } }}>Save</button>
+              <button className="btn btn-ghost btn-sm" onClick={() => setEditingDetails(null)}>Cancel</button>
+            </div>
+          </div>
+        ) : (
+          <>
+            <h1 style={{ font: "var(--text-display)", letterSpacing: "var(--tracking-title)", margin: "0 0 12px" }}>{t.title}</h1>
+            <p className="sec" style={{ fontSize: 14, lineHeight: "22px", maxWidth: 680, whiteSpace: "pre-wrap", margin: "0 0 8px" }}>
+              {t.description || <span className="muted">No description.</span>}
+            </p>
+          </>
+        )}
 
         {t.status === "review" && (
           <div className="issue" style={{ borderColor: "var(--violet)", background: "color-mix(in srgb, var(--violet) 10%, transparent)", margin: "18px 0" }}>
@@ -182,22 +210,16 @@ export default function TaskDetail({ id }) {
       </div>
 
       <aside className="detail-side">
-        <div style={{ display: "flex", gap: 8, marginBottom: 18, flexWrap: "wrap" }}>
-          {primary.map((s, i) => (
-            <button key={s} className={`btn ${i === 0 ? "btn-primary" : "btn-secondary"}`} style={i === 0 ? { flex: 1, justifyContent: "center" } : undefined} onClick={(e) => doMove(e.currentTarget, s)}>
-              {actionLabel(t.status, s) ?? STATUS[s]}
-            </button>
-          ))}
-          {secondary.map((s) => <button key={s} className="btn btn-ghost btn-sm" onClick={(e) => doMove(e.currentTarget, s)}>{actionLabel(t.status, s)}</button>)}
-          {!transitions.length && data && <span className="muted" style={{ fontSize: 12 }}>{t.status === "review" ? "Waiting for a reviewer." : closed ? "This task is closed." : "No actions available to you."}</span>}
-        </div>
+        {!transitions.length && data && <div className="muted" style={{ fontSize: 12, marginBottom: 14 }}>{t.status === "review" ? "Waiting for a reviewer." : closed ? "This task is closed." : "No workflow actions available to you."}</div>}
         <dl className="kv">
           <dt>Status</dt><dd><span className="cell-edit" role="button" onClick={(e) => edit(e.currentTarget, "status", t)}><Status s={t.status} /></span></dd>
-          <dt>Assignee</dt><dd><Who id={t.a} /></dd>
+          <dt>Assignee</dt><dd>{canDetail ? <span className="cell-edit" role="button" onClick={(e) => openPopover(e.currentTarget, { title: "Reassign to", width: 320, items: peopleItems(members), onPick: (a) => a !== t.a && updateTask(t, { a }) })}><Who id={t.a} /></span> : <Who id={t.a} />}</dd>
           <dt>Priority</dt><dd><span className="cell-edit" role="button" onClick={(e) => edit(e.currentTarget, "prio", t)}><Priority p={t.prio} /></span></dd>
-          <dt>Complexity</dt><dd><Complexity c={t.cx} /></dd>
+          <dt>Complexity</dt><dd>{canDetail ? <span className="cell-edit" role="button" onClick={(e) => openPopover(e.currentTarget, { title: "Complexity", items: cxItems(), onPick: (cx) => updateTask(t, { cx }) })}><Complexity c={t.cx} /></span> : <Complexity c={t.cx} />}</dd>
           <dt>Started</dt><dd className="num">{when(d?.startedAt)}</dd>
-          <dt>Deadline</dt><dd><Due task={t} /></dd>
+          <dt>Deadline</dt><dd>{canDetail
+            ? <input type="date" className="input" style={{ height: 28, width: 150, colorScheme: "inherit" }} defaultValue={t.due === "—" ? "" : t.due} key={t.due} aria-label="Deadline" onChange={(e) => updateTask(t, { due: e.target.value })} />
+            : <Due task={t} />}</dd>
           <dt>Actual hours</dt>
           <dd>
             {canEdit && !closed ? (

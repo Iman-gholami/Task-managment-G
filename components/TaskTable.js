@@ -1,6 +1,7 @@
 "use client";
 
 import { useRouter } from "next/navigation";
+import { Fragment } from "react";
 import { useApp } from "@/components/AppProvider";
 import Icon from "@/components/ui/Icon";
 import { Complexity, Due, EmptyState, Priority, Quality, Status, Who } from "@/components/ui/indicators";
@@ -8,6 +9,8 @@ import { prioItems } from "@/components/ui/menus";
 import { PRIO, QUAL, STATUS } from "@/lib/format";
 import { actionLabel, allowedTransitions } from "@/lib/workflow";
 
+// Fixed widths keep columns aligned across several tables on one page (e.g. grouped by assignee).
+const WIDTH = { a: 170, team: 140, status: 130, prio: 105, cx: 125, due: 140, hours: 70, quality: 140, upd: 90 };
 const HEAD = { title: "Task", a: "Assignee", team: "Team", status: "Status", prio: "Priority", cx: "Complexity", due: "Deadline", hours: "Hours", quality: "Quality", upd: "Updated" };
 
 export const qualityItems = () => Object.entries(QUAL).map(([v, l], i) => ({ value: v, label: <Quality q={v} />, kbd: String(i + 1) }));
@@ -55,7 +58,8 @@ export function useTaskActions() {
 /** Back-compat alias used by keyboard shortcuts. */
 export const useInlineEdit = () => useTaskActions().edit;
 
-export default function TaskTable({ list, cols, compact, kb = -1, sort, onSort }) {
+/** `groups` (optional): [{ key, label, items }] renders one table with a header row per group. */
+export default function TaskTable({ list, groups, cols, compact, kb = -1, sort, onSort }) {
   const router = useRouter();
   const { edit } = useTaskActions();
 
@@ -67,7 +71,7 @@ export default function TaskTable({ list, cols, compact, kb = -1, sort, onSort }
 
   const cell = (t, c) => {
     switch (c) {
-      case "title": return <td key={c} className="title"><span className="id">{t.id}</span>{t.title}</td>;
+      case "title": return <td key={c} className="title" title={t.title}><span className="id">{t.id}</span>{t.title}</td>;
       case "a": return <td key={c}><Who id={t.a} /></td>;
       case "team": return <td key={c}>{t.team}</td>;
       case "status": return <td key={c}>{editable("status", t, <Status s={t.status} />)}</td>;
@@ -81,9 +85,16 @@ export default function TaskTable({ list, cols, compact, kb = -1, sort, onSort }
     }
   };
 
+  const row = (t, i) => (
+    <tr key={t.id} className={i >= 0 && i === kb ? "kb" : ""} onClick={() => router.push(`/tasks/${t.id}`)}>
+      {cols.map((c) => cell(t, c))}
+    </tr>
+  );
+
   return (
     <div className="table-wrap" style={compact ? { border: 0 } : undefined}>
-      <table className="dt">
+      <table className="dt fixed">
+        <colgroup>{cols.map((c) => <col key={c} style={WIDTH[c] ? { width: WIDTH[c] } : undefined} />)}</colgroup>
         <thead>
           <tr>
             {cols.map((c) => (
@@ -94,12 +105,13 @@ export default function TaskTable({ list, cols, compact, kb = -1, sort, onSort }
           </tr>
         </thead>
         <tbody>
-          {list.length ? (
-            list.map((t, i) => (
-              <tr key={t.id} className={i === kb ? "kb" : ""} onClick={() => router.push(`/tasks/${t.id}`)}>
-                {cols.map((c) => cell(t, c))}
-              </tr>
-            ))
+          {groups ? groups.map((g) => (
+            <Fragment key={g.key}>
+              <tr className="group-row" data-testid={`group-${g.key}`}><td colSpan={cols.length}>{g.label}</td></tr>
+              {g.items.map((t) => row(t, -1))}
+            </Fragment>
+          )) : list.length ? (
+            list.map((t, i) => row(t, i))
           ) : (
             <tr>
               <td colSpan={cols.length}>

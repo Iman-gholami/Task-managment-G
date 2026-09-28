@@ -1,6 +1,6 @@
 import { isManager, requireUser } from "@/lib/server/auth";
 import { err } from "@/lib/server/access";
-import { addEvent, getTask, getTaskDetails, updateTask } from "@/lib/server/repo";
+import { addEvent, getTask, getTaskDetails, getUser, updateTask } from "@/lib/server/repo";
 import { actionLabel, allowedTransitions, canTransition } from "@/lib/workflow";
 import { PRIO, QUAL, STATUS } from "@/lib/format";
 
@@ -37,7 +37,8 @@ export async function PATCH(request, { params }) {
     }
     patch.status = body.status;
     const label = actionLabel(task.status, body.status);
-    events.push(label ? `${label.toLowerCase()}${patch.quality ? ` · quality: ${QUAL[patch.quality]}` : ""}` : `status → ${STATUS[body.status]}`);
+    const PAST = { Start: "started the task", "Submit for review": "submitted it for review", Approve: "approved it", "Return for changes": "returned it for changes", Reopen: "reopened the task", Unblock: "unblocked the task", "Resume work": "resumed work", "Mark blocked": "marked it blocked", "Cancel task": "cancelled the task", Restore: "restored the task" };
+    events.push(`${PAST[label] ?? `moved it to ${STATUS[body.status]}`}${patch.quality ? ` · quality: ${QUAL[patch.quality]}` : ""}`);
   } else if ("quality" in body) {
     return err(400, "Quality is set when a reviewer approves the task.");
   }
@@ -53,12 +54,34 @@ export async function PATCH(request, { params }) {
     if (!isOpenStatus(task.status)) return err(409, "Hours can't be changed after approval.");
     patch.hours = h;
   }
+  // Details (title, description, deadline, complexity, assignee) are edited by managers.
+  const detailKeys = ["title", "description", "due", "cx", "a"].filter((k) => k in body);
+  if (detailKeys.length) {
+    if (!isManager(user)) return err(403, "Only a manager can change task details.");
+    if (!isOpenStatus(task.status)) return err(409, "Closed tasks can't be changed.");
+  }
   for (const k of ["title", "description"]) {
     if (k in body) {
       const v = String(body[k]).trim();
       if (k === "title" && !v) return err(400, "Title is required.");
       patch[k] = v;
     }
+  }
+  if ("due" in body) {
+    if (body.due && !/^\d{4}-\d{2}-\d{2}$/.test(body.due)) return err(400, "Invalid deadline.");
+    patch.due = body.due || "—";
+    events.push(body.due ? `deadline → ${body.due}` : "removed the deadline");
+  }
+  if ("cx" in body) {
+    if (![1, 2, 3, 4].includes(body.cx)) return err(400, "Invalid complexity.");
+    patch.cx = body.cx;
+  }
+  if ("a" in body && body.a !== task.a) {
+    const assignee = getUser(body.a);
+    if (!assignee || !assignee.active) return err(400, "Assignee not found.");
+    patch.a = assignee.id;
+    patch.team = assignee.team;
+    events.push(`reassigned to ${assignee.name}`);
   }
   const updated = updateTask(id, patch);
   events.forEach((e) => addEvent(id, user.id, e));

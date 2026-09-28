@@ -133,7 +133,9 @@ test.describe("manager assigns and follows up tasks", () => {
     await page.locator("body").press("c");
     const dialog = page.getByRole("dialog", { name: "Create task" });
     await dialog.getByPlaceholder("Task title").fill("Tune Splunk correlation rule for VPN logins");
-    await dialog.getByRole("button", { name: /Sara|Leila/ }).first().click();
+    await dialog.getByRole("button", { name: /Create Task/ }).click();
+    await expect(dialog.getByText("Choose who this task is for.")).toBeVisible();
+    await dialog.getByRole("button", { name: "Assign to…" }).click();
     await page.getByRole("menuitem", { name: /Sara Rahimi/ }).click();
     await dialog.getByRole("button", { name: /Create Task/ }).click();
     await expect(dialog).toBeHidden();
@@ -145,10 +147,10 @@ test.describe("manager assigns and follows up tasks", () => {
     await page.reload();
     await expect(page.getByTestId(`group-${ids.sara}`)).toContainText("2 tasks");
     await expect(page.getByTestId(`group-${ids.arash}`)).toContainText("1 task");
-    await expect(page.getByTestId(`group-${ids.sara}`)).toContainText("Tune Splunk correlation rule");
+    await expect(page.locator("tbody")).toContainText("Tune Splunk correlation rule");
 
     await page.locator("select[aria-label=Assignee]").selectOption(ids.arash);
-    await expect(page.locator("tbody tr")).toHaveCount(1);
+    await expect(page.locator("tbody tr:not(.group-row)")).toHaveCount(1);
     await page.getByRole("button", { name: "Reset" }).click();
     await page.getByRole("tab", { name: /Needs review/ }).click();
     await expect(page.getByText("Nothing here")).toBeVisible();

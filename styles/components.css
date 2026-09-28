@@ -165,9 +165,13 @@ table.dt{width:100%;border-collapse:separate;border-spacing:0;font:var(--text-ta
 .dt tbody tr:hover td{background:var(--hover)}
 .dt tbody tr.kb td{background:var(--selected)}
 .dt tbody tr.kb td:first-child{box-shadow:inset 2px 0 0 var(--primary)}
+.dt.fixed{table-layout:fixed}
+.dt.fixed td{overflow:hidden;text-overflow:ellipsis}
 .dt td.title{color:var(--text);font-weight:500;max-width:420px;overflow:hidden;text-overflow:ellipsis}
 .dt td.title .id{color:var(--text-3);font:400 12px var(--font-mono);margin-right:10px}
-.dt .group-row td{height:32px;background:var(--surface-2);color:var(--text);font-weight:600;font-size:12px}
+.dt .group-row td{height:40px;padding-top:10px;background:transparent;color:var(--text);font-weight:600;font-size:13px;border-bottom:1px solid var(--border)}
+.dt tbody tr.group-row{cursor:default}
+.dt tbody tr.group-row:hover td{background:transparent}
 .dt td .overdue{color:var(--danger);font-weight:500}
 .dt td .soon{color:var(--warning)}
 .cell-edit{border-radius:var(--r-sm);padding:3px 6px;margin:-3px -6px;display:inline-flex}
@@ -281,3 +285,11 @@ svg.spark{display:block;overflow:visible}
 .login-form{width:340px;display:grid;gap:14px}
 
 @media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
+
+/* Attention list (dashboards) */
+.attn{display:flex;align-items:center;gap:12px;padding:10px 14px;border-bottom:1px solid var(--divider);transition:background var(--t-fast)}
+.attn:last-child{border-bottom:0}
+.attn:hover{background:var(--hover)}
+.attn-title{display:block;color:var(--text);font-weight:500;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.attn-meta{display:flex;align-items:center;gap:6px;font-size:12px;color:var(--text-3);margin-top:2px}
+.attn-meta .avatar{width:16px;height:16px;font-size:8px}
