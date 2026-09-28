@@ -15,6 +15,7 @@ const PATHS = {
   bell: '<path d="M5.5 13V9a4.5 4.5 0 0 1 9 0v4l1.5 2h-12z"/><path d="M8.5 17.5h3"/>',
   plus: '<path d="M10 4v12M4 10h12"/>',
   sun: '<circle cx="10" cy="10" r="3.2"/><path d="M10 2.5v1.5M10 16v1.5M2.5 10H4M16 10h1.5M4.7 4.7l1 1M14.3 14.3l1 1M4.7 15.3l1-1M14.3 5.7l1-1"/>',
+  sunset: '<path d="M3 14h14M5 17h10M7 12a3 3 0 0 1 6 0M10 4v3M4.7 7.1l1.7 1.2M15.3 7.1l-1.7 1.2"/>',
   side: '<rect x="3" y="4" width="14" height="12" rx="2"/><path d="M8 4v12"/>',
   cols: '<rect x="3" y="4" width="14" height="12" rx="2"/><path d="M8 4v12M12 4v12"/>',
   x: '<path d="m6 6 8 8M14 6l-8 8"/>',
