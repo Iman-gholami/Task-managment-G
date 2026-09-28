@@ -1,12 +1,19 @@
 // @ts-check
 const { defineConfig, devices } = require("@playwright/test");
 
+const path = require("node:path");
+const os = require("node:os");
+
 const PORT = process.env.PORT || 3100;
+// Every test run starts from a fresh, seeded database.
+const DB = path.join(os.tmpdir(), `sentinel-test-${Date.now()}.db`);
 
 module.exports = defineConfig({
   testDir: "./tests",
   timeout: 30_000,
-  retries: process.env.CI ? 1 : 0,
+  retries: 0,
+  workers: 1, // tests share one database
+  fullyParallel: false,
   reporter: process.env.CI ? "github" : "list",
   use: {
     baseURL: `http://localhost:${PORT}`,
@@ -17,8 +24,9 @@ module.exports = defineConfig({
   projects: [{ name: "chromium", use: { ...devices["Desktop Chrome"], viewport: { width: 1440, height: 900 } } }],
   webServer: {
     command: `npx next start -p ${PORT}`,
+    env: { DATABASE_PATH: DB },
     url: `http://localhost:${PORT}/dashboard`,
-    reuseExistingServer: !process.env.CI,
+    reuseExistingServer: false,
     timeout: 60_000,
   },
 });

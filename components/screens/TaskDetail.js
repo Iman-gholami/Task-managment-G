@@ -13,14 +13,15 @@ const INITIAL_CHECKS = [
 ];
 
 export default function TaskDetail({ id }) {
-  const { tasks, dispatch, toast } = useApp();
+  const { tasks, updateTask, toast, me, peopleMap } = useApp();
   const edit = useInlineEdit();
   const t = tasks.find((x) => x.id === id);
-  const [checks, setChecks] = useState(INITIAL_CHECKS);
+  const demo = id === "T-1042"; // checklist, files and comments are not persisted yet; only the seeded demo task has sample content
+  const [checks, setChecks] = useState(demo ? INITIAL_CHECKS : []);
   const [newItem, setNewItem] = useState("");
-  const [comments, setComments] = useState([
+  const [comments, setComments] = useState(!demo ? [] : [
     { by: "ln", at: "Sep 27, 16:20", body: <>Please coordinate with <span className="mention">@Arash Moradi</span> before enabling in production — L2 owns the escalation path.</> },
-    { by: "sr", at: "Today, 08:05 · edited", body: "Baseline done. False-positive rate on last week's data drops from 41/day to 6/day." },
+    { by: "sr", at: "Sep 28, 08:05 · edited", body: "Baseline done. False-positive rate on last week's data drops from 41/day to 6/day." },
   ]);
   const [draft, setDraft] = useState("");
 
@@ -33,7 +34,7 @@ export default function TaskDetail({ id }) {
   }
 
   const doneCount = checks.filter((c) => c[1]).length;
-  const setField = (patch, msg) => { dispatch({ type: "task/update", id: t.id, patch: { ...patch, upd: "now" } }); if (msg) toast(msg); };
+  const setField = async (patch, msg) => { if ((await updateTask(t, patch)) && msg) toast(msg); };
   const primary =
     t.status === "todo" || t.status === "backlog" || t.status === "returned" ? ["Start task", () => setField({ status: "progress" }, `${t.id} → In Progress`)]
     : t.status === "progress" ? ["Submit for Review", () => setField({ status: "review" }, "Submitted for review · Leila Nouri notified")]
@@ -42,7 +43,7 @@ export default function TaskDetail({ id }) {
 
   const postComment = () => {
     if (!draft.trim()) return;
-    setComments((c) => [...c, { by: "sr", at: "Just now", body: draft.trim() }]);
+    setComments((c) => [...c, { by: me.id, at: "Just now", body: draft.trim() }]);
     setDraft("");
   };
 
@@ -52,16 +53,16 @@ export default function TaskDetail({ id }) {
         <div className="mono muted" style={{ marginBottom: 8 }}>{t.id} · {t.team}</div>
         <h1 style={{ font: "var(--text-display)", letterSpacing: "var(--tracking-title)", margin: "0 0 14px" }}>{t.title}</h1>
         <p className="sec" style={{ fontSize: 14, lineHeight: "22px", maxWidth: 680 }}>
-          Current rule fires on every login from a new country, producing ~40 false positives/day. Add per-user baselining and a risk score so only logins that combine new geography with an unusual time window or ASN reach the analyst queue. Reference ruleset lives in the detection repo.
+          {t.description || <span className="muted">No description.</span>}
         </p>
-        <div style={{ display: "flex", gap: 8, margin: "14px 0 30px" }}>
+        {demo && <div style={{ display: "flex", gap: 8, margin: "14px 0 30px" }}>
           <span className="file"><span className="ext" style={{ background: "#3B7D4F" }}>SPL</span><span>vpn_anomaly_v3.spl<small>6 KB · Sara Rahimi</small></span></span>
           <span className="file"><Icon name="link" /><span>Splunk search<small className="mono">splunk/search/88213</small></span></span>
-        </div>
+        </div>}
 
         <div className="section-head">
           <h2>Checklist</h2><span className="meta num">{doneCount} of {checks.length}</span>
-          <div className="progress ok" style={{ width: 80 }}><span style={{ width: `${(doneCount / checks.length) * 100}%` }} /></div>
+          {checks.length > 0 && <div className="progress ok" style={{ width: 80 }}><span style={{ width: `${(doneCount / checks.length) * 100}%` }} /></div>}
         </div>
         <div>
           {checks.map(([label, done], i) => (
@@ -84,9 +85,9 @@ export default function TaskDetail({ id }) {
           <div key={i}>
             <div className="comment">
               <Avatar id={c.by} />
-              <div><div className="h"><b>{c.by === "ln" ? "Leila Nouri" : "Sara Rahimi"}</b><span className="muted">{c.at}</span></div><p>{c.body}</p></div>
+              <div><div className="h"><b>{peopleMap[c.by]?.name}</b><span className="muted">{c.at}</span></div><p>{c.body}</p></div>
             </div>
-            {i === 0 && <div className="activity"><Icon name="chev" />Leila Nouri changed priority Normal → <b style={{ color: "var(--text)" }}>High</b> · Sep 27</div>}
+            {demo && i === 0 && <div className="activity"><Icon name="chev" />Leila Nouri changed priority Normal → <b style={{ color: "var(--text)" }}>High</b> · Sep 27</div>}
           </div>
         ))}
         <div className="composer">
@@ -102,7 +103,7 @@ export default function TaskDetail({ id }) {
       <aside className="detail-side">
         <div style={{ display: "flex", gap: 8, marginBottom: 18 }}>
           {primary && <button className="btn btn-primary" style={{ flex: 1, justifyContent: "center" }} onClick={primary[1]}>{primary[0]}</button>}
-          {t.status === "review" && <button className="btn btn-secondary" onClick={() => setField({ status: "returned" }, `${t.id} returned to ${t.a === "sr" ? "Sara" : "assignee"}`)}>Return</button>}
+          {t.status === "review" && <button className="btn btn-secondary" onClick={() => setField({ status: "returned" }, `${t.id} returned to ${peopleMap[t.a]?.name.split(" ")[0]}`)}>Return</button>}
           <button className="btn btn-secondary icon-btn" aria-label="More actions"><Icon name="more" /></button>
         </div>
         <dl className="kv">

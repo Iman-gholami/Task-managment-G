@@ -5,8 +5,8 @@ import { useApp } from "@/components/AppProvider";
 import TaskTable from "@/components/TaskTable";
 import Icon from "@/components/ui/Icon";
 import { Avatar, Distribution, Spark } from "@/components/ui/indicators";
-import { P, people } from "@/lib/data";
-import { CX, TODAY, isOpen } from "@/lib/format";
+import { P } from "@/lib/data";
+import { CX, TODAY, addDays, isOpen, longDate, weekday } from "@/lib/format";
 import { PeopleTable } from "@/components/screens/Team";
 
 export default function Dashboard() {
@@ -22,10 +22,10 @@ function CreateButton({ primary }) {
 }
 
 function AnalystDashboard() {
-  const { tasks, activities, tickets } = useApp();
-  const mine = tasks.filter((t) => t.a === "sr" && isOpen(t)).sort((a, b) => (a.due > b.due ? 1 : -1));
+  const { tasks, activities, tickets, me } = useApp();
+  const mine = tasks.filter((t) => t.a === me.id && isOpen(t)).sort((a, b) => (a.due > b.due ? 1 : -1));
   const overdue = mine.filter((t) => t.due < TODAY).length;
-  const dueSoon = mine.filter((t) => t.due >= TODAY && t.due <= "2026-09-30").length;
+  const dueSoon = mine.filter((t) => t.due >= TODAY && t.due <= addDays(TODAY, 2)).length;
   const inReview = mine.filter((t) => t.status === "review").length;
   const done = activities.filter((a) => a.done).length;
   const remaining = activities.filter((a) => !a.done);
@@ -34,7 +34,7 @@ function AnalystDashboard() {
   return (
     <div className="page">
       <div className="page-head">
-        <div><h1>Good morning, Sara</h1><p>Monday, Sep 28 · Day shift 07:00–15:00</p></div>
+        <div><h1>Hello, {me.name.split(" ")[0]}</h1><p>{weekday(TODAY)}, {longDate(TODAY)} · {me.team}</p></div>
         <div className="actions"><CreateButton /><Link className="btn btn-primary" href="/shift">Continue Shift Log</Link></div>
       </div>
 
@@ -89,7 +89,8 @@ const Row = ({ k, v }) => (
 );
 
 function SocDashboard() {
-  const soc = people.filter((p) => p.team.startsWith("SOC ·") || p.assist);
+  const { members } = useApp();
+  const soc = members.filter((p) => p.team.startsWith("SOC ·") || p.assist);
   const attention = [
     ["alert", "danger", "Neda Karimi has not started today's Shift Log", "Remind"],
     ["flag", "danger", "T-1039 is 1 day overdue · Mina Sadeghi", "Open", "/tasks/T-1039"],
@@ -151,6 +152,7 @@ function SocDashboard() {
 }
 
 function SecurityDashboard() {
+  const { members } = useApp();
   const teams = [["SOC", 64, 22, 3, [40, 48, 52, 58, 61, 64], [4, 3, 2, 1]], ["Design & Automation", 21, 9, 1, [14, 17, 19, 18, 22, 21], [2, 3, 3, 2]], ["Threat Intelligence", 17, 6, 0, [12, 13, 15, 14, 16, 17], [3, 4, 2, 1]]];
   return (
     <div className="page">
@@ -184,7 +186,7 @@ function SecurityDashboard() {
       </section>
       <section className="section">
         <div className="section-head"><h2>Employee activity</h2><span className="meta">Alphabetical · not a ranking</span><div className="right"><Link className="btn btn-ghost btn-sm" href="/team">Directory</Link></div></div>
-        <PeopleTable list={[...people].filter((p) => p.role !== "Security Manager").sort((a, b) => a.name.localeCompare(b.name))} />
+        <PeopleTable list={members.filter((p) => p.role !== "security_manager")} />
       </section>
     </div>
   );

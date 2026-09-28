@@ -2,22 +2,42 @@
 
 import Link from "next/link";
 import { useRef, useState } from "react";
-import { useApp } from "@/components/AppProvider";
+import { api, useApp } from "@/components/AppProvider";
 import Icon from "@/components/ui/Icon";
 import { Status, Who } from "@/components/ui/indicators";
-import { fmtDate, weekday } from "@/lib/format";
+import { fmtDate, longDate, weekday } from "@/lib/format";
 
 const HINTS = { misp: "IOC count feeds monthly reports", files: "Upload the day's files or link to them", report: "Attach the Word report" };
 
 export default function ShiftLog() {
-  const { activities, tickets, shiftDone, dispatch, toast } = useApp();
+  const { activities, tickets, shiftDone, shiftDate, dispatch, toast, me } = useApp();
+  const [saved, setSaved] = useState("autosaved");
   const [issueOpen, setIssueOpen] = useState(null);
   const [flash, setFlash] = useState(null);
   const done = activities.filter((a) => a.done).length;
   const misp = activities.find((a) => a.kind === "misp");
   const issues = activities.filter((a) => a.issue).length;
   const remaining = activities.filter((a) => !a.done);
-  const update = (n, patch) => dispatch({ type: "activity/update", n, patch });
+  const update = async (n, patch) => {
+    dispatch({ type: "activity/update", n, patch });
+    setSaved("saving…");
+    try {
+      await api("/api/shift", { method: "PATCH", body: { n, patch } });
+      setSaved("autosaved");
+    } catch (e) {
+      setSaved("not saved");
+      toast(e.message);
+    }
+  };
+  const setCompleted = async (completed) => {
+    try {
+      await api("/api/shift", { method: "PATCH", body: { completed } });
+      dispatch({ type: "shift/complete", value: completed });
+      if (completed) toast("Shift completed · summary sent to your manager");
+    } catch (e) {
+      toast(e.message);
+    }
+  };
   const readOnly = shiftDone;
 
   const completeShift = () => {
@@ -28,24 +48,23 @@ export default function ShiftLog() {
       setTimeout(() => setFlash(null), 1200);
       return;
     }
-    dispatch({ type: "shift/complete", value: true });
-    toast("Shift completed · summary sent to Leila Nouri");
+    setCompleted(true);
   };
 
   return (
     <div className="page narrow" style={{ maxWidth: 1080, paddingBottom: 0 }}>
       <div className="page-head" style={{ marginBottom: 0 }}>
-        <div><h1>Shift Log — Sep 28, 2026</h1></div>
+        <div><h1>Shift Log — {longDate(shiftDate)}</h1></div>
         <div className="actions"><Link className="btn btn-ghost" href="/shift/history">History</Link></div>
       </div>
       <div className="shift-head">
         <div className="ring" style={{ "--v": (done / activities.length) * 100 }} aria-label={`${Math.round((done / activities.length) * 100)}% complete`} />
         <div className="facts">
-          <div><small>Analyst</small><Who id="sr" /></div>
+          <div><small>Analyst</small><Who id={me.id} /></div>
           <div><small>Shift</small>Day · 07:00–15:00</div>
-          <div><small>Status</small>{shiftDone ? <span className="badge success">Completed 14:52</span> : <span className="badge primary">In progress</span>}</div>
+          <div><small>Status</small>{shiftDone ? <span className="badge success">Completed</span> : <span className="badge primary">In progress</span>}</div>
           <div><small>Completion</small><span className="num">{Math.round((done / activities.length) * 100)}%</span></div>
-          <div><small>Last updated</small><span className="num">09:42 · autosaved</span></div>
+          <div><small>Last updated</small><span className="num" style={saved === "not saved" ? { color: "var(--danger)" } : undefined}>{saved}</span></div>
         </div>
       </div>
 
@@ -124,7 +143,7 @@ export default function ShiftLog() {
           {!shiftDone && remaining.length > 0 && `${remaining.length} remaining: ${remaining.map((r) => r.title).join(", ")}`}
         </span>
         {shiftDone
-          ? <button className="btn btn-secondary" onClick={() => dispatch({ type: "shift/complete", value: false })}>Reopen</button>
+          ? <button className="btn btn-secondary" onClick={() => setCompleted(false)}>Reopen</button>
           : <button className="btn btn-primary" onClick={completeShift}>Complete Shift</button>}
       </div>
     </div>
@@ -159,9 +178,15 @@ function Tickets({ readOnly }) {
   const [error, setError] = useState(false);
   const numberRef = useRef(null);
 
-  const save = () => {
+  const save = async () => {
     if (!row.no.trim()) { setError(true); numberRef.current?.focus(); return; }
-    dispatch({ type: "ticket/add", ticket: { ...row, no: row.no.trim() } });
+    try {
+      const res = await api("/api/shift/tickets", { method: "POST", body: row });
+      dispatch({ type: "tickets/set", tickets: res.tickets });
+    } catch (e) {
+      toast(e.message);
+      return;
+    }
     toast(`Ticket ${row.no.trim()} added`);
     setRow({ no: "", ref: "", desc: "" });
     setAdding(false);

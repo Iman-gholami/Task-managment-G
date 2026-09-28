@@ -11,14 +11,13 @@ const HEAD = { title: "Task", a: "Assignee", team: "Team", status: "Status", pri
 
 /** Opens the inline Status / Priority editor for a task. Shared by table rows, details and keyboard shortcuts. */
 export function useInlineEdit() {
-  const { openPopover, dispatch, toast } = useApp();
+  const { openPopover, updateTask, toast } = useApp();
   return (anchor, field, task) =>
     openPopover(anchor, {
       title: field === "status" ? "Change status" : "Priority",
       items: field === "status" ? statusItems() : prioItems(),
-      onPick: (v) => {
-        dispatch({ type: "task/update", id: task.id, patch: { [field]: v, upd: "now" } });
-        toast(`${task.id} → ${field === "status" ? STATUS[v] : PRIO[v]}`);
+      onPick: async (v) => {
+        if (await updateTask(task, { [field]: v })) toast(`${task.id} → ${field === "status" ? STATUS[v] : PRIO[v]}`);
       },
     });
 }

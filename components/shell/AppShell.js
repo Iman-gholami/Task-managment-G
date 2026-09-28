@@ -7,8 +7,9 @@ import { useApp } from "@/components/AppProvider";
 import Icon from "@/components/ui/Icon";
 import { Avatar } from "@/components/ui/indicators";
 import CreateTaskModal from "@/components/CreateTaskModal";
-import { P, ROLES } from "@/lib/data";
 import { isOpen } from "@/lib/format";
+import { ROLE_LABELS } from "@/lib/roles";
+import { api } from "@/components/AppProvider";
 import { REPORTS } from "@/lib/reports";
 
 const REPORT_NAMES = Object.fromEntries(REPORTS.map(([k, n]) => [k, n]));
@@ -49,15 +50,14 @@ const NOTIFICATIONS = [
 
 export default function AppShell({ children }) {
   const app = useApp();
-  const { role, setRole, theme, setTheme, collapsed, setCollapsed, openPopover, setCreateOpen, tasks } = app;
+  const { me, theme, setTheme, collapsed, setCollapsed, openPopover, setCreateOpen, tasks } = app;
   const path = usePathname();
   const router = useRouter();
   const cmdRef = useRef(null);
-  const me = ROLES[role].me;
   const crumbs = crumbsFor(path);
 
   const counts = {
-    "/tasks/my": tasks.filter((t) => t.a === "sr" && isOpen(t)).length,
+    "/tasks/my": tasks.filter((t) => t.a === me.id && isOpen(t)).length,
     "/tasks/team": tasks.filter((t) => t.team.startsWith("SOC") && isOpen(t)).length,
   };
   const NAV = [
@@ -88,7 +88,11 @@ export default function AppShell({ children }) {
     return () => document.removeEventListener("keydown", onKey);
   });
 
-  const nextRole = { analyst: "soc", soc: "security", security: "analyst" }[role];
+  const signOut = async () => {
+    await api("/api/auth/logout", { method: "POST" }).catch(() => {});
+    router.replace("/login");
+    router.refresh();
+  };
 
   return (
     <div className={`app ${collapsed ? "collapsed" : ""}`}>
@@ -111,10 +115,10 @@ export default function AppShell({ children }) {
           );
         })}
         <div className="sidebar-foot">
-          <button className="nav-item" style={{ border: 0, background: "none", width: "100%" }} data-tip="Switch role (demo)" onClick={() => { setRole(nextRole); router.push("/dashboard"); }}>
-            <Icon name="team" /><span>Switch role (demo)</span>
+          <button className="nav-item" style={{ border: 0, background: "none", width: "100%" }} data-tip="Sign out" onClick={signOut}>
+            <Icon name="side" /><span>Sign out</span>
           </button>
-          <div className="me"><Avatar id={me} /><div className="me-meta">{P[me].name}<small>{ROLES[role].label}</small></div></div>
+          <div className="me"><Avatar id={me.id} /><div className="me-meta">{me.name}<small>{ROLE_LABELS[me.role]} · {me.team}</small></div></div>
         </div>
       </aside>
 

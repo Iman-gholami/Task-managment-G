@@ -5,13 +5,14 @@ import { useApp } from "@/components/AppProvider";
 import Icon from "@/components/ui/Icon";
 import { Complexity, Priority, Who } from "@/components/ui/indicators";
 import { cxItems, peopleItems, prioItems } from "@/components/ui/menus";
-import { P } from "@/lib/data";
 
-const blank = { title: "", description: "", a: "sr", prio: "normal", cx: 2, review: true, due: "" };
+const blank = { title: "", description: "", prio: "normal", cx: 2, review: true, due: "" };
 
 export default function CreateTaskModal() {
-  const { createOpen, setCreateOpen, addTask, toast, openPopover } = useApp();
-  const [form, setForm] = useState(blank);
+  const { createOpen, setCreateOpen, addTask, toast, openPopover, me, users, peopleMap } = useApp();
+  const manager = me.role === "soc_manager" || me.role === "security_manager";
+  const [busy, setBusy] = useState(false);
+  const [form, setForm] = useState({ ...blank, a: me.id });
   const [advanced, setAdvanced] = useState(false);
   const [another, setAnother] = useState(false);
   const [error, setError] = useState(false);
@@ -20,7 +21,7 @@ export default function CreateTaskModal() {
 
   useEffect(() => {
     if (!createOpen) return;
-    setForm(blank);
+    setForm({ ...blank, a: me.id });
     setError(false);
     setAdvanced(false);
     setTimeout(() => titleRef.current?.focus());
@@ -29,14 +30,24 @@ export default function CreateTaskModal() {
   if (!createOpen) return null;
   const close = () => setCreateOpen(false);
 
-  const submit = () => {
+  const submit = async () => {
     if (!form.title.trim()) {
       setError(true);
       titleRef.current?.focus();
       return;
     }
-    const task = addTask({ title: form.title.trim(), a: form.a, prio: form.prio, cx: form.cx, due: form.due || "—" });
-    toast(`Task ${task.id} created and assigned to ${P[form.a].name}`);
+    if (busy) return;
+    setBusy(true);
+    let task;
+    try {
+      task = await addTask({ title: form.title.trim(), description: form.description, a: form.a, prio: form.prio, cx: form.cx, due: form.due });
+    } catch (e) {
+      toast(e.message);
+      return;
+    } finally {
+      setBusy(false);
+    }
+    toast(`Task ${task.id} created and assigned to ${peopleMap[form.a].name}`);
     if (another) {
       setForm({ ...blank, a: form.a });
       titleRef.current?.focus();
@@ -53,13 +64,13 @@ export default function CreateTaskModal() {
       <div className="modal" role="dialog" aria-modal="true" aria-label="Create task">
         <div className="modal-body">
           <div className="crumbs" style={{ marginBottom: 12 }}>
-            <span className="badge">{P[form.a].team}</span><Icon name="chev" /><b>New task</b>
+            <span className="badge">{peopleMap[form.a]?.team}</span><Icon name="chev" /><b>New task</b>
           </div>
           <input ref={titleRef} className="title-input" placeholder="Task title" value={form.title} onChange={(e) => { set({ title: e.target.value }); setError(false); }} aria-invalid={error} />
           {error && <div style={{ color: "var(--danger)", fontSize: 12, marginTop: 2 }}>Add a title to create the task.</div>}
           <textarea className="desc-input" placeholder="Add description…" value={form.description} onChange={(e) => set({ description: e.target.value })} />
           <div className="prop-row">
-            <button className="prop" onClick={(e) => openPopover(e.currentTarget, { title: "Assignee", items: peopleItems(), onPick: (a) => set({ a }), width: 320 })}><Who id={form.a} /></button>
+            <button className="prop" disabled={!manager} title={manager ? undefined : "Analysts create tasks for themselves"} onClick={(e) => openPopover(e.currentTarget, { title: "Assignee", items: peopleItems(users), onPick: (a) => set({ a }), width: 320 })}><Who id={form.a} /></button>
             <button className="prop" onClick={(e) => openPopover(e.currentTarget, { title: "Priority", items: prioItems(), onPick: (prio) => set({ prio }) })}><Priority p={form.prio} /></button>
             <button className="prop" onClick={(e) => openPopover(e.currentTarget, { title: "Complexity", items: cxItems(), onPick: (cx) => set({ cx }) })}><Complexity c={form.cx} /></button>
             <span className="prop"><Icon name="cal" />Start: Today</span>
@@ -85,7 +96,7 @@ export default function CreateTaskModal() {
           </label>
           <span style={{ marginLeft: "auto" }} className="muted"><kbd>Esc</kbd></span>
           <button className="btn btn-ghost" onClick={close}>Cancel</button>
-          <button className="btn btn-primary" onClick={submit}>Create Task <kbd style={{ borderColor: "rgba(255,255,255,.3)", color: "rgba(255,255,255,.8)" }}>⌘↵</kbd></button>
+          <button className="btn btn-primary" onClick={submit} disabled={busy}>Create Task <kbd style={{ borderColor: "rgba(255,255,255,.3)", color: "rgba(255,255,255,.8)" }}>⌘↵</kbd></button>
         </div>
       </div>
     </div>

@@ -1,5 +1,8 @@
-import { P } from "@/lib/data";
-import { CX, PRIO, QUAL, STATUS, TODAY, fmtDate, initials, isOpen } from "@/lib/format";
+"use client";
+
+import { useApp } from "@/components/AppProvider";
+import { P as MOCK } from "@/lib/data";
+import { CX, PRIO, QUAL, STATUS, TODAY, addDays, fmtDate, initials, isOpen } from "@/lib/format";
 
 export function Status({ s, label }) {
   return <span className="status" data-s={s}>{label ?? STATUS[s]}</span>;
@@ -27,8 +30,14 @@ export function Quality({ q }) {
   return q ? <span className="q" data-q={q}>{QUAL[q]}</span> : <span className="muted">—</span>;
 }
 
+const FALLBACK = { name: "Unknown", color: "#6B7280" };
+function usePerson(id) {
+  const app = useApp();
+  return (app?.peopleMap ?? MOCK)[id] ?? FALLBACK;
+}
+
 export function Avatar({ id, size }) {
-  const p = P[id];
+  const p = usePerson(id);
   return (
     <span className={`avatar ${size === "lg" ? "lg" : ""}`} style={{ background: p.color }} title={p.name}>
       {initials(p.name)}
@@ -37,10 +46,11 @@ export function Avatar({ id, size }) {
 }
 
 export function Who({ id, short }) {
+  const p = usePerson(id);
   return (
     <span className="who">
       <Avatar id={id} />
-      {short ? P[id].name.split(" ")[0] : P[id].name}
+      {short ? p.name.split(" ")[0] : p.name}
     </span>
   );
 }
@@ -48,7 +58,7 @@ export function Who({ id, short }) {
 export function Due({ task }) {
   if (task.due === "—") return <span className="muted">—</span>;
   if (isOpen(task) && task.due < TODAY) return <span className="overdue">{fmtDate(task.due)} · overdue</span>;
-  if (isOpen(task) && task.due <= "2026-09-30") return <span className="soon">{fmtDate(task.due)}</span>;
+  if (isOpen(task) && task.due <= addDays(TODAY, 2)) return <span className="soon">{fmtDate(task.due)}</span>;
   return <span className="num">{fmtDate(task.due)}</span>;
 }
 

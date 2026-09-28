@@ -6,7 +6,6 @@ import { useApp } from "@/components/AppProvider";
 import Icon from "@/components/ui/Icon";
 import { Complexity, EmptyState, Quality, Who } from "@/components/ui/indicators";
 import { peopleItems } from "@/components/ui/menus";
-import { P, ticketLog } from "@/lib/data";
 import { fmtDate } from "@/lib/format";
 import { REPORTS } from "@/lib/reports";
 
@@ -106,21 +105,21 @@ function ShiftReport({ cur }) {
 }
 
 function TicketReport() {
-  const { openPopover } = useApp();
+  const { openPopover, allTickets, members, peopleMap } = useApp();
   const [q, setQ] = useState("");
   const [analyst, setAnalyst] = useState(null);
   const rows = useMemo(
-    () => ticketLog.filter((r) => (!analyst || r[0] === analyst) && (r[2] + r[3] + r[4]).toLowerCase().includes(q.toLowerCase())),
-    [q, analyst]
+    () => allTickets.map((t) => [t.a, t.date, t.no, t.ref, t.desc]).filter((r) => (!analyst || r[0] === analyst) && (r[2] + r[3] + r[4]).toLowerCase().includes(q.toLowerCase())),
+    [q, analyst, allTickets]
   );
   return (
     <>
-      <Head title="Ticket Report" sub={`${rows.length} tickets · Sep 2026`} file="Ticket_Report_Sep2026.xlsx" />
+      <Head title="Ticket Report" sub={`${rows.length} tickets`} file="Ticket_Report_Sep2026.xlsx" />
       <div className="toolbar">
         <div className="search"><Icon name="search" /><input className="input" placeholder="Search ticket number or description" value={q} onChange={(e) => setQ(e.target.value)} /></div>
         {analyst
-          ? <button className="chip active" onClick={() => setAnalyst(null)}>Analyst is <b>{P[analyst].name}</b><span className="x"><Icon name="x" /></span></button>
-          : <button className="chip" onClick={(e) => openPopover(e.currentTarget, { title: "Analyst", items: peopleItems(), onPick: setAnalyst, width: 320 })}><Icon name="plus" />Analyst</button>}
+          ? <button className="chip active" onClick={() => setAnalyst(null)}>Analyst is <b>{peopleMap[analyst]?.name}</b><span className="x"><Icon name="x" /></span></button>
+          : <button className="chip" onClick={(e) => openPopover(e.currentTarget, { title: "Analyst", items: peopleItems(members), onPick: setAnalyst, width: 320 })}><Icon name="plus" />Analyst</button>}
         <button className="chip active"><Icon name="cal" />Date <b>Sep 2026</b></button>
         {(q || analyst) && <button className="btn btn-ghost btn-sm" onClick={() => { setQ(""); setAnalyst(null); }}>Reset</button>}
       </div>
@@ -129,7 +128,7 @@ function TicketReport() {
           <thead><tr><th>Analyst</th><th className="sorted">Date ↓</th><th>Ticket Number</th><th>Related Reference</th><th>Description</th></tr></thead>
           <tbody>
             {rows.map(([a, d, n, r, ds]) => (
-              <tr key={n}><td><Who id={a} /></td><td className="num">{fmtDate(d)}</td><td className="mono" style={{ color: "var(--text)" }}>{n}</td><td className="mono">{r}</td><td>{ds}</td></tr>
+              <tr key={`${n}-${d}`}><td><Who id={a} /></td><td className="num">{fmtDate(d)}</td><td className="mono" style={{ color: "var(--text)" }}>{n}</td><td className="mono">{r}</td><td>{ds}</td></tr>
             ))}
           </tbody>
         </table>

@@ -1,5 +1,4 @@
 import localFont from "next/font/local";
-import AppProvider from "@/components/AppProvider";
 import "@/styles/tokens.css";
 import "@/styles/components.css";
 
@@ -21,7 +20,7 @@ export default function RootLayout({ children }) {
         <script dangerouslySetInnerHTML={{ __html: themeScript }} />
       </head>
       <body>
-        <AppProvider>{children}</AppProvider>
+        {children}
       </body>
     </html>
   );

@@ -7,14 +7,13 @@ import TaskTable, { useInlineEdit } from "@/components/TaskTable";
 import Icon from "@/components/ui/Icon";
 import { Avatar, Priority, Status } from "@/components/ui/indicators";
 import { prioItems, statusItems } from "@/components/ui/menus";
-import { P } from "@/lib/data";
 import { PRIO, STATUS } from "@/lib/format";
 
 const TITLES = { my: "My Tasks", team: "Team Tasks", all: "All Tasks" };
 const ORDER = { status: Object.keys(STATUS), prio: Object.keys(PRIO) };
 
 export default function Tasks({ scope }) {
-  const { tasks, setCreateOpen, openPopover } = useApp();
+  const { tasks, setCreateOpen, openPopover, me, peopleMap } = useApp();
   const router = useRouter();
   const edit = useInlineEdit();
   const [q, setQ] = useState("");
@@ -24,13 +23,13 @@ export default function Tasks({ scope }) {
   const [kb, setKb] = useState(0);
 
   const list = useMemo(() => {
-    let l = tasks.filter((t) => (scope === "my" ? t.a === "sr" : scope === "team" ? t.team.startsWith("SOC") : true));
+    let l = tasks.filter((t) => (scope === "my" ? t.a === me.id : scope === "team" ? t.team.startsWith("SOC") : true));
     if (q) l = l.filter((t) => (t.title + t.id).toLowerCase().includes(q.toLowerCase()));
     if (filters.status) l = l.filter((t) => t.status === filters.status);
     if (filters.prio) l = l.filter((t) => t.prio === filters.prio);
-    const val = (t) => (ORDER[sort.k] ? ORDER[sort.k].indexOf(t[sort.k]) : sort.k === "a" ? P[t.a].name : t[sort.k] ?? "");
+    const val = (t) => (ORDER[sort.k] ? ORDER[sort.k].indexOf(t[sort.k]) : sort.k === "a" ? peopleMap[t.a]?.name : t[sort.k] ?? "");
     return [...l].sort((a, b) => (val(a) > val(b) ? 1 : val(a) < val(b) ? -1 : 0) * sort.dir);
-  }, [tasks, scope, q, filters, sort]);
+  }, [tasks, scope, q, filters, sort, me.id, peopleMap]);
 
   const cols = scope === "my" ? ["title", "status", "prio", "cx", "due", "hours", "quality", "upd"] : ["title", "a", "status", "prio", "cx", "due", "hours", "quality"];
   const active = Object.entries(filters).filter(([, v]) => v);
