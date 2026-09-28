@@ -70,7 +70,7 @@ export default function AppProvider({ children, initial }) {
     stats: initial.stats,
   });
   const role = dashboardFor(initial.me);
-  const [theme, setThemeState] = useState("dark");
+  const [theme, setThemeState] = useState("light");
   const [collapsed, setCollapsedState] = useState(false);
   const [toasts, setToasts] = useState([]);
   const [popover, setPopover] = useState(null);
@@ -79,7 +79,8 @@ export default function AppProvider({ children, initial }) {
 
   // Restore per-viewer preferences after hydration.
   useEffect(() => {
-    setThemeState(document.documentElement.dataset.theme || "dark");
+    // Effective theme: a remembered manual choice, otherwise the OS preference.
+    setThemeState(document.documentElement.dataset.theme || (window.matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light"));
     setCollapsedState(readPref("so.collapsed", "0") === "1");
   }, []);
 

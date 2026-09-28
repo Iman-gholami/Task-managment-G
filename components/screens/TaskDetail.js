@@ -15,7 +15,7 @@ import { actionLabel } from "@/lib/workflow";
 
 const size = (n) => (n > 1048576 ? `${(n / 1048576).toFixed(1)} MB` : `${Math.max(1, Math.round(n / 1024))} KB`);
 const ext = (name) => (name.split(".").pop() || "file").slice(0, 4).toUpperCase();
-const EXT_COLOR = { DOC: "#2F5FBF", DOCX: "#2F5FBF", XLS: "#1F7A4A", XLSX: "#1F7A4A", PDF: "#B3412F", TXT: "var(--neutral)", SPL: "#3B7D4F" };
+const EXT_KIND = { DOC: "doc", DOCX: "doc", XLS: "sheet", XLSX: "sheet", CSV: "sheet", PDF: "pdf" };
 
 export default function TaskDetail({ id }) {
   const { tasks, updateTask, toast, me, peopleMap, openPopover, members } = useApp();
@@ -78,10 +78,10 @@ export default function TaskDetail({ id }) {
   return (
     <div className="detail">
       <div className="detail-main">
-        <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 10, minHeight: 32 }}>
-          <Link href={isManager(me) ? "/tasks/assigned" : "/tasks/my"} className="muted" style={{ fontSize: 13 }}>← Tasks</Link>
+        <div style={{ display: "flex", alignItems: "center", flexWrap: "wrap", gap: "var(--s-2)", marginBottom: "var(--s-4)", minHeight: 36 }}>
+          <Link href={isManager(me) ? "/tasks/assigned" : "/tasks/my"} className="muted" style={{ fontSize: "var(--fs-13)", whiteSpace: "nowrap" }}>← Tasks</Link>
           <span className="mono muted">/ {t.id}</span>
-          <div style={{ marginLeft: "auto", display: "flex", gap: 8 }}>
+          <div style={{ marginLeft: "auto", display: "flex", flexWrap: "wrap", justifyContent: "flex-end", gap: "var(--s-2)" }}>
             {secondary.map((s) => <button key={s} className="btn btn-ghost btn-sm" onClick={(e) => doMove(e.currentTarget, s)}>{actionLabel(t.status, s)}</button>)}
             {manager && !closed && !editingDetails && <button className="btn btn-secondary btn-sm" onClick={() => setEditingDetails({ title: t.title, description: t.description })}><Icon name="edit" />Edit</button>}
             {[...primary.slice(1), ...primary.slice(0, 1)].map((s) => (
@@ -102,25 +102,25 @@ export default function TaskDetail({ id }) {
           </div>
         ) : (
           <>
-            <h1 style={{ font: "var(--text-display)", letterSpacing: "var(--tracking-title)", margin: "0 0 12px" }}>{t.title}</h1>
-            <p className="sec" style={{ fontSize: 14, lineHeight: "22px", maxWidth: 680, whiteSpace: "pre-wrap", margin: "0 0 8px" }}>
+            <h1 style={{ marginBottom: "var(--s-4)" }}>{t.title}</h1>
+            <p className="prose">
               {t.description || <span className="muted">No description.</span>}
             </p>
           </>
         )}
 
         {t.status === "review" && (
-          <div className="issue" style={{ borderColor: "var(--violet)", background: "color-mix(in srgb, var(--violet) 10%, transparent)", margin: "18px 0" }}>
-            <div style={{ color: "var(--text)", fontWeight: 500 }}>Waiting for review</div>
-            <div className="sec" style={{ fontSize: 13 }}>
+          <div className="callout" style={{ "--tone": "var(--violet)" }} role="status">
+            <strong>Waiting for review</strong>
+            <span>
               {transitions.includes("done") ? "Approve with a quality rating, or return it to the assignee with a comment." : "A manager will approve it or return it for changes."}
-            </div>
+            </span>
           </div>
         )}
         {t.status === "done" && (
-          <div className="issue" style={{ borderColor: "var(--success)", background: "var(--success-soft)", margin: "18px 0" }}>
-            <div style={{ color: "var(--text)", fontWeight: 500 }}>Approved · <Quality q={t.quality} /></div>
-            <div className="sec" style={{ fontSize: 13 }}>This task is closed{d?.completedAt ? ` since ${when(d.completedAt)}` : ""}.{transitions.includes("progress") ? " You can reopen it if more work is needed." : ""}</div>
+          <div className="callout" style={{ "--tone": "var(--success)" }} role="status">
+            <strong>Approved · <Quality q={t.quality} /></strong>
+            <span>This task is closed{d?.completedAt ? ` since ${when(d.completedAt)}` : ""}.{transitions.includes("progress") ? " You can reopen it if more work is needed." : ""}</span>
           </div>
         )}
 
@@ -141,7 +141,7 @@ export default function TaskDetail({ id }) {
               {d.attachments.length === 0 && <span className="muted" style={{ fontSize: 13 }}>No files attached.</span>}
               {d.attachments.map((a) => (
                 <span key={a.id} className="file">
-                  <span className="ext" style={{ background: EXT_COLOR[ext(a.name)] ?? "var(--neutral)" }}>{ext(a.name)}</span>
+                  <span className="ext" data-kind={EXT_KIND[ext(a.name)]}>{ext(a.name)}</span>
                   <a href={`/api/tasks/${id}/attachments/${a.id}`} download>{a.name}<small>{size(a.size)} · {peopleMap[a.by]?.name}</small></a>
                   {canEdit && <button className="btn btn-ghost icon-btn btn-sm" aria-label={`Remove ${a.name}`} onClick={() => run(`/api/tasks/${id}/attachments/${a.id}`, { method: "DELETE" })}><Icon name="x" /></button>}
                 </span>
@@ -234,8 +234,8 @@ export default function TaskDetail({ id }) {
           <dt>Quality</dt><dd>{t.quality ? <Quality q={t.quality} /> : <span className="muted">Set on approval</span>}</dd>
         </dl>
         <div className="side-h">Activity</div>
-        <div style={{ fontSize: 12, color: "var(--text-3)", display: "grid", gap: 8 }} data-testid="activity">
-          {d?.events.length ? d.events.map((e) => <div key={e.id}><span style={{ color: "var(--text-2)" }}>{peopleMap[e.by]?.name ?? "System"}</span> {e.text} · {when(e.at)}</div>) : <div>No activity yet.</div>}
+        <div className="timeline" data-testid="activity">
+          {d?.events.length ? d.events.map((e) => <div key={e.id}><b>{peopleMap[e.by]?.name ?? "System"}</b> {e.text}<br />{when(e.at)}</div>) : <div>No activity yet.</div>}
         </div>
       </aside>
     </div>

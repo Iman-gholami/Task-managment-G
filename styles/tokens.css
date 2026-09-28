@@ -1,135 +1,195 @@
 /* ==========================================================================
-   Sentinel Ops — Design Tokens
-   One semantic token set, two independently tuned themes.
-   Components reference ONLY semantic tokens (never raw hex).
+   Sentinel Ops — Design Tokens ("Ink & Signal")
+   One semantic token set, two tuned themes. Components use semantic tokens only.
+   Palette values come from scripts/palette.mjs (OKLCH, contrast-checked).
    ========================================================================== */
+
+@font-face { font-family: "Instrument Serif"; src: url("fonts/InstrumentSerif-Regular.woff2") format("woff2"); font-weight: 400; font-style: normal; font-display: swap; }
+@font-face { font-family: "Instrument Serif"; src: url("fonts/InstrumentSerif-Italic.woff2") format("woff2"); font-weight: 400; font-style: italic; font-display: swap; }
 
 :root {
-  /* ---- Typography ---------------------------------------------------- */
-  --font-sans: var(--font-geist), "Geist", "Inter", "Manrope", ui-sans-serif, system-ui, sans-serif;
-  --font-mono: var(--font-geist-mono), "Geist Mono", "JetBrains Mono", ui-monospace, SFMono-Regular, monospace;
+  /* ---- Palette: Ink (cool, faintly blue-slate neutrals) ---------------- */
+  --ink-50: #F9FAFC; --ink-100: #F1F3F5; --ink-200: #E4E6E9; --ink-300: #D0D4D8; --ink-400: #A4AAB0;
+  --ink-500: #7F878F; --ink-600: #626A72; --ink-700: #4C535B; --ink-800: #343A40; --ink-900: #21262B;
+  --ink-950: #14181B; --ink-975: #0D1013;
 
-  --text-display: 600 28px/34px var(--font-sans);   /* Page title (Login, Profile) */
-  --text-title:   600 24px/30px var(--font-sans);   /* Page title */
-  --text-section: 600 16px/22px var(--font-sans);   /* Section title */
-  --text-body:    400 14px/20px var(--font-sans);
-  --text-table:   400 13px/18px var(--font-sans);
-  --text-meta:    400 12px/16px var(--font-sans);
-  --text-label:   500 12px/16px var(--font-sans);   /* column headers, field labels */
-  --tracking-tight: 0em;
-  --tracking-title: -0.02em;
+  /* ---- Palette: Signal (deep teal accent) ------------------------------ */
+  --signal-50: #EEFEFC; --signal-100: #E3F8F5; --signal-200: #CFEEE9; --signal-300: #B2DED7; --signal-400: #6ABAB0;
+  --signal-500: #009B8F; --signal-600: #007D72; --signal-700: #00665B; --signal-800: #004940; --signal-900: #00312A; --signal-950: #00201B;
 
-  /* ---- Spacing (4pt base) -------------------------------------------- */
-  --s-1: 4px;  --s-2: 8px;  --s-3: 12px; --s-4: 16px; --s-5: 20px;
-  --s-6: 24px; --s-8: 32px; --s-10: 40px; --s-12: 48px;
+  /* ---- Palette: semantic families (tuned to sit with Ink & Signal) ----- */
+  --green-50: #F3FEF4; --green-100: #E9F7EB; --green-400: #86B790; --green-600: #317A45; --green-700: #15632F;
+  --amber-50: #FFF9ED; --amber-100: #FDF1E1; --amber-400: #C9A26C; --amber-600: #905D00; --amber-700: #784600;
+  --red-50: #FFF5F3;   --red-100: #FFECE9;   --red-400: #E1918A;   --red-500: #CA625C; --red-600: #AB413E; --red-700: #902828;
+  --blue-50: #F2FCFF;  --blue-100: #E8F5FF;  --blue-400: #84AED3;  --blue-600: #2F6E9E;
+  --plum-50: #FBF8FF;  --plum-100: #F3F0FF;  --plum-400: #ACA1D2;  --plum-600: #6D5C9C;
 
-  /* ---- Radius ---------------------------------------------------------- */
-  --r-xs: 4px;   /* dots, tags, checkbox */
-  --r-sm: 6px;   /* pills, chips */
+  /* ---- Typography ------------------------------------------------------ */
+  --font-sans: var(--font-geist), "Geist", ui-sans-serif, system-ui, sans-serif;
+  --font-mono: var(--font-geist-mono), "Geist Mono", ui-monospace, SFMono-Regular, monospace;
+  --font-display: "Instrument Serif", Georgia, "Times New Roman", serif; /* signature: page titles only */
+
+  --fs-12: 12px; --fs-13: 13px; --fs-14: 14px; --fs-16: 16px; --fs-18: 18px;
+  --fs-20: 20px; --fs-24: 24px; --fs-30: 30px; --fs-36: 36px; --fs-48: 48px;
+  --fw-regular: 400; --fw-medium: 500; --fw-semibold: 600;
+
+  --text-display: var(--fw-regular) var(--fs-36)/1.1 var(--font-display); /* page titles (signature) */
+  --text-title:   var(--fw-regular) var(--fs-30)/1.15 var(--font-display);
+  --text-section: var(--fw-semibold) var(--fs-16)/1.4 var(--font-sans);
+  --text-body:    var(--fw-regular) var(--fs-16)/1.6 var(--font-sans);    /* prose: descriptions, comments */
+  --text-ui:      var(--fw-regular) var(--fs-14)/1.45 var(--font-sans);   /* controls, navigation */
+  --text-table:   var(--fw-regular) var(--fs-14)/1.4 var(--font-sans);
+  --text-meta:    var(--fw-regular) var(--fs-12)/1.4 var(--font-sans);
+  --text-label:   var(--fw-medium) var(--fs-12)/1.4 var(--font-sans);
+  --tracking-tight: -0.006em;
+  --tracking-title: -0.01em;
+  --tracking-caps: 0.06em;
+
+  /* ---- Spacing (4 / 8 grid) --------------------------------------------- */
+  --s-1: 4px; --s-2: 8px; --s-3: 12px; --s-4: 16px; --s-5: 20px; --s-6: 24px;
+  --s-8: 32px; --s-10: 40px; --s-12: 48px; --s-16: 64px; --s-24: 96px;
+
+  /* ---- Radius (one family: 6 / 8 / 12) ----------------------------------- */
+  --r-xs: 4px;   /* checkbox, kbd */
+  --r-sm: 6px;   /* badges, chips, menu items */
   --r-md: 8px;   /* inputs, buttons */
-  --r-lg: 10px;  /* surfaces */
-  --r-xl: 14px;  /* modals, drawers */
+  --r-lg: 12px;  /* panels, main sheet, modals */
+  --r-full: 999px;
 
-  /* ---- Sizing ---------------------------------------------------------- */
-  --sidebar-w: 232px;
-  --sidebar-w-collapsed: 56px;
-  --header-h: 52px;
-  --row-h: 36px;          /* default table row */
-  --row-h-compact: 32px;  /* dense mode */
-  --control-h: 32px;
-  --control-h-sm: 28px;
-  --content-max: 1280px;  /* reading/form pages; tables go full width */
+  /* ---- Sizing ------------------------------------------------------------ */
+  --sidebar-w: 240px;
+  --sidebar-w-collapsed: 60px;
+  --header-h: 56px;
+  --row-h: 44px;
+  --control-h: 36px;
+  --control-h-sm: 30px;
+  --content-max: 1200px;
+  --prose-max: 68ch;
 
-  /* ---- Motion ---------------------------------------------------------- */
-  --ease: cubic-bezier(.2, .8, .2, 1);
-  --t-fast: 120ms;
-  --t-base: 160ms;
-  --t-slow: 200ms;
+  /* ---- Z-index ------------------------------------------------------------ */
+  --z-sticky: 2; --z-nav: 30; --z-scrim: 40; --z-modal: 41; --z-pop: 50; --z-toast: 60;
+
+  /* ---- Motion -------------------------------------------------------------- */
+  --ease-out: cubic-bezier(.16, 1, .3, 1);
+  --ease-in: cubic-bezier(.7, 0, .84, 0);
+  --ease: var(--ease-out);
+  --t-fast: 150ms;
+  --t-base: 200ms;
+  --t-slow: 280ms;
 }
 
 /* ==========================================================================
-   DARK (primary theme)
+   LIGHT (default)
    ========================================================================== */
-:root, [data-theme="dark"] {
-  color-scheme: dark;
-
-  --bg:               #0B0D12;
-  --surface:          #11141B;
-  --surface-2:        #171B24;
-  --surface-raised:   #1C212C;
-  --hover:            #222936;
-  --selected:         rgba(108,124,255,.10);
-
-  --text:             #F4F6F8;
-  --text-2:           #A7AFBC;
-  --text-3:           #6F7887;
-  --text-on-primary:  #FFFFFF;
-
-  --border:           #252B36;
-  --border-strong:    #353D4A;
-  --divider:          rgba(255,255,255,.05);
-
-  --primary:          #6C7CFF;
-  --primary-hover:    #7D8BFF;
-  --primary-soft:     rgba(108,124,255,.14);
-  --focus-ring:       0 0 0 2px var(--bg), 0 0 0 4px rgba(108,124,255,.65);
-
-  --success:          #3CCB8E;  --success-soft: rgba(60,203,142,.12);
-  --warning:          #E6A94A;  --warning-soft: rgba(230,169,74,.12);
-  --danger:           #F26666;  --danger-soft:  rgba(242,102,102,.12);
-  --info:             #55A7FF;  --info-soft:    rgba(85,167,255,.12);
-  --neutral:          #8A93A3;  --neutral-soft: rgba(138,147,163,.12);
-  --violet:           #A48BFF;  /* Review state only */
-  --teal:             #3FC1C9;  /* Complexity scale accent only */
-
-  --shadow-sm: 0 1px 0 rgba(0,0,0,.4);
-  --shadow-md: 0 8px 24px -8px rgba(0,0,0,.6), 0 0 0 1px var(--border);
-  --shadow-lg: 0 24px 48px -12px rgba(0,0,0,.7), 0 0 0 1px var(--border-strong);
-
-  /* data-viz ramp: single-hue indigo, 4 steps (Simple→Advanced) */
-  --viz-1: #3A4270; --viz-2: #5160C4; --viz-3: #6C7CFF; --viz-4: #A9B3FF;
-  --viz-grid: rgba(255,255,255,.06);
-}
-
-/* ==========================================================================
-   LIGHT (independently tuned, not an inversion)
-   ========================================================================== */
-[data-theme="light"] {
+:root, [data-theme="light"] {
   color-scheme: light;
 
-  --bg:               #F6F7F9;
-  --surface:          #FFFFFF;
-  --surface-2:        #F0F2F5;
-  --surface-raised:   #FFFFFF;
-  --hover:            #ECEFF3;
-  --selected:         rgba(86,102,232,.08);
+  --bg: var(--ink-100);
+  --surface: #FFFFFF;
+  --surface-2: var(--ink-50);
+  --surface-raised: #FFFFFF;
+  --hover: color-mix(in oklab, var(--ink-100) 70%, #FFFFFF);
+  --selected: color-mix(in oklab, var(--signal-600) 7%, #FFFFFF);
 
-  --text:             #171A1F;
-  --text-2:           #59616D;
-  --text-3:           #8A929E;
-  --text-on-primary:  #FFFFFF;
+  --text: var(--ink-950);
+  --text-2: var(--ink-700);
+  --text-3: var(--ink-600);
+  --text-on-primary: #FFFFFF;
 
-  --border:           #E2E5E9;
-  --border-strong:    #CDD2D9;
-  --divider:          rgba(0,0,0,.06);
+  --border: var(--ink-200);
+  --border-strong: var(--ink-500);       /* input borders: 3.6:1 */
+  --divider: color-mix(in oklab, var(--ink-200) 75%, #FFFFFF);
 
-  --primary:          #5666E8;
-  --primary-hover:    #4655D4;
-  --primary-soft:     rgba(86,102,232,.10);
-  --focus-ring:       0 0 0 2px var(--bg), 0 0 0 4px rgba(86,102,232,.55);
+  --primary: var(--signal-600);          /* white text 5.0:1 */
+  --primary-hover: var(--signal-700);
+  --primary-soft: color-mix(in oklab, var(--signal-600) 10%, #FFFFFF);
+  --link: var(--signal-700);
+  --focus-ring: 0 0 0 2px var(--surface), 0 0 0 4px color-mix(in oklab, var(--signal-600) 70%, transparent);
 
-  --success:          #238A62;  --success-soft: rgba(35,138,98,.10);
-  --warning:          #B7791F;  --warning-soft: rgba(183,121,31,.11);
-  --danger:           #D84F4F;  --danger-soft:  rgba(216,79,79,.10);
-  --info:             #357FD3;  --info-soft:    rgba(53,127,211,.10);
-  --neutral:          #6B7380;  --neutral-soft: rgba(107,115,128,.10);
-  --violet:           #7A5CE0;
-  --teal:             #1E8F97;
+  --success: var(--green-700);  --success-soft: var(--green-100);
+  --warning: var(--amber-700);  --warning-soft: var(--amber-100);
+  --danger:  var(--red-600);    --danger-soft:  var(--red-100);
+  --info:    var(--blue-600);   --info-soft:    var(--blue-100);
+  --violet:  var(--plum-600);   --violet-soft:  var(--plum-100);
+  --neutral: var(--ink-500);    --neutral-soft: var(--ink-100);
 
-  --shadow-sm: 0 1px 2px rgba(16,24,40,.05);
-  --shadow-md: 0 8px 24px -8px rgba(16,24,40,.14), 0 0 0 1px var(--border);
-  --shadow-lg: 0 24px 48px -12px rgba(16,24,40,.20), 0 0 0 1px var(--border);
+  --shadow-sm: 0 1px 2px rgb(20 24 27 / .04);
+  --shadow-md: 0 1px 2px rgb(20 24 27 / .04), 0 8px 24px -12px rgb(20 24 27 / .16), 0 0 0 1px var(--border);
+  --shadow-lg: 0 2px 4px rgb(20 24 27 / .04), 0 24px 48px -16px rgb(20 24 27 / .22), 0 0 0 1px var(--border);
+  --scrim: rgb(20 24 27 / .32);
 
-  --viz-1: #D5D9FA; --viz-2: #A3ACF3; --viz-3: #5666E8; --viz-4: #2E3AA8;
-  --viz-grid: rgba(0,0,0,.06);
+  --viz-1: var(--signal-200); --viz-2: var(--signal-400); --viz-3: var(--signal-600); --viz-4: var(--signal-800);
+  --viz-grid: var(--ink-200);
+}
+
+/* ==========================================================================
+   DARK (prefers-color-scheme, or manual toggle)
+   ========================================================================== */
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    color-scheme: dark;
+    --bg: var(--ink-975);
+    --surface: var(--ink-950);
+    --surface-2: color-mix(in oklab, var(--ink-900) 55%, var(--ink-950));
+    --surface-raised: var(--ink-900);
+    --hover: color-mix(in oklab, var(--ink-900) 80%, var(--ink-950));
+    --selected: color-mix(in oklab, var(--signal-400) 10%, var(--ink-950));
+    --text: var(--ink-50);
+    --text-2: var(--ink-300);
+    --text-3: var(--ink-400);
+    --text-on-primary: var(--ink-975);
+    --border: var(--ink-800);
+    --border-strong: var(--ink-600);
+    --divider: color-mix(in oklab, var(--ink-800) 70%, var(--ink-950));
+    --primary: var(--signal-400);
+    --primary-hover: var(--signal-300);
+    --primary-soft: color-mix(in oklab, var(--signal-400) 14%, var(--ink-950));
+    --link: var(--signal-300);
+    --focus-ring: 0 0 0 2px var(--surface), 0 0 0 4px color-mix(in oklab, var(--signal-400) 75%, transparent);
+    --success: var(--green-400);  --success-soft: color-mix(in oklab, var(--green-400) 14%, var(--ink-950));
+    --warning: var(--amber-400);  --warning-soft: color-mix(in oklab, var(--amber-400) 14%, var(--ink-950));
+    --danger:  var(--red-400);    --danger-soft:  color-mix(in oklab, var(--red-400) 14%, var(--ink-950));
+    --info:    var(--blue-400);   --info-soft:    color-mix(in oklab, var(--blue-400) 14%, var(--ink-950));
+    --violet:  var(--plum-400);   --violet-soft:  color-mix(in oklab, var(--plum-400) 14%, var(--ink-950));
+    --neutral: var(--ink-400);    --neutral-soft: var(--ink-900);
+    --shadow-sm: 0 1px 2px rgb(0 0 0 / .3);
+    --shadow-md: 0 8px 24px -12px rgb(0 0 0 / .6), 0 0 0 1px var(--border);
+    --shadow-lg: 0 24px 48px -16px rgb(0 0 0 / .7), 0 0 0 1px var(--border);
+    --scrim: rgb(0 0 0 / .55);
+    --viz-1: var(--signal-800); --viz-2: var(--signal-600); --viz-3: var(--signal-400); --viz-4: var(--signal-200);
+    --viz-grid: var(--ink-800);
+  }
+}
+[data-theme="dark"] {
+  color-scheme: dark;
+  --bg: var(--ink-975);
+  --surface: var(--ink-950);
+  --surface-2: color-mix(in oklab, var(--ink-900) 55%, var(--ink-950));
+  --surface-raised: var(--ink-900);
+  --hover: color-mix(in oklab, var(--ink-900) 80%, var(--ink-950));
+  --selected: color-mix(in oklab, var(--signal-400) 10%, var(--ink-950));
+  --text: var(--ink-50);
+  --text-2: var(--ink-300);
+  --text-3: var(--ink-400);
+  --text-on-primary: var(--ink-975);
+  --border: var(--ink-800);
+  --border-strong: var(--ink-600);
+  --divider: color-mix(in oklab, var(--ink-800) 70%, var(--ink-950));
+  --primary: var(--signal-400);
+  --primary-hover: var(--signal-300);
+  --primary-soft: color-mix(in oklab, var(--signal-400) 14%, var(--ink-950));
+  --link: var(--signal-300);
+  --focus-ring: 0 0 0 2px var(--surface), 0 0 0 4px color-mix(in oklab, var(--signal-400) 75%, transparent);
+  --success: var(--green-400);  --success-soft: color-mix(in oklab, var(--green-400) 14%, var(--ink-950));
+  --warning: var(--amber-400);  --warning-soft: color-mix(in oklab, var(--amber-400) 14%, var(--ink-950));
+  --danger:  var(--red-400);    --danger-soft:  color-mix(in oklab, var(--red-400) 14%, var(--ink-950));
+  --info:    var(--blue-400);   --info-soft:    color-mix(in oklab, var(--blue-400) 14%, var(--ink-950));
+  --violet:  var(--plum-400);   --violet-soft:  color-mix(in oklab, var(--plum-400) 14%, var(--ink-950));
+  --neutral: var(--ink-400);    --neutral-soft: var(--ink-900);
+  --shadow-sm: 0 1px 2px rgb(0 0 0 / .3);
+  --shadow-md: 0 8px 24px -12px rgb(0 0 0 / .6), 0 0 0 1px var(--border);
+  --shadow-lg: 0 24px 48px -16px rgb(0 0 0 / .7), 0 0 0 1px var(--border);
+  --scrim: rgb(0 0 0 / .55);
+  --viz-1: var(--signal-800); --viz-2: var(--signal-600); --viz-3: var(--signal-400); --viz-4: var(--signal-200);
+  --viz-grid: var(--ink-800);
 }

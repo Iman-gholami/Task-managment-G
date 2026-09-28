@@ -19,100 +19,66 @@ Its look comes from proportion, rhythm, and restraint. It doesn't use decoration
 | 5 | **Speed beats spectacle** | Motion takes 120–200ms and only confirms an action. Common edits happen in place: status, priority, IOC count, ticket entry. |
 | 6 | **Respectful measurement** | Performance data describes output. The default sort is alphabetical, and nothing is ranked or given medals. |
 
-### Visual identity: "Graphite & Indigo"
-- **Graphite layers** give the structure: the sidebar sits on `--bg`, and the working area is one raised `--surface` sheet inset 8px, with a 10px radius and a hairline outline. This "sheet on a desk" shell is the product's signature silhouette.
-- **Indigo** is the only brand color. It is used for primary buttons, the active-nav tick, focus rings, progress fills, and data-viz ramps.
-- **Teal** is used only for the Complexity pips. **Violet** is used only for the Review status.
-- **Glyph language**: status is shown by the fill of a circle (empty → half → ¾ → full), priority by signal bars, and complexity by diamond pips. Because each one uses a different shape, they can never be confused, even in grayscale.
+### Visual identity: "Ink & Signal"
+- **Ink**: cool, faintly blue-slate neutrals (never pure grey, black or white text on white). They make up ~90% of every screen.
+- **Signal**: one deep-teal accent, used only for primary actions, the active nav item, links, focus rings, progress and the brand dot. Because nothing else is teal, anything teal is something to act on.
+- **Signature detail**: page titles, key numbers and the login statement use **Instrument Serif**, an editorial serif, against the Geist sans UI. Everything else stays quiet.
+- **Depth**: the sidebar sits on the page background; the working area is one white (or ink-950) sheet with a hairline outline and a very soft shadow. Radius is 8px for controls and 12px for surfaces.
 
 ---
 
 ## 2. Tokens
 
-All components use **semantic tokens only**. The two themes are tuned independently; light mode is not an inversion of dark.
+The tokens live in `styles/tokens.css`. Palette hex values are generated in OKLCH by `scripts/palette.mjs`, which also prints the contrast checks. Components use semantic tokens only.
 
-### Color
+### Palette
+| Scale | 50 | 100 | 200 | 300 | 400 | 500 | 600 | 700 | 800 | 900 | 950 | 975 |
+|---|---|---|---|---|---|---|---|---|---|---|---|---|
+| Ink (`--ink-*`) | #F9FAFC | #F1F3F5 | #E4E6E9 | #D0D4D8 | #A4AAB0 | #7F878F | #626A72 | #4C535B | #343A40 | #21262B | #14181B | #0D1013 |
+| Signal (`--signal-*`) | #EEFEFC | #E3F8F5 | #CFEEE9 | #B2DED7 | #6ABAB0 | #009B8F | #007D72 | #00665B | #004940 | #00312A | #00201B | — |
 
-| Token | Dark | Light | Use |
+Semantic families (only the steps in use): green `#15632F` / `#86B790`, amber `#784600` / `#C9A26C`, red `#AB413E` / `#E1918A`, blue `#2F6E9E` / `#84AED3`, plum `#6D5C9C` / `#ACA1D2` (light / dark theme).
+
+### Semantic tokens
+| Token | Light | Dark | Use |
 |---|---|---|---|
-| `--bg` | `#0B0D12` | `#F6F7F9` | App background, sidebar |
-| `--surface` | `#11141B` | `#FFFFFF` | Main working sheet, tables |
-| `--surface-2` | `#171B24` | `#F0F2F5` | Inset areas, search field, kanban columns, chips |
-| `--surface-raised` | `#1C212C` | `#FFFFFF` + shadow | Popovers, modals, toasts |
-| `--hover` | `#222936` | `#ECEFF3` | Row/menu hover |
-| `--selected` | indigo 10% | indigo 8% | Keyboard-focused row |
-| `--text` | `#F4F6F8` | `#171A1F` | Primary text |
-| `--text-2` | `#A7AFBC` | `#59616D` | Secondary, cell text |
-| `--text-3` | `#6F7887` | `#8A929E` | Metadata, headers, placeholders |
-| `--border` | `#252B36` | `#E2E5E9` | Inputs, surfaces |
-| `--border-strong` | `#353D4A` | `#CDD2D9` | Hover borders, inactive glyph parts |
-| `--divider` | white 5% | black 6% | Row separators (lighter than border) |
-| `--primary` / `-hover` | `#6C7CFF` / `#7D8BFF` | `#5666E8` / `#4655D4` | Primary CTA, focus, progress |
-| `--success` | `#3CCB8E` | `#238A62` | Done, completed shift |
-| `--warning` | `#E6A94A` | `#B7791F` | Returned, due soon, issue reported |
-| `--danger` | `#F26666` | `#D84F4F` | Overdue, Critical, Blocked, missing log |
-| `--info` | `#55A7FF` | `#357FD3` | In Progress |
-| `--violet` | `#A48BFF` | `#7A5CE0` | Review (only) |
-| `--teal` | `#3FC1C9` | `#1E8F97` | Complexity pips (only) |
+| `--bg` | ink-100 | ink-975 | Page background, sidebar |
+| `--surface` | #FFFFFF | ink-950 | Main sheet, tables, inputs |
+| `--surface-2` | ink-50 | between 900 and 950 | Hover rows, side panels, segmented controls |
+| `--surface-raised` | #FFFFFF | ink-900 | Menus, modals |
+| `--text` / `--text-2` / `--text-3` | ink-950 / 700 / 600 | ink-50 / 300 / 400 | Primary, secondary, muted text |
+| `--border` / `--border-strong` / `--divider` | ink-200 / 500 / mix | ink-800 / 600 / mix | Surfaces, inputs (3:1), row separators |
+| `--primary` / `--primary-hover` | signal-600 / 700 | signal-400 / 300 | Primary buttons, active states, focus |
+| `--link` | signal-700 | signal-300 | Links and mentions |
+| `--success` `--warning` `--danger` `--info` `--violet` | 700 / 700 / 600 / 600 / 600 | 400 of each | Status text; each has a `-soft` background |
 
-Each semantic color also has a `-soft` background at 10–14% alpha. Soft backgrounds are used only for states that need attention (Blocked, Returned, issue callouts, badges).
-
-**Data-viz ramp** (`--viz-1…4`) is a single indigo hue in 4 lightness steps, mapped Simple → Advanced. Charts never use a rainbow.
+### Contrast (WCAG AA, checked by `node scripts/palette.mjs`)
+| Pair | Light | Dark |
+|---|---|---|
+| Text on background | 17.9 | 18.3 |
+| Secondary text | 7.8 | 12.0 |
+| Muted text | 5.5 | 7.6 |
+| Text on primary button | 5.0 | 8.4 |
+| Link | 6.9 | 12.2 |
+| Input border (3:1 needed) | 3.6 | 3.3 |
+| Status colours | 5.5–7.9 | 7.3–7.8 |
 
 ### Typography
-Geist (falls back to Inter, then Manrope) · Geist Mono for technical identifiers only.
+- **Families:** Geist (UI), Geist Mono (IDs and ticket numbers only), Instrument Serif (page titles and key numbers only). All are bundled locally and OFL-licensed.
+- **Scale:** 12 / 13 / 14 / 16 / 18 / 20 / 24 / 30 / 36 / 48. **Weights:** 400, 500, 600.
+- **Text sizes:** page titles are 36px serif (30px on phones). Prose (descriptions, comments, forms) is 16px/1.6. UI controls and tables are 14px. Metadata is 12px.
 
-| Role | Spec | Where |
-|---|---|---|
-| Display | 600 · 28/34 · −0.02em | Login, Task title, Profile name |
-| Title | 600 · 24/30 · −0.02em | Page titles |
-| Section | 600 · 16/22 | Section headings |
-| Body | 400 · 14/20 · −0.011em | Paragraphs, forms |
-| Table | 400 · 13/18 | All data cells |
-| Label | 500 · 12/16 | Column headers, field labels, badges |
-| Meta | 400 · 12/16 | Timestamps, hints |
-| Mono | 400 · 12 | Ticket numbers, task IDs, external refs, MISP event IDs |
-
-- **Tabular numbers** (`font-variant-numeric: tabular-nums`) are used for every count, hour value, percentage, and date column.
-- Hierarchy comes from **weight and size, then color**. The page title is the only 24px text on a screen.
-
-### Spacing (4pt)
-`4 · 8 · 12 · 16 · 20 · 24 · 32 · 40 · 48`
-- Table cell padding is 0 × 12. The page gutter is 32 (24 top). Gaps between sections are 32. Inline gaps are 6–8.
-- Operational screens (Tasks, Shift Log) use the compact end of the scale. Profile and Report screens use the generous end.
-
-### Radius
-| Element | Radius |
-|---|---|
-| Checkbox, tags | 4 |
-| Chips, pills, badges | 6 |
-| Inputs, buttons, menu items | 8 |
-| Surfaces, panels, main sheet | 10 |
-| Modals, drawers | 14 |
-
-### Elevation
-There are three levels, and nothing sits above them:
-1. **Flat** has no shadow: tables and sections.
-2. **Raised** uses `--shadow-sm` plus a hairline: the main sheet and kanban cards.
-3. **Overlay** uses `--shadow-lg`: popovers, modals, and toasts.
-
-In dark mode, elevation comes from surface lightness. In light mode it comes from a soft shadow.
-
-### Motion
-| Token | Duration | Use |
-|---|---|---|
-| `--t-fast` | 120ms | Hover, background, color |
-| `--t-base` | 160ms | Popover in, switch thumb |
-| `--t-slow` | 200ms | Modal in, sidebar collapse, check tick |
-
-The easing curve is `cubic-bezier(.2,.8,.2,1)`. There are no page transitions. `prefers-reduced-motion` turns all motion off.
+### Spacing, radius, shadow, motion
+- **Spacing:** 4, 8, 12, 16, 20, 24, 32, 40, 48, 64, 96.
+- **Radius:** 4 (checkbox, kbd), 6 (badges, menu items), 8 (inputs, buttons), 12 (panels, modals).
+- **Shadows:** three levels (`--shadow-sm/md/lg`). Elevation comes from surface lightness in dark mode and from a very soft shadow in light mode.
+- **Motion:** 150 / 200 / 280 ms. Ease-out for entering, ease-in for leaving. Only transform and opacity are animated. `prefers-reduced-motion` turns motion off.
+- **Z-index:** sticky 2, nav 30, scrim 40, modal 41, popover 50, toast 60.
 
 ### Layout
-- **Shell**: 232px sidebar (56px collapsed), a 52px header, and the content sheet.
-- **Content max**: 1280px for reading, profile, and form pages (`.page.narrow`). Tables and boards stretch to the full sheet width.
-- **Target widths**: 1440, 1600, and 1920. At 1920, tables gain columns (Team, Updated) instead of empty space.
-
----
+- **Shell:** a 240px sidebar (60px when collapsed) plus a 56px header. Below 1024px the sidebar becomes a drawer.
+- **Content width:** 1200px maximum for reading pages; tables use the full width and scroll inside their own container.
+- **Breakpoints tested:** 360, 375, 768, 1024, 1280, 1440 and 1536px. On touch screens all controls are at least 44px.
 
 ## 3. Semantic indicators
 

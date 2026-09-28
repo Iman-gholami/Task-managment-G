@@ -109,7 +109,7 @@ export default function Tasks({ scope }) {
               <button className={view === "table" ? "on" : ""} onClick={() => setView("table")} aria-label="Table view"><Icon name="list" /></button>
               <button className={view === "board" ? "on" : ""} onClick={() => setView("board")} aria-label="Board view"><Icon name="board" /></button>
             </div>
-            {(manager || scope === "my") && <button className="btn btn-primary" onClick={() => setCreateOpen(true)}><Icon name="plus" />Create Task<kbd style={{ borderColor: "rgba(255,255,255,.3)", color: "rgba(255,255,255,.8)" }}>C</kbd></button>}
+            {(manager || scope === "my") && <button className="btn btn-primary" onClick={() => setCreateOpen(true)}><Icon name="plus" />Create Task<kbd>C</kbd></button>}
           </div>
         </div>
 

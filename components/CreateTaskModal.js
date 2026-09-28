@@ -3,43 +3,37 @@
 import { useEffect, useRef, useState } from "react";
 import { useApp } from "@/components/AppProvider";
 import Icon from "@/components/ui/Icon";
+import Dialog from "@/components/ui/Dialog";
 import { Complexity, Priority, Who } from "@/components/ui/indicators";
 import { cxItems, peopleItems, prioItems } from "@/components/ui/menus";
 
-const blank = { title: "", description: "", prio: "normal", cx: 2, review: true, due: "" };
+const blank = { title: "", description: "", prio: "normal", cx: 2, due: "" };
 
 export default function CreateTaskModal() {
-  const { createOpen, setCreateOpen, addTask, toast, openPopover, me, users, peopleMap } = useApp();
+  const { createOpen, setCreateOpen } = useApp();
+  if (!createOpen) return null;
+  return <CreateTaskDialog onClose={() => setCreateOpen(false)} />;
+}
+
+function CreateTaskDialog({ onClose }) {
+  const { addTask, toast, openPopover, me, users, peopleMap } = useApp();
   const manager = me.role === "soc_manager" || me.role === "security_manager";
   const [busy, setBusy] = useState(false);
   const [form, setForm] = useState({ ...blank, a: manager ? "" : me.id });
-  const [advanced, setAdvanced] = useState(false);
   const [another, setAnother] = useState(false);
-  const [error, setError] = useState(false);
+  const [error, setError] = useState(null); // "title" | "assignee" | null
   const titleRef = useRef(null);
   const set = (patch) => setForm((f) => ({ ...f, ...patch }));
 
-  useEffect(() => {
-    if (!createOpen) return;
-    setForm({ ...blank, a: manager ? "" : me.id });
-    setError(false);
-    setAdvanced(false);
-    setTimeout(() => titleRef.current?.focus());
-  }, [createOpen]);
-
-  if (!createOpen) return null;
-  const close = () => setCreateOpen(false);
+  useEffect(() => { titleRef.current?.focus(); }, []);
 
   const submit = async () => {
     if (!form.title.trim()) {
-      setError(true);
+      setError("title");
       titleRef.current?.focus();
       return;
     }
-    if (!form.a) {
-      setError("assignee");
-      return;
-    }
+    if (!form.a) return setError("assignee");
     if (busy) return;
     setBusy(true);
     let task;
@@ -55,54 +49,44 @@ export default function CreateTaskModal() {
     if (another) {
       setForm({ ...blank, a: form.a });
       titleRef.current?.focus();
-    } else close();
+    } else onClose();
   };
 
-  const onKeyDown = (e) => {
-    if (e.key === "Escape" && !document.querySelector(".pop")) close();
-    if (e.key === "Enter" && (e.metaKey || e.ctrlKey)) submit();
-  };
+  const people = users.filter((u) => u.active !== false && u.id !== me.id).concat(users.filter((u) => u.id === me.id));
 
   return (
-    <div className="scrim" onMouseDown={(e) => e.target === e.currentTarget && close()} onKeyDown={onKeyDown}>
-      <div className="modal" role="dialog" aria-modal="true" aria-label="Create task">
-        <div className="modal-body">
-          <div className="crumbs" style={{ marginBottom: 12 }}>
-            {form.a && <><span className="badge">{peopleMap[form.a]?.team}</span><Icon name="chev" /></>}<b>New task</b>
-          </div>
-          <input ref={titleRef} className="title-input" placeholder="Task title" value={form.title} onChange={(e) => { set({ title: e.target.value }); setError(false); }} aria-invalid={error} />
-          {error === true && <div style={{ color: "var(--danger)", fontSize: 12, marginTop: 2 }}>Add a title to create the task.</div>}
-          <textarea className="desc-input" placeholder="Add description…" value={form.description} onChange={(e) => set({ description: e.target.value })} />
-          <div className="prop-row">
-            <button className="prop" disabled={!manager} title={manager ? undefined : "Analysts create tasks for themselves"} onClick={(e) => openPopover(e.currentTarget, { title: "Assignee", items: peopleItems(users.filter((u) => u.id !== me.id).concat(users.filter((u) => u.id === me.id))), onPick: (a) => { set({ a }); setError(false); }, width: 320 })} style={error === "assignee" ? { boxShadow: "0 0 0 1px var(--danger)" } : undefined}>{form.a ? <Who id={form.a} /> : <><Icon name="user" />Assign to…</>}</button>
-            <button className="prop" onClick={(e) => openPopover(e.currentTarget, { title: "Priority", items: prioItems(), onPick: (prio) => set({ prio }) })}><Priority p={form.prio} /></button>
-            <button className="prop" onClick={(e) => openPopover(e.currentTarget, { title: "Complexity", items: cxItems(), onPick: (cx) => set({ cx }) })}><Complexity c={form.cx} /></button>
-                        <label className="prop"><Icon name="flag" />Deadline<input type="date" value={form.due} onChange={(e) => set({ due: e.target.value })} style={{ border: 0, background: "none", colorScheme: "inherit", fontSize: 12 }} aria-label="Deadline" /></label>
-            <label className="prop"><input type="checkbox" className="switch" checked={form.review} onChange={(e) => set({ review: e.target.checked })} />Review required</label>
-          </div>
-          {error === "assignee" && <div style={{ color: "var(--danger)", fontSize: 12, marginTop: 8 }}>Choose who this task is for.</div>}
-          <button className="disclose" onClick={() => setAdvanced(!advanced)} aria-expanded={advanced}>
-            <Icon name={advanced ? "down" : "chev"} />Checklist, attachments, external reference
+    <Dialog label="Create task" onClose={onClose} width={640} onKeyDown={(e) => { if (e.key === "Enter" && (e.metaKey || e.ctrlKey)) submit(); }}>
+      <div className="modal-body">
+        <div className="eyebrow" style={{ marginBottom: "var(--s-4)" }}>New task{form.a ? ` · ${peopleMap[form.a]?.team}` : ""}</div>
+        <label htmlFor="task-title" className="sr-only">Title</label>
+        <input id="task-title" ref={titleRef} className="title-input" placeholder="Task title" value={form.title} onChange={(e) => { set({ title: e.target.value }); setError(null); }} aria-invalid={error === "title"} aria-describedby={error === "title" ? "task-title-error" : undefined} maxLength={200} />
+        {error === "title" && <div id="task-title-error" className="field-error" style={{ marginTop: "var(--s-1)" }}>Add a title to create the task.</div>}
+        <label htmlFor="task-desc" className="sr-only">Description</label>
+        <textarea id="task-desc" className="desc-input" placeholder="Add a description (optional)" value={form.description} onChange={(e) => set({ description: e.target.value })} />
+
+        <div className="prop-row" role="group" aria-label="Task details">
+          <button type="button" className="prop" disabled={!manager} title={manager ? "Assignee" : "Analysts create tasks for themselves"}
+            onClick={(e) => openPopover(e.currentTarget, { title: "Assign to", items: peopleItems(people), onPick: (a) => { set({ a }); setError(null); }, width: 320 })}
+            style={error === "assignee" ? { boxShadow: "inset 0 0 0 1px var(--danger)" } : undefined}>
+            {form.a ? <Who id={form.a} /> : <><Icon name="user" />Assign to…</>}
           </button>
-          {advanced && (
-            <div style={{ marginTop: 12, display: "grid", gap: 10 }}>
-              <div className="field"><label>Checklist</label><input className="input" placeholder="Add first item and press Enter" /></div>
-              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
-                <div className="field"><label>External reference</label><input className="input mono" placeholder="e.g. splunk/search/88213" /></div>
-                <div className="field"><label>Attachments</label><button className="btn btn-secondary"><Icon name="clip" />Attach files</button></div>
-              </div>
-            </div>
-          )}
-        </div>
-        <div className="modal-foot">
-          <label className="sec" style={{ fontSize: 12, display: "flex", gap: 8, alignItems: "center" }}>
-            <input type="checkbox" className="switch" checked={another} onChange={(e) => setAnother(e.target.checked)} />Create another
+          <button type="button" className="prop" title="Priority" onClick={(e) => openPopover(e.currentTarget, { title: "Priority", items: prioItems(), onPick: (prio) => set({ prio }) })}><Priority p={form.prio} /></button>
+          <button type="button" className="prop" title="Complexity" onClick={(e) => openPopover(e.currentTarget, { title: "Complexity", items: cxItems(), onPick: (cx) => set({ cx }) })}><Complexity c={form.cx} /></button>
+          <label className="prop"><Icon name="cal" /><span className="sr-only">Deadline</span>
+            <input type="date" value={form.due} min={new Date().toISOString().slice(0, 10)} onChange={(e) => set({ due: e.target.value })} style={{ border: 0, background: "none", color: "inherit", font: "inherit", colorScheme: "inherit" }} aria-label="Deadline" />
           </label>
-          <span style={{ marginLeft: "auto" }} className="muted"><kbd>Esc</kbd></span>
-          <button className="btn btn-ghost" onClick={close}>Cancel</button>
-          <button className="btn btn-primary" onClick={submit} disabled={busy}>Create Task <kbd style={{ borderColor: "rgba(255,255,255,.3)", color: "rgba(255,255,255,.8)" }}>⌘↵</kbd></button>
         </div>
+        {error === "assignee" && <div className="field-error" style={{ marginTop: "var(--s-3)" }} role="alert">Choose who this task is for.</div>}
+        <p className="muted" style={{ fontSize: "var(--fs-13)", marginTop: "var(--s-5)" }}>Checklist items, files and comments can be added on the task page after it&apos;s created.</p>
       </div>
-    </div>
+      <div className="modal-foot">
+        <label className="sec" style={{ fontSize: "var(--fs-13)", display: "flex", gap: "var(--s-2)", alignItems: "center", cursor: "pointer" }}>
+          <input type="checkbox" className="switch" checked={another} onChange={(e) => setAnother(e.target.checked)} />Create another
+        </label>
+        <span style={{ marginLeft: "auto" }} />
+        <button type="button" className="btn btn-ghost" onClick={onClose}>Cancel</button>
+        <button type="button" className="btn btn-primary" onClick={submit} disabled={busy} aria-busy={busy}>Create Task <kbd>⌘↵</kbd></button>
+      </div>
+    </Dialog>
   );
 }

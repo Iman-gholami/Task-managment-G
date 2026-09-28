@@ -8,14 +8,25 @@ const geistMono = localFont({ src: "../styles/fonts/GeistMono-Variable.woff2", v
 export const metadata = {
   title: { default: "Sentinel Ops", template: "%s · Sentinel Ops" },
   description: "Task management, SOC shift logs and workforce performance for the Security Department.",
+  applicationName: "Sentinel Ops",
+  robots: { index: false, follow: false }, // internal tool
 };
 
-// Applies the saved theme before first paint to avoid a light/dark flash.
+export const viewport = {
+  width: "device-width",
+  initialScale: 1,
+  themeColor: [
+    { media: "(prefers-color-scheme: light)", color: "#F1F3F5" },
+    { media: "(prefers-color-scheme: dark)", color: "#0D1013" },
+  ],
+};
+
+// Applies a manually chosen theme before first paint (otherwise the OS preference wins, via CSS).
 const themeScript = `try{var t=localStorage.getItem("so.theme");if(t)document.documentElement.dataset.theme=t}catch(e){}`;
 
 export default function RootLayout({ children }) {
   return (
-    <html lang="en" data-theme="dark" className={`${geist.variable} ${geistMono.variable}`} suppressHydrationWarning>
+    <html lang="en" className={`${geist.variable} ${geistMono.variable}`} suppressHydrationWarning>
       <head>
         <script dangerouslySetInnerHTML={{ __html: themeScript }} />
       </head>

@@ -29,7 +29,7 @@ export function Quality({ q }) {
   return q ? <span className="q" data-q={q}>{QUAL[q]}</span> : <span className="muted">—</span>;
 }
 
-const FALLBACK = { name: "Unknown", color: "#6B7280" };
+const FALLBACK = { name: "Unknown", color: "var(--ink-500)" };
 function usePerson(id) {
   const app = useApp();
   return app?.peopleMap?.[id] ?? FALLBACK;

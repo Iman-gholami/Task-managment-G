@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
 import { api, useApp } from "@/components/AppProvider";
 import Icon from "@/components/ui/Icon";
+import Dialog from "@/components/ui/Dialog";
 import { EmptyState, Who } from "@/components/ui/indicators";
 import { ROLE_LABELS, assignableFor, canManageMember, isManager } from "@/lib/roles";
 
@@ -103,13 +104,6 @@ export default function Team() {
   );
 }
 
-function Dialog({ label, onClose, children, width = 480 }) {
-  return (
-    <div className="scrim" onMouseDown={(e) => e.target === e.currentTarget && onClose()} onKeyDown={(e) => e.key === "Escape" && onClose()}>
-      <div className="modal" role="dialog" aria-modal="true" aria-label={label} style={{ width }}>{children}</div>
-    </div>
-  );
-}
 
 function AddMemberModal({ onClose }) {
   const { me, dispatch, toast } = useApp();
@@ -159,7 +153,7 @@ function AddMemberModal({ onClose }) {
         <div className="modal-foot">
           <span style={{ marginLeft: "auto" }} />
           <button type="button" className="btn btn-ghost" onClick={onClose}>Cancel</button>
-          <button className="btn btn-primary" disabled={busy}>Add Member</button>
+          <button className="btn btn-primary" disabled={busy} aria-busy={busy}>Add Member</button>
         </div>
       </form>
     </Dialog>
@@ -213,7 +207,7 @@ function EditMemberModal({ member, onClose }) {
         <div className="modal-foot">
           <span style={{ marginLeft: "auto" }} />
           <button type="button" className="btn btn-ghost" onClick={onClose}>Cancel</button>
-          <button className="btn btn-primary" disabled={busy}>Save changes</button>
+          <button className="btn btn-primary" disabled={busy} aria-busy={busy}>Save changes</button>
         </div>
       </form>
     </Dialog>

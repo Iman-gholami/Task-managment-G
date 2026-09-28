@@ -50,7 +50,7 @@ export default function Account() {
           <div className="field"><label htmlFor="pw-next">New password</label><input id="pw-next" type="password" className="input" value={form.next} onChange={set("next")} autoComplete="new-password" minLength={8} required /><span className="muted" style={{ fontSize: 12 }}>At least 8 characters.</span></div>
           <div className="field"><label htmlFor="pw-confirm">Confirm new password</label><input id="pw-confirm" type="password" className="input" value={form.confirm} onChange={set("confirm")} autoComplete="new-password" required /></div>
           {error && <div role="alert" style={{ color: "var(--danger)", fontSize: 13 }}>{error}</div>}
-          <div><button className="btn btn-primary" disabled={busy}>{busy ? "Saving…" : "Change password"}</button></div>
+          <div><button className="btn btn-primary" disabled={busy} aria-busy={busy}>Change password</button></div>
         </form>
       </section>
     </div>

@@ -152,8 +152,8 @@ export default function ShiftLog({ view }) {
         <span className="s"><b>{misp.iocs}</b>IOCs added</span>
         <span className="s"><b>{tickets.length}</b>Tickets created</span>
         <span className="s"><b>{issues}</b>{issues === 1 ? "Issue reported" : "Issues reported"}</span>
-        <span style={{ marginLeft: "auto" }} className="remain">
-          {!shiftDone && remaining.length > 0 && `${remaining.length} remaining: ${remaining.map((r) => r.title).join(", ")}`}
+        <span className="remain" title={remaining.map((r) => r.title).join("\n")}>
+          {!shiftDone && remaining.length > 0 && `${remaining.length} remaining · next: ${remaining[0].title}`}
         </span>
         {view ? null : shiftDone
           ? <button className="btn btn-secondary" onClick={() => setCompleted(false)}>Reopen</button>

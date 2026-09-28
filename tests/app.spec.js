@@ -184,7 +184,7 @@ test.describe("task workflow", () => {
     await page.locator("tr", { hasText: ids.t1 }).locator("td.title").click();
     await page.getByRole("button", { name: "Approve" }).click();
     await page.getByRole("menuitem", { name: /Excellent/ }).click();
-    await expect(page.locator(".issue", { hasText: "Approved ·" })).toBeVisible();
+    await expect(page.locator(".callout", { hasText: "Approved ·" })).toBeVisible();
     await expect(page.getByRole("button", { name: "Approve" })).toHaveCount(0);
     await expect(page.getByRole("button", { name: "Return for changes" })).toHaveCount(0);
     expect((await page.request.patch(`/api/tasks/${ids.t1}`, { data: { status: "returned" } })).status()).toBe(409);

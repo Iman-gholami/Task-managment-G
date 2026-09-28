@@ -42,8 +42,8 @@ export default function Reports({ report }) {
   const filtered = Object.entries(f).some(([k, v]) => v && FILTERS[key].includes(k) && !(k === "user" && key === "employee"));
 
   return (
-    <div style={{ display: "grid", gridTemplateColumns: "240px 1fr", height: "100%" }}>
-      <nav style={{ borderRight: "1px solid var(--divider)", padding: "20px 12px" }} aria-label="Reports">
+    <div className="split">
+      <nav className="split-nav" aria-label="Reports">
         {reportsFor.map(([k, n]) => <Link key={k} className={`nav-item ${k === key ? "active" : ""}`} href={`/reports/${k}`}><span>{n}</span></Link>)}
       </nav>
       <div className="page" style={{ minWidth: 0 }}>

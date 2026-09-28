@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
-import { Fragment, useEffect, useRef } from "react";
+import { Fragment, useEffect, useRef, useState } from "react";
 import { api, useApp } from "@/components/AppProvider";
 import Icon from "@/components/ui/Icon";
 import { Avatar } from "@/components/ui/indicators";
@@ -60,6 +60,17 @@ export default function AppShell({ children }) {
   const crumbs = crumbsFor(path, peopleMap);
   const manager = isManager(me);
   const notifications = useNotifications();
+  const [navOpen, setNavOpen] = useState(false);
+
+  // Mobile drawer: close on navigation and on Escape.
+  useEffect(() => { setNavOpen(false); }, [path]);
+  useEffect(() => {
+    if (!navOpen) return;
+    const onKey = (e) => e.key === "Escape" && setNavOpen(false);
+    document.addEventListener("keydown", onKey);
+    return () => document.removeEventListener("keydown", onKey);
+  }, [navOpen]);
+  const toggleNav = () => (window.matchMedia("(max-width: 1023px)").matches ? setNavOpen((o) => !o) : setCollapsed(!collapsed));
 
   const counts = {
     "/tasks/my": tasks.filter((t) => t.a === me.id && isOpen(t)).length,
@@ -112,8 +123,10 @@ export default function AppShell({ children }) {
   };
 
   return (
-    <div className={`app ${collapsed ? "collapsed" : ""}`}>
-      <aside className="sidebar" aria-label="Main navigation">
+    <div className={`app ${collapsed ? "collapsed" : ""} ${navOpen ? "nav-open" : ""}`}>
+      <a href="#main" className="btn btn-primary sr-only">Skip to content</a>
+      <div className="nav-scrim" onClick={() => setNavOpen(false)} aria-hidden="true" />
+      <aside className="sidebar" id="sidebar" aria-label="Main navigation">
         <div className="brand"><span className="brand-mark">S</span><span>Sentinel Ops</span></div>
         {NAV.map(([href, label, icon, subs]) => {
           const on = path === href || path.startsWith(href + "/");
@@ -141,15 +154,15 @@ export default function AppShell({ children }) {
 
       <main className="main">
         <header className="header">
-          <button className="btn btn-ghost icon-btn" aria-label="Toggle sidebar" onClick={() => setCollapsed(!collapsed)}><Icon name="side" /></button>
+          <button className="btn btn-ghost icon-btn" aria-label="Toggle navigation" aria-controls="sidebar" aria-expanded={navOpen} onClick={toggleNav}><Icon name="side" /></button>
           <nav className="crumbs" aria-label="Breadcrumb">
             {crumbs.map((c, i) => (i === crumbs.length - 1 ? <b key={i}>{c}</b> : <span key={i} style={{ display: "contents" }}>{c}<Icon name="chev" /></span>))}
           </nav>
           <div className="spacer" />
-          <div className="cmdk" ref={cmdRef} role="button" tabIndex={0} onClick={openCommand} onKeyDown={(e) => e.key === "Enter" && openCommand()}>
-            <Icon name="search" />Search or jump to…<kbd>⌘K</kbd>
+          <div className="cmdk" ref={cmdRef} role="button" tabIndex={0} aria-label="Search or jump to" onClick={openCommand} onKeyDown={(e) => e.key === "Enter" && openCommand()}>
+            <Icon name="search" /><span className="cmdk-label">Search or jump to…</span><kbd>⌘K</kbd>
           </div>
-          <button className="btn btn-ghost icon-btn" aria-label="Notifications" style={{ position: "relative" }} onClick={(e) => openPopover(e.currentTarget, {
+          <button className="btn btn-ghost icon-btn" aria-label={notifications.length ? `Notifications (${notifications.length})` : "Notifications"} style={{ position: "relative" }} onClick={(e) => openPopover(e.currentTarget, {
             title: "Notifications",
             render: (close) => notifications.length === 0
               ? <div className="mi muted" style={{ width: 320 }}>You&apos;re all caught up.</div>
@@ -160,11 +173,11 @@ export default function AppShell({ children }) {
               )),
           })}>
             <Icon name="bell" />
-            {notifications.length > 0 && <span style={{ position: "absolute", top: 6, right: 6, width: 7, height: 7, borderRadius: "50%", background: "var(--primary)" }} />}
+            {notifications.length > 0 && <span className="dot" aria-hidden="true" />}
           </button>
-          <button className="btn btn-ghost icon-btn" aria-label="Toggle theme" onClick={() => setTheme(theme === "dark" ? "light" : "dark")}><Icon name="sun" /></button>
+          <button className="btn btn-ghost icon-btn" aria-label={theme === "dark" ? "Switch to light theme" : "Switch to dark theme"} onClick={() => setTheme(theme === "dark" ? "light" : "dark")}><Icon name={theme === "dark" ? "sun" : "moon"} /></button>
         </header>
-        <div className="content">{children}</div>
+        <div className="content" id="main" tabIndex={-1}><div key={path}>{children}</div></div>
       </main>
       <CreateTaskModal />
     </div>

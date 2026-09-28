@@ -20,8 +20,8 @@ const PERMISSIONS = [
 export function Admin() {
   const { members: people } = useApp();
   return (
-    <div style={{ display: "grid", gridTemplateColumns: "220px 1fr", height: "100%" }}>
-      <nav style={{ borderRight: "1px solid var(--divider)", padding: "20px 12px" }} aria-label="Administration">
+    <div className="split">
+      <nav className="split-nav" aria-label="Administration">
         {ADMIN_SECTIONS.map((n, i) => <span key={n} className={`nav-item ${i ? "" : "active"}`}><span>{n}</span></span>)}
       </nav>
       <div className="page" style={{ minWidth: 0 }}>
@@ -104,25 +104,27 @@ export function Login() {
   };
   return (
     <div className="login">
-      <div className="login-l">
-        <form className="login-form" onSubmit={submit}>
-          <div className="brand" style={{ padding: 0, marginBottom: 20 }}><span className="brand-mark">S</span><span>Sentinel Ops</span></div>
-          <h1 style={{ font: "var(--text-display)", letterSpacing: "var(--tracking-title)", margin: 0 }}>Sign in</h1>
-          <p className="sec" style={{ margin: "-6px 0 8px" }}>Security Department workspace</p>
-          <div className="field"><label htmlFor="email">Work email</label><input id="email" name="email" type="email" className="input" style={{ height: 36 }} autoComplete="username" required autoFocus /></div>
-          <div className="field"><label htmlFor="password">Password</label><input id="password" name="password" className="input" style={{ height: 36 }} type="password" autoComplete="current-password" required /></div>
-          {error && <div role="alert" style={{ color: "var(--danger)", fontSize: 13 }}>{error}</div>}
-          <button className="btn btn-primary" style={{ justifyContent: "center", height: 36 }} disabled={busy}>{busy ? "Signing in…" : "Sign in"}</button>
-          <p className="muted" style={{ fontSize: 12 }}>Trouble signing in? Contact your administrator.</p>
+      <main className="login-l">
+        <form className="login-form" onSubmit={submit} noValidate={false}>
+          <div className="brand" style={{ padding: 0, margin: 0 }}><span className="brand-mark">S</span><span>Sentinel Ops</span></div>
+          <div style={{ marginTop: "var(--s-8)" }}>
+            <h1>Welcome back</h1>
+            <p className="muted" style={{ marginTop: "var(--s-2)" }}>Sign in to the Security Department workspace.</p>
+          </div>
+          <div className="field"><label htmlFor="email">Work email</label><input id="email" name="email" type="email" className="input" autoComplete="username" inputMode="email" required autoFocus aria-invalid={!!error} /></div>
+          <div className="field"><label htmlFor="password">Password</label><input id="password" name="password" className="input" type="password" autoComplete="current-password" required aria-invalid={!!error} /></div>
+          {error && <div role="alert" className="field-error"><Icon name="alert" />{error}</div>}
+          <button className="btn btn-primary" style={{ width: "100%" }} disabled={busy} aria-busy={busy}>Sign in</button>
+          <p className="muted" style={{ fontSize: "var(--fs-13)" }}>Trouble signing in? Ask your administrator to reset your password.</p>
         </form>
-      </div>
-      <div className="login-r">
-        <div style={{ maxWidth: 420 }}>
-          <div className="mono muted" style={{ marginBottom: 10 }}>SECURITY DEPARTMENT</div>
-          <div style={{ font: "600 22px/30px var(--font-sans)", letterSpacing: "var(--tracking-title)" }}>Tasks, shift logs and team output — in one quiet place.</div>
-          <p className="sec">Internal use only. Activity is recorded for audit.</p>
+      </main>
+      <aside className="login-r" aria-hidden="true">
+        <div className="eyebrow">Security Department</div>
+        <div>
+          <p className="quote">Every task, every shift, <em>in one calm place.</em></p>
+          <p className="muted" style={{ marginTop: "var(--s-6)", maxWidth: "40ch" }}>Assign and review work, keep the daily SOC shift log, and see what the team actually accomplished.</p>
         </div>
-      </div>
+      </aside>
     </div>
   );
 }
