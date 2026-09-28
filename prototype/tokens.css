@@ -1,0 +1,135 @@
+/* ==========================================================================
+   Sentinel Ops — Design Tokens
+   One semantic token set, two independently tuned themes.
+   Components reference ONLY semantic tokens (never raw hex).
+   ========================================================================== */
+
+:root {
+  /* ---- Typography ---------------------------------------------------- */
+  --font-sans: "Geist", "Inter", "Manrope", ui-sans-serif, system-ui, sans-serif;
+  --font-mono: "Geist Mono", "JetBrains Mono", ui-monospace, SFMono-Regular, monospace;
+
+  --text-display: 600 28px/34px var(--font-sans);   /* Page title (Login, Profile) */
+  --text-title:   600 24px/30px var(--font-sans);   /* Page title */
+  --text-section: 600 16px/22px var(--font-sans);   /* Section title */
+  --text-body:    400 14px/20px var(--font-sans);
+  --text-table:   400 13px/18px var(--font-sans);
+  --text-meta:    400 12px/16px var(--font-sans);
+  --text-label:   500 12px/16px var(--font-sans);   /* column headers, field labels */
+  --tracking-tight: -0.011em;
+  --tracking-title: -0.02em;
+
+  /* ---- Spacing (4pt base) -------------------------------------------- */
+  --s-1: 4px;  --s-2: 8px;  --s-3: 12px; --s-4: 16px; --s-5: 20px;
+  --s-6: 24px; --s-8: 32px; --s-10: 40px; --s-12: 48px;
+
+  /* ---- Radius ---------------------------------------------------------- */
+  --r-xs: 4px;   /* dots, tags, checkbox */
+  --r-sm: 6px;   /* pills, chips */
+  --r-md: 8px;   /* inputs, buttons */
+  --r-lg: 10px;  /* surfaces */
+  --r-xl: 14px;  /* modals, drawers */
+
+  /* ---- Sizing ---------------------------------------------------------- */
+  --sidebar-w: 232px;
+  --sidebar-w-collapsed: 56px;
+  --header-h: 52px;
+  --row-h: 36px;          /* default table row */
+  --row-h-compact: 32px;  /* dense mode */
+  --control-h: 32px;
+  --control-h-sm: 28px;
+  --content-max: 1280px;  /* reading/form pages; tables go full width */
+
+  /* ---- Motion ---------------------------------------------------------- */
+  --ease: cubic-bezier(.2, .8, .2, 1);
+  --t-fast: 120ms;
+  --t-base: 160ms;
+  --t-slow: 200ms;
+}
+
+/* ==========================================================================
+   DARK (primary theme)
+   ========================================================================== */
+:root, [data-theme="dark"] {
+  color-scheme: dark;
+
+  --bg:               #0B0D12;
+  --surface:          #11141B;
+  --surface-2:        #171B24;
+  --surface-raised:   #1C212C;
+  --hover:            #222936;
+  --selected:         rgba(108,124,255,.10);
+
+  --text:             #F4F6F8;
+  --text-2:           #A7AFBC;
+  --text-3:           #6F7887;
+  --text-on-primary:  #FFFFFF;
+
+  --border:           #252B36;
+  --border-strong:    #353D4A;
+  --divider:          rgba(255,255,255,.05);
+
+  --primary:          #6C7CFF;
+  --primary-hover:    #7D8BFF;
+  --primary-soft:     rgba(108,124,255,.14);
+  --focus-ring:       0 0 0 2px var(--bg), 0 0 0 4px rgba(108,124,255,.65);
+
+  --success:          #3CCB8E;  --success-soft: rgba(60,203,142,.12);
+  --warning:          #E6A94A;  --warning-soft: rgba(230,169,74,.12);
+  --danger:           #F26666;  --danger-soft:  rgba(242,102,102,.12);
+  --info:             #55A7FF;  --info-soft:    rgba(85,167,255,.12);
+  --neutral:          #8A93A3;  --neutral-soft: rgba(138,147,163,.12);
+  --violet:           #A48BFF;  /* Review state only */
+  --teal:             #3FC1C9;  /* Complexity scale accent only */
+
+  --shadow-sm: 0 1px 0 rgba(0,0,0,.4);
+  --shadow-md: 0 8px 24px -8px rgba(0,0,0,.6), 0 0 0 1px var(--border);
+  --shadow-lg: 0 24px 48px -12px rgba(0,0,0,.7), 0 0 0 1px var(--border-strong);
+
+  /* data-viz ramp: single-hue indigo, 4 steps (Simple→Advanced) */
+  --viz-1: #3A4270; --viz-2: #5160C4; --viz-3: #6C7CFF; --viz-4: #A9B3FF;
+  --viz-grid: rgba(255,255,255,.06);
+}
+
+/* ==========================================================================
+   LIGHT (independently tuned, not an inversion)
+   ========================================================================== */
+[data-theme="light"] {
+  color-scheme: light;
+
+  --bg:               #F6F7F9;
+  --surface:          #FFFFFF;
+  --surface-2:        #F0F2F5;
+  --surface-raised:   #FFFFFF;
+  --hover:            #ECEFF3;
+  --selected:         rgba(86,102,232,.08);
+
+  --text:             #171A1F;
+  --text-2:           #59616D;
+  --text-3:           #8A929E;
+  --text-on-primary:  #FFFFFF;
+
+  --border:           #E2E5E9;
+  --border-strong:    #CDD2D9;
+  --divider:          rgba(0,0,0,.06);
+
+  --primary:          #5666E8;
+  --primary-hover:    #4655D4;
+  --primary-soft:     rgba(86,102,232,.10);
+  --focus-ring:       0 0 0 2px var(--bg), 0 0 0 4px rgba(86,102,232,.55);
+
+  --success:          #238A62;  --success-soft: rgba(35,138,98,.10);
+  --warning:          #B7791F;  --warning-soft: rgba(183,121,31,.11);
+  --danger:           #D84F4F;  --danger-soft:  rgba(216,79,79,.10);
+  --info:             #357FD3;  --info-soft:    rgba(53,127,211,.10);
+  --neutral:          #6B7380;  --neutral-soft: rgba(107,115,128,.10);
+  --violet:           #7A5CE0;
+  --teal:             #1E8F97;
+
+  --shadow-sm: 0 1px 2px rgba(16,24,40,.05);
+  --shadow-md: 0 8px 24px -8px rgba(16,24,40,.14), 0 0 0 1px var(--border);
+  --shadow-lg: 0 24px 48px -12px rgba(16,24,40,.20), 0 0 0 1px var(--border);
+
+  --viz-1: #D5D9FA; --viz-2: #A3ACF3; --viz-3: #5666E8; --viz-4: #2E3AA8;
+  --viz-grid: rgba(0,0,0,.06);
+}
