@@ -4,14 +4,15 @@ import { useEffect, useMemo, useState } from "react";
 import { api, useApp } from "@/components/AppProvider";
 import useFetch from "@/components/useFetch";
 import { Avatar } from "@/components/ui/indicators";
+import Icon from "@/components/ui/Icon";
 import { TODAY, addDays } from "@/lib/format";
 import styles from "./ShiftSchedule.module.css";
 
 const SHIFT_KEYS = ["morning", "evening", "night"];
 const SHIFT_META = {
-  morning: { label: "شیفت صبح", short: "صبح", time: "۰۷:۰۰ – ۱۵:۰۰", icon: "☀" },
-  evening: { label: "شیفت عصر", short: "عصر", time: "۱۵:۰۰ – ۲۳:۰۰", icon: "◐" },
-  night: { label: "شیفت شب", short: "شب", time: "۲۳:۰۰ – ۰۷:۰۰", icon: "☾" },
+  morning: { label: "شیفت صبح", short: "صبح", time: "۰۷:۰۰ تا ۱۵:۰۰", icon: "sun" },
+  evening: { label: "شیفت عصر", short: "عصر", time: "۱۵:۰۰ تا ۲۳:۰۰", icon: "sunset" },
+  night: { label: "شیفت شب", short: "شب", time: "۲۳:۰۰ تا ۰۷:۰۰", icon: "moon" },
 };
 const WEEKDAYS = ["شنبه", "یکشنبه", "دوشنبه", "سه‌شنبه", "چهارشنبه", "پنجشنبه", "جمعه"];
 const PERSIAN_CAL = new Intl.DateTimeFormat("fa-IR-u-ca-persian", {
@@ -64,14 +65,11 @@ function calendarRange(monthStart) {
   const firstWeekday = dateObj(monthStart).getUTCDay();
   const daysFromSaturday = (firstWeekday + 1) % 7;
   const start = addDays(monthStart, -daysFromSaturday);
-
   const nextMonth = shiftJalaliMonth(monthStart, 1);
   const lastDay = addDays(nextMonth, -1);
   const lastWeekday = dateObj(lastDay).getUTCDay();
   const daysToFriday = (5 - lastWeekday + 7) % 7;
-  const end = addDays(lastDay, daysToFriday);
-
-  return { start, end };
+  return { start, end: addDays(lastDay, daysToFriday) };
 }
 
 function assignmentMap(assignments) {
@@ -85,6 +83,10 @@ function assignmentMap(assignments) {
 
 function formatLongDate(iso) {
   return PERSIAN_LONG.format(dateObj(iso));
+}
+
+function ShiftGlyph({ shift, className }) {
+  return <span className={className} data-tone={shift}><Icon name={SHIFT_META[shift].icon} /></span>;
 }
 
 export default function ShiftSchedule() {
@@ -115,7 +117,7 @@ export default function ShiftSchedule() {
     [data?.assignments, currentMonthKey]
   );
 
-  const openDay = (date, shift = focusShift) => {
+  const openComposer = (date, shift = focusShift) => {
     setFocusDate(date);
     setFocusShift(shift);
     setSelected({ date, shift });
@@ -174,6 +176,7 @@ export default function ShiftSchedule() {
     () => Array.from({ length: daysBetween(range.start, range.end) + 1 }, (_, i) => addDays(range.start, i)),
     [range.start, range.end]
   );
+
   const visibleMembers = useMemo(() => {
     const q = query.trim().toLowerCase();
     return analysts.filter((m) => !q || `${m.name} ${m.team}`.toLowerCase().includes(q));
@@ -182,116 +185,169 @@ export default function ShiftSchedule() {
   const focusShifts = byDate[focusDate] || { morning: [], evening: [], night: [] };
   const focusPeople = focusShifts[focusShift].map((id) => peopleMap[id]).filter(Boolean);
   const scheduledPeople = new Set(monthAssignments.map((a) => a.userId)).size;
+  const monthDaysCovered = new Set(monthAssignments.map((a) => a.date)).size;
 
   return (
     <div className={`${styles.page} page`} dir="rtl">
-      <div className={styles.pageHead}>
-        <div>
-          <div className={styles.eyebrow}>برنامه‌ریزی نیروی انسانی</div>
+      <header className={styles.hero}>
+        <div className={styles.heroCopy}>
+          <div className={styles.kicker}><Icon name="cal" /> برنامه‌ریزی شیفت</div>
           <h1>مدیریت شیفت نیروها</h1>
-          <p>شیفت‌های ماهانه را سریع بچینید و پوشش هر روز را در یک نگاه ببینید.</p>
+          <p>پوشش شیفت‌های تیم را برای کل ماه برنامه‌ریزی کنید و وضعیت هر روز را در یک نگاه ببینید.</p>
         </div>
-        <div className={styles.headActions}>
-          <span className={styles.monthStat}><b>{faNum(scheduledPeople)}</b> نیروی برنامه‌ریزی‌شده</span>
-          <button className="btn btn-primary" onClick={() => openDay(focusDate, focusShift)}>＋ ثبت شیفت</button>
+        <div className={styles.heroActions}>
+          <div className={styles.heroMetric}>
+            <span><Icon name="team" /></span>
+            <div><b>{faNum(scheduledPeople)}</b><small>نیروی برنامه‌ریزی‌شده</small></div>
+          </div>
+          <div className={styles.heroMetric}>
+            <span><Icon name="cal" /></span>
+            <div><b>{faNum(monthDaysCovered)}</b><small>روز دارای برنامه</small></div>
+          </div>
+          <button className="btn btn-primary" onClick={() => openComposer(focusDate, focusShift)}>
+            <Icon name="plus" /> ثبت شیفت
+          </button>
         </div>
-      </div>
+      </header>
 
-      <div className={styles.schedulerLayout}>
-        <aside className={styles.sidePanel}>
-          <section className={styles.sideCard}>
-            <div className={styles.sideTitle}>تاریخ انتخاب‌شده</div>
-            <button className={styles.selectedDate} onClick={() => openDay(focusDate, focusShift)}>
-              <span>◫</span>
-              <b>{formatLongDate(focusDate)}</b>
+      <div className={styles.workspace}>
+        <aside className={styles.inspector}>
+          <div className={styles.inspectorHead}>
+            <div>
+              <span>روز انتخاب‌شده</span>
+              <h2>{formatLongDate(focusDate)}</h2>
+            </div>
+            <button className={styles.editDate} onClick={() => openComposer(focusDate, focusShift)} aria-label="ویرایش شیفت روز انتخاب‌شده">
+              <Icon name="edit" />
             </button>
+          </div>
 
-            <div className={styles.sideTitle}>شیفت انتخاب‌شده</div>
-            <div className={styles.selectedShift} data-tone={focusShift}>
-              <span className={styles.shiftIcon}>{SHIFT_META[focusShift].icon}</span>
-              <div><b>{SHIFT_META[focusShift].label}</b><small>{SHIFT_META[focusShift].time}</small></div>
-            </div>
-
-            <div className={styles.peopleTitle}>
-              <b>نیروهای این شیفت</b>
-              <span>{faNum(focusPeople.length)} نفر</span>
-            </div>
-            <div className={styles.selectedPeople}>
-              {focusPeople.length ? focusPeople.map((person) => (
-                <div className={styles.selectedPerson} key={person.id}>
-                  <Avatar id={person.id} />
-                  <span><b>{person.name}</b><small>{person.team}</small></span>
-                </div>
-              )) : <div className={styles.emptyPeople}>هنوز نیرویی برای این شیفت انتخاب نشده است.</div>}
-            </div>
-            <button className="btn btn-secondary" style={{ width: "100%" }} onClick={() => openDay(focusDate, focusShift)}>ویرایش نیروها</button>
-          </section>
-
-          <section className={styles.daySummary}>
-            <div className={styles.summaryHead}><b>شیفت‌های این روز</b><span>{faNum(SHIFT_KEYS.filter((k) => focusShifts[k].length).length)}</span></div>
+          <div className={styles.sectionLabel}>شیفت‌های این روز</div>
+          <div className={styles.shiftRows}>
             {SHIFT_KEYS.map((key) => {
               const ids = focusShifts[key];
+              const active = focusShift === key;
               return (
-                <button key={key} className={styles.dayShiftCard} data-tone={key} onClick={() => openDay(focusDate, key)}>
-                  <span className={styles.dayShiftIcon}>{SHIFT_META[key].icon}</span>
-                  <span className={styles.dayShiftText}><b>{SHIFT_META[key].label}</b><small>{SHIFT_META[key].time}</small></span>
-                  <span className={styles.avatarStack}>
-                    {ids.slice(0, 3).map((id) => <Avatar key={id} id={id} />)}
+                <button
+                  key={key}
+                  className={`${styles.shiftRow} ${active ? styles.shiftRowActive : ""}`}
+                  data-tone={key}
+                  onClick={() => {
+                    setFocusShift(key);
+                    openComposer(focusDate, key);
+                  }}
+                >
+                  <ShiftGlyph shift={key} className={styles.shiftRowIcon} />
+                  <span className={styles.shiftRowText}>
+                    <b>{SHIFT_META[key].label}</b>
+                    <small>{SHIFT_META[key].time}</small>
                   </span>
-                  <span className={styles.countPill}>{faNum(ids.length)} نفر</span>
+                  <span className={styles.shiftRowEnd}>
+                    <span className={styles.miniAvatars}>
+                      {ids.slice(0, 3).map((id) => <Avatar key={id} id={id} />)}
+                    </span>
+                    <em>{faNum(ids.length)}</em>
+                  </span>
                 </button>
               );
             })}
-          </section>
+          </div>
+
+          <div className={styles.inspectorDivider} />
+          <div className={styles.peopleHeader}>
+            <div>
+              <span>نیروهای {SHIFT_META[focusShift].short}</span>
+              <small>{faNum(focusPeople.length)} نفر</small>
+            </div>
+            <button onClick={() => openComposer(focusDate, focusShift)}>مدیریت</button>
+          </div>
+
+          <div className={styles.peoplePreview}>
+            {focusPeople.length ? focusPeople.slice(0, 5).map((person) => (
+              <div className={styles.personPreview} key={person.id}>
+                <Avatar id={person.id} />
+                <span><b>{person.name}</b><small>{person.team}</small></span>
+              </div>
+            )) : (
+              <div className={styles.emptyPreview}>
+                <span><Icon name="team" /></span>
+                <b>هنوز نیرویی ثبت نشده</b>
+                <small>برای این شیفت نیرو انتخاب کنید.</small>
+              </div>
+            )}
+            {focusPeople.length > 5 && <div className={styles.morePeople}>+ {faNum(focusPeople.length - 5)} نفر دیگر</div>}
+          </div>
+
+          <button className={`${styles.inspectorCta} btn btn-secondary`} onClick={() => openComposer(focusDate, focusShift)}>
+            <Icon name="edit" /> ویرایش برنامه این روز
+          </button>
         </aside>
 
-        <section className={styles.calendarPanel}>
-          <div className={styles.toolbar}>
-            <div className={styles.monthControls}>
-              <button className="btn btn-ghost icon-btn" aria-label="ماه قبل" onClick={() => changeMonth(-1)}>›</button>
-              <button className="btn btn-ghost" onClick={goToday}>امروز</button>
-              <button className="btn btn-ghost icon-btn" aria-label="ماه بعد" onClick={() => changeMonth(1)}>‹</button>
+        <section className={styles.calendarCard}>
+          <div className={styles.calendarToolbar}>
+            <div className={styles.legend} aria-label="راهنمای رنگ شیفت‌ها">
+              {SHIFT_KEYS.map((key) => (
+                <span key={key} data-tone={key}><i />{SHIFT_META[key].short}</span>
+              ))}
             </div>
-            <h2>{PERSIAN_MONTH.format(dateObj(monthStart))}</h2>
-            <div className={styles.legend}>
-              {SHIFT_KEYS.map((key) => <span key={key} data-tone={key}><i />{SHIFT_META[key].short}</span>)}
+
+            <div className={styles.monthTitle}>
+              <small>تقویم ماهانه</small>
+              <h2>{PERSIAN_MONTH.format(dateObj(monthStart))}</h2>
+            </div>
+
+            <div className={styles.monthNav}>
+              <button className={styles.navButton} aria-label="ماه قبل" onClick={() => changeMonth(-1)}><Icon name="chev" /></button>
+              <button className={styles.todayButton} onClick={goToday}>امروز</button>
+              <button className={`${styles.navButton} ${styles.navNext}`} aria-label="ماه بعد" onClick={() => changeMonth(1)}><Icon name="chev" /></button>
             </div>
           </div>
 
           {error && (
             <div className={styles.errorBar}>
-              <span>دریافت برنامه شیفت‌ها ناموفق بود.</span>
-              <button className="btn btn-ghost btn-sm" onClick={reload}>تلاش دوباره</button>
+              <span><Icon name="alert" /> دریافت برنامه شیفت‌ها ناموفق بود.</span>
+              <button onClick={reload}>تلاش دوباره</button>
             </div>
           )}
 
           <div className={styles.weekdays}>
             {WEEKDAYS.map((day) => <div key={day}>{day}</div>)}
           </div>
-          <div className={`${styles.calendar} ${loading && !data ? styles.loading : ""}`} aria-busy={loading}>
+
+          <div className={`${styles.calendarGrid} ${loading && !data ? styles.loading : ""}`} aria-busy={loading}>
             {cells.map((date) => {
               const parts = jalaliParts(date);
               const current = jalaliMonthKey(date) === currentMonthKey;
               const shifts = byDate[date] || { morning: [], evening: [], night: [] };
               const assigned = SHIFT_KEYS.some((s) => shifts[s].length);
               const focused = date === focusDate;
+              const weekend = dateObj(date).getUTCDay() === 5;
               return (
                 <button
                   type="button"
-                  className={`${styles.day} ${!current ? styles.outside : ""} ${date === TODAY ? styles.today : ""} ${focused ? styles.focused : ""}`}
+                  className={`${styles.day} ${!current ? styles.outside : ""} ${date === TODAY ? styles.today : ""} ${focused ? styles.focused : ""} ${weekend ? styles.weekend : ""}`}
                   key={date}
-                  onClick={() => openDay(date, "morning")}
+                  onClick={() => openComposer(date, shifts.morning.length ? "morning" : shifts.evening.length ? "evening" : shifts.night.length ? "night" : "morning")}
                   aria-label={formatLongDate(date)}
                 >
-                  <span className={styles.dayNumber}>{faNum(parts.day)}</span>
-                  <div className={styles.chips}>
+                  <span className={styles.dayTop}>
+                    <b className={styles.dayNumber}>{faNum(parts.day)}</b>
+                    {date === TODAY && <small>امروز</small>}
+                  </span>
+
+                  <span className={styles.dayShifts}>
                     {SHIFT_KEYS.map((key) => shifts[key].length > 0 && (
-                      <span className={styles.shiftChip} data-tone={key} key={key} onClick={(e) => { e.stopPropagation(); openDay(date, key); }}>
-                        <i />{SHIFT_META[key].short}<b>{faNum(shifts[key].length)}</b>
+                      <span className={styles.shiftPill} data-tone={key} key={key}>
+                        <i />
+                        <span>{SHIFT_META[key].short}</span>
+                        <b>{faNum(shifts[key].length)}</b>
                       </span>
                     ))}
-                  </div>
-                  {!assigned && current && <span className={styles.addHint}>＋ افزودن شیفت</span>}
+                  </span>
+
+                  {!assigned && current && (
+                    <span className={styles.emptyDay}><Icon name="plus" /> افزودن شیفت</span>
+                  )}
                 </button>
               );
             })}
@@ -301,68 +357,79 @@ export default function ShiftSchedule() {
 
       {selected && (
         <div className={styles.scrim} onMouseDown={(e) => e.target === e.currentTarget && setSelected(null)}>
-          <section className={styles.modal} role="dialog" aria-modal="true" aria-labelledby="shift-dialog-title" dir="rtl">
-            <div className={styles.modalHead}>
-              <div>
-                <small>تعریف شیفت برای</small>
+          <section className={styles.composer} role="dialog" aria-modal="true" aria-labelledby="shift-dialog-title" dir="rtl">
+            <div className={styles.composerHead}>
+              <div className={styles.composerDateIcon}><Icon name="cal" /></div>
+              <div className={styles.composerTitle}>
+                <span>برنامه‌ریزی شیفت</span>
                 <h2 id="shift-dialog-title">{formatLongDate(selected.date)}</h2>
               </div>
-              <button className="btn btn-ghost icon-btn" aria-label="بستن" onClick={() => setSelected(null)}>×</button>
+              <button className={styles.closeButton} aria-label="بستن" onClick={() => setSelected(null)}><Icon name="x" /></button>
             </div>
 
-            <div className={styles.modalSectionTitle}>انتخاب شیفت</div>
-            <div className={styles.shiftTabs}>
-              {SHIFT_KEYS.map((key) => {
-                const meta = SHIFT_META[key];
-                return (
-                  <button key={key} data-tone={key} className={selected.shift === key ? styles.activeTab : ""} onClick={() => changeShift(key)}>
-                    <span>{meta.icon}</span>
-                    <b>{meta.label}</b>
-                    <small>{meta.time}</small>
-                  </button>
-                );
-              })}
+            <div className={styles.composerBody}>
+              <div className={styles.fieldLabel}>نوع شیفت</div>
+              <div className={styles.shiftSelector}>
+                {SHIFT_KEYS.map((key) => {
+                  const meta = SHIFT_META[key];
+                  const active = selected.shift === key;
+                  return (
+                    <button key={key} data-tone={key} className={active ? styles.shiftOptionActive : ""} onClick={() => changeShift(key)}>
+                      <ShiftGlyph shift={key} className={styles.shiftOptionIcon} />
+                      <span><b>{meta.label}</b><small>{meta.time}</small></span>
+                      {active && <i className={styles.optionCheck}><Icon name="check" /></i>}
+                    </button>
+                  );
+                })}
+              </div>
+
+              <div className={styles.peopleControlHead}>
+                <div className={styles.fieldLabel}>انتخاب نیروها <span>{faNum(draftIds.length)} انتخاب</span></div>
+                <button disabled={!draftIds.length} onClick={() => setDraftIds([])}>پاک کردن</button>
+              </div>
+
+              <label className={styles.searchBox}>
+                <Icon name="search" />
+                <input value={query} onChange={(e) => setQuery(e.target.value)} placeholder="جستجوی نام یا تیم..." aria-label="جستجوی نیرو" />
+              </label>
+
+              <div className={styles.peopleList}>
+                {visibleMembers.length === 0 ? (
+                  <div className={styles.noPeople}>نیرویی با این مشخصات پیدا نشد.</div>
+                ) : visibleMembers.map((member) => {
+                  const checked = draftIds.includes(member.id);
+                  const currentShift = SHIFT_KEYS.find((s) => byDate[selected.date]?.[s]?.includes(member.id));
+                  const moved = currentShift && currentShift !== selected.shift;
+                  return (
+                    <label className={`${styles.personRow} ${checked ? styles.personRowSelected : ""}`} key={member.id}>
+                      <input
+                        type="checkbox"
+                        checked={checked}
+                        onChange={() => setDraftIds((ids) => checked ? ids.filter((id) => id !== member.id) : [...ids, member.id])}
+                      />
+                      <span className={styles.customCheck}>{checked && <Icon name="check" />}</span>
+                      <Avatar id={member.id} />
+                      <span className={styles.personMeta}>
+                        <b>{member.name}</b>
+                        <small>{member.team}</small>
+                      </span>
+                      {moved ? <em className={styles.moveTag}>از {SHIFT_META[currentShift].short} منتقل می‌شود</em> : currentShift === selected.shift ? <em className={styles.currentTag}>در همین شیفت</em> : null}
+                    </label>
+                  );
+                })}
+              </div>
             </div>
 
-            <div className={styles.peopleHead}>
-              <div><b>انتخاب نیروها</b><small>{faNum(draftIds.length)} نفر انتخاب شده</small></div>
-              <button className={styles.clear} disabled={!draftIds.length} onClick={() => setDraftIds([])}>پاک کردن انتخاب‌ها</button>
-            </div>
-            <div className={styles.searchWrap}>
-              <span>⌕</span>
-              <input className="input" value={query} onChange={(e) => setQuery(e.target.value)} placeholder="جستجوی نام یا تیم..." aria-label="جستجوی نیرو" />
-            </div>
-
-            <div className={styles.peopleList}>
-              {visibleMembers.length === 0 ? (
-                <div className={styles.noPeople}>نیرویی با این مشخصات پیدا نشد.</div>
-              ) : visibleMembers.map((member) => {
-                const checked = draftIds.includes(member.id);
-                const currentShift = SHIFT_KEYS.find((s) => byDate[selected.date]?.[s]?.includes(member.id));
-                const moved = currentShift && currentShift !== selected.shift;
-                return (
-                  <label className={`${styles.person} ${checked ? styles.personSelected : ""}`} key={member.id}>
-                    <input
-                      type="checkbox"
-                      checked={checked}
-                      onChange={() => setDraftIds((ids) => checked ? ids.filter((id) => id !== member.id) : [...ids, member.id])}
-                    />
-                    <Avatar id={member.id} />
-                    <span className={styles.personMeta}>
-                      <b>{member.name}</b>
-                      <small>{member.team}</small>
-                    </span>
-                    {moved ? <span className={styles.moveTag}>انتقال از {SHIFT_META[currentShift].short}</span> : currentShift === selected.shift ? <span className={styles.currentTag}>ثبت شده</span> : null}
-                  </label>
-                );
-              })}
-            </div>
-
-            <div className={styles.modalFoot}>
-              <span>ثبت این لیست فقط نیروهای {SHIFT_META[selected.shift].label} در همین روز را به‌روزرسانی می‌کند.</span>
-              <div>
+            <div className={styles.composerFoot}>
+              <div className={styles.selectionSummary}>
+                <span className={styles.selectionAvatars}>{draftIds.slice(0, 4).map((id) => <Avatar key={id} id={id} />)}</span>
+                <span><b>{faNum(draftIds.length)} نفر</b><small>برای {SHIFT_META[selected.shift].label}</small></span>
+              </div>
+              <div className={styles.composerActions}>
                 <button className="btn btn-ghost" onClick={() => setSelected(null)}>انصراف</button>
-                <button className="btn btn-primary" disabled={saving} onClick={save}>{saving ? "در حال ثبت..." : "ثبت شیفت"}</button>
+                <button className="btn btn-primary" disabled={saving} onClick={save}>
+                  <Icon name="check" /> {saving ? "در حال ثبت..." : "ثبت برنامه"}
+                </button>
               </div>
             </div>
           </section>
