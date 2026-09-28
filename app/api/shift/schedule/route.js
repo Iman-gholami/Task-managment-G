@@ -1,6 +1,7 @@
 import { canManageMember, isManager, requireUser } from "@/lib/server/auth";
 import { err } from "@/lib/server/access";
-import { getUser, listShiftAssignments, replaceShiftAssignments } from "@/lib/server/repo";
+import { getUser } from "@/lib/server/repo";
+import { listShiftAssignments, replaceShiftAssignments } from "@/lib/server/shift-schedule";
 import { isShiftAnalyst } from "@/lib/server/stats";
 
 const DATE = /^\d{4}-\d{2}-\d{2}$/;
