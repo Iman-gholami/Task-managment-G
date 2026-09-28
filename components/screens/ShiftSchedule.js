@@ -37,6 +37,7 @@ const FA_NUM = new Intl.NumberFormat("fa-IR", { useGrouping: false });
 const toEnglishDigits = (value) => String(value).replace(/[۰-۹]/g, (d) => "۰۱۲۳۴۵۶۷۸۹".indexOf(d));
 const faNum = (value) => FA_NUM.format(value);
 const dateObj = (iso) => new Date(`${iso}T00:00:00Z`);
+const daysBetween = (a, b) => Math.round((dateObj(b).getTime() - dateObj(a).getTime()) / 864e5);
 
 function jalaliParts(iso) {
   const parts = PERSIAN_CAL.formatToParts(dateObj(iso));
@@ -60,10 +61,17 @@ function shiftJalaliMonth(monthStart, amount) {
 }
 
 function calendarRange(monthStart) {
-  const weekday = dateObj(monthStart).getUTCDay();
-  const saturdayOffset = (weekday + 1) % 7;
-  const start = addDays(monthStart, -saturdayOffset);
-  return { start, end: addDays(start, 41) };
+  const firstWeekday = dateObj(monthStart).getUTCDay();
+  const daysFromSaturday = (firstWeekday + 1) % 7;
+  const start = addDays(monthStart, -daysFromSaturday);
+
+  const nextMonth = shiftJalaliMonth(monthStart, 1);
+  const lastDay = addDays(nextMonth, -1);
+  const lastWeekday = dateObj(lastDay).getUTCDay();
+  const daysToFriday = (5 - lastWeekday + 7) % 7;
+  const end = addDays(lastDay, daysToFriday);
+
+  return { start, end };
 }
 
 function assignmentMap(assignments) {
@@ -162,7 +170,10 @@ export default function ShiftSchedule() {
     }
   };
 
-  const cells = useMemo(() => Array.from({ length: 42 }, (_, i) => addDays(range.start, i)), [range.start]);
+  const cells = useMemo(
+    () => Array.from({ length: daysBetween(range.start, range.end) + 1 }, (_, i) => addDays(range.start, i)),
+    [range.start, range.end]
+  );
   const visibleMembers = useMemo(() => {
     const q = query.trim().toLowerCase();
     return analysts.filter((m) => !q || `${m.name} ${m.team}`.toLowerCase().includes(q));
