@@ -2,15 +2,28 @@
 
 import Link from "next/link";
 import { useRef, useState } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
+import useFetch from "@/components/useFetch";
+import { PeriodSelector } from "@/components/screens/Dashboard";
+import { TableSkeleton } from "@/components/screens/Misc";
+import { EmptyState } from "@/components/ui/indicators";
+import { isManager } from "@/lib/roles";
 import { api, useApp } from "@/components/AppProvider";
 import Icon from "@/components/ui/Icon";
 import { Status, Who } from "@/components/ui/indicators";
-import { fmtDate, longDate, weekday } from "@/lib/format";
+import { TODAY, fmtDate, longDate, weekday } from "@/lib/format";
 
 const HINTS = { misp: "IOC count feeds monthly reports", files: "Upload the day's files or link to them", report: "Attach the Word report" };
 
-export default function ShiftLog() {
-  const { activities, tickets, shiftDone, shiftDate, dispatch, toast, me } = useApp();
+/** Own shift log (editable), or `view` = another analyst's log shown read-only to a manager. */
+export default function ShiftLog({ view }) {
+  const app = useApp();
+  const { dispatch, toast, me } = app;
+  const activities = view ? view.activities : app.activities;
+  const tickets = view ? view.tickets : app.tickets;
+  const shiftDone = view ? !!view.completedAt : app.shiftDone;
+  const shiftDate = view ? view.date : app.shiftDate;
+  const owner = view ? view.userId : me.id;
   const [saved, setSaved] = useState("autosaved");
   const [issueOpen, setIssueOpen] = useState(null);
   const [flash, setFlash] = useState(null);
@@ -38,7 +51,7 @@ export default function ShiftLog() {
       toast(e.message);
     }
   };
-  const readOnly = shiftDone;
+  const readOnly = shiftDone || !!view;
 
   const completeShift = () => {
     if (remaining.length) {
@@ -55,16 +68,16 @@ export default function ShiftLog() {
     <div className="page narrow" style={{ maxWidth: 1080, paddingBottom: 0 }}>
       <div className="page-head" style={{ marginBottom: 0 }}>
         <div><h1>Shift Log — {longDate(shiftDate)}</h1></div>
-        <div className="actions"><Link className="btn btn-ghost" href="/shift/history">History</Link></div>
+        <div className="actions"><Link className="btn btn-ghost" href={view ? `/shift/history?user=${owner}` : "/shift/history"}>History</Link>{view && <Link className="btn btn-secondary" href="/shift/team">Team shift logs</Link>}</div>
       </div>
       <div className="shift-head">
         <div className="ring" style={{ "--v": (done / activities.length) * 100 }} aria-label={`${Math.round((done / activities.length) * 100)}% complete`} />
         <div className="facts">
-          <div><small>Analyst</small><Who id={me.id} /></div>
+          <div><small>Analyst</small><Who id={owner} /></div>
           <div><small>Shift</small>Day · 07:00–15:00</div>
           <div><small>Status</small>{shiftDone ? <span className="badge success">Completed</span> : <span className="badge primary">In progress</span>}</div>
           <div><small>Completion</small><span className="num">{Math.round((done / activities.length) * 100)}%</span></div>
-          <div><small>Last updated</small><span className="num" style={saved === "not saved" ? { color: "var(--danger)" } : undefined}>{saved}</span></div>
+          <div><small>Last updated</small><span className="num" style={saved === "not saved" ? { color: "var(--danger)" } : undefined}>{view ? "read-only" : saved}</span></div>
         </div>
       </div>
 
@@ -132,7 +145,7 @@ export default function ShiftLog() {
         );
       })}
 
-      <Tickets readOnly={readOnly} />
+      <Tickets readOnly={readOnly} list={tickets} />
 
       <div className="summary">
         <span className="s"><b>{done}/{activities.length}</b>Activities</span>
@@ -142,7 +155,7 @@ export default function ShiftLog() {
         <span style={{ marginLeft: "auto" }} className="remain">
           {!shiftDone && remaining.length > 0 && `${remaining.length} remaining: ${remaining.map((r) => r.title).join(", ")}`}
         </span>
-        {shiftDone
+        {view ? null : shiftDone
           ? <button className="btn btn-secondary" onClick={() => setCompleted(false)}>Reopen</button>
           : <button className="btn btn-primary" onClick={completeShift}>Complete Shift</button>}
       </div>
@@ -171,8 +184,9 @@ function IssueForm({ onSave, onCancel }) {
   );
 }
 
-function Tickets({ readOnly }) {
-  const { tickets, dispatch, toast } = useApp();
+function Tickets({ readOnly, list }) {
+  const { dispatch, toast } = useApp();
+  const tickets = list;
   const [adding, setAdding] = useState(false);
   const [row, setRow] = useState({ no: "", ref: "", desc: "" });
   const [error, setError] = useState(false);
@@ -220,37 +234,101 @@ function Tickets({ readOnly }) {
 }
 
 export function ShiftHistory() {
-  const rows = Array.from({ length: 12 }, (_, i) => {
-    const d = `2026-09-${String(27 - i).padStart(2, "0")}`;
-    const miss = i === 4;
-    return { d, acts: miss ? 5 : 8, iocs: [4, 7, 5, 9, 2, 6, 5, 3, 8, 6, 4, 5][i], tix: [2, 1, 3, 0, 1, 2, 1, 4, 0, 2, 1, 1][i], issues: i % 5 === 1 ? 1 : 0, miss };
-  });
+  const { me, members } = useApp();
+  const params = useSearchParams();
+  const router = useRouter();
+  const manager = isManager(me);
+  const analysts = members.filter((m) => m.shift !== null);
+  const user = params.get("user") || (me.keepsShiftLog ? me.id : analysts[0]?.id);
+  const [period, setPeriod] = useState("this");
+  const { data, loading, error, reload } = useFetch(user ? `/api/shift/history?user=${user}&period=${period}` : null);
+  const open = (date) => router.push(user === me.id && date === data.logs[0]?.date && !manager ? "/shift" : `/shift/view?user=${user}&date=${date}`);
+
   return (
     <div className="page">
       <div className="page-head">
-        <div><h1>Shift Log History</h1><p>Sara Rahimi · September 2026</p></div>
+        <div><h1>Shift Log History</h1><p>{analysts.find((a) => a.id === user)?.name ?? ""}{data ? ` · ${data.period.from} – ${data.period.to}` : ""}</p></div>
         <div className="actions">
-          <button className="chip active">Analyst is <b>Sara Rahimi</b></button>
-          <button className="chip active">Period <b>Sep 2026</b></button>
-          <button className="btn btn-secondary"><Icon name="xls" />Export</button>
+          {manager && (
+            <select className="input" style={{ width: 200 }} value={user} onChange={(e) => router.replace(`/shift/history?user=${e.target.value}`)} aria-label="Analyst">
+              {analysts.map((a) => <option key={a.id} value={a.id}>{a.name}</option>)}
+            </select>
+          )}
+          <PeriodSelector value={period} onChange={setPeriod} />
         </div>
       </div>
-      <table className="dt">
-        <thead><tr><th>Date</th><th>Status</th><th>Activities</th><th className="r">IOCs</th><th className="r">Tickets</th><th className="r">Issues</th><th>Traffic report</th></tr></thead>
-        <tbody>
-          {rows.map((r) => (
-            <tr key={r.d}>
-              <td className="title num">{fmtDate(r.d)} <span className="muted" style={{ fontWeight: 400 }}>· {weekday(r.d)}</span></td>
-              <td>{r.miss ? <Status s="returned" label="Incomplete" /> : <Status s="done" label="Completed" />}</td>
-              <td><span style={{ display: "inline-flex", alignItems: "center", gap: 10 }}><span className="progress ok" style={{ width: 80 }}><span style={{ width: `${(r.acts / 8) * 100}%` }} /></span><span className="num">{r.acts}/8</span></span></td>
-              <td className="r num">{r.iocs}</td>
-              <td className="r num">{r.tix}</td>
-              <td className="r num">{r.issues || <span className="muted">0</span>}</td>
-              <td>{r.miss ? <span className="muted">Not attached</span> : <span className="sec" style={{ display: "inline-flex", gap: 6, alignItems: "center" }}><Icon name="report" /> .docx</span>}</td>
-            </tr>
-          ))}
-        </tbody>
-      </table>
+      {loading && !data ? <TableSkeleton rows={8} /> : error ? (
+        <EmptyState danger icon={<Icon name="alert" />} title="Couldn't load shift logs" action={<button className="btn btn-secondary btn-sm" onClick={reload}>Retry</button>}>{error}</EmptyState>
+      ) : !data?.logs.length ? (
+        <EmptyState icon={<Icon name="shift" />} title="No shift logs">No shift activity was recorded in this period.</EmptyState>
+      ) : (
+        <table className="dt">
+          <thead><tr><th>Date</th><th>Status</th><th>Activities</th><th className="r">IOCs</th><th className="r">Tickets</th><th className="r">Issues</th><th>Traffic report</th></tr></thead>
+          <tbody>
+            {data.logs.map((r) => (
+              <tr key={r.date} onClick={() => open(r.date)}>
+                <td className="title num">{fmtDate(r.date)} <span className="muted" style={{ fontWeight: 400 }}>· {weekday(r.date)}</span></td>
+                <td>{r.completed ? <Status s="done" label="Completed" /> : r.date === data.logs[0].date && r.date >= TODAY ? <Status s="progress" label="In progress" /> : <Status s="returned" label="Incomplete" />}</td>
+                <td><span style={{ display: "inline-flex", alignItems: "center", gap: 10 }}><span className="progress ok" style={{ width: 80 }}><span style={{ width: `${(r.done / r.total) * 100}%` }} /></span><span className="num">{r.done}/{r.total}</span></span></td>
+                <td className="r num">{r.iocs}</td>
+                <td className="r num">{r.tickets}</td>
+                <td className="r num">{r.issues || <span className="muted">0</span>}</td>
+                <td>{r.report ? <span className="sec">Done</span> : <span className="muted">Not done</span>}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      )}
     </div>
   );
+}
+
+/** Managers: today's shift logs for every SOC analyst. */
+export function ShiftTeam() {
+  const { members } = useApp();
+  const router = useRouter();
+  const analysts = members.filter((m) => m.shift !== null);
+  const { data } = useFetch(`/api/shift/team`);
+  const byId = Object.fromEntries((data?.rows ?? []).map((r) => [r.id, r]));
+  return (
+    <div className="page">
+      <div className="page-head">
+        <div><h1>Team Shift Logs</h1><p>{longDate(TODAY)} · {analysts.length} SOC analysts</p></div>
+        <div className="actions"><Link className="btn btn-secondary" href="/reports/shift">Shift Activity Report</Link></div>
+      </div>
+      {analysts.length === 0 ? <EmptyState icon={<Icon name="shift" />} title="No SOC analysts">Add analysts to SOC · L1/L2/L3 from the Team page.</EmptyState> : (
+        <table className="dt">
+          <thead><tr><th>Analyst</th><th>Team</th><th>Today</th><th>Activities</th><th className="r">IOCs</th><th className="r">Tickets</th><th className="r">Issues</th><th /></tr></thead>
+          <tbody>
+            {analysts.map((a) => {
+              const r = byId[a.id];
+              return (
+                <tr key={a.id} onClick={() => router.push(r ? `/shift/view?user=${a.id}&date=${TODAY}` : `/shift/history?user=${a.id}`)}>
+                  <td className="title"><Who id={a.id} /></td>
+                  <td>{a.team}</td>
+                  <td>{!r ? <span className="badge danger">Not started</span> : r.completed ? <Status s="done" label="Completed" /> : <Status s="progress" label="In progress" />}</td>
+                  <td>{r ? <span style={{ display: "inline-flex", alignItems: "center", gap: 10 }}><span className="progress ok" style={{ width: 80 }}><span style={{ width: `${(r.done / r.total) * 100}%` }} /></span><span className="num">{r.done}/{r.total}</span></span> : <span className="muted">—</span>}</td>
+                  <td className="r num">{r?.iocs ?? "—"}</td>
+                  <td className="r num">{r?.tickets ?? "—"}</td>
+                  <td className="r num">{r?.issues ?? "—"}</td>
+                  <td className="r"><Link className="btn btn-ghost btn-sm" href={`/shift/history?user=${a.id}`} onClick={(e) => e.stopPropagation()}>History</Link></td>
+                </tr>
+              );
+            })}
+          </tbody>
+        </table>
+      )}
+    </div>
+  );
+}
+
+/** Read-only view of one analyst's log for a given day. */
+export function ShiftView() {
+  const params = useSearchParams();
+  const user = params.get("user");
+  const date = params.get("date");
+  const { data, error, loading } = useFetch(user ? `/api/shift?user=${user}${date ? `&date=${date}` : ""}` : null);
+  if (loading) return <div className="page"><TableSkeleton rows={8} /></div>;
+  if (error || !data) return <EmptyState icon={<Icon name="shift" />} title="No shift log" action={<Link className="btn btn-secondary btn-sm" href="/shift/team">Back to team shift logs</Link>}>{error ?? "Nothing recorded."}</EmptyState>;
+  return <ShiftLog view={{ ...data, userId: user }} />;
 }

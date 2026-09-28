@@ -20,13 +20,15 @@ function crumbsFor(path) {
     case "tasks":
       return b === "my" ? ["Tasks", "My Tasks"] : b === "team" ? ["Tasks", "Team Tasks"] : b === "all" ? ["Tasks", "All Tasks"] : ["Tasks", b];
     case "shift":
-      return ["Shift Logs", b === "history" ? "History" : "Today"];
+      return ["Shift Logs", b === "history" ? "History" : b === "team" ? "Team Today" : b === "view" ? "Log" : "Today"];
     case "team":
       return ["Team"];
     case "performance":
-      return b === "employees" ? ["Performance", "Employees", "Sara Rahimi"] : ["Performance", "Overview"];
+      return b === "employees" ? ["Performance", "Employee"] : ["Performance", "Overview"];
     case "reports":
       return ["Reports", REPORT_NAMES[b] || "Reports"];
+    case "account":
+      return ["Account"];
     case "admin":
       return ["Administration", "Users & Roles"];
     case "states":
@@ -37,8 +39,8 @@ function crumbsFor(path) {
 }
 
 const JUMPS = [
-  ["/dashboard", "Dashboard"], ["/tasks/my", "My Tasks"], ["/tasks/team", "Team Tasks"], ["/shift", "Today's Shift Log"],
-  ["/performance/employees", "Employee Performance"], ["/reports/tickets", "Ticket Report"], ["/states", "Empty / loading / error states"], ["/login", "Login screen"],
+  ["/dashboard", "Dashboard"], ["/tasks/my", "My Tasks"], ["/tasks/team", "Team Tasks"], ["/shift", "Shift Log"],
+  ["/performance/employees", "Performance"], ["/reports/employee", "Reports"], ["/reports/tickets", "Ticket Report"], ["/account", "Account & password"],
 ];
 
 const NOTIFICATIONS = [
@@ -60,15 +62,18 @@ export default function AppShell({ children }) {
     "/tasks/my": tasks.filter((t) => t.a === me.id && isOpen(t)).length,
     "/tasks/team": tasks.filter((t) => t.team.startsWith("SOC") && isOpen(t)).length,
   };
+  const manager = me.role === "soc_manager" || me.role === "security_manager";
   const NAV = [
     ["/dashboard", "Dashboard", "home"],
     ["/tasks", "Tasks", "tasks", [["/tasks/my", "My Tasks"], ["/tasks/team", "Team Tasks"], ["/tasks/all", "All Tasks"]]],
-    ["/shift", "Shift Logs", "shift"],
+    me.keepsShiftLog && ["/shift", "Shift Logs", "shift", [["/shift", "Today"], ["/shift/history", "History"]]],
+    manager && ["/shift", "Shift Logs", "shift", [["/shift/team", "Team Today"], ["/shift/history", "History"]]],
     ["/team", "Team", "team"],
-    ["/performance", "Performance", "perf", [["/performance/overview", "Overview"], ["/performance/employees", "Employees"]]],
+    manager ? ["/performance", "Performance", "perf", [["/performance/overview", "Overview"], ["/performance/employees", "Employees"]]] : ["/performance/employees", "My Performance", "perf"],
     ["/reports", "Reports", "report"],
-    ["/admin", "Administration", "admin"],
-  ];
+    manager && ["/admin", "Administration", "admin"],
+    ["/account", "Account", "admin"],
+  ].filter(Boolean);
 
   const openCommand = () =>
     openPopover(cmdRef.current, {

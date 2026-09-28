@@ -23,7 +23,7 @@ module.exports = defineConfig({
   },
   projects: [{ name: "chromium", use: { ...devices["Desktop Chrome"], viewport: { width: 1440, height: 900 } } }],
   webServer: {
-    command: `npx next start -p ${PORT}`,
+    command: `node scripts/next.mjs start -p ${PORT}`,
     env: { DATABASE_PATH: DB },
     url: `http://localhost:${PORT}/dashboard`,
     reuseExistingServer: false,

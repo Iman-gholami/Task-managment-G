@@ -1,5 +1,5 @@
 import { isManager, requireUser } from "@/lib/server/auth";
-import { createTask, getUser, listTasks } from "@/lib/server/repo";
+import { addEvent, createTask, getUser, listTasks } from "@/lib/server/repo";
 
 const PRIOS = ["low", "normal", "high", "critical"];
 
@@ -25,5 +25,6 @@ export async function POST(request) {
     cx: [1, 2, 3, 4].includes(body.cx) ? body.cx : 2,
     due: /^\d{4}-\d{2}-\d{2}$/.test(body.due ?? "") ? body.due : "—",
   }, user.id);
+  addEvent(task.id, user.id, "created the task");
   return Response.json({ task }, { status: 201 });
 }

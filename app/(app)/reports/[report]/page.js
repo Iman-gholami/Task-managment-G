@@ -1,10 +1,7 @@
+import { Suspense } from "react";
 import { notFound } from "next/navigation";
 import Reports from "@/components/screens/Reports";
 import { REPORTS } from "@/lib/reports";
-
-export function generateStaticParams() {
-  return REPORTS.map(([report]) => ({ report }));
-}
 
 export async function generateMetadata({ params }) {
   const { report } = await params;
@@ -14,5 +11,5 @@ export async function generateMetadata({ params }) {
 export default async function Page({ params }) {
   const { report } = await params;
   if (!REPORTS.some((r) => r[0] === report)) notFound();
-  return <Reports report={report} />;
+  return <Suspense><Reports key={report} report={report} /></Suspense>;
 }

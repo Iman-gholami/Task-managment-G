@@ -52,19 +52,43 @@ const ROUTES = [
   ["/shift", "Shift Log —"],
   ["/shift/history", "Shift Log History"],
   ["/team", "Team"],
-  ["/performance/overview", "Performance Overview"],
   ["/performance/employees", "Sara Rahimi"],
   ["/reports/employee", "Employee Monthly Report"],
   ["/reports/shift", "SOC Shift Activity Report"],
   ["/reports/tickets", "Ticket Report"],
-  ["/admin", "Users & Roles"],
+  ["/account", "Sara Rahimi"],
   ["/states", "Empty, loading & error states"],
+];
+
+const MANAGER_ROUTES = [
+  ["/dashboard", "SOC overview"],
+  ["/shift/team", "Team Shift Logs"],
+  ["/shift/history", "Shift Log History"],
+  ["/performance/overview", "Performance Overview"],
+  ["/performance/employees", "Leila Nouri"],
+  ["/reports/team", "Team Monthly Report"],
+  ["/reports/task", "Task Report"],
+  ["/admin", "Users & Roles"],
 ];
 
 test.describe("every screen renders without errors", () => {
   for (const [path, heading] of ROUTES) {
     test(path, async ({ page }) => {
       await signIn(page);
+      const errors = [];
+      page.on("pageerror", (e) => errors.push(e.message));
+      page.on("console", (m) => m.type() === "error" && errors.push(m.text()));
+      await page.goto(path);
+      await expect(page.locator("h1").first()).toContainText(heading);
+      expect(errors).toEqual([]);
+    });
+  }
+});
+
+test.describe("every manager screen renders without errors", () => {
+  for (const [path, heading] of MANAGER_ROUTES) {
+    test(path, async ({ page }) => {
+      await signIn(page, "soc");
       const errors = [];
       page.on("pageerror", (e) => errors.push(e.message));
       page.on("console", (m) => m.type() === "error" && errors.push(m.text()));
@@ -194,7 +218,7 @@ test.describe("analyst", () => {
   });
 
   test("command menu opens with Ctrl+K and navigates", async ({ page }) => {
-    await page.goto("/dashboard");
+    await page.goto("/dashboard", { waitUntil: "networkidle" }); // wait for hydration
     await page.keyboard.press("Control+k");
     await page.getByRole("menuitem", { name: "Ticket Report" }).click();
     await expect(page).toHaveURL(/\/reports\/tickets$/);
@@ -276,5 +300,165 @@ test.describe("member management", () => {
     await expect(page.getByRole("button", { name: "Remove Leila Nouri" })).toHaveCount(1);
     const self = await page.request.delete("/api/members/kf");
     expect(self.status()).toBe(403);
+  });
+});
+
+test.describe("task workflow", () => {
+  test("analyst cannot approve their own task", async ({ page }) => {
+    await signIn(page);
+    // T-1042 was moved to Review in an earlier test.
+    const res = await page.request.patch("/api/tasks/T-1042", { data: { status: "done", quality: "excellent" } });
+    expect(res.status()).toBe(409);
+    await page.goto("/tasks/T-1042");
+    await expect(page.getByText("Waiting for review")).toBeVisible();
+    await expect(page.getByRole("button", { name: "Approve" })).toHaveCount(0);
+  });
+
+  test("manager approves once with a quality rating; the decision can't be flipped", async ({ page }) => {
+    await signIn(page, "soc");
+    await page.goto("/tasks/T-1042");
+    await expect(page.getByRole("button", { name: "Return for changes" })).toBeVisible();
+    await page.getByRole("button", { name: "Approve" }).click();
+    await page.getByRole("menuitem", { name: /Excellent/ }).click();
+    await expect(page.locator(".issue", { hasText: "Approved ·" })).toBeVisible();
+    await expect(page.getByRole("button", { name: "Approve" })).toHaveCount(0);
+    await expect(page.getByRole("button", { name: "Return for changes" })).toHaveCount(0);
+    await expect(page.getByTestId("activity")).toContainText("approve · quality: Excellent");
+
+    // Returning or re-approving an approved task is rejected by the API.
+    expect((await page.request.patch("/api/tasks/T-1042", { data: { status: "returned" } })).status()).toBe(409);
+    expect((await page.request.patch("/api/tasks/T-1042", { data: { status: "done", quality: "good" } })).status()).toBe(400);
+    const t = await (await page.request.get("/api/tasks/T-1042")).json();
+    expect(t.task.quality).toBe("excellent");
+
+    // Inline status menu offers only Reopen.
+    await page.goto("/tasks/team");
+    await page.locator("tr", { hasText: "T-1042" }).locator('[data-edit="status"]').click();
+    await expect(page.getByRole("menuitem")).toHaveText([/Reopen/]);
+  });
+
+  test("manager returns a task; assignee resumes it", async ({ page }) => {
+    await signIn(page, "soc");
+    await page.goto("/tasks/T-1040");
+    await page.getByRole("button", { name: "Return for changes" }).click();
+    await expect(page.locator(".detail-side .status").first()).toHaveText("Returned");
+    await signIn(page, "analyst");
+    await page.goto("/tasks/T-1040");
+    await page.getByRole("button", { name: "Resume work" }).click();
+    await expect(page.locator(".detail-side .status").first()).toHaveText("In Progress");
+  });
+
+  test("approved work shows up in performance numbers", async ({ page }) => {
+    await signIn(page);
+    await page.goto("/performance/employees");
+    await expect(page.locator("tbody")).toContainText("Tune Splunk correlation rule");
+  });
+});
+
+test.describe("task details are saved", () => {
+  test("checklist, comments and attachments persist", async ({ page }) => {
+    await signIn(page);
+    await page.goto("/tasks/T-1030");
+    await page.getByLabel("New checklist item").fill("Export access logs");
+    await page.getByLabel("New checklist item").press("Enter");
+    await expect(page.getByText("Export access logs")).toBeVisible();
+    await page.locator("label.check-item", { hasText: "Export access logs" }).locator("input").check();
+
+    await page.getByLabel("New comment").fill("Started on this, @Leila Nouri FYI");
+    await page.getByRole("button", { name: /^Comment/ }).click();
+    await expect(page.locator(".mention", { hasText: "@Leila Nouri" })).toBeVisible();
+
+    await page.getByTestId("attach-input").setInputFiles({ name: "access-logs.txt", mimeType: "text/plain", buffer: Buffer.from("hello") });
+    await expect(page.getByRole("link", { name: /access-logs\.txt/ })).toBeVisible();
+
+    await page.reload();
+    await expect(page.locator("label.check-item", { hasText: "Export access logs" }).locator("input")).toBeChecked();
+    await expect(page.getByText("Started on this")).toBeVisible();
+    const [download] = await Promise.all([page.waitForEvent("download"), page.getByRole("link", { name: /access-logs\.txt/ }).click()]);
+    expect(download.suggestedFilename()).toBe("access-logs.txt");
+  });
+});
+
+test.describe("shift logs are for SOC analysts only", () => {
+  test("managers get the team view, not their own log", async ({ page }) => {
+    await signIn(page, "soc");
+    await page.goto("/shift");
+    await expect(page).toHaveURL(/\/shift\/team$/);
+    await expect(page.locator("tbody")).toContainText("Sara Rahimi");
+    expect((await page.request.patch("/api/shift", { data: { n: 1, patch: { done: true } } })).status()).toBe(403);
+    await page.locator("tr", { hasText: "Sara Rahimi" }).click();
+    await expect(page.getByText("read-only")).toBeVisible();
+    await expect(page.getByRole("button", { name: "Complete Shift" })).toHaveCount(0);
+  });
+
+  test("security manager has no Shift Log of their own", async ({ page }) => {
+    await signIn(page, "security");
+    await page.goto("/dashboard");
+    await expect(page.getByRole("link", { name: "Continue Shift Log" })).toHaveCount(0);
+    expect((await page.request.post("/api/shift/tickets", { data: { no: "X-1" } })).status()).toBe(403);
+  });
+});
+
+test.describe("reports", () => {
+  for (const report of ["employee", "team", "task", "shift", "tickets"]) {
+    test(`${report} report exports a real Excel file`, async ({ page }) => {
+      await signIn(page, "security");
+      const res = await page.request.get(`/api/reports/${report}?period=this&user=sr&format=xlsx`);
+      expect(res.status()).toBe(200);
+      expect(res.headers()["content-type"]).toContain("spreadsheetml");
+      const body = await res.body();
+      expect(body.subarray(0, 2).toString()).toBe("PK"); // xlsx is a zip
+    });
+  }
+
+  test("employee monthly report preview uses live data", async ({ page }) => {
+    await signIn(page, "soc");
+    await page.goto("/reports/employee");
+    await page.getByLabel("Employee").selectOption("sr");
+    await expect(page.getByRole("heading", { name: "Routine Activity" })).toBeVisible();
+    await expect(page.locator("section", { hasText: "Tasks" }).first()).toContainText("Tune Splunk correlation rule");
+  });
+
+  test("analysts can't open the team report", async ({ page }) => {
+    await signIn(page);
+    expect((await page.request.get("/api/reports/team")).status()).toBe(403);
+  });
+});
+
+test.describe("accounts", () => {
+  test("change password, then sign in with the new one", async ({ page, browser }) => {
+    await signIn(page, "security");
+    await page.goto("/account");
+    await page.getByLabel("Current password").fill("wrong");
+    await page.getByLabel("New password", { exact: true }).fill("NewPass2026!");
+    await page.getByLabel("Confirm new password").fill("NewPass2026!");
+    await page.getByRole("button", { name: "Change password" }).click();
+    await expect(page.locator("form [role=alert]")).toHaveText("Current password is incorrect.");
+    await page.getByLabel("Current password").fill(PASSWORD);
+    await page.getByRole("button", { name: "Change password" }).click();
+    await expect(page.getByText("Password changed")).toBeVisible();
+
+    const ctx = await browser.newContext();
+    const url = (p) => new URL(p, page.url()).href;
+    expect((await ctx.request.post(url("/api/auth/login"), { data: { email: USERS.security, password: PASSWORD } })).status()).toBe(401);
+    expect((await ctx.request.post(url("/api/auth/login"), { data: { email: USERS.security, password: "NewPass2026!" } })).ok()).toBeTruthy();
+    await ctx.close();
+  });
+
+  test("SOC Manager edits an analyst's team and resets their password", async ({ page, browser }) => {
+    await signIn(page, "soc");
+    await page.goto("/team");
+    await page.getByRole("button", { name: "Edit Neda Karimi" }).click();
+    const dialog = page.getByRole("dialog", { name: "Edit member" });
+    await expect(dialog.getByLabel("Role").locator("option")).toHaveText(["Analyst"]);
+    await dialog.getByLabel("Primary team").selectOption("SOC · L2");
+    await dialog.getByLabel("Reset password (optional)").fill("Reset2026!!");
+    await dialog.getByRole("button", { name: "Save changes" }).click();
+    await expect(page.locator("tr", { hasText: "Neda Karimi" })).toContainText("SOC · L2");
+    // SOC Managers can't promote anyone.
+    expect((await page.request.patch("/api/members/nk", { data: { role: "soc_manager" } })).status()).toBe(403);
+    const ctx = await browser.newContext();
+    expect((await ctx.request.post(new URL("/api/auth/login", page.url()).href, { data: { email: "neda@corp.local", password: "Reset2026!!" } })).ok()).toBeTruthy();
+    await ctx.close();
   });
 });

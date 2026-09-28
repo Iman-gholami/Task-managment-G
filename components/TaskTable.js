@@ -4,27 +4,60 @@ import { useRouter } from "next/navigation";
 import { useApp } from "@/components/AppProvider";
 import Icon from "@/components/ui/Icon";
 import { Complexity, Due, EmptyState, Priority, Quality, Status, Who } from "@/components/ui/indicators";
-import { prioItems, statusItems } from "@/components/ui/menus";
-import { PRIO, STATUS } from "@/lib/format";
+import { prioItems } from "@/components/ui/menus";
+import { PRIO, QUAL, STATUS } from "@/lib/format";
+import { actionLabel, allowedTransitions } from "@/lib/workflow";
 
 const HEAD = { title: "Task", a: "Assignee", team: "Team", status: "Status", prio: "Priority", cx: "Complexity", due: "Deadline", hours: "Hours", quality: "Quality", upd: "Updated" };
 
-/** Opens the inline Status / Priority editor for a task. Shared by table rows, details and keyboard shortcuts. */
-export function useInlineEdit() {
-  const { openPopover, updateTask, toast } = useApp();
-  return (anchor, field, task) =>
+export const qualityItems = () => Object.entries(QUAL).map(([v, l], i) => ({ value: v, label: <Quality q={v} />, kbd: String(i + 1) }));
+
+/**
+ * Workflow-aware status/priority editing shared by the table, details and keyboard shortcuts.
+ * Only transitions the current user is allowed to make are offered; approving asks for quality.
+ */
+export function useTaskActions() {
+  const { openPopover, updateTask, toast, me } = useApp();
+
+  const move = async (anchor, task, to) => {
+    if (task.status === "review" && to === "done") {
+      return openPopover(anchor, {
+        title: "Approve with quality",
+        items: qualityItems(),
+        onPick: async (quality) => {
+          if (await updateTask(task, { status: "done", quality })) toast(`${task.id} approved · ${QUAL[quality]}`);
+        },
+      });
+    }
+    if (await updateTask(task, { status: to })) toast(`${task.id} → ${STATUS[to]}`);
+  };
+
+  const edit = (anchor, field, task) => {
+    if (field === "prio") {
+      if (["done", "cancelled"].includes(task.status)) return toast("Closed tasks can't be changed.");
+      if (task.a !== me.id && !["soc_manager", "security_manager"].includes(me.role)) return toast("You can only edit your own tasks.");
+      return openPopover(anchor, { title: "Priority", items: prioItems(), onPick: async (v) => { if (await updateTask(task, { prio: v })) toast(`${task.id} → ${PRIO[v]}`); } });
+    }
+    const next = allowedTransitions(me, task);
+    if (!next.length) {
+      return toast(task.status === "done" ? "Approved tasks are closed." : task.status === "review" ? "Waiting for a reviewer." : "No status changes available to you.");
+    }
     openPopover(anchor, {
-      title: field === "status" ? "Change status" : "Priority",
-      items: field === "status" ? statusItems() : prioItems(),
-      onPick: async (v) => {
-        if (await updateTask(task, { [field]: v })) toast(`${task.id} → ${field === "status" ? STATUS[v] : PRIO[v]}`);
-      },
+      title: "Move task",
+      items: next.map((s, i) => ({ value: s, label: <><Status s={s} /><span className="muted" style={{ marginLeft: "auto", fontSize: 12 }}>{actionLabel(task.status, s)}</span></>, kbd: String(i + 1) })),
+      onPick: (to) => move(anchor, task, to),
     });
+  };
+
+  return { edit, move };
 }
+
+/** Back-compat alias used by keyboard shortcuts. */
+export const useInlineEdit = () => useTaskActions().edit;
 
 export default function TaskTable({ list, cols, compact, kb = -1, sort, onSort }) {
   const router = useRouter();
-  const edit = useInlineEdit();
+  const { edit } = useTaskActions();
 
   const editable = (field, task, node) => (
     <span className="cell-edit" data-edit={field} role="button" tabIndex={-1} onClick={(e) => { e.stopPropagation(); edit(e.currentTarget, field, task); }}>

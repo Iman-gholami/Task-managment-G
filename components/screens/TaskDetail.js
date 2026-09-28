@@ -1,29 +1,35 @@
 "use client";
 
 import Link from "next/link";
-import { useState } from "react";
-import { useApp } from "@/components/AppProvider";
-import { useInlineEdit } from "@/components/TaskTable";
+import { useEffect, useRef, useState } from "react";
+import { api, useApp } from "@/components/AppProvider";
+import { useTaskActions } from "@/components/TaskTable";
+import useFetch from "@/components/useFetch";
 import Icon from "@/components/ui/Icon";
-import { Avatar, Complexity, Due, EmptyState, Priority, Status, Who } from "@/components/ui/indicators";
+import { Avatar, Complexity, Due, EmptyState, Priority, Quality, Status, Who } from "@/components/ui/indicators";
+import { TableSkeleton } from "@/components/screens/Misc";
+import { STATUS } from "@/lib/format";
+import { isManager } from "@/lib/roles";
+import { actionLabel } from "@/lib/workflow";
 
-const INITIAL_CHECKS = [
-  ["Pull 30 days of VPN auth logs", true], ["Baseline normal login geography per user", true], ["Draft SPL with risk scoring", true],
-  ["Validate against last month's true positives", false], ["Peer review with L2", false],
-];
+const when = (s) => (s ? s.replace("T", " ").slice(0, 16) : "—");
+const size = (n) => (n > 1048576 ? `${(n / 1048576).toFixed(1)} MB` : `${Math.max(1, Math.round(n / 1024))} KB`);
+const ext = (name) => (name.split(".").pop() || "file").slice(0, 4).toUpperCase();
+const EXT_COLOR = { DOC: "#2F5FBF", DOCX: "#2F5FBF", XLS: "#1F7A4A", XLSX: "#1F7A4A", PDF: "#B3412F", TXT: "var(--neutral)", SPL: "#3B7D4F" };
 
 export default function TaskDetail({ id }) {
-  const { tasks, updateTask, toast, me, peopleMap } = useApp();
-  const edit = useInlineEdit();
+  const { tasks, updateTask, toast, me, peopleMap, dispatch } = useApp();
+  const { edit, move } = useTaskActions();
   const t = tasks.find((x) => x.id === id);
-  const demo = id === "T-1042"; // checklist, files and comments are not persisted yet; only the seeded demo task has sample content
-  const [checks, setChecks] = useState(demo ? INITIAL_CHECKS : []);
+  const { data, loading, error, setData, reload } = useFetch(t ? `/api/tasks/${id}` : null);
   const [newItem, setNewItem] = useState("");
-  const [comments, setComments] = useState(!demo ? [] : [
-    { by: "ln", at: "Sep 27, 16:20", body: <>Please coordinate with <span className="mention">@Arash Moradi</span> before enabling in production — L2 owns the escalation path.</> },
-    { by: "sr", at: "Sep 28, 08:05 · edited", body: "Baseline done. False-positive rate on last week's data drops from 41/day to 6/day." },
-  ]);
   const [draft, setDraft] = useState("");
+  const [editing, setEditing] = useState(null);
+  const [uploading, setUploading] = useState(false);
+  const fileRef = useRef(null);
+  const status = t?.status;
+  // Refresh transitions and activity whenever the status changes (approve, return, start…).
+  useEffect(() => { if (status && data) reload(); }, [status]); // eslint-disable-line react-hooks/exhaustive-deps
 
   if (!t) {
     return (
@@ -33,102 +39,188 @@ export default function TaskDetail({ id }) {
     );
   }
 
-  const doneCount = checks.filter((c) => c[1]).length;
-  const setField = async (patch, msg) => { if ((await updateTask(t, patch)) && msg) toast(msg); };
-  const primary =
-    t.status === "todo" || t.status === "backlog" || t.status === "returned" ? ["Start task", () => setField({ status: "progress" }, `${t.id} → In Progress`)]
-    : t.status === "progress" ? ["Submit for Review", () => setField({ status: "review" }, "Submitted for review · Leila Nouri notified")]
-    : t.status === "review" ? ["Approve", () => setField({ status: "done", quality: "good" }, `${t.id} approved · quality: Good`)]
-    : null;
+  const canEdit = t.a === me.id || isManager(me);
+  const closed = t.status === "done" || t.status === "cancelled";
+  const d = data?.details;
+  const transitions = data?.transitions ?? [];
+  const merge = (patch) => setData((x) => ({ ...x, details: { ...x.details, ...patch } }));
 
-  const postComment = () => {
-    if (!draft.trim()) return;
-    setComments((c) => [...c, { by: me.id, at: "Just now", body: draft.trim() }]);
-    setDraft("");
+  /** Runs a mutating request and merges the returned detail lists. */
+  const run = async (url, opts) => {
+    try {
+      merge(await api(url, opts));
+      return true;
+    } catch (e) {
+      toast(e.message);
+      return false;
+    }
   };
+
+  const doMove = (anchor, to) => move(anchor, t, to);
+
+  const upload = async (file) => {
+    if (!file) return;
+    const form = new FormData();
+    form.append("file", file);
+    setUploading(true);
+    if (await run(`/api/tasks/${id}/attachments`, { method: "POST", body: form })) toast(`${file.name} attached`);
+    setUploading(false);
+    fileRef.current.value = "";
+  };
+
+  const doneCount = d?.checklist.filter((c) => c.done).length ?? 0;
+  const primary = transitions.filter((s) => !["cancelled", "blocked"].includes(s));
+  const secondary = transitions.filter((s) => ["cancelled", "blocked"].includes(s));
 
   return (
     <div className="detail">
       <div className="detail-main">
         <div className="mono muted" style={{ marginBottom: 8 }}>{t.id} · {t.team}</div>
         <h1 style={{ font: "var(--text-display)", letterSpacing: "var(--tracking-title)", margin: "0 0 14px" }}>{t.title}</h1>
-        <p className="sec" style={{ fontSize: 14, lineHeight: "22px", maxWidth: 680 }}>
+        <p className="sec" style={{ fontSize: 14, lineHeight: "22px", maxWidth: 680, whiteSpace: "pre-wrap" }}>
           {t.description || <span className="muted">No description.</span>}
         </p>
-        {demo && <div style={{ display: "flex", gap: 8, margin: "14px 0 30px" }}>
-          <span className="file"><span className="ext" style={{ background: "#3B7D4F" }}>SPL</span><span>vpn_anomaly_v3.spl<small>6 KB · Sara Rahimi</small></span></span>
-          <span className="file"><Icon name="link" /><span>Splunk search<small className="mono">splunk/search/88213</small></span></span>
-        </div>}
 
-        <div className="section-head">
-          <h2>Checklist</h2><span className="meta num">{doneCount} of {checks.length}</span>
-          {checks.length > 0 && <div className="progress ok" style={{ width: 80 }}><span style={{ width: `${(doneCount / checks.length) * 100}%` }} /></div>}
-        </div>
-        <div>
-          {checks.map(([label, done], i) => (
-            <label key={label} className={`check-item ${done ? "done" : ""}`}>
-              <span className="grip"><Icon name="grip" /></span>
-              <input type="checkbox" className="cb" checked={done} onChange={() => setChecks((c) => c.map((x, j) => (j === i ? [x[0], !x[1]] : x)))} />
-              <span>{label}</span>
-            </label>
-          ))}
-          <div className="check-item" style={{ color: "var(--text-3)" }}>
-            <span className="grip" /><Icon name="plus" />
-            <input className="input" style={{ border: 0, background: "none", height: 28, padding: 0 }} placeholder="Add item" value={newItem} onChange={(e) => setNewItem(e.target.value)}
-              onKeyDown={(e) => { if (e.key === "Enter" && newItem.trim()) { setChecks((c) => [...c, [newItem.trim(), false]]); setNewItem(""); } }} />
-          </div>
-        </div>
-
-        <div className="hr" />
-        <div className="section-head"><h2>Comments</h2><span className="meta">{comments.length}</span></div>
-        {comments.map((c, i) => (
-          <div key={i}>
-            <div className="comment">
-              <Avatar id={c.by} />
-              <div><div className="h"><b>{peopleMap[c.by]?.name}</b><span className="muted">{c.at}</span></div><p>{c.body}</p></div>
+        {t.status === "review" && (
+          <div className="issue" style={{ borderColor: "var(--violet)", background: "color-mix(in srgb, var(--violet) 10%, transparent)", margin: "18px 0" }}>
+            <div style={{ color: "var(--text)", fontWeight: 500 }}>Waiting for review</div>
+            <div className="sec" style={{ fontSize: 13 }}>
+              {transitions.includes("done") ? "Approve with a quality rating, or return it to the assignee with a comment." : "A manager will approve it or return it for changes."}
             </div>
-            {demo && i === 0 && <div className="activity"><Icon name="chev" />Leila Nouri changed priority Normal → <b style={{ color: "var(--text)" }}>High</b> · Sep 27</div>}
           </div>
-        ))}
-        <div className="composer">
-          <textarea placeholder="Leave a comment… use @ to mention" value={draft} onChange={(e) => setDraft(e.target.value)} onKeyDown={(e) => { if (e.key === "Enter" && (e.metaKey || e.ctrlKey)) postComment(); }} />
-          <div className="bar">
-            <button className="btn btn-ghost icon-btn btn-sm" aria-label="Mention"><Icon name="at" /></button>
-            <button className="btn btn-ghost icon-btn btn-sm" aria-label="Attach"><Icon name="clip" /></button>
-            <button className="btn btn-secondary btn-sm" style={{ marginLeft: "auto" }} onClick={postComment}>Comment <kbd>⌘↵</kbd></button>
+        )}
+        {t.status === "done" && (
+          <div className="issue" style={{ borderColor: "var(--success)", background: "var(--success-soft)", margin: "18px 0" }}>
+            <div style={{ color: "var(--text)", fontWeight: 500 }}>Approved · <Quality q={t.quality} /></div>
+            <div className="sec" style={{ fontSize: 13 }}>This task is closed{d?.completedAt ? ` since ${when(d.completedAt)}` : ""}.{transitions.includes("progress") ? " You can reopen it if more work is needed." : ""}</div>
           </div>
-        </div>
+        )}
+
+        {loading && !d ? <div style={{ marginTop: 24 }}><TableSkeleton rows={5} /></div> : error ? (
+          <EmptyState icon={<Icon name="alert" />} danger title="Couldn't load task details" action={<button className="btn btn-secondary btn-sm" onClick={reload}>Retry</button>}>{error}</EmptyState>
+        ) : d && (
+          <>
+            <div className="section-head" style={{ marginTop: 24 }}>
+              <h2>Attachments</h2><span className="meta">{d.attachments.length}</span>
+              {canEdit && (
+                <div className="right">
+                  <input ref={fileRef} type="file" hidden onChange={(e) => upload(e.target.files[0])} aria-label="Upload attachment" data-testid="attach-input" />
+                  <button className="btn btn-ghost btn-sm" disabled={uploading} onClick={() => fileRef.current.click()}><Icon name="clip" />{uploading ? "Uploading…" : "Attach file"}</button>
+                </div>
+              )}
+            </div>
+            <div style={{ display: "flex", gap: 8, flexWrap: "wrap", marginBottom: 28 }}>
+              {d.attachments.length === 0 && <span className="muted" style={{ fontSize: 13 }}>No files attached.</span>}
+              {d.attachments.map((a) => (
+                <span key={a.id} className="file">
+                  <span className="ext" style={{ background: EXT_COLOR[ext(a.name)] ?? "var(--neutral)" }}>{ext(a.name)}</span>
+                  <a href={`/api/tasks/${id}/attachments/${a.id}`} download>{a.name}<small>{size(a.size)} · {peopleMap[a.by]?.name}</small></a>
+                  {canEdit && <button className="btn btn-ghost icon-btn btn-sm" aria-label={`Remove ${a.name}`} onClick={() => run(`/api/tasks/${id}/attachments/${a.id}`, { method: "DELETE" })}><Icon name="x" /></button>}
+                </span>
+              ))}
+            </div>
+
+            <div className="section-head">
+              <h2>Checklist</h2><span className="meta num">{doneCount} of {d.checklist.length}</span>
+              {d.checklist.length > 0 && <div className="progress ok" style={{ width: 80 }}><span style={{ width: `${(doneCount / d.checklist.length) * 100}%` }} /></div>}
+            </div>
+            <div>
+              {d.checklist.map((c) => (
+                <label key={c.id} className={`check-item ${c.done ? "done" : ""}`}>
+                  <input type="checkbox" className="cb" checked={c.done} disabled={!canEdit || closed}
+                    onChange={() => { merge({ checklist: d.checklist.map((x) => (x.id === c.id ? { ...x, done: !x.done } : x)) }); run(`/api/tasks/${id}/checklist/${c.id}`, { method: "PATCH", body: { done: !c.done } }); }} />
+                  <span style={{ flex: 1 }}>{c.label}</span>
+                  {canEdit && !closed && <button className="btn btn-ghost icon-btn btn-sm grip" aria-label={`Delete ${c.label}`} onClick={(e) => { e.preventDefault(); run(`/api/tasks/${id}/checklist/${c.id}`, { method: "DELETE" }); }}><Icon name="x" /></button>}
+                </label>
+              ))}
+              {canEdit && !closed && (
+                <div className="check-item" style={{ color: "var(--text-3)" }}>
+                  <Icon name="plus" />
+                  <input className="input" style={{ border: 0, background: "none", height: 28, padding: 0 }} placeholder="Add item" value={newItem} onChange={(e) => setNewItem(e.target.value)} aria-label="New checklist item"
+                    onKeyDown={async (e) => { if (e.key === "Enter" && newItem.trim()) { const label = newItem.trim(); setNewItem(""); await run(`/api/tasks/${id}/checklist`, { method: "POST", body: { label } }); } }} />
+                </div>
+              )}
+            </div>
+
+            <div className="hr" />
+            <div className="section-head"><h2>Comments</h2><span className="meta">{d.comments.length}</span></div>
+            {d.comments.map((c) => (
+              <div key={c.id} className="comment">
+                <Avatar id={c.by} />
+                <div>
+                  <div className="h">
+                    <b>{peopleMap[c.by]?.name}</b><span className="muted">{when(c.at)}{c.edited ? " · edited" : ""}</span>
+                    {c.by === me.id && editing?.id !== c.id && (
+                      <span style={{ marginLeft: 8 }}>
+                        <button className="btn btn-ghost btn-sm" onClick={() => setEditing({ id: c.id, body: c.body })}>Edit</button>
+                        <button className="btn btn-ghost btn-sm" onClick={() => run(`/api/tasks/${id}/comments/${c.id}`, { method: "DELETE" })}>Delete</button>
+                      </span>
+                    )}
+                  </div>
+                  {editing?.id === c.id ? (
+                    <div style={{ display: "grid", gap: 6, marginTop: 6 }}>
+                      <textarea className="textarea" value={editing.body} onChange={(e) => setEditing({ ...editing, body: e.target.value })} aria-label="Edit comment" />
+                      <div style={{ display: "flex", gap: 6 }}>
+                        <button className="btn btn-secondary btn-sm" onClick={async () => { if (await run(`/api/tasks/${id}/comments/${c.id}`, { method: "PATCH", body: { body: editing.body } })) setEditing(null); }}>Save</button>
+                        <button className="btn btn-ghost btn-sm" onClick={() => setEditing(null)}>Cancel</button>
+                      </div>
+                    </div>
+                  ) : <p style={{ whiteSpace: "pre-wrap" }}>{highlight(c.body)}</p>}
+                </div>
+              </div>
+            ))}
+            <div className="composer">
+              <textarea placeholder="Leave a comment… use @ to mention" value={draft} onChange={(e) => setDraft(e.target.value)} aria-label="New comment"
+                onKeyDown={async (e) => { if (e.key === "Enter" && (e.metaKey || e.ctrlKey) && draft.trim()) { if (await run(`/api/tasks/${id}/comments`, { method: "POST", body: { body: draft } })) setDraft(""); } }} />
+              <div className="bar">
+                <button className="btn btn-secondary btn-sm" style={{ marginLeft: "auto" }} disabled={!draft.trim()}
+                  onClick={async () => { if (await run(`/api/tasks/${id}/comments`, { method: "POST", body: { body: draft } })) setDraft(""); }}>Comment <kbd>⌘↵</kbd></button>
+              </div>
+            </div>
+          </>
+        )}
       </div>
 
       <aside className="detail-side">
-        <div style={{ display: "flex", gap: 8, marginBottom: 18 }}>
-          {primary && <button className="btn btn-primary" style={{ flex: 1, justifyContent: "center" }} onClick={primary[1]}>{primary[0]}</button>}
-          {t.status === "review" && <button className="btn btn-secondary" onClick={() => setField({ status: "returned" }, `${t.id} returned to ${peopleMap[t.a]?.name.split(" ")[0]}`)}>Return</button>}
-          <button className="btn btn-secondary icon-btn" aria-label="More actions"><Icon name="more" /></button>
+        <div style={{ display: "flex", gap: 8, marginBottom: 18, flexWrap: "wrap" }}>
+          {primary.map((s, i) => (
+            <button key={s} className={`btn ${i === 0 ? "btn-primary" : "btn-secondary"}`} style={i === 0 ? { flex: 1, justifyContent: "center" } : undefined} onClick={(e) => doMove(e.currentTarget, s)}>
+              {actionLabel(t.status, s) ?? STATUS[s]}
+            </button>
+          ))}
+          {secondary.map((s) => <button key={s} className="btn btn-ghost btn-sm" onClick={(e) => doMove(e.currentTarget, s)}>{actionLabel(t.status, s)}</button>)}
+          {!transitions.length && data && <span className="muted" style={{ fontSize: 12 }}>{t.status === "review" ? "Waiting for a reviewer." : closed ? "This task is closed." : "No actions available to you."}</span>}
         </div>
         <dl className="kv">
           <dt>Status</dt><dd><span className="cell-edit" role="button" onClick={(e) => edit(e.currentTarget, "status", t)}><Status s={t.status} /></span></dd>
-          <dt>Assignee</dt><dd><span className="cell-edit"><Who id={t.a} /></span></dd>
+          <dt>Assignee</dt><dd><Who id={t.a} /></dd>
           <dt>Priority</dt><dd><span className="cell-edit" role="button" onClick={(e) => edit(e.currentTarget, "prio", t)}><Priority p={t.prio} /></span></dd>
-          <dt>Complexity</dt><dd><span className="cell-edit"><Complexity c={t.cx} /></span></dd>
-          <dt>Start</dt><dd className="num">Sep 24</dd>
+          <dt>Complexity</dt><dd><Complexity c={t.cx} /></dd>
+          <dt>Started</dt><dd className="num">{when(d?.startedAt)}</dd>
           <dt>Deadline</dt><dd><Due task={t} /></dd>
           <dt>Actual hours</dt>
           <dd>
-            <span className="stepper">
-              <button aria-label="Decrease hours" onClick={() => setField({ hours: Math.max(0, t.hours - 0.5) })}>−</button>
-              <input aria-label="Actual hours" value={t.hours} onChange={(e) => setField({ hours: Number(e.target.value) || 0 })} inputMode="decimal" />
-              <button aria-label="Increase hours" onClick={() => setField({ hours: t.hours + 0.5 })}>+</button>
-            </span>
+            {canEdit && !closed ? (
+              <span className="stepper">
+                <button aria-label="Decrease hours" onClick={() => updateTask(t, { hours: Math.max(0, t.hours - 0.5) })}>−</button>
+                <input aria-label="Actual hours" defaultValue={t.hours} key={t.hours} inputMode="decimal" onBlur={(e) => { const h = Number(e.target.value); if (Number.isFinite(h) && h !== t.hours) updateTask(t, { hours: h }); }} />
+                <button aria-label="Increase hours" onClick={() => updateTask(t, { hours: t.hours + 0.5 })}>+</button>
+              </span>
+            ) : <span className="num">{t.hours.toFixed(1)}</span>}
           </dd>
-          <dt>Reviewer</dt><dd><Who id="ln" /></dd>
-          <dt>Quality</dt><dd className="muted">{t.quality ? t.quality[0].toUpperCase() + t.quality.slice(1) : "Set on approval"}</dd>
+          <dt>Created by</dt><dd>{d?.createdBy ? <Who id={d.createdBy} /> : <span className="muted">—</span>}</dd>
+          <dt>Quality</dt><dd>{t.quality ? <Quality q={t.quality} /> : <span className="muted">Set on approval</span>}</dd>
         </dl>
         <div className="side-h">Activity</div>
-        <div style={{ fontSize: 12, color: "var(--text-3)", display: "grid", gap: 8 }}>
-          <div>Created by Leila Nouri · Sep 24</div><div>Status → In Progress · Sep 24</div><div>Hours logged +2.5 · Today</div>
+        <div style={{ fontSize: 12, color: "var(--text-3)", display: "grid", gap: 8 }} data-testid="activity">
+          {d?.events.length ? d.events.map((e) => <div key={e.id}><span style={{ color: "var(--text-2)" }}>{peopleMap[e.by]?.name ?? "System"}</span> {e.text} · {when(e.at)}</div>) : <div>No activity yet.</div>}
         </div>
       </aside>
     </div>
   );
+}
+
+/** Renders @Full Name mentions in the accent color. */
+function highlight(body) {
+  return body.split(/(@[A-Z][\w-]*(?: [A-Z][\w-]*)?)/g).map((part, i) => (part.startsWith("@") ? <span key={i} className="mention">{part}</span> : part));
 }

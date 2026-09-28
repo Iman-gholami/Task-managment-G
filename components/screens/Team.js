@@ -8,7 +8,7 @@ import Icon from "@/components/ui/Icon";
 import { EmptyState, Status, Who } from "@/components/ui/indicators";
 import { ROLE_LABELS, assignableFor, canManageMember } from "@/lib/roles";
 
-export function PeopleTable({ list, onRemove }) {
+export function PeopleTable({ list, onRemove, onEdit }) {
   const router = useRouter();
   const { me } = useApp();
   return (
@@ -36,6 +36,7 @@ export function PeopleTable({ list, onRemove }) {
             <td className="r" onClick={(e) => e.stopPropagation()}>
               <span style={{ display: "inline-flex", gap: 4 }}>
                 <Link className="btn btn-ghost btn-sm" href="/performance/employees">Performance</Link>
+                {onEdit && canManageMember(me, p) && <button className="btn btn-ghost btn-sm" onClick={() => onEdit(p)} aria-label={`Edit ${p.name}`}>Edit</button>}
                 {onRemove && canManageMember(me, p) && (
                   <button className="btn btn-ghost btn-sm" style={{ color: "var(--danger)" }} onClick={() => onRemove(p)} aria-label={`Remove ${p.name}`}>Remove</button>
                 )}
@@ -56,6 +57,7 @@ export default function Team() {
   const [q, setQ] = useState("");
   const [adding, setAdding] = useState(false);
   const [removing, setRemoving] = useState(null);
+  const [editingMember, setEditingMember] = useState(null);
   const canAdd = assignableFor(me).roles.length > 0;
 
   const list = members
@@ -86,8 +88,9 @@ export default function Team() {
       <div className="toolbar">
         <div className="search"><Icon name="search" /><input className="input" placeholder="Search people" value={q} onChange={(e) => setQ(e.target.value)} /></div>
       </div>
-      {list.length ? <PeopleTable list={list} onRemove={setRemoving} /> : <EmptyState icon={<Icon name="team" />} title="No people match">Try a different name or team.</EmptyState>}
+      {list.length ? <PeopleTable list={list} onRemove={setRemoving} onEdit={setEditingMember} /> : <EmptyState icon={<Icon name="team" />} title="No people match">Try a different name or team.</EmptyState>}
       {adding && <AddMemberModal onClose={() => setAdding(false)} />}
+      {editingMember && <EditMemberModal member={editingMember} onClose={() => setEditingMember(null)} />}
       {removing && (
         <Dialog label="Remove member" onClose={() => setRemoving(null)}>
           <div className="modal-body">
@@ -162,6 +165,60 @@ function AddMemberModal({ onClose }) {
           <span style={{ marginLeft: "auto" }} />
           <button type="button" className="btn btn-ghost" onClick={onClose}>Cancel</button>
           <button className="btn btn-primary" disabled={busy}>Add Member</button>
+        </div>
+      </form>
+    </Dialog>
+  );
+}
+
+function EditMemberModal({ member, onClose }) {
+  const { me, dispatch, toast } = useApp();
+  const { roles, teams } = assignableFor(me);
+  const [form, setForm] = useState({ role: member.role, team: member.team, password: "" });
+  const [error, setError] = useState("");
+  const [busy, setBusy] = useState(false);
+  const set = (k) => (e) => { setForm((f) => ({ ...f, [k]: e.target.value })); setError(""); };
+  const roleOptions = roles.includes(member.role) ? roles : [member.role, ...roles];
+  const teamOptions = teams.includes(member.team) ? teams : [member.team, ...teams];
+
+  const submit = async (e) => {
+    e.preventDefault();
+    setBusy(true);
+    try {
+      const body = { role: form.role, team: form.team, ...(form.password ? { password: form.password } : {}) };
+      const { user } = await api(`/api/members/${member.id}`, { method: "PATCH", body });
+      dispatch({ type: "users/update", user });
+      toast(`${member.name} updated${form.password ? " · password reset" : ""}`);
+      onClose();
+    } catch (err) {
+      setError(err.message);
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  return (
+    <Dialog label="Edit member" onClose={onClose} width={520}>
+      <form onSubmit={submit}>
+        <div className="modal-body" style={{ display: "grid", gap: 14 }}>
+          <h3 style={{ margin: 0, font: "var(--text-section)" }}>Edit {member.name}</h3>
+          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
+            <div className="field"><label htmlFor="e-role">Role</label>
+              <select id="e-role" className="input" value={form.role} onChange={set("role")}>{roleOptions.map((r) => <option key={r} value={r}>{ROLE_LABELS[r]}</option>)}</select>
+            </div>
+            <div className="field"><label htmlFor="e-team">Primary team</label>
+              <select id="e-team" className="input" value={form.team} onChange={set("team")}>{teamOptions.map((t) => <option key={t}>{t}</option>)}</select>
+            </div>
+          </div>
+          <div className="field"><label htmlFor="e-pass">Reset password (optional)</label><input id="e-pass" type="password" className="input" value={form.password} onChange={set("password")} minLength={8} autoComplete="new-password" />
+            <span className="muted" style={{ fontSize: 12 }}>Leave empty to keep the current password. Resetting signs the member out.</span>
+          </div>
+          {error && <div role="alert" style={{ color: "var(--danger)", fontSize: 13 }}>{error}</div>}
+        </div>
+        <div className="modal-foot">
+          <span style={{ marginLeft: "auto" }} />
+          <button type="button" className="btn btn-ghost" onClick={onClose}>Cancel</button>
+          <button className="btn btn-primary" disabled={busy}>Save changes</button>
         </div>
       </form>
     </Dialog>

@@ -27,6 +27,8 @@ function reducer(state, action) {
       return { ...state, shiftDone: action.value };
     case "users/add":
       return { ...state, users: [...state.users, action.user].sort((a, b) => a.name.localeCompare(b.name)) };
+    case "users/update":
+      return { ...state, users: state.users.map((u) => (u.id === action.user.id ? { ...u, ...action.user } : u)) };
     case "users/deactivate":
       return { ...state, users: state.users.map((u) => (u.id === action.id ? { ...u, active: false } : u)) };
     default:
@@ -47,9 +49,10 @@ function writePref(key, value) {
   } catch {}
 }
 
-/** JSON fetch helper for the app's API. Throws Error(message) on non-2xx. */
+/** JSON fetch helper for the app's API. Throws Error(message) on non-2xx. `body` may be FormData. */
 export async function api(url, { method = "GET", body } = {}) {
-  const res = await fetch(url, { method, headers: body ? { "Content-Type": "application/json" } : undefined, body: body ? JSON.stringify(body) : undefined });
+  const form = typeof FormData !== "undefined" && body instanceof FormData;
+  const res = await fetch(url, { method, headers: body && !form ? { "Content-Type": "application/json" } : undefined, body: body ? (form ? body : JSON.stringify(body)) : undefined });
   const json = await res.json().catch(() => ({}));
   if (res.status === 401 && !url.startsWith("/api/auth/")) window.location.href = "/login";
   if (!res.ok) throw new Error(json.error || "Something went wrong. Try again.");
@@ -65,7 +68,7 @@ export default function AppProvider({ children, initial }) {
     tickets: initial.shift.tickets,
     shiftDone: !!initial.shift.completedAt,
     shiftDate: initial.shift.date,
-    allTickets: initial.allTickets,
+    stats: initial.stats,
   });
   const role = dashboardFor(initial.me);
   const [theme, setThemeState] = useState("dark");

@@ -4,15 +4,16 @@
   "private": true,
   "description": "Task management, SOC shift logs and workforce performance for the Security Department.",
   "scripts": {
-    "dev": "next dev",
-    "build": "next build",
-    "start": "next start",
+    "dev": "node scripts/next.mjs dev",
+    "build": "node scripts/next.mjs build",
+    "start": "node scripts/next.mjs start",
     "test": "playwright test"
   },
   "engines": {
     "node": ">=22.13.0"
   },
   "dependencies": {
+    "exceljs": "^4.4.0",
     "next": "16.3.6",
     "react": "19.3.0",
     "react-dom": "19.3.0",
