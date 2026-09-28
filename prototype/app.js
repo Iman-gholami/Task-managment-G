@@ -453,7 +453,7 @@ function states() {
 }
 
 function login() {
-  return `<div class="login"><div class="login-l"><form class="login-form" onsubmit="location.hash='#/dashboard';return false">
+  return `<div class="login"><div class="login-l"><form class="login-form" id="login-form">
     <div class="brand" style="padding:0;margin-bottom:20px"><span class="brand-mark">S</span><span>Sentinel Ops</span></div>
     <h1 style="font:var(--text-display);letter-spacing:var(--tracking-title);margin:0">Sign in</h1><p class="sec" style="margin:-6px 0 8px">Security Department workspace</p>
     <button type="button" class="btn btn-secondary" style="justify-content:center;height:36px">Continue with SSO</button>
@@ -547,6 +547,9 @@ document.addEventListener("click", e => {
   if (d.ioc) { const a = activities[7]; a.iocs = Math.max(0, a.iocs + +d.ioc); $("#ioc").value = a.iocs; }
   if (d.issue) { const box = $(`#issue-${d.issue}`); box.hidden = !box.hidden; box.innerHTML = `<div class="issue"><input class="input" placeholder="Issue summary" autofocus><textarea class="textarea" placeholder="What happened? (optional)"></textarea><div style="display:flex;gap:8px"><button class="btn btn-ghost btn-sm">${ic("clip")}Attachment</button><button class="btn btn-ghost btn-sm">${ic("link")}External reference</button><button class="btn btn-secondary btn-sm" style="margin-left:auto">Save issue</button></div></div>`; $("input", box)?.focus(); }
   if (d.task && !e.target.closest(".cell-edit")) location.hash = "#/tasks/" + d.task;
+});
+document.addEventListener("submit", e => {
+  if (e.target.id === "login-form") { e.preventDefault(); location.hash = "#/dashboard"; }
 });
 document.addEventListener("keydown", e => {
   if (e.target.matches("input,textarea,[contenteditable]")) { if (e.key === "Escape") e.target.blur(); return; }
