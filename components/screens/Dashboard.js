@@ -52,7 +52,7 @@ function AnalystDashboard() {
         <div className="metric"><div className="l">Due in 48h</div><div className="v">{dueSoon}</div></div>
         <div className={`metric ${overdue ? "alert" : ""}`}><div className="l">Overdue</div><div className="v">{overdue}</div></div>
         <div className="metric"><div className="l">Awaiting review</div><div className="v">{inReview}</div></div>
-        <Link className="metric link" href="/performance/employees"><div className="l">Completed · {month}</div><div className="v">{stats.my.completed}</div></Link>
+        <Link className="metric link" href={`/performance/employees/${me.id}`}><div className="l">Completed · {month}</div><div className="v">{stats.my.completed}</div></Link>
         {shift && <div className="metric"><div className="l">MISP IOCs · {month}</div><div className="v">{stats.my.iocs}</div></div>}
         {shift && <div className="metric"><div className="l">Tickets · {month}</div><div className="v">{stats.my.tickets}</div></div>}
       </div>
@@ -100,7 +100,6 @@ function useAttention(scope) {
   const { tasks, members, me, peopleMap } = useApp();
   const inScope = (t) => scope(peopleMap[t.a] ?? { team: t.team });
   const items = [];
-  members.filter((m) => m.shift === "missing").forEach((m) => items.push({ icon: "alert", tone: "danger", text: `${m.name} has not started today's Shift Log`, label: "History", href: `/shift/history?user=${m.id}` }));
   tasks.filter((t) => isOpen(t) && t.due !== "—" && t.due < TODAY && inScope(t)).forEach((t) => items.push({ icon: "flag", tone: "danger", text: `${t.id} is overdue · ${peopleMap[t.a]?.name}`, label: "Open", href: `/tasks/${t.id}` }));
   tasks.filter((t) => t.status === "review" && t.a !== me.id && inScope(t)).forEach((t) => items.push({ icon: "tasks", tone: "violet", text: `${t.id} awaiting your review · ${peopleMap[t.a]?.name}`, label: "Review", href: `/tasks/${t.id}` }));
   tasks.filter((t) => t.status === "blocked" && inScope(t)).forEach((t) => items.push({ icon: "alert", tone: "warning", text: `${t.id} is blocked · ${peopleMap[t.a]?.name}`, label: "Open", href: `/tasks/${t.id}` }));
@@ -129,23 +128,22 @@ function AttentionList({ items }) {
 }
 
 function SocDashboard() {
-  const { members, tasks, stats, peopleMap } = useApp();
+  const { members, tasks, stats, peopleMap, me } = useApp();
   const soc = members.filter((p) => p.team.startsWith("SOC ·") || p.assist?.startsWith("SOC"));
   const socTask = (t) => (peopleMap[t.a]?.team ?? t.team).startsWith("SOC");
   const attention = useAttention((u) => u.team.startsWith("SOC"));
-  const analysts = soc.filter((p) => p.shift);
   const month = monthName(stats.period.from);
   return (
     <div className="page">
       <div className="page-head">
-        <div><h1>SOC overview</h1><p>{weekday(TODAY)}, {longDate(TODAY)} · {analysts.length} analysts</p></div>
-        <div className="actions"><Link className="btn btn-secondary" href="/shift/team">Team Shift Logs</Link><CreateButton primary /></div>
+        <div><h1>SOC overview</h1><p>{weekday(TODAY)}, {longDate(TODAY)} · {soc.length} people</p></div>
+        <div className="actions"><Link className="btn btn-secondary" href="/tasks/assigned">Assigned by Me</Link><CreateButton primary /></div>
       </div>
       <div className="metrics">
         <Link className="metric link" href="/tasks/team"><div className="l">Active team tasks</div><div className="v">{tasks.filter((t) => isOpen(t) && t.status !== "backlog" && socTask(t)).length}</div></Link>
+        <Link className="metric link" href="/tasks/assigned"><div className="l">Assigned by me · open</div><div className="v">{tasks.filter((t) => t.createdBy === me.id && t.a !== me.id && isOpen(t)).length}</div></Link>
         <div className={`metric ${attention.some((a) => a.icon === "flag") ? "alert" : ""}`}><div className="l">Overdue</div><div className="v">{attention.filter((a) => a.icon === "flag").length}</div></div>
         <div className="metric"><div className="l">Awaiting your review</div><div className="v">{attention.filter((a) => a.label === "Review").length}</div></div>
-        <Link className="metric link" href="/shift/team"><div className="l">Shift completion today</div><div className="v">{stats.soc.shiftCompletion}%</div></Link>
         <div className="metric"><div className="l">MISP IOCs · {month}</div><div className="v">{stats.soc.iocs} <Spark values={stats.soc.iocSeries} width={56} height={20} /></div></div>
         <div className="metric"><div className="l">Tickets · {month}</div><div className="v">{stats.soc.tickets} <Spark values={stats.soc.ticketSeries} width={56} height={20} /></div></div>
       </div>
@@ -160,16 +158,7 @@ function SocDashboard() {
               <span className="num sec" style={{ textAlign: "right" }}>{p.open}</span>
             </div>
           ))}
-          <div className="section-head" style={{ marginTop: 28 }}><h2>Today&apos;s shift logs</h2><div className="right"><Link className="btn btn-ghost btn-sm" href="/shift/team">Details</Link></div></div>
-          {analysts.map((p) => (
-            <div key={p.id} className="hbar">
-              <span className="who"><Avatar id={p.id} />{p.name.split(" ")[0]}</span>
-              <div className="track"><span style={{ width: `${{ active: 50, completed: 100, missing: 0 }[p.shift]}%`, background: "var(--success)" }} /></div>
-              <span style={{ textAlign: "right" }}>
-                {p.shift === "missing" ? <span className="badge danger">Missing</span> : p.shift === "completed" ? <span className="badge success">Done</span> : <span className="badge primary">Active</span>}
-              </span>
-            </div>
-          ))}
+          {soc.length === 0 && <p className="muted">No SOC members yet. Add them from the Team page.</p>}
         </section>
       </div>
     </div>
@@ -194,7 +183,7 @@ function SecurityDashboard() {
         <div className="metric"><div className="l">Active tasks</div><div className="v">{data ? sum("active") : "—"}</div></div>
         <div className={`metric ${sum("overdue") ? "alert" : ""}`}><div className="l">Overdue</div><div className="v">{data ? sum("overdue") : "—"}</div></div>
         <div className="metric"><div className="l">Task hours logged</div><div className="v">{data ? Math.round(sum("hours")) : "—"}</div></div>
-        <div className="metric"><div className="l">Shift log compliance · month</div><div className="v">{stats.department.shiftCompliance}%</div></div>
+        <div className="metric"><div className="l">People</div><div className="v">{members.length}</div></div>
       </div>
       <section className="section">
         <div className="section-head"><h2>Team comparison</h2><span className="meta">Completed tasks · 6-month trend</span></div>

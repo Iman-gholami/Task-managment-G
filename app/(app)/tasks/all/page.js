@@ -1,7 +1,6 @@
-import Tasks from "@/components/screens/Tasks";
+import { redirect } from "next/navigation";
 
-export const metadata = { title: "All Tasks" };
-
+// "All Tasks" was merged into Team Tasks (a Security Manager's team is the whole department).
 export default function Page() {
-  return <Tasks scope="all" />;
+  redirect("/tasks/team");
 }

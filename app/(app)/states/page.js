@@ -1,7 +1,5 @@
-import { States } from "@/components/screens/Misc";
-
-export const metadata = { title: "States" };
+import { redirect } from "next/navigation";
 
 export default function Page() {
-  return <States />;
+  redirect("/dashboard");
 }

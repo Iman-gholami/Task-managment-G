@@ -5,18 +5,19 @@ import { useRouter } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
 import { api, useApp } from "@/components/AppProvider";
 import Icon from "@/components/ui/Icon";
-import { EmptyState, Status, Who } from "@/components/ui/indicators";
-import { ROLE_LABELS, assignableFor, canManageMember } from "@/lib/roles";
+import { EmptyState, Who } from "@/components/ui/indicators";
+import { ROLE_LABELS, assignableFor, canManageMember, isManager } from "@/lib/roles";
 
 export function PeopleTable({ list, onRemove, onEdit }) {
   const router = useRouter();
   const { me } = useApp();
+  const canView = (p) => p.id === me.id || isManager(me);
   return (
     <table className="dt">
-      <thead><tr><th>Name</th><th>Role</th><th>Primary team</th><th>Workload</th><th className="r">Open tasks</th><th>Shift today</th><th /></tr></thead>
+      <thead><tr><th>Name</th><th>Role</th><th>Primary team</th><th>Workload</th><th className="r">Open tasks</th><th /></tr></thead>
       <tbody>
         {list.map((p) => (
-          <tr key={p.id} data-member={p.id} onClick={() => router.push("/performance/employees")}>
+          <tr key={p.id} data-member={p.id} style={canView(p) ? undefined : { cursor: "default" }} onClick={() => canView(p) && router.push(`/performance/employees/${p.id}`)}>
             <td className="title"><Who id={p.id} /></td>
             <td>{ROLE_LABELS[p.role] ?? p.role}</td>
             <td>{p.team}{p.assist && <span className="muted"> · assisting {p.assist}</span>}</td>
@@ -27,15 +28,9 @@ export function PeopleTable({ list, onRemove, onEdit }) {
               </span>
             </td>
             <td className="r num">{p.open}</td>
-            <td>
-              {p.shift === "missing" ? <span className="badge danger">Not started</span>
-                : p.shift === "completed" ? <Status s="done" label="Completed" />
-                : p.shift === "active" ? <Status s="progress" label="In progress" />
-                : <span className="muted">—</span>}
-            </td>
             <td className="r" onClick={(e) => e.stopPropagation()}>
               <span style={{ display: "inline-flex", gap: 4 }}>
-                <Link className="btn btn-ghost btn-sm" href="/performance/employees">Performance</Link>
+                {canView(p) && <Link className="btn btn-ghost btn-sm" href={`/performance/employees/${p.id}`}>Performance</Link>}
                 {onEdit && canManageMember(me, p) && <button className="btn btn-ghost btn-sm" onClick={() => onEdit(p)} aria-label={`Edit ${p.name}`}>Edit</button>}
                 {onRemove && canManageMember(me, p) && (
                   <button className="btn btn-ghost btn-sm" style={{ color: "var(--danger)" }} onClick={() => onRemove(p)} aria-label={`Remove ${p.name}`}>Remove</button>

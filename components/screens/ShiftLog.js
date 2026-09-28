@@ -68,7 +68,7 @@ export default function ShiftLog({ view }) {
     <div className="page narrow" style={{ maxWidth: 1080, paddingBottom: 0 }}>
       <div className="page-head" style={{ marginBottom: 0 }}>
         <div><h1>Shift Log — {longDate(shiftDate)}</h1></div>
-        <div className="actions"><Link className="btn btn-ghost" href={view ? `/shift/history?user=${owner}` : "/shift/history"}>History</Link>{view && <Link className="btn btn-secondary" href="/shift/team">Team shift logs</Link>}</div>
+        <div className="actions"><Link className="btn btn-ghost" href="/shift/history">History</Link></div>
       </div>
       <div className="shift-head">
         <div className="ring" style={{ "--v": (done / activities.length) * 100 }} aria-label={`${Math.round((done / activities.length) * 100)}% complete`} />

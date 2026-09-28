@@ -3,83 +3,95 @@
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { Fragment, useEffect, useRef } from "react";
-import { useApp } from "@/components/AppProvider";
+import { api, useApp } from "@/components/AppProvider";
 import Icon from "@/components/ui/Icon";
 import { Avatar } from "@/components/ui/indicators";
 import CreateTaskModal from "@/components/CreateTaskModal";
-import { isOpen } from "@/lib/format";
-import { ROLE_LABELS } from "@/lib/roles";
-import { api } from "@/components/AppProvider";
+import { TODAY, addDays, isOpen } from "@/lib/format";
+import { ROLE_LABELS, isManager } from "@/lib/roles";
 import { REPORTS } from "@/lib/reports";
+import { inTeamScope } from "@/components/screens/Tasks";
 
 const REPORT_NAMES = Object.fromEntries(REPORTS.map(([k, n]) => [k, n]));
+const TASK_VIEWS = { my: "My Tasks", assigned: "Assigned by Me", team: "Team Tasks" };
 
-function crumbsFor(path) {
-  const [a, b] = path.split("/").filter(Boolean);
+function crumbsFor(path, peopleMap) {
+  const [a, b, c] = path.split("/").filter(Boolean);
   switch (a) {
     case "tasks":
-      return b === "my" ? ["Tasks", "My Tasks"] : b === "team" ? ["Tasks", "Team Tasks"] : b === "all" ? ["Tasks", "All Tasks"] : ["Tasks", b];
+      return ["Tasks", TASK_VIEWS[b] ?? b];
     case "shift":
-      return ["Shift Logs", b === "history" ? "History" : b === "team" ? "Team Today" : b === "view" ? "Log" : "Today"];
+      return ["Shift Log", b === "history" ? "History" : "Today"];
     case "team":
       return ["Team"];
     case "performance":
-      return b === "employees" ? ["Performance", "Employee"] : ["Performance", "Overview"];
+      return b === "employees" ? ["Performance", peopleMap[c]?.name ?? "Employee"] : ["Performance", "Overview"];
     case "reports":
       return ["Reports", REPORT_NAMES[b] || "Reports"];
     case "account":
       return ["Account"];
     case "admin":
       return ["Administration", "Users & Roles"];
-    case "states":
-      return ["System", "States"];
     default:
       return ["Dashboard"];
   }
 }
 
-const JUMPS = [
-  ["/dashboard", "Dashboard"], ["/tasks/my", "My Tasks"], ["/tasks/team", "Team Tasks"], ["/shift", "Shift Log"],
-  ["/performance/employees", "Performance"], ["/reports/employee", "Reports"], ["/reports/tickets", "Ticket Report"], ["/account", "Account & password"],
-];
-
-const NOTIFICATIONS = [
-  ["New task assigned", "T-1042 · by Leila Nouri", "3h"],
-  ["Task returned", "T-1033 · changes requested", "1h"],
-  ["Mentioned in comment", "T-1038 · Reza Jafari", "1d"],
-  ["Deadline approaching", "T-1041 due in 2 days", "1d"],
-];
+/** Notifications derived from live task data. */
+function useNotifications() {
+  const { tasks, me, peopleMap } = useApp();
+  const manager = isManager(me);
+  const list = [];
+  for (const t of tasks) {
+    if (t.a === me.id && t.status === "returned") list.push(["Task returned for changes", t]);
+    else if (manager && t.status === "review" && t.a !== me.id && (t.createdBy === me.id || inTeamScope(me, peopleMap[t.a]))) list.push(["Waiting for your review", t]);
+    else if (t.a === me.id && isOpen(t) && t.due !== "—" && t.due < TODAY) list.push(["Overdue", t]);
+    else if (t.a === me.id && isOpen(t) && t.due !== "—" && t.due <= addDays(TODAY, 2)) list.push(["Deadline approaching", t]);
+    else if (t.a === me.id && t.status === "todo" && t.createdBy && t.createdBy !== me.id) list.push(["New task assigned", t]);
+  }
+  return list.slice(0, 12);
+}
 
 export default function AppShell({ children }) {
-  const app = useApp();
-  const { me, theme, setTheme, collapsed, setCollapsed, openPopover, setCreateOpen, tasks } = app;
+  const { me, theme, setTheme, collapsed, setCollapsed, openPopover, setCreateOpen, tasks, peopleMap } = useApp();
   const path = usePathname();
   const router = useRouter();
   const cmdRef = useRef(null);
-  const crumbs = crumbsFor(path);
+  const crumbs = crumbsFor(path, peopleMap);
+  const manager = isManager(me);
+  const notifications = useNotifications();
 
   const counts = {
     "/tasks/my": tasks.filter((t) => t.a === me.id && isOpen(t)).length,
-    "/tasks/team": tasks.filter((t) => t.team.startsWith("SOC") && isOpen(t)).length,
+    "/tasks/assigned": tasks.filter((t) => t.createdBy === me.id && t.a !== me.id && isOpen(t)).length,
   };
-  const manager = me.role === "soc_manager" || me.role === "security_manager";
+  const taskViews = manager
+    ? [["/tasks/assigned", "Assigned by Me"], ["/tasks/team", "Team Tasks"], ["/tasks/my", "My Tasks"]]
+    : [["/tasks/my", "My Tasks"], ["/tasks/team", "Team Tasks"]];
+  // Shift logs belong to SOC analysts only; managers see shift figures in Performance and Reports.
   const NAV = [
     ["/dashboard", "Dashboard", "home"],
-    ["/tasks", "Tasks", "tasks", [["/tasks/my", "My Tasks"], ["/tasks/team", "Team Tasks"], ["/tasks/all", "All Tasks"]]],
-    me.keepsShiftLog && ["/shift", "Shift Logs", "shift", [["/shift", "Today"], ["/shift/history", "History"]]],
-    manager && ["/shift", "Shift Logs", "shift", [["/shift/team", "Team Today"], ["/shift/history", "History"]]],
+    ["/tasks", "Tasks", "tasks", taskViews],
+    me.keepsShiftLog && ["/shift", "Shift Log", "shift", [["/shift", "Today"], ["/shift/history", "History"]]],
     ["/team", "Team", "team"],
-    manager ? ["/performance", "Performance", "perf", [["/performance/overview", "Overview"], ["/performance/employees", "Employees"]]] : ["/performance/employees", "My Performance", "perf"],
+    manager ? ["/performance", "Performance", "perf", [["/performance/overview", "Overview"]]] : [`/performance/employees/${me.id}`, "My Performance", "perf"],
     ["/reports", "Reports", "report"],
     manager && ["/admin", "Administration", "admin"],
     ["/account", "Account", "admin"],
+  ].filter(Boolean);
+
+  const jumps = [
+    ["/dashboard", "Dashboard"], ...taskViews,
+    me.keepsShiftLog && ["/shift", "Shift Log"],
+    manager ? ["/performance/overview", "Performance"] : [`/performance/employees/${me.id}`, "My Performance"],
+    ["/reports/employee", "Reports"], ["/account", "Account & password"],
   ].filter(Boolean);
 
   const openCommand = () =>
     openPopover(cmdRef.current, {
       title: "Jump to",
       width: 300,
-      items: [...JUMPS.map(([v, l]) => ({ value: v, label: l })), { value: "create", label: <><Icon name="plus" />Create Task</>, kbd: "C" }],
+      items: [...jumps.map(([v, l]) => ({ value: v, label: l })), { value: "create", label: <><Icon name="plus" />Create Task</>, kbd: "C" }],
       onPick: (v) => (v === "create" ? setCreateOpen(true) : router.push(v)),
     });
 
@@ -137,15 +149,19 @@ export default function AppShell({ children }) {
           <div className="cmdk" ref={cmdRef} role="button" tabIndex={0} onClick={openCommand} onKeyDown={(e) => e.key === "Enter" && openCommand()}>
             <Icon name="search" />Search or jump to…<kbd>⌘K</kbd>
           </div>
-          <button className="btn btn-ghost icon-btn" aria-label="Notifications" onClick={(e) => openPopover(e.currentTarget, {
+          <button className="btn btn-ghost icon-btn" aria-label="Notifications" style={{ position: "relative" }} onClick={(e) => openPopover(e.currentTarget, {
             title: "Notifications",
-            render: () => NOTIFICATIONS.map(([a, b, w]) => (
-              <div key={a} className="mi" style={{ height: "auto", padding: 8, alignItems: "flex-start", width: 320 }}>
-                <div><div>{a}</div><div className="muted" style={{ fontSize: 12 }}>{b}</div></div>
-                <span className="muted" style={{ marginLeft: "auto", fontSize: 12 }}>{w}</span>
-              </div>
-            )),
-          })}><Icon name="bell" /></button>
+            render: (close) => notifications.length === 0
+              ? <div className="mi muted" style={{ width: 320 }}>You&apos;re all caught up.</div>
+              : notifications.map(([title, t]) => (
+                <div key={title + t.id} className="mi" style={{ height: "auto", padding: 8, alignItems: "flex-start", width: 320 }} onClick={() => { close(); router.push(`/tasks/${t.id}`); }}>
+                  <div><div>{title}</div><div className="muted" style={{ fontSize: 12 }}>{t.id} · {t.title}</div></div>
+                </div>
+              )),
+          })}>
+            <Icon name="bell" />
+            {notifications.length > 0 && <span style={{ position: "absolute", top: 6, right: 6, width: 7, height: 7, borderRadius: "50%", background: "var(--primary)" }} />}
+          </button>
           <button className="btn btn-ghost icon-btn" aria-label="Toggle theme" onClick={() => setTheme(theme === "dark" ? "light" : "dark")}><Icon name="sun" /></button>
         </header>
         <div className="content">{children}</div>

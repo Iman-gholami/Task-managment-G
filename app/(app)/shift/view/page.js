@@ -1,8 +1,6 @@
-import { Suspense } from "react";
-import { ShiftView } from "@/components/screens/ShiftLog";
+import { redirect } from "next/navigation";
 
-export const metadata = { title: "Shift Log" };
-
+// Shift logs belong to SOC analysts only. Managers review shift figures in Performance and Reports.
 export default function Page() {
-  return <Suspense><ShiftView /></Suspense>;
+  redirect("/reports/shift");
 }

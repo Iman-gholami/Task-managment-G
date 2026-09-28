@@ -1,7 +1,6 @@
 "use client";
 
 import { useApp } from "@/components/AppProvider";
-import { P as MOCK } from "@/lib/data";
 import { CX, PRIO, QUAL, STATUS, TODAY, addDays, fmtDate, initials, isOpen } from "@/lib/format";
 
 export function Status({ s, label }) {
@@ -33,7 +32,7 @@ export function Quality({ q }) {
 const FALLBACK = { name: "Unknown", color: "#6B7280" };
 function usePerson(id) {
   const app = useApp();
-  return (app?.peopleMap ?? MOCK)[id] ?? FALLBACK;
+  return app?.peopleMap?.[id] ?? FALLBACK;
 }
 
 export function Avatar({ id, size }) {

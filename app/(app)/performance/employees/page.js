@@ -1,8 +1,8 @@
-import { Suspense } from "react";
-import { EmployeePerformance } from "@/components/screens/Performance";
+import { redirect } from "next/navigation";
+import { getCurrentUser } from "@/lib/server/auth";
+import { isManager } from "@/lib/roles";
 
-export const metadata = { title: "Employee Performance" };
-
-export default function Page() {
-  return <Suspense><EmployeePerformance /></Suspense>;
+export default async function Page() {
+  const me = await getCurrentUser();
+  redirect(isManager(me) ? "/performance/overview" : `/performance/employees/${me.id}`);
 }

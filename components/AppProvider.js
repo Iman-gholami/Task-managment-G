@@ -1,7 +1,6 @@
 "use client";
 
 import { createContext, useCallback, useContext, useEffect, useMemo, useReducer, useRef, useState } from "react";
-import { P as MOCK_PEOPLE } from "@/lib/data";
 import { SOC_TEAMS, dashboardFor } from "@/lib/roles";
 import { isOpen } from "@/lib/format";
 import Icon from "@/components/ui/Icon";
@@ -135,7 +134,7 @@ export default function AppProvider({ children, initial }) {
     return { ...u, open, load: Math.min(100, Math.round((open / 6) * 100)), shift: isShiftAnalyst ? shift ?? "missing" : null };
   }), [data.users, data.tasks, data.me.id, data.shiftDone, initial.shiftStatus]);
 
-  const peopleMap = useMemo(() => ({ ...MOCK_PEOPLE, ...Object.fromEntries(data.users.map((u) => [u.id, u])) }), [data.users]);
+  const peopleMap = useMemo(() => ({ ...Object.fromEntries(data.users.map((u) => [u.id, u])) }), [data.users]);
 
   const value = useMemo(
     () => ({ ...data, dispatch, role, peopleMap, members, theme, setTheme, collapsed, setCollapsed, toast, openPopover, closePopover, createOpen, setCreateOpen, addTask, updateTask }),

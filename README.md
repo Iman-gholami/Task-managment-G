@@ -13,8 +13,13 @@ The Security Department's internal work tool: Task Management, SOC Shift Logs, a
 - An approved task is closed: status, priority and hours are locked. Only a manager can **Reopen** it, and that is recorded in the task's activity.
 - The server enforces these rules; the UI only offers the allowed actions.
 
+### Task views
+- **Assigned by Me** (managers): every task you created for someone else, grouped by assignee, with tabs for *Open*, *Needs review*, *Overdue / Blocked*, *Done* and *All*.
+- **Team Tasks**: your team's work (a Security Manager's team is the whole department).
+- **My Tasks**: work assigned to you.
+
 ### Shift logs
-Only SOC analysts (SOC · L1/L2/L3) keep a daily Shift Log. SOC and Security Managers see **Shift Logs → Team Today** (read-only, per analyst) and each analyst's history instead.
+Only SOC analysts (SOC · L1/L2/L3) have a Shift Log. Managers, engineers and Threat Intelligence do not; managers see shift figures in **Performance** and the **SOC Shift Activity Report**.
 
 ### Performance & reports
 Figures are computed from the database for the selected period (this month, last month, quarter, or a custom range): completed tasks by completion date, hours, complexity and quality, and — for SOC analysts — shift logs, routine completion, IOC count, tickets, traffic reports and issues. Every report has **Export to Excel** (`.xlsx`). Analysts see their own data; team reports are for managers.
@@ -23,16 +28,17 @@ Uploaded files are stored next to the database in `data/uploads/` (max 20 MB eac
 
 ## First run
 
-On first start the app creates `data/sentinel.db` and seeds sample users and tasks. All seeded accounts use the password `ChangeMe123!` (override with `SEED_PASSWORD` **before the first start**):
+A fresh install contains **no sample data** — only one administrator account (a Security Manager). Sign in with it and add your team on the **Team** page.
 
-| Email | Role |
+| Setting | Default |
 |---|---|
-| `kaveh@corp.local` | Security Manager |
-| `leila@corp.local` | SOC Manager |
-| `sara@corp.local` | Analyst (SOC · L1) |
-| `arash@`, `neda@`, `reza@`, `mina@`, `hossein@corp.local` | Other team members |
+| `ADMIN_EMAIL` | `admin@local` |
+| `ADMIN_PASSWORD` | `ChangeMe123!` |
+| `ADMIN_NAME` | `Administrator` |
 
-Change these passwords (or remove the sample users) before real use.
+Set these before the first start (e.g. `ADMIN_EMAIL=you@company ADMIN_PASSWORD='…' npm start`), or change the password on the **Account** page right after signing in.
+
+**Upgrading from an earlier version:** the demo people (`…@corp.local`), their tasks, shift logs and tickets are removed automatically on the first start. Anything you created yourself is kept. If no Security Manager is left, the administrator account above is created.
 
 ### Member management
 - **Security Manager** can add and remove anyone except Security Managers (including SOC Managers).
@@ -46,7 +52,7 @@ Change these passwords (or remove the sample users) before real use.
 |---|---|---|
 | `PORT` | `3000` | HTTP port |
 | `DATABASE_PATH` | `./data/sentinel.db` | SQLite file location. Back up this file and the `uploads/` folder next to it |
-| `SEED_PASSWORD` | `ChangeMe123!` | Password for seeded accounts (first start only) |
+| `ADMIN_EMAIL` / `ADMIN_PASSWORD` / `ADMIN_NAME` | see above | Built-in administrator (created only when no Security Manager exists) |
 | `COOKIE_SECURE` | `false` | Set to `true` when serving over HTTPS |
 
 ## Run on your server
@@ -66,7 +72,7 @@ npm run dev
 
 ## Tests
 
-End-to-end tests (Playwright) run against a fresh temporary database and cover sign-in/out, every screen, persistence of tasks and the Shift Log, API permission checks, and adding/removing members as each role.
+End-to-end tests (Playwright) start from an empty database, build a team through the UI, and cover sign-in, member management, task assignment and review, shift logs, performance, reports and Excel export.
 
 ```bash
 npx playwright install chromium   # once; or set CHROMIUM_PATH=/usr/bin/chromium to use a system Chromium
@@ -94,12 +100,11 @@ npm test
 |---|---|
 | `/dashboard` | Role-aware dashboard (Analyst, SOC Manager, Security Manager) |
 | `/team` | Directory; managers add and remove members here |
-| `/tasks/my` · `/tasks/team` · `/tasks/all` | Task tables (with a board view) |
-| `/tasks/T-1042` | Task details |
-| `/shift` · `/shift/history` | Today's Shift Log · history (SOC analysts) |
-| `/shift/team` | Today's shift logs for all analysts (managers) |
+| `/tasks/assigned` · `/tasks/team` · `/tasks/my` | Task lists (with a board view) |
+| `/tasks/T-1001` | Task details |
+| `/shift` · `/shift/history` | Today's Shift Log · history (SOC analysts only) |
 | `/account` | Profile and password |
-| `/performance/overview` · `/performance/employees` | Performance |
+| `/performance/overview` · `/performance/employees/<id>` | Performance overview · one employee |
 | `/reports/employee` · `/reports/shift` · `/reports/tickets` … | Reports |
 | `/admin` | Users & roles |
 | `/login` | Sign in |

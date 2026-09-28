@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useRouter, useSearchParams } from "next/navigation";
+import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { useApp } from "@/components/AppProvider";
 import useFetch from "@/components/useFetch";
@@ -24,12 +24,11 @@ function usePeriod() {
   return { period, setPeriod, range, setRange, query: periodQuery(period, range) };
 }
 
-export function EmployeePerformance() {
+/** One employee's performance. The employee comes from the URL: /performance/employees/<id>. */
+export function EmployeePerformance({ userId }) {
   const { me, members, openPopover } = useApp();
   const router = useRouter();
-  const params = useSearchParams();
   const manager = isManager(me);
-  const userId = (manager && params.get("user")) || me.id;
   const p = usePeriod();
   const { data, loading, error, reload } = useFetch(`/api/performance?user=${userId}&${p.query}`);
   const tickets = useFetch(data?.routine ? `/api/reports/tickets?user=${userId}&${p.query}` : null);
@@ -55,7 +54,7 @@ export function EmployeePerformance() {
         </div>
         <div className="actions">
           {manager && (
-            <select className="input" style={{ width: 190 }} value={userId} onChange={(e) => router.replace(`/performance/employees?user=${e.target.value}`)} aria-label="Employee">
+            <select className="input" style={{ width: 190 }} value={userId} onChange={(e) => router.push(`/performance/employees/${e.target.value}`)} aria-label="Employee">
               {members.filter((m) => m.role !== "security_manager").map((m) => <option key={m.id} value={m.id}>{m.name}</option>)}
             </select>
           )}
@@ -85,7 +84,7 @@ export function EmployeePerformance() {
             <section className="section">
               <div className="section-head">
                 <h2>Routine Activity</h2><span className="badge">Shift Logs</span><span className="meta">Daily operational work — counted separately from tasks</span>
-                <div className="right"><Link className="btn btn-ghost btn-sm" href={`/shift/history${manager ? `?user=${userId}` : ""}`}>Daily logs <Icon name="chev" /></Link></div>
+                {userId === me.id && <div className="right"><Link className="btn btn-ghost btn-sm" href="/shift/history">Daily logs <Icon name="chev" /></Link></div>}
               </div>
               <div className="grid" style={{ gridTemplateColumns: "repeat(5,1fr)", gap: 0 }}>
                 {[
@@ -177,7 +176,7 @@ export function PerformanceOverview() {
               {rows.map((r) => {
                 const na = <span className="muted">n/a</span>;
                 return (
-                  <tr key={r.id} onClick={() => router.push(`/performance/employees?user=${r.id}`)}>
+                  <tr key={r.id} onClick={() => router.push(`/performance/employees/${r.id}`)}>
                     <td className="title"><Who id={r.id} /></td><td>{r.team}</td>
                     <td className="r num">{r.completedTasks}</td><td className="r num">{r.taskHours}</td>
                     <td style={{ width: 180 }}>{r.complexity.some(Boolean) ? <Distribution parts={r.complexity} /> : <span className="muted">—</span>}</td>
