@@ -3,8 +3,8 @@
 A calm, dense, typographic system for a security organization's internal work tool.
 Its look comes from proportion, rhythm, and restraint. It doesn't use decoration.
 
-> Live reference: `prototype/index.html` (open it directly in a browser). Every rule in this document is implemented there.
-> Tokens: `prototype/tokens.css`. Components: `prototype/app.css`.
+> Live reference: the Next.js app in this repository (`npm run dev`). Every rule in this document is implemented there.
+> Tokens: `styles/tokens.css`. Component styles: `styles/components.css`. React components: `components/`.
 
 ---
 
@@ -150,7 +150,7 @@ The rotated squares and teal fill make it impossible to confuse with priority ba
 
 ## 4. Component library
 
-Each entry lists anatomy, then states, then behavior. Class names refer to `app.css`.
+Each entry lists anatomy, then states, then behavior. Class names refer to `styles/components.css`.
 
 | Component | Spec |
 |---|---|

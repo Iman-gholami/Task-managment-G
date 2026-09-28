@@ -1,7 +1,7 @@
 # Sentinel Ops: Screen Specifications
 
 Each screen has a wireframe and a fixed spec block.
-Screens marked **▶ Prototype** are built in `prototype/index.html`, at the hash route shown.
+Screens marked **▶** are implemented in the Next.js app, at the route shown (e.g. `http://localhost:3000/tasks/my`).
 Shared conventions (states, tokens, components) are in `DESIGN_SYSTEM.md`.
 
 **Global shell (all screens except Login)**
@@ -32,7 +32,7 @@ Shared conventions (states, tokens, components) are in `DESIGN_SYSTEM.md`.
 
 ---
 
-## 1. Login  ▶ `#/login`
+## 1. Login  ▶ `/login`
 | | |
 |---|---|
 | **Purpose** | Authenticate into the Security Department workspace |
@@ -58,7 +58,7 @@ Shared conventions (states, tokens, components) are in `DESIGN_SYSTEM.md`.
 └─────────────────────────────┴──────────────────────────────┘
 ```
 
-## 2. Analyst Dashboard  ▶ `#/dashboard`
+## 2. Analyst Dashboard  ▶ `/dashboard`
 | | |
 |---|---|
 | **Purpose** | Start the day: see what needs doing and get into the Shift Log |
@@ -86,7 +86,7 @@ T-1033 Draft monthly  ○ Returned ▮▮ Norm Sep28│ Remaining  Monitor Secur
                                              │ Recent activity …
 ```
 
-## 3. SOC Manager Dashboard  ▶ switch role → `#/dashboard`
+## 3. SOC Manager Dashboard  ▶ switch role → `/dashboard`
 | | |
 |---|---|
 | **Purpose** | Keep the SOC running today and unblock people |
@@ -120,7 +120,7 @@ Needs your attention (7)          │ Team workload
 | **Empty** | "No activity was found for the selected period." |
 | **Note** | The employee list states "Alphabetical · not a ranking". There is no leaderboard. |
 
-## 5. My Tasks  ▶ `#/tasks/my`
+## 5. My Tasks  ▶ `/tasks/my`
 | | |
 |---|---|
 | **Purpose** | Triage and update the user's own work fast |
@@ -143,12 +143,12 @@ T-1042 Tune Splunk correlation rule…   ◐ In Progress ▮▮▮ High ◆◆�
 T-1035 Onboard new L1 analyst          ● Done        ▮▮ Normal ◆◇◇◇ Simple Sep 25       2.0  ★ Excellent
 ```
 
-## 6. Team Tasks  ▶ `#/tasks/team`
+## 6. Team Tasks  ▶ `/tasks/team`
 Same as My Tasks, with these differences: the **Assignee** column is added, the **Assignee** filter chip is added, and grouping by assignee is optional.
 - **Primary user**: SOC Manager. **Primary action**: Create Task. **Secondary**: bulk-select (checkbox column appears on hover) → change status, reassign.
 - **Empty**: "Your team has no open tasks."
 
-## 7. All Tasks  ▶ `#/tasks/all`
+## 7. All Tasks  ▶ `/tasks/all`
 Cross-team scope (SOC, Design & Automation, Threat Intelligence). Adds **Team** column and **Team** filter at ≥1600px.
 - **Primary user**: Security Manager. Read and edit access follows role permissions; rows the user can't edit show no hover affordance.
 
@@ -176,7 +176,7 @@ Cross-team scope (SOC, Design & Automation, Threat Intelligence). Adds **Team** 
 └─────────────────────────────────────────────────────────┘
 ```
 
-## 9. Task Details  ▶ `#/tasks/T-1042`
+## 9. Task Details  ▶ `/tasks/T-1042`
 | | |
 |---|---|
 | **Purpose** | Everything about one task, editable in place |
@@ -203,7 +203,7 @@ Comments 2                                           │ Reviewer   (LN) Leila
  [Leave a comment…  @ 📎            Comment ⌘↵]      │
 ```
 
-## 10. Shift Log: Active Shift  ▶ `#/shift`
+## 10. Shift Log: Active Shift  ▶ `/shift`
 | | |
 |---|---|
 | **Purpose** | Record the day's routine SOC activities fast and accurately |
@@ -239,13 +239,13 @@ Created Tickets  [Tickets Created: 2]                        [+ Add Ticket]
  7/8 Activities  6 IOCs  2 Tickets  1 Issue   1 remaining: Monitor…  [Complete Shift]
 ```
 
-## 11. Shift Log: Completed Shift  ▶ `#/shift` → "Completed (demo)"
+## 11. Shift Log: Completed Shift  ▶ `/shift` → finish all activities, then **Complete Shift**
 - **Purpose**: a read-only record for the analyst and their manager.
 - Same layout, with these differences: controls become static values, the status badge reads "Completed 14:52" in green, and the summary bar replaces Complete with **Reopen** (available to the owner within the same day, or to a manager at any time; reopening is logged).
 - Managers see **Return to analyst** with a comment.
 - **Empty/Loading/Error**: standard.
 
-## 12. Shift Log History  ▶ `#/shift/history`
+## 12. Shift Log History  ▶ `/shift/history`
 | | |
 |---|---|
 | **Purpose** | Browse previous daily logs; drill into any day |
@@ -266,7 +266,7 @@ Created Tickets  [Tickets Created: 2]                        [+ Add Ticket]
 | **Secondary** | Remind about missing log, open member performance |
 | **Empty** | "No members in this team yet. [Manage in Administration]" |
 
-## 14. Employee Directory  ▶ `#/team`
+## 14. Employee Directory  ▶ `/team`
 | | |
 |---|---|
 | **Purpose** | Find a person and see their load at a glance |
@@ -285,7 +285,7 @@ Created Tickets  [Tickets Created: 2]                        [+ Add Ticket]
 | **Primary action** | Assign task (for managers) |
 | **Empty/Loading/Error** | Standard |
 
-## 16. Employee Performance  ▶ `#/perf/employee`
+## 16. Employee Performance  ▶ `/performance/employees`
 | | |
 |---|---|
 | **Purpose** | Answer: *what did this person actually accomplish in this period?* |
@@ -311,7 +311,7 @@ Task Performance [Tasks]
  Task · Description · Complexity · Quality · Start · End · Hours · Status
 ```
 
-## 17. Performance Overview  ▶ `#/perf/overview`
+## 17. Performance Overview  ▶ `/performance/overview`
 | | |
 |---|---|
 | **Purpose** | Compare output across the organization without ranking people |
@@ -320,7 +320,7 @@ Task Performance [Tasks]
 | **Primary action** | Export to Excel |
 | **Note** | The default sort is alphabetical, and the footnote states the no-ranking principle. Sorting by a metric is allowed but never persisted as the default |
 
-## 18. Reports (hub)  ▶ `#/reports`
+## 18. Reports (hub)  ▶ `/reports`
 | | |
 |---|---|
 | **Purpose** | Produce the standard exports, not ad-hoc BI |
@@ -330,12 +330,12 @@ Task Performance [Tasks]
 | **Empty** | "No activity was found for the selected period." |
 | **Loading** | The preview table skeleton. Export is disabled until the preview is ready |
 
-## 19. Employee Monthly Report  ▶ `#/reports/employee`
+## 19. Employee Monthly Report  ▶ `/reports/employee`
 - Mirrors the existing Excel format. The **Tasks** sheet has these columns: Task Title · Work Description · Quality · Start Time · End Time · Hours · Executor · Complexity.
 - For SOC employees there is also a **Routine Activity** block: Shift logs, Routine completion, MISP IOCs, Tickets, Traffic reports, and Issues reported.
 - The export has two sheets, *Tasks* and *Routine Activity*, plus a *Tickets* appendix.
 
-## 20. SOC Shift Activity Report
+## 20. SOC Shift Activity Report  ▶ `/reports/shift`
 | | |
 |---|---|
 | **Purpose** | Monthly compliance and output of routine work |
@@ -343,7 +343,7 @@ Task Performance [Tasks]
 | **Primary action** | Export to Excel |
 | **Visual** | Completion cells use a small inline bar. Below 90%, the text turns warning-colored (no fill) |
 
-## 21. Ticket Report  ▶ `#/reports/tickets`
+## 21. Ticket Report  ▶ `/reports/tickets`
 | | |
 |---|---|
 | **Purpose** | A searchable ledger of every ticket registered in shift logs |
@@ -351,7 +351,7 @@ Task Performance [Tasks]
 | **Primary action** | Export to Excel |
 | **Empty** | "No tickets were registered in this period." |
 
-## 22. Administration  ▶ `#/admin`
+## 22. Administration  ▶ `/admin`
 | | |
 |---|---|
 | **Purpose** | Configure the workspace |
@@ -359,7 +359,7 @@ Task Performance [Tasks]
 | **Activity Definitions** | The ordered list of the 8 shift activities with a type (basic / files / monitor / report / MISP), a required flag, and extra fields. Changes apply from the next day and never rewrite history |
 | **Primary action** | Depends on the section (Invite User, Add Team…) |
 
-## 23. User / Role Management  ▶ `#/admin`
+## 23. User / Role Management  ▶ `/admin`
 | | |
 |---|---|
 | **Purpose** | Manage people, roles, primary teams, and temporary assignments |
@@ -372,5 +372,5 @@ Task Performance [Tasks]
 
 ---
 
-## States gallery  ▶ `#/states`
+## States gallery  ▶ `/states`
 Reference renders of the empty states (Tasks, Shift Log, Reports), the table skeleton, the load error, and the no-access error.

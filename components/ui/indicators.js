@@ -1,0 +1,85 @@
+import { P } from "@/lib/data";
+import { CX, PRIO, QUAL, STATUS, TODAY, fmtDate, initials, isOpen } from "@/lib/format";
+
+export function Status({ s, label }) {
+  return <span className="status" data-s={s}>{label ?? STATUS[s]}</span>;
+}
+
+export function Priority({ p }) {
+  return (
+    <span className="prio" data-p={p}>
+      <i>{p === "critical" ? "!" : <><b /><b /><b /></>}</i>
+      {PRIO[p]}
+    </span>
+  );
+}
+
+export function Complexity({ c }) {
+  return (
+    <span className="cx" data-c={c}>
+      <i><b /><b /><b /><b /></i>
+      {CX[c]}
+    </span>
+  );
+}
+
+export function Quality({ q }) {
+  return q ? <span className="q" data-q={q}>{QUAL[q]}</span> : <span className="muted">—</span>;
+}
+
+export function Avatar({ id, size }) {
+  const p = P[id];
+  return (
+    <span className={`avatar ${size === "lg" ? "lg" : ""}`} style={{ background: p.color }} title={p.name}>
+      {initials(p.name)}
+    </span>
+  );
+}
+
+export function Who({ id, short }) {
+  return (
+    <span className="who">
+      <Avatar id={id} />
+      {short ? P[id].name.split(" ")[0] : P[id].name}
+    </span>
+  );
+}
+
+export function Due({ task }) {
+  if (task.due === "—") return <span className="muted">—</span>;
+  if (isOpen(task) && task.due < TODAY) return <span className="overdue">{fmtDate(task.due)} · overdue</span>;
+  if (isOpen(task) && task.due <= "2026-09-30") return <span className="soon">{fmtDate(task.due)}</span>;
+  return <span className="num">{fmtDate(task.due)}</span>;
+}
+
+export function Spark({ values, width = 120, height = 28, color = "var(--primary)" }) {
+  const max = Math.max(...values);
+  const min = Math.min(...values);
+  const pts = values.map((v, i) => [(i / (values.length - 1)) * width, height - 2 - ((v - min) / (max - min || 1)) * (height - 4)]);
+  const [lx, ly] = pts[pts.length - 1];
+  return (
+    <svg className="spark" width={width} height={height} aria-hidden="true">
+      <polyline points={pts.map((p) => p.join(",")).join(" ")} fill="none" stroke={color} strokeWidth="1.5" strokeLinejoin="round" />
+      <circle cx={lx} cy={ly} r="2.5" fill={color} />
+    </svg>
+  );
+}
+
+export function Distribution({ parts }) {
+  return (
+    <div className="dist">
+      {parts.map((n, i) => <span key={i} style={{ flex: n, background: `var(--viz-${i + 1})` }} />)}
+    </div>
+  );
+}
+
+export function EmptyState({ icon, title, children, action, danger }) {
+  return (
+    <div className="empty">
+      <div className="glyph" style={danger ? { color: "var(--danger)" } : undefined}>{icon}</div>
+      <h3>{title}</h3>
+      {children}
+      {action && <div style={{ marginTop: 14, display: "flex", gap: 8, justifyContent: "center" }}>{action}</div>}
+    </div>
+  );
+}
