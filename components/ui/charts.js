@@ -62,6 +62,64 @@ export function Meter({ value, max = 100, label, tone, readout }) {
   );
 }
 
+/** Donut breakdown for a small set of categories. */
+export function DonutBreakdown({ rows, name = "Breakdown", unit = " tasks" }) {
+  const radius = 46;
+  const circumference = 2 * Math.PI * radius;
+  const total = rows.reduce((sum, row) => sum + Math.max(0, Number(row.value) || 0), 0);
+  let cursor = 0;
+  const summary = rows.map((row) => `${row.label} ${row.value}${unit}`).join(" · ");
+
+  return (
+    <div className="donut-chart" role="img" aria-label={`${name}: ${summary}`}>
+      <div className="donut-chart__visual">
+        <svg viewBox="0 0 120 120" aria-hidden="true">
+          <circle className="donut-chart__track" cx="60" cy="60" r={radius} />
+          {total > 0 && rows.map((row, i) => {
+            const value = Math.max(0, Number(row.value) || 0);
+            if (!value) return null;
+            const length = (value / total) * circumference;
+            const offset = cursor;
+            cursor += length;
+            return (
+              <circle
+                key={row.label}
+                className="donut-chart__segment"
+                cx="60"
+                cy="60"
+                r={radius}
+                style={{
+                  "--donut-color": `var(--viz-${(i % 4) + 1})`,
+                  strokeDasharray: `${length} ${circumference - length}`,
+                  strokeDashoffset: -offset,
+                }}
+              />
+            );
+          })}
+        </svg>
+        <div className="donut-chart__center">
+          <b className="num">{total}</b>
+          <span>completed</span>
+        </div>
+      </div>
+      <div className="donut-chart__legend">
+        {rows.map((row, i) => {
+          const value = Math.max(0, Number(row.value) || 0);
+          const pct = total ? Math.round((value / total) * 100) : 0;
+          return (
+            <div key={row.label} className="donut-chart__legend-row">
+              <i style={{ background: `var(--viz-${(i % 4) + 1})` }} aria-hidden="true" />
+              <span>{row.label}</span>
+              <small>{pct}%</small>
+              <b className="num">{value}</b>
+            </div>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
 /** Compact multi-series line chart used for manager-level trends. */
 export function TrendLines({ series, labels, name = "Trend" }) {
   const width = 680;
