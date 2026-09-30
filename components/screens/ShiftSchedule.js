@@ -1,10 +1,11 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useMemo, useState } from "react";
 import { api, useApp } from "@/components/AppProvider";
 import useFetch from "@/components/useFetch";
 import { Avatar } from "@/components/ui/indicators";
 import Icon from "@/components/ui/Icon";
+import Dialog from "@/components/ui/Dialog";
 import { TODAY, addDays } from "@/lib/format";
 import styles from "./ShiftSchedule.module.css";
 
@@ -79,13 +80,6 @@ export default function ShiftSchedule() {
   const [query, setQuery] = useState("");
   const [saving, setSaving] = useState(false);
 
-  useEffect(() => {
-    if (!selected) return;
-    const onKey = (e) => e.key === "Escape" && setSelected(null);
-    document.addEventListener("keydown", onKey);
-    return () => document.removeEventListener("keydown", onKey);
-  }, [selected]);
-
   const currentMonthKey = jalaliMonthKey(monthStart);
   const monthAssignments = useMemo(() => (data?.assignments || []).filter((a) => jalaliMonthKey(a.date) === currentMonthKey), [data?.assignments, currentMonthKey]);
 
@@ -96,6 +90,7 @@ export default function ShiftSchedule() {
     setDraftIds(byDate[date]?.[shift] || []);
     setQuery("");
   };
+  const closeComposer = () => setSelected(null);
   const changeShift = (shift) => {
     if (!selected) return;
     setSelected({ ...selected, shift });
@@ -112,7 +107,7 @@ export default function ShiftSchedule() {
     setFocusDate(TODAY);
   };
   const save = async () => {
-    if (!selected) return;
+    if (!selected || saving) return;
     setSaving(true);
     try {
       const res = await api("/api/shift/schedule", { method: "PUT", body: { date: selected.date, shift: selected.shift, userIds: draftIds } });
@@ -120,7 +115,7 @@ export default function ShiftSchedule() {
       toast(`${SHIFT_META[selected.shift].label} برای ${formatLongDate(selected.date)} ثبت شد`);
       setFocusDate(selected.date);
       setFocusShift(selected.shift);
-      setSelected(null);
+      closeComposer();
     } catch (e) {
       toast(e.message);
     } finally {
@@ -232,45 +227,111 @@ export default function ShiftSchedule() {
         </section>
       </div>
 
-      {selected && <div className={styles.scrim} onMouseDown={(e) => e.target === e.currentTarget && setSelected(null)}>
-        <section className={styles.composer} role="dialog" aria-modal="true" dir="rtl">
-          <div className={styles.composerHead}>
-            <div className={styles.composerCal}><Icon name="cal" /></div>
-            <div><span>ثبت برنامه شیفت</span><h2>{formatLongDate(selected.date)}</h2></div>
-            <button onClick={() => setSelected(null)} aria-label="بستن"><Icon name="x" /></button>
-          </div>
-
-          <div className={styles.composerBody}>
-            <div className={styles.label}>نوع شیفت</div>
-            <div className={styles.shiftPicker}>
-              {SHIFT_KEYS.map((key) => <button key={key} data-tone={key} className={selected.shift === key ? styles.pickerActive : ""} onClick={() => changeShift(key)}>
-                <ShiftGlyph shift={key} className={styles.pickerIcon} /><span><b>{SHIFT_META[key].label}</b><small>{SHIFT_META[key].time}</small></span>{selected.shift === key && <i><Icon name="check" /></i>}
-              </button>)}
+      {selected && (
+        <Dialog
+          label="ثبت شیفت"
+          onClose={closeComposer}
+          width={600}
+          onKeyDown={(e) => { if (e.key === "Enter" && (e.metaKey || e.ctrlKey)) save(); }}
+        >
+          <div dir="rtl">
+            <div style={{ minHeight: 56, display: "flex", alignItems: "center", gap: "var(--s-3)", padding: "0 var(--s-6)", borderBottom: "1px solid var(--divider)" }}>
+              <div style={{ minWidth: 0 }}>
+                <div className="eyebrow" style={{ marginBottom: "var(--s-1)" }}>برنامه‌ریزی شیفت</div>
+                <div style={{ color: "var(--text)", fontWeight: "var(--fw-semibold)", fontSize: "var(--fs-16)", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
+                  {formatLongDate(selected.date)}
+                </div>
+              </div>
+              <span style={{ marginRight: "auto" }} />
+              <button type="button" className="btn btn-ghost icon-btn btn-sm" onClick={closeComposer} aria-label="بستن"><Icon name="x" /></button>
             </div>
 
-            <div className={styles.peopleControl}><div className={styles.label}>انتخاب نیروها <span>{faNum(draftIds.length)} انتخاب</span></div><button disabled={!draftIds.length} onClick={() => setDraftIds([])}>پاک کردن</button></div>
-            <label className={styles.search}><Icon name="search" /><input value={query} onChange={(e) => setQuery(e.target.value)} placeholder="جستجوی نام یا تیم..." /></label>
+            <div className="modal-body">
+              <div className="field">
+                <label>نوع شیفت</label>
+                <div className="seg" role="group" aria-label="نوع شیفت" style={{ width: "100%", display: "grid", gridTemplateColumns: "repeat(3, minmax(0, 1fr))" }}>
+                  {SHIFT_KEYS.map((key) => (
+                    <button
+                      key={key}
+                      type="button"
+                      className={selected.shift === key ? "on" : ""}
+                      onClick={() => changeShift(key)}
+                      style={{ justifyContent: "center", minWidth: 0 }}
+                    >
+                      <Icon name={SHIFT_META[key].icon} />
+                      {SHIFT_META[key].short}
+                    </button>
+                  ))}
+                </div>
+                <span className="hint">{SHIFT_META[selected.shift].time}</span>
+              </div>
 
-            <div className={styles.peopleList}>
-              {visibleMembers.length ? visibleMembers.map((member) => {
-                const checked = draftIds.includes(member.id);
-                const currentShift = SHIFT_KEYS.find((s) => byDate[selected.date]?.[s]?.includes(member.id));
-                const moved = currentShift && currentShift !== selected.shift;
-                return <label className={`${styles.personRow} ${checked ? styles.personSelected : ""}`} key={member.id}>
-                  <input type="checkbox" checked={checked} onChange={() => setDraftIds((ids) => checked ? ids.filter((id) => id !== member.id) : [...ids, member.id])} />
-                  <span className={styles.check}>{checked && <Icon name="check" />}</span><Avatar id={member.id} /><span className={styles.personMeta}><b>{member.name}</b><small>{member.team}</small></span>
-                  {moved ? <em className={styles.moveTag}>از {SHIFT_META[currentShift].short} منتقل می‌شود</em> : currentShift === selected.shift ? <em className={styles.currentTag}>در همین شیفت</em> : null}
-                </label>;
-              }) : <div className={styles.noPeople}>نیرویی پیدا نشد.</div>}
+              <div style={{ height: 1, background: "var(--divider)", margin: "var(--s-6) calc(var(--s-6) * -1)" }} />
+
+              <div className="field">
+                <div style={{ display: "flex", alignItems: "center", gap: "var(--s-2)" }}>
+                  <label htmlFor="shift-people-search">انتخاب نیروها</label>
+                  <span className="muted" style={{ fontSize: "var(--fs-12)" }}>{faNum(draftIds.length)} نفر انتخاب شده</span>
+                  <span style={{ marginRight: "auto" }} />
+                  <button type="button" className="btn btn-ghost btn-sm" disabled={!draftIds.length} onClick={() => setDraftIds([])}>پاک کردن</button>
+                </div>
+                <div style={{ position: "relative" }}>
+                  <Icon name="search" className="i" />
+                  <input
+                    id="shift-people-search"
+                    className="input"
+                    value={query}
+                    onChange={(e) => setQuery(e.target.value)}
+                    placeholder="جستجوی نام یا تیم..."
+                    style={{ paddingRight: 38 }}
+                  />
+                  <span style={{ position: "absolute", right: 12, top: "50%", transform: "translateY(-50%)", color: "var(--text-3)", display: "grid", placeItems: "center", pointerEvents: "none" }}><Icon name="search" /></span>
+                </div>
+              </div>
+
+              <div style={{ marginTop: "var(--s-4)", maxHeight: 300, overflow: "auto", borderTop: "1px solid var(--divider)" }}>
+                {visibleMembers.length ? visibleMembers.map((member) => {
+                  const checked = draftIds.includes(member.id);
+                  const currentShift = SHIFT_KEYS.find((s) => byDate[selected.date]?.[s]?.includes(member.id));
+                  const moved = currentShift && currentShift !== selected.shift;
+                  return (
+                    <label
+                      key={member.id}
+                      style={{ minHeight: 52, display: "flex", alignItems: "center", gap: "var(--s-3)", padding: "0 var(--s-2)", borderBottom: "1px solid var(--divider)", cursor: "pointer", background: checked ? "var(--selected)" : "transparent" }}
+                    >
+                      <input
+                        type="checkbox"
+                        className="cb"
+                        checked={checked}
+                        onChange={() => setDraftIds((ids) => checked ? ids.filter((id) => id !== member.id) : [...ids, member.id])}
+                      />
+                      <Avatar id={member.id} />
+                      <span style={{ minWidth: 0, flex: 1 }}>
+                        <b style={{ display: "block", fontSize: "var(--fs-14)", fontWeight: "var(--fw-medium)", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{member.name}</b>
+                        <small className="muted" style={{ fontSize: "var(--fs-12)" }}>{member.team}</small>
+                      </span>
+                      {moved ? (
+                        <span className="prop" style={{ cursor: "default", height: 26 }}>انتقال از {SHIFT_META[currentShift].short}</span>
+                      ) : currentShift === selected.shift ? (
+                        <span className="prop" style={{ cursor: "default", height: 26 }}>ثبت شده</span>
+                      ) : null}
+                    </label>
+                  );
+                }) : (
+                  <div className="muted" style={{ minHeight: 120, display: "grid", placeItems: "center", fontSize: "var(--fs-13)", borderBottom: "1px solid var(--divider)" }}>نیرویی پیدا نشد.</div>
+                )}
+              </div>
+            </div>
+
+            <div className="modal-foot">
+              <span className="sec" style={{ fontSize: "var(--fs-13)" }}><b style={{ color: "var(--text)", fontWeight: "var(--fw-medium)" }}>{faNum(draftIds.length)} نفر</b> برای {SHIFT_META[selected.shift].label}</span>
+              <span style={{ marginRight: "auto" }} />
+              <button type="button" className="btn btn-ghost" onClick={closeComposer}>انصراف</button>
+              <button type="button" className="btn btn-primary" onClick={save} disabled={saving} aria-busy={saving}>ثبت شیفت <kbd>⌘↵</kbd></button>
             </div>
           </div>
-
-          <div className={styles.composerFoot}>
-            <span><b>{faNum(draftIds.length)} نفر</b> برای {SHIFT_META[selected.shift].label}</span>
-            <div><button className="btn btn-ghost" onClick={() => setSelected(null)}>انصراف</button><button className="btn btn-primary" disabled={saving} onClick={save}><Icon name="check" /> {saving ? "در حال ثبت..." : "ثبت شیفت"}</button></div>
-          </div>
-        </section>
-      </div>}
+        </Dialog>
+      )}
     </div>
   );
 }
