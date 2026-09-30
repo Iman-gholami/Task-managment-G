@@ -1,11 +1,16 @@
 import { isManager, requireUser } from "@/lib/server/auth";
 import { err } from "@/lib/server/access";
 import { listShiftSchedules, removeShiftSchedule, scheduleStatsByUser, setShiftSchedule } from "@/lib/server/repo";
+import { replaceShiftAssignments } from "@/lib/server/shift-batch";
 import { isIsoDate, monthBounds } from "@/lib/shifts";
 import { isShiftAnalyst } from "@/lib/server/stats";
 
 function canView(user) {
   return isManager(user) || isShiftAnalyst(user);
+}
+
+function daysBetween(from, to) {
+  return Math.round((new Date(`${to}T00:00:00Z`) - new Date(`${from}T00:00:00Z`)) / 864e5);
 }
 
 export async function GET(request) {
@@ -20,7 +25,9 @@ export async function GET(request) {
   let month = null;
 
   if (fromParam || toParam) {
-    if (!isIsoDate(fromParam) || !isIsoDate(toParam) || fromParam > toParam) return err(400, "Invalid date range.");
+    if (!isIsoDate(fromParam) || !isIsoDate(toParam) || fromParam > toParam || daysBetween(fromParam, toParam) > 55) {
+      return err(400, "Invalid date range.");
+    }
     bounds = { from: fromParam, to: toParam };
   } else {
     month = url.searchParams.get("month") || new Date().toISOString().slice(0, 7);
@@ -41,6 +48,26 @@ export async function POST(request) {
   try {
     const schedule = setShiftSchedule(String(body.userId || ""), String(body.date || ""), String(body.shiftType || ""), user.id);
     return Response.json({ schedule }, { status: 201 });
+  } catch (e) {
+    return err(409, e.message);
+  }
+}
+
+/** Replace everyone assigned to one shift/date in a single transaction. */
+export async function PUT(request) {
+  const [user, denied] = await requireUser();
+  if (denied) return denied;
+  if (!isManager(user)) return err(403, "Only SOC or Security Managers can assign shifts.");
+
+  const body = await request.json().catch(() => ({}));
+  try {
+    const assignments = replaceShiftAssignments(
+      String(body.date || ""),
+      String(body.shiftType || ""),
+      Array.isArray(body.userIds) ? body.userIds.map(String) : [],
+      user.id
+    );
+    return Response.json({ assignments });
   } catch (e) {
     return err(409, e.message);
   }
