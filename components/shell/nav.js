@@ -17,10 +17,10 @@ export function navFor(me, counts = {}) {
         { href: "/dashboard", label: "Dashboard", icon: "home" },
         { href: taskViews[0].href, match: "/tasks", label: "Tasks", icon: "tasks", subs: taskViews },
         // Shift logs belong to SOC analysts only; scheduling is visible to analysts and managers.
-        me.keepsShiftLog && { href: "/shift", match: "/shift", label: "Shift Log", icon: "shift", subs: [{ href: "/shift", label: "Today" }, { href: "/shift/history", label: "History" }] },
+        me.keepsShiftLog && { href: "/shift", exact: true, label: "Shift Log", icon: "shift", subs: [{ href: "/shift", label: "Today" }, { href: "/shift/history", label: "History" }] },
         shiftPlanning && {
           href: "/shift/schedule",
-          match: "/shift/schedule",
+          exact: true,
           label: "Shift Schedule",
           icon: "cal",
           subs: [
