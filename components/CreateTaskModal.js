@@ -8,7 +8,7 @@ import { Field } from "@/components/ui/Field";
 import { CX, PRIO, TODAY } from "@/lib/format";
 import { isManager } from "@/lib/roles";
 
-const blank = { title: "", description: "", prio: "normal", cx: 2, due: "" };
+const blank = { title: "", description: "", prio: "normal", cx: 2, start: TODAY, due: "" };
 
 export default function CreateTaskModal() {
   const { createOpen, setCreateOpen } = useApp();
@@ -44,6 +44,7 @@ function CreateTaskDialog({ onClose }) {
         a: form.a,
         prio: form.prio,
         cx: form.cx,
+        start: form.start,
         due: form.due,
       });
       toast(`${task.id} created and assigned to ${peopleMap[form.a].name}`);
@@ -58,7 +59,7 @@ function CreateTaskDialog({ onClose }) {
   const people = users
     .filter((u) => u.active !== false && u.id !== me.id)
     .concat(users.filter((u) => u.id === me.id));
-  const dirty = form.title.trim() || form.description.trim() || form.due;
+  const dirty = form.title.trim() || form.description.trim() || form.due || form.start !== TODAY;
 
   return (
     <>
@@ -137,8 +138,17 @@ function CreateTaskDialog({ onClose }) {
               </select>
             </Field>
 
-            <Field label="Start date" htmlFor="task-start" hint="Recorded automatically when the assignee starts the task.">
-              <input id="task-start" className="input" value="Set when work starts" disabled readOnly />
+            <Field label="Start date" htmlFor="task-start" hint="Defaults to today. Choose another date if this task is planned to start later.">
+              <input
+                id="task-start"
+                className="input"
+                type="date"
+                value={form.start}
+                onChange={(e) => {
+                  const start = e.target.value;
+                  set({ start, ...(form.due && start && form.due < start ? { due: "" } : {}) });
+                }}
+              />
             </Field>
 
             <Field label="Deadline" htmlFor="task-deadline">
@@ -146,7 +156,7 @@ function CreateTaskDialog({ onClose }) {
                 id="task-deadline"
                 className="input"
                 type="date"
-                min={TODAY}
+                min={form.start || TODAY}
                 value={form.due}
                 onChange={(e) => set({ due: e.target.value })}
               />
