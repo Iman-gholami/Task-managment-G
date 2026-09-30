@@ -1,6 +1,7 @@
 import localFont from "next/font/local";
 import "@/styles/tokens.css";
 import "@/styles/components.css";
+import "@/styles/shifts.css";
 
 const geist = localFont({ src: "../styles/fonts/Geist-Variable.woff2", variable: "--font-geist", weight: "100 900", display: "swap" });
 const geistMono = localFont({ src: "../styles/fonts/GeistMono-Variable.woff2", variable: "--font-geist-mono", weight: "100 900", display: "swap" });
