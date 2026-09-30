@@ -61,3 +61,61 @@ export function Meter({ value, max = 100, label, tone, readout }) {
     </span>
   );
 }
+
+/** Compact multi-series line chart used for manager-level trends. */
+export function TrendLines({ series, labels, name = "Trend" }) {
+  const width = 680;
+  const height = 190;
+  const pad = { top: 16, right: 14, bottom: 30, left: 28 };
+  const innerW = width - pad.left - pad.right;
+  const innerH = height - pad.top - pad.bottom;
+  const all = series.flatMap((s) => s.values);
+  const top = Math.max(1, ...all);
+  const x = (i) => pad.left + (labels.length <= 1 ? innerW / 2 : (i / (labels.length - 1)) * innerW);
+  const y = (v) => pad.top + innerH - (v / top) * innerH;
+  const grid = [0, 0.25, 0.5, 0.75, 1];
+  const summary = series.map((s) => `${s.name}: ${s.values.join(", ")}`).join(" · ");
+
+  return (
+    <div className="trend-chart" role="img" aria-label={`${name}. ${summary}`}>
+      <svg viewBox={`0 0 ${width} ${height}`} preserveAspectRatio="none" aria-hidden="true">
+        {grid.map((p) => (
+          <line key={p} className="trend-grid" x1={pad.left} x2={width - pad.right} y1={pad.top + innerH * p} y2={pad.top + innerH * p} />
+        ))}
+        {series.map((s, si) => {
+          const points = s.values.map((v, i) => `${x(i)},${y(v)}`).join(" ");
+          return (
+            <g key={s.name} style={{ "--trend-color": `var(--viz-${(si % 4) + 1})` }}>
+              <polyline className="trend-line" points={points} />
+              {s.values.map((v, i) => <circle key={i} className="trend-dot" cx={x(i)} cy={y(v)} r="4" />)}
+            </g>
+          );
+        })}
+      </svg>
+      <div className="trend-axis" aria-hidden="true">
+        {labels.map((label) => <span key={label}>{label}</span>)}
+      </div>
+      <div className="trend-legend">
+        {series.map((s, si) => (
+          <span key={s.name}><i style={{ background: `var(--viz-${(si % 4) + 1})` }} />{s.name}<b>{s.values.at(-1) ?? 0}</b></span>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+/** Horizontal comparison bars. Preserve the supplied order; this is not a leaderboard. */
+export function CompareBars({ rows, name, unit = "" }) {
+  const top = Math.max(1, ...rows.map((r) => r.value));
+  return (
+    <div className="compare-bars" role="img" aria-label={`${name}: ${rows.map((r) => `${r.label} ${r.value}${unit}`).join(", ")}`}>
+      {rows.map((r) => (
+        <div className="compare-bar" key={r.label}>
+          <span className="compare-bar__label">{r.label}</span>
+          <span className="compare-bar__track"><span style={{ width: `${Math.round((r.value / top) * 100)}%` }} /></span>
+          <b className="num">{r.value}{unit}</b>
+        </div>
+      ))}
+    </div>
+  );
+}
