@@ -21,6 +21,7 @@ function crumbsFor(path, peopleMap) {
     case "tasks":
       return ["Tasks", TASK_VIEWS[b] ?? b];
     case "shift":
+      if (b === "schedule") return ["Shifts", "Schedule"];
       return ["Shift Log", b === "history" ? "History" : "Today"];
     case "team":
       return ["Team"];
@@ -79,11 +80,15 @@ export default function AppShell({ children }) {
   const taskViews = manager
     ? [["/tasks/assigned", "Assigned by Me"], ["/tasks/team", "Team Tasks"], ["/tasks/my", "My Tasks"]]
     : [["/tasks/my", "My Tasks"], ["/tasks/team", "Team Tasks"]];
-  // Shift logs belong to SOC analysts only; managers see shift figures in Performance and Reports.
+  const shiftViews = [
+    manager && ["/shift/schedule", "Schedule"],
+    me.keepsShiftLog && ["/shift", "Today"],
+    me.keepsShiftLog && ["/shift/history", "History"],
+  ].filter(Boolean);
   const NAV = [
     ["/dashboard", "Dashboard", "home"],
     ["/tasks", "Tasks", "tasks", taskViews],
-    me.keepsShiftLog && ["/shift", "Shift Log", "shift", [["/shift", "Today"], ["/shift/history", "History"]]],
+    shiftViews.length && ["/shift", manager ? "Shifts" : "Shift Log", "shift", shiftViews],
     ["/team", "Team", "team"],
     manager ? ["/performance", "Performance", "perf", [["/performance/overview", "Overview"]]] : [`/performance/employees/${me.id}`, "My Performance", "perf"],
     ["/reports", "Reports", "report"],
@@ -93,6 +98,7 @@ export default function AppShell({ children }) {
 
   const jumps = [
     ["/dashboard", "Dashboard"], ...taskViews,
+    manager && ["/shift/schedule", "Shift Schedule"],
     me.keepsShiftLog && ["/shift", "Shift Log"],
     manager ? ["/performance/overview", "Performance"] : [`/performance/employees/${me.id}`, "My Performance"],
     ["/reports/employee", "Reports"], ["/account", "Account & password"],
