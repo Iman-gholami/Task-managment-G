@@ -43,15 +43,17 @@ export default function EmployeePerformanceCharts({ data }) {
   const qualityTotal = qualityRows.reduce((sum, row) => sum + row.value, 0);
   const cadence = deliveryRows(data.tasks, data.period);
   const routine = data.routine;
+  const miniStatsStyle = { display: "grid", gap: "var(--s-3)" };
+  const miniStatStyle = { display: "grid", gap: 8, padding: "12px 14px", border: "1px solid var(--divider)", borderRadius: "var(--r-md)", background: "var(--surface-inset)" };
 
   return (
-    <section className={styles.employeeCharts} aria-label="Employee performance charts">
+    <section className={styles.managerCharts} aria-label="Employee performance charts">
       <Panel title="Work profile" meta="Completed work in the selected reporting period">
         <div className={`${styles.chartBody} ${styles.chartSplit}`}>
           <div className={styles.chartSection}>
             <div className={styles.chartLabel}><span>Complexity mix</span><small>{complexityTotal} completed</small></div>
             {complexityTotal ? (
-              <DonutBreakdown rows={complexityRows} name="Completed work by complexity" unit=" tasks" centerLabel="tasks" />
+              <DonutBreakdown rows={complexityRows} name="Completed work by complexity" unit=" tasks" />
             ) : (
               <div className="muted small">No completed tasks in this period.</div>
             )}
@@ -60,7 +62,7 @@ export default function EmployeePerformanceCharts({ data }) {
           <div className={styles.chartSection}>
             <div className={styles.chartLabel}><span>Quality mix</span><small>Manager review outcomes</small></div>
             {qualityTotal ? (
-              <DonutBreakdown rows={qualityRows} name="Completed work by quality" unit=" ratings" centerLabel="rated" />
+              <DonutBreakdown rows={qualityRows} name="Completed work by quality" unit=" ratings" />
             ) : (
               <div className="muted small">No quality ratings in this period.</div>
             )}
@@ -83,13 +85,13 @@ export default function EmployeePerformanceCharts({ data }) {
           <div className={`${styles.chartBody} ${styles.chartSplit}`}>
             <div className={styles.chartSection}>
               <div className={styles.chartLabel}><span>Completion</span><small>Shift discipline</small></div>
-              <div className={styles.employeeMiniStats}>
-                <div className={styles.employeeMiniStat}>
-                  <span>Routine completion</span>
+              <div style={miniStatsStyle}>
+                <div style={miniStatStyle}>
+                  <span className="muted small">Routine completion</span>
                   <Meter value={routine.completion ?? 0} max={100} label="Routine completion" readout={`${routine.completion ?? 0}%`} />
                 </div>
-                <div className={styles.employeeMiniStat}>
-                  <span>Shift logs completed</span>
+                <div style={miniStatStyle}>
+                  <span className="muted small">Shift logs completed</span>
                   <Meter value={routine.completed ?? 0} max={Math.max(1, routine.logs ?? 0)} label="Shift logs completed" readout={`${routine.completed ?? 0} / ${routine.logs ?? 0}`} />
                 </div>
               </div>
