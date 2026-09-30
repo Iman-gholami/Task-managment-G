@@ -2,10 +2,10 @@ import { redirect } from "next/navigation";
 import AppProvider from "@/components/AppProvider";
 import AppShell from "@/components/shell/AppShell";
 import { getCurrentUser } from "@/lib/server/auth";
-import { getShiftLog, listTasks, listUsers, shiftStatusToday } from "@/lib/server/repo";
+import { getShiftLog, listTasks, listUsers, shiftStatusToday, today } from "@/lib/server/repo";
 import { dashboardStats, isShiftAnalyst } from "@/lib/server/stats";
 
-const EMPTY_SHIFT = { date: null, activities: [], tickets: [], completedAt: null };
+const emptyShift = () => ({ date: today(), activities: [], tickets: [], completedAt: null });
 
 export default async function AppLayout({ children }) {
   const me = await getCurrentUser();
@@ -15,7 +15,7 @@ export default async function AppLayout({ children }) {
     me: { ...me, keepsShiftLog },
     users: listUsers(),
     tasks: listTasks(),
-    shift: keepsShiftLog ? getShiftLog(me.id) : EMPTY_SHIFT,
+    shift: keepsShiftLog ? (getShiftLog(me.id) ?? emptyShift()) : emptyShift(),
     shiftStatus: shiftStatusToday(),
     stats: dashboardStats(me),
   };
