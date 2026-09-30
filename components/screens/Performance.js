@@ -7,6 +7,7 @@ import { useApp } from "@/components/AppProvider";
 import useFetch from "@/components/useFetch";
 import PeriodSelector from "@/components/PeriodSelector";
 import ManagerPerformanceCharts from "@/components/screens/ManagerPerformanceCharts";
+import EmployeePerformanceCharts from "@/components/screens/EmployeePerformanceCharts";
 import Icon from "@/components/ui/Icon";
 import { PageHeader, Panel } from "@/components/ui/layout";
 import { Metric, MetricGrid } from "@/components/ui/Metric";
@@ -85,6 +86,8 @@ export function EmployeePerformance({ userId }) {
               </>
             )}
           </MetricGrid>
+
+          <EmployeePerformanceCharts data={data} />
 
           <div className="stack-lg">
             {r && (
