@@ -242,7 +242,7 @@ export default function ShiftSchedule() {
                   {formatLongDate(selected.date)}
                 </div>
               </div>
-              <span style={{ marginRight: "auto" }} />
+              <span style={{ flex: 1 }} />
               <button type="button" className="btn btn-ghost icon-btn btn-sm" onClick={closeComposer} aria-label="بستن"><Icon name="x" /></button>
             </div>
 
@@ -272,11 +272,10 @@ export default function ShiftSchedule() {
                 <div style={{ display: "flex", alignItems: "center", gap: "var(--s-2)" }}>
                   <label htmlFor="shift-people-search">انتخاب نیروها</label>
                   <span className="muted" style={{ fontSize: "var(--fs-12)" }}>{faNum(draftIds.length)} نفر انتخاب شده</span>
-                  <span style={{ marginRight: "auto" }} />
+                  <span style={{ flex: 1 }} />
                   <button type="button" className="btn btn-ghost btn-sm" disabled={!draftIds.length} onClick={() => setDraftIds([])}>پاک کردن</button>
                 </div>
                 <div style={{ position: "relative" }}>
-                  <Icon name="search" className="i" />
                   <input
                     id="shift-people-search"
                     className="input"
@@ -325,7 +324,7 @@ export default function ShiftSchedule() {
 
             <div className="modal-foot">
               <span className="sec" style={{ fontSize: "var(--fs-13)" }}><b style={{ color: "var(--text)", fontWeight: "var(--fw-medium)" }}>{faNum(draftIds.length)} نفر</b> برای {SHIFT_META[selected.shift].label}</span>
-              <span style={{ marginRight: "auto" }} />
+              <span style={{ flex: 1 }} />
               <button type="button" className="btn btn-ghost" onClick={closeComposer}>انصراف</button>
               <button type="button" className="btn btn-primary" onClick={save} disabled={saving} aria-busy={saving}>ثبت شیفت <kbd>⌘↵</kbd></button>
             </div>
