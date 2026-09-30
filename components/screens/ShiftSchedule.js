@@ -96,6 +96,7 @@ export default function ShiftSchedule() {
   const monthSchedules = useMemo(() => schedules.filter((row) => jalaliMonthKey(row.date) === monthKey), [schedules, monthKey]);
   const stats = useMemo(() => selectedUser ? scheduleStats(monthSchedules.filter((row) => row.userId === selectedUser)) : ZERO_STATS, [monthSchedules, selectedUser]);
   const selectedRows = byDate[selectedDate] ?? [];
+  const selectedShiftRows = selectedRows.filter((row) => row.shiftType === selectedShift);
   const cells = useMemo(() => Array.from({ length: daysBetween(range.start, range.end) + 1 }, (_, i) => addDays(range.start, i)), [range.start, range.end]);
   const selectedPerson = analysts.find((a) => a.id === selectedUser);
   const visibleAnalysts = useMemo(() => {
@@ -171,9 +172,8 @@ export default function ShiftSchedule() {
     <div className={`page ${styles.page}`} dir="rtl">
       <header className={styles.hero}>
         <div>
-          <div className={styles.kicker}><span className={styles.kickerIcon}><Icon name="cal" /></span> برنامه‌ریزی شیفت SOC</div>
           <h1>مدیریت شیفت نیروها</h1>
-          <p>چیدمان ماهانه، آمار هر کارشناس و مدیریت سریع شیفت‌ها در یک نمای واحد.</p>
+          <p>تقویم ماهانه تیم، جزئیات هر روز و آمار هر کارشناس در یک نمای خلوت و سریع.</p>
         </div>
         <div className={styles.heroActions}>
           <Link className="btn btn-secondary" href="/shift/changes"><Icon name="edit" /> تغییر شیفت</Link>
@@ -196,21 +196,11 @@ export default function ShiftSchedule() {
             </div>
 
             <label className={styles.analystSelect}>
-              <span>آمار کارشناس</span>
+              <span>نمایش آمار</span>
               <select value={selectedUser} onChange={(e) => setSelectedUser(e.target.value)}>
                 {analysts.map((a) => <option key={a.id} value={a.id}>{a.name}</option>)}
               </select>
             </label>
-          </div>
-
-          <div className={styles.statsStrip}>
-            <Stat label="ساعت ماه" value={stats.hours} suffix=" ساعت" />
-            <Stat label="کل شیفت" value={stats.total} />
-            <Stat label="پنجشنبه" value={stats.thursdays} />
-            <Stat label="جمعه" value={stats.fridays} />
-            <Stat label="تا ۸ شب" value={stats.evening} tone="evening" />
-            <Stat label="صبح" value={stats.morning} tone="morning" />
-            <Stat label="شب" value={stats.night} tone="night" />
           </div>
 
           {error && <div className={styles.errorBar}><span>دریافت برنامه شیفت ناموفق بود.</span><button onClick={reload}>تلاش دوباره</button></div>}
@@ -247,15 +237,28 @@ export default function ShiftSchedule() {
                     {SHIFT_KEYS.map((shiftType) => {
                       const shiftRows = rows.filter((row) => row.shiftType === shiftType);
                       if (!shiftRows.length) return null;
+                      const includesSelected = shiftRows.some((row) => row.userId === selectedUser);
                       return (
-                        <div className={styles.shiftBand} data-shift={shiftType} key={shiftType}>
+                        <button
+                          type="button"
+                          className={styles.shiftBand}
+                          data-shift={shiftType}
+                          data-selected-person={includesSelected ? "true" : "false"}
+                          key={shiftType}
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setSelectedDate(date);
+                            setSelectedShift(shiftType);
+                          }}
+                          title={`${SHIFT_META[shiftType].label} · ${faNum(shiftRows.length)} نفر`}
+                        >
                           <i />
-                          <span>{shiftRows.slice(0, 2).map((r) => r.name.split(" ")[0]).join("، ")}</span>
-                          <small>{SHIFT_META[shiftType].short}{shiftRows.length > 2 ? ` +${faNum(shiftRows.length - 2)}` : ""}</small>
-                        </div>
+                          <span>{SHIFT_META[shiftType].short}</span>
+                          <strong>{faNum(shiftRows.length)}</strong>
+                        </button>
                       );
                     })}
-                    {!rows.length && currentMonth && <span className={styles.emptyDay}>بدون شیفت</span>}
+                    {!rows.length && currentMonth && <span className={styles.emptyDay}>—</span>}
                   </div>
                 </div>
               );
@@ -264,6 +267,7 @@ export default function ShiftSchedule() {
 
           <div className={styles.legend}>
             {SHIFT_KEYS.map((key) => <span key={key} data-shift={key}><i />{SHIFT_META[key].label}<small>{SHIFT_META[key].time}</small></span>)}
+            <span className={styles.legendHint}>نقطه‌ی پررنگ‌تر یعنی کارشناس انتخاب‌شده در آن شیفت حضور دارد.</span>
           </div>
         </section>
 
@@ -273,38 +277,62 @@ export default function ShiftSchedule() {
             {manager && <button className={styles.roundBtn} onClick={() => openComposer(selectedDate, selectedShift)} aria-label="ثبت شیفت"><Icon name="plus" /></button>}
           </div>
 
-          <div className={styles.shiftList}>
+          <div className={styles.shiftTabs}>
             {SHIFT_KEYS.map((key) => {
-              const rows = selectedRows.filter((row) => row.shiftType === key);
+              const count = selectedRows.filter((row) => row.shiftType === key).length;
               return (
-                <section className={`${styles.shiftPanel} ${selectedShift === key ? styles.shiftPanelActive : ""}`} data-shift={key} key={key}>
-                  <button className={styles.shiftPanelHead} onClick={() => { setSelectedShift(key); if (manager) openComposer(selectedDate, key); }}>
-                    <span className={styles.shiftMark}><i /></span>
-                    <span className={styles.shiftInfo}><b>{SHIFT_META[key].label}</b><small>{SHIFT_META[key].time}</small></span>
-                    <strong>{rows.length ? `${faNum(rows.length)} نفر` : "خالی"}</strong>
-                  </button>
-                  {rows.length > 0 && (
-                    <div className={styles.peopleList}>
-                      {rows.map((row) => (
-                        <div className={styles.personRow} key={row.userId}>
-                          <button className={styles.person} onClick={() => setSelectedUser(row.userId)}><Who id={row.userId} /></button>
-                          {manager && <button className={styles.removeBtn} onClick={() => remove(row)} disabled={saving}>حذف</button>}
-                        </div>
-                      ))}
-                    </div>
-                  )}
-                </section>
+                <button
+                  type="button"
+                  key={key}
+                  data-shift={key}
+                  className={selectedShift === key ? styles.shiftTabActive : ""}
+                  onClick={() => setSelectedShift(key)}
+                >
+                  <i />
+                  <span>{SHIFT_META[key].short}</span>
+                  <strong>{faNum(count)}</strong>
+                </button>
               );
             })}
           </div>
 
-          <div className={styles.analystCard}>
-            <span>خلاصه ماهانه</span>
-            <b>{selectedPerson?.name || "کارشناس"}</b>
-            <div><strong>{faNum(stats.total)}</strong><small>شیفت</small><strong>{faNum(stats.hours)}</strong><small>ساعت</small></div>
-          </div>
+          <section className={styles.selectedShiftBlock} data-shift={selectedShift}>
+            <div className={styles.selectedShiftHead}>
+              <div><b>{SHIFT_META[selectedShift].label}</b><small>{SHIFT_META[selectedShift].time}</small></div>
+              {manager && <button onClick={() => openComposer(selectedDate, selectedShift)}><Icon name="edit" /> ویرایش</button>}
+            </div>
 
-          <div className={styles.tip}>یک کلیک روی روز، جزئیات را اینجا نمایش می‌دهد. دابل‌کلیک برای مدیر فرم ثبت همان روز را باز می‌کند.</div>
+            <div className={styles.peopleList}>
+              {selectedShiftRows.length === 0 ? (
+                <div className={styles.emptyPeople}>برای این شیفت نیرویی ثبت نشده است.</div>
+              ) : selectedShiftRows.map((row) => (
+                <div className={styles.personRow} key={row.userId}>
+                  <button className={styles.person} onClick={() => setSelectedUser(row.userId)}><Who id={row.userId} /></button>
+                  {manager && <button className={styles.removeBtn} onClick={() => remove(row)} disabled={saving}>حذف</button>}
+                </div>
+              ))}
+            </div>
+          </section>
+
+          <section className={styles.analystCard}>
+            <div className={styles.analystCardHead}>
+              <span>آمار ماهانه</span>
+              <b>{selectedPerson?.name || "کارشناس"}</b>
+            </div>
+            <div className={styles.analystPrimary}>
+              <div><strong>{faNum(stats.hours)}</strong><span>ساعت</span></div>
+              <div><strong>{faNum(stats.total)}</strong><span>شیفت</span></div>
+            </div>
+            <div className={styles.analystMiniGrid}>
+              <MiniStat label="پنجشنبه" value={stats.thursdays} />
+              <MiniStat label="جمعه" value={stats.fridays} />
+              <MiniStat label="تا ۸" value={stats.evening} tone="evening" />
+              <MiniStat label="صبح" value={stats.morning} tone="morning" />
+              <MiniStat label="شب" value={stats.night} tone="night" />
+            </div>
+          </section>
+
+          <div className={styles.tip}>یک کلیک برای مشاهده جزئیات است. دابل‌کلیک روی روز، فرم ثبت همان روز را برای مدیر باز می‌کند.</div>
         </aside>
       </div>
 
@@ -353,6 +381,6 @@ export default function ShiftSchedule() {
   );
 }
 
-function Stat({ label, value, suffix = "", tone }) {
-  return <div className={styles.stat} data-tone={tone || "default"}><span>{label}</span><b>{faNum(value)}{suffix}</b></div>;
+function MiniStat({ label, value, tone }) {
+  return <div className={styles.miniStat} data-tone={tone || "default"}><span>{label}</span><b>{faNum(value)}</b></div>;
 }
