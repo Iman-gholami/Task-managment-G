@@ -6,6 +6,7 @@ import { useState } from "react";
 import { useApp } from "@/components/AppProvider";
 import useFetch from "@/components/useFetch";
 import PeriodSelector from "@/components/PeriodSelector";
+import ManagerPerformanceCharts from "@/components/screens/ManagerPerformanceCharts";
 import Icon from "@/components/ui/Icon";
 import { PageHeader, Panel } from "@/components/ui/layout";
 import { Metric, MetricGrid } from "@/components/ui/Metric";
@@ -180,6 +181,9 @@ export function PerformanceOverview() {
             <Metric label="MISP IOCs" value={total((r) => r.routine?.iocs)} loading={busy} foot="Added in shift logs" />
             <Metric label="Tickets" value={total((r) => r.routine?.tickets)} loading={busy} foot="Registered in shift logs" />
           </MetricGrid>
+
+          <ManagerPerformanceCharts data={data} loading={busy} />
+
           <div className="toolbar" role="search" aria-label="Filter employees">
             <div className="search"><Icon name="search" /><input type="search" className="input" placeholder="Search employee" aria-label="Search employee" value={q} onChange={(e) => setQ(e.target.value)} /></div>
             <div className="end"><span className="result-count">{busy ? "" : rows.length === all.length ? plural(all.length, "person", "people") : `${rows.length} of ${all.length}`}</span></div>
