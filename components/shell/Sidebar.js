@@ -28,7 +28,9 @@ export default function Sidebar({ groups, path, collapsed, inert, onProfile, onB
             {g.label && <div className="nav-label" id={`nav-${g.id}`}>{g.label}</div>}
             <ul aria-labelledby={g.label ? `nav-${g.id}` : undefined}>
               {g.items.map((it) => {
-                const on = isOn(path, it.match ?? it.href);
+                const on = it.exact
+                  ? path === it.href || !!it.subs?.some((s) => path === s.href)
+                  : isOn(path, it.match ?? it.href);
                 const current = on && !it.subs;
                 return (
                   <li key={it.href}>
