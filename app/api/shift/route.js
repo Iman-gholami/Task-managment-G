@@ -14,7 +14,7 @@ export async function GET(request) {
   const owner = getUser(target);
   if (!owner || !isShiftAnalyst(owner)) return err(404, "Shift logs are kept by SOC analysts only.");
   const log = target === user.id && !date ? getShiftLog(target) : findShiftLog(target, date);
-  if (!log) return err(404, "No shift activity has been recorded for this day.");
+  if (!log) return err(404, "No shift is scheduled for this day.");
   return Response.json(log);
 }
 
@@ -24,9 +24,16 @@ export async function PATCH(request) {
   if (denied) return denied;
   if (!isShiftAnalyst(user)) return err(403, "Shift logs are kept by SOC analysts only.");
   const body = await request.json().catch(() => ({}));
+  const log = getShiftLog(user.id);
+  if (!log) return err(404, "No shift is scheduled for today.");
+
   if ("completed" in body) {
-    if (body.completed && getShiftLog(user.id).activities.some((a) => !a.done)) return err(400, "Complete all activities first.");
-    return Response.json(setShiftCompleted(user.id, !!body.completed));
+    if (body.completed && log.activities.some((a) => !a.done)) return err(400, "Complete all activities first.");
+    try {
+      return Response.json(setShiftCompleted(user.id, !!body.completed));
+    } catch (e) {
+      return err(409, e.message);
+    }
   }
   const n = Number(body.n);
   if (!Number.isInteger(n) || typeof body.patch !== "object") return err(400, "Invalid request.");
