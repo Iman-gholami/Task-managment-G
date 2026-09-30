@@ -1,0 +1,52 @@
+/* Persian / RTL presentation layer.
+   Keep the English shell on Geist, but use a Persian-first typeface for RTL product screens. */
+.page[dir="rtl"] {
+  font-family: var(--font-vazirmatn), Tahoma, Arial, sans-serif;
+  letter-spacing: 0;
+  font-kerning: normal;
+  text-rendering: optimizeLegibility;
+}
+
+.page[dir="rtl"] button,
+.page[dir="rtl"] input,
+.page[dir="rtl"] select,
+.page[dir="rtl"] textarea {
+  font-family: inherit;
+  letter-spacing: 0;
+}
+
+/* Native select menus otherwise inherit the light text from the dark theme while
+   some browsers still paint the popup with a white system background. Force a
+   theme-matched option surface so every analyst name stays readable. */
+.page[dir="rtl"] select option,
+.page[dir="rtl"] select optgroup {
+  background: var(--surface-raised);
+  color: var(--text);
+  font-family: var(--font-vazirmatn), Tahoma, Arial, sans-serif;
+  font-size: 13px;
+  font-weight: 450;
+}
+
+:root[data-theme="dark"] .page[dir="rtl"] select {
+  color-scheme: dark;
+}
+
+:root[data-theme="light"] .page[dir="rtl"] select {
+  color-scheme: light;
+}
+
+/* Persian labels benefit from a little more vertical breathing room than Geist. */
+.page[dir="rtl"] h1,
+.page[dir="rtl"] h2,
+.page[dir="rtl"] h3,
+.page[dir="rtl"] label,
+.page[dir="rtl"] button,
+.page[dir="rtl"] select {
+  line-height: 1.55;
+}
+
+.page[dir="rtl"] h1,
+.page[dir="rtl"] h2,
+.page[dir="rtl"] h3 {
+  font-weight: 700;
+}
