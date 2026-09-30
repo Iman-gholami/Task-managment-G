@@ -3,7 +3,10 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { api } from "@/components/AppProvider";
 
-/** Loads JSON from `url` (skips when null). Returns { data, error, loading, reload, setData }. */
+/**
+ * Loads JSON from `url` (skips when null). Returns { data, error, loading, reload, setData }.
+ * `error` is the ApiError (with `status` / `kind`), so the UI can tell permission, network and server failures apart.
+ */
 export default function useFetch(url) {
   const [state, setState] = useState({ data: null, error: null, loading: !!url, url: null });
   const latest = useRef(url);
@@ -18,7 +21,7 @@ export default function useFetch(url) {
       const data = await api(url);
       if (latest.current === url) setState({ data, error: null, loading: false, url });
     } catch (e) {
-      if (latest.current === url) setState({ data: null, error: e.message, loading: false, url });
+      if (latest.current === url) setState({ data: null, error: e, loading: false, url });
     }
   }, [url]);
 

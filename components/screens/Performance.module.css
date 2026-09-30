@@ -1,0 +1,340 @@
+.managerCharts {
+  display: grid;
+  gap: var(--s-4);
+  margin-bottom: var(--s-6);
+}
+
+.chartGrid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: var(--s-4);
+}
+
+.chartBody {
+  padding: var(--s-4);
+}
+
+.chartSplit {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: var(--s-5);
+}
+
+.chartSection {
+  min-width: 0;
+}
+
+.chartSection + .chartSection {
+  border-left: 1px solid var(--divider);
+  padding-left: var(--s-5);
+}
+
+.chartLabel {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: var(--s-3);
+  margin-bottom: var(--s-3);
+  color: var(--text);
+  font-size: var(--fs-13);
+  font-weight: var(--fw-medium);
+}
+
+.chartLabel small {
+  color: var(--text-3);
+  font-size: var(--fs-12);
+  font-weight: var(--fw-regular);
+}
+
+.complexityBody {
+  display: grid;
+  gap: var(--s-4);
+  padding: var(--s-5) var(--s-4);
+}
+
+.complexityBar :global(.dist) {
+  height: 16px;
+  border-radius: var(--r-full);
+  background: var(--viz-track);
+}
+
+:global(.donut-chart) {
+  display: grid;
+  grid-template-columns: minmax(190px, 230px) minmax(260px, 1fr);
+  align-items: center;
+  gap: clamp(28px, 6vw, 72px);
+  width: min(760px, 100%);
+  margin: 0 auto;
+  padding: var(--s-3) var(--s-4);
+}
+
+:global(.donut-chart__visual) {
+  position: relative;
+  width: 100%;
+  aspect-ratio: 1;
+  max-width: 220px;
+  justify-self: center;
+}
+
+:global(.donut-chart__visual svg) {
+  display: block;
+  width: 100%;
+  height: 100%;
+  transform: rotate(-90deg);
+  overflow: visible;
+}
+
+:global(.donut-chart__track),
+:global(.donut-chart__segment) {
+  fill: none;
+  stroke-width: 14;
+}
+
+:global(.donut-chart__track) {
+  stroke: var(--viz-track);
+}
+
+:global(.donut-chart__segment) {
+  stroke: var(--donut-color);
+  transition: stroke-width var(--t-fast), opacity var(--t-fast);
+}
+
+:global(.donut-chart__segment:hover) {
+  stroke-width: 17;
+}
+
+:global(.donut-chart__center) {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-content: center;
+  text-align: center;
+  pointer-events: none;
+}
+
+:global(.donut-chart__center b) {
+  color: var(--text);
+  font: var(--type-kpi);
+  line-height: 1;
+}
+
+:global(.donut-chart__center span) {
+  margin-top: 7px;
+  color: var(--text-3);
+  font: var(--type-caption);
+  text-transform: uppercase;
+  letter-spacing: var(--tracking-caps);
+}
+
+:global(.donut-chart__legend) {
+  display: grid;
+  gap: 4px;
+  min-width: 0;
+}
+
+:global(.donut-chart__legend-row) {
+  display: grid;
+  grid-template-columns: 10px minmax(0, 1fr) 46px 36px;
+  align-items: center;
+  gap: var(--s-3);
+  min-height: 42px;
+  padding: 0 var(--s-3);
+  border-bottom: 1px solid var(--divider);
+  color: var(--text-2);
+  font-size: var(--fs-13);
+}
+
+:global(.donut-chart__legend-row:last-child) {
+  border-bottom: 0;
+}
+
+:global(.donut-chart__legend-row > i) {
+  width: 9px;
+  height: 9px;
+  border-radius: 50%;
+}
+
+:global(.donut-chart__legend-row > span) {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+:global(.donut-chart__legend-row > small) {
+  color: var(--text-3);
+  font-size: var(--fs-12);
+  text-align: right;
+}
+
+:global(.donut-chart__legend-row > b) {
+  color: var(--text);
+  font-size: var(--fs-13);
+  font-weight: var(--fw-semibold);
+  text-align: right;
+}
+
+:global(.trend-chart) {
+  min-width: 0;
+}
+
+:global(.trend-chart svg) {
+  display: block;
+  width: 100%;
+  height: 190px;
+  overflow: visible;
+}
+
+:global(.trend-grid) {
+  stroke: var(--divider);
+  stroke-width: 1;
+  vector-effect: non-scaling-stroke;
+}
+
+:global(.trend-line) {
+  fill: none;
+  stroke: var(--trend-color);
+  stroke-width: 2.4;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  vector-effect: non-scaling-stroke;
+}
+
+:global(.trend-dot) {
+  fill: var(--surface-card);
+  stroke: var(--trend-color);
+  stroke-width: 2.2;
+  vector-effect: non-scaling-stroke;
+}
+
+:global(.trend-axis) {
+  display: grid;
+  grid-template-columns: repeat(6, 1fr);
+  gap: var(--s-2);
+  margin: -20px 12px 0 28px;
+  color: var(--text-3);
+  font: var(--type-caption);
+  text-align: center;
+}
+
+:global(.trend-legend) {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--s-2) var(--s-5);
+  margin-top: var(--s-4);
+  padding-top: var(--s-3);
+  border-top: 1px solid var(--divider);
+  color: var(--text-2);
+  font: var(--type-caption);
+}
+
+:global(.trend-legend > span) {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+}
+
+:global(.trend-legend i) {
+  width: 18px;
+  height: 3px;
+  border-radius: var(--r-full);
+}
+
+:global(.trend-legend b) {
+  color: var(--text);
+  font-weight: var(--fw-semibold);
+  font-variant-numeric: tabular-nums;
+}
+
+:global(.compare-bars) {
+  display: grid;
+  gap: 10px;
+}
+
+:global(.compare-bar) {
+  display: grid;
+  grid-template-columns: minmax(100px, 148px) minmax(80px, 1fr) minmax(42px, auto);
+  align-items: center;
+  gap: var(--s-3);
+  min-height: 28px;
+}
+
+:global(.compare-bar__label) {
+  min-width: 0;
+  overflow: hidden;
+  color: var(--text-2);
+  font-size: var(--fs-12);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+:global(.compare-bar__track) {
+  height: 8px;
+  overflow: hidden;
+  border-radius: var(--r-full);
+  background: var(--viz-track);
+}
+
+:global(.compare-bar__track > span) {
+  display: block;
+  min-width: 2px;
+  height: 100%;
+  border-radius: inherit;
+  background: linear-gradient(90deg, var(--viz-bar), var(--viz-bar-strong));
+  transition: width var(--t-slow) var(--ease-out);
+}
+
+:global(.compare-bar > b) {
+  color: var(--text);
+  font-size: var(--fs-12);
+  font-weight: var(--fw-semibold);
+  text-align: right;
+}
+
+@media (max-width: 900px) {
+  .chartGrid,
+  .chartSplit {
+    grid-template-columns: 1fr;
+  }
+
+  .chartSection + .chartSection {
+    border-top: 1px solid var(--divider);
+    border-left: 0;
+    padding-top: var(--s-4);
+    padding-left: 0;
+  }
+}
+
+@media (max-width: 639px) {
+  .chartBody {
+    padding: var(--s-3);
+  }
+
+  :global(.donut-chart) {
+    grid-template-columns: 1fr;
+    gap: var(--s-4);
+    padding: var(--s-2) 0;
+  }
+
+  :global(.donut-chart__visual) {
+    width: 190px;
+  }
+
+  :global(.donut-chart__legend-row) {
+    grid-template-columns: 10px minmax(0, 1fr) 40px 32px;
+    padding: 0 var(--s-2);
+  }
+
+  :global(.trend-chart svg) {
+    height: 160px;
+  }
+
+  :global(.trend-axis) {
+    font-size: 10px;
+  }
+
+  :global(.compare-bar) {
+    grid-template-columns: minmax(82px, 112px) minmax(64px, 1fr) 40px;
+    gap: var(--s-2);
+  }
+}

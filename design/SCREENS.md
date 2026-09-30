@@ -22,7 +22,7 @@ Shared conventions (states, tokens, components) are in `DESIGN_SYSTEM.md`.
 │            │                                                               │
 │ (SR) Sara  │                                                               │
 └────────────┴──────────────────────────────────────────────────────────────┘
- bg (#0B0D12)   surface sheet (#11141B), inset 8px, radius 10
+ bg (--bg)      surface sheet (--surface), inset 8px, radius 12 — see DESIGN_SYSTEM.md
 ```
 
 **Standard states (they apply unless a screen overrides them)**
@@ -41,7 +41,7 @@ Shared conventions (states, tokens, components) are in `DESIGN_SYSTEM.md`.
 | **Layout** | Split 50/50: the form on `--bg` on the left, a quiet surface panel with a one-line product statement on the right |
 | **Primary action** | Sign in (or Continue with SSO, when SSO is configured it becomes primary) |
 | **Secondary** | Contact administrator link |
-| **Components** | Input (36px), Button, Brand mark |
+| **Components** | Input (40px, lg), Button (lg), Brand mark |
 | **Empty** | n/a |
 | **Loading** | The button shows an inline spinner and "Signing in…", and the fields become read-only |
 | **Error** | "Email or password is incorrect." inline above the button. Locked accounts see "Your account is locked. Contact your administrator." |
