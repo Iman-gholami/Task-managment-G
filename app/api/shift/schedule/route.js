@@ -1,7 +1,7 @@
 import { isManager, requireUser } from "@/lib/server/auth";
 import { err } from "@/lib/server/access";
 import { listShiftSchedules, removeShiftSchedule, scheduleStatsByUser, setShiftSchedule } from "@/lib/server/repo";
-import { monthBounds } from "@/lib/shifts";
+import { isIsoDate, monthBounds } from "@/lib/shifts";
 import { isShiftAnalyst } from "@/lib/server/stats";
 
 function canView(user) {
@@ -14,9 +14,20 @@ export async function GET(request) {
   if (!canView(user)) return err(403, "Shift schedule is available to SOC analysts and managers.");
 
   const url = new URL(request.url);
-  const month = url.searchParams.get("month") || new Date().toISOString().slice(0, 7);
-  const bounds = monthBounds(month);
-  if (!bounds) return err(400, "Invalid month.");
+  const fromParam = url.searchParams.get("from");
+  const toParam = url.searchParams.get("to");
+  let bounds;
+  let month = null;
+
+  if (fromParam || toParam) {
+    if (!isIsoDate(fromParam) || !isIsoDate(toParam) || fromParam > toParam) return err(400, "Invalid date range.");
+    bounds = { from: fromParam, to: toParam };
+  } else {
+    month = url.searchParams.get("month") || new Date().toISOString().slice(0, 7);
+    bounds = monthBounds(month);
+    if (!bounds) return err(400, "Invalid month.");
+  }
+
   const schedules = listShiftSchedules(bounds.from, bounds.to);
   return Response.json({ month, ...bounds, schedules, statsByUser: scheduleStatsByUser(schedules) });
 }
