@@ -14,7 +14,7 @@
 .shift-stat b { font-size: 22px; font-weight: 600; letter-spacing: -.02em; }
 
 .shift-schedule-layout { display: grid; grid-template-columns: minmax(0, 1fr); gap: var(--s-4); align-items: start; }
-.shift-schedule-layout.with-editor { grid-template-columns: minmax(0, 1fr) 320px; }
+.shift-schedule-layout.with-panel { grid-template-columns: minmax(0, 1fr) 340px; }
 .shift-calendar { overflow: hidden; padding: 0; }
 .shift-calendar-week { display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); background: var(--surface-2); border-bottom: 1px solid var(--border); }
 .shift-calendar-week > div { padding: 9px 10px; color: var(--text-3); font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: .04em; text-align: center; }
@@ -47,10 +47,16 @@
 .shift-type-option.evening.active { background: var(--warning-soft); }
 .shift-type-option.night.active { background: var(--violet-soft); }
 .shift-editor > .btn-primary { width: 100%; justify-content: center; margin-top: 2px; }
+.shift-panel-date { display: grid; gap: 3px; margin: -2px 0 var(--s-4); padding: 10px 12px; border-radius: var(--r-md); background: var(--surface-2); border: 1px solid var(--divider); }
+.shift-panel-date b { font-size: 13px; }
+.shift-panel-date small { color: var(--text-3); font-size: 11px; direction: rtl; text-align: left; }
 .shift-selected-list { margin-top: var(--s-6); padding-top: var(--s-4); border-top: 1px solid var(--divider); }
+.shift-selected-list.compact { margin-top: 0; padding-top: 0; border-top: 0; }
 .shift-selected-row { display: flex; align-items: center; justify-content: space-between; gap: var(--s-2); padding: 9px 0; border-bottom: 1px solid var(--divider); }
 .shift-selected-row > div { min-width: 0; display: grid; gap: 3px; }
 .shift-selected-row small { color: var(--text-3); padding-left: 28px; }
+.shift-panel-assign { width: 100%; justify-content: center; margin-top: var(--s-4); }
+.shift-panel-help { margin: var(--s-3) 0 0; font-size: 11px; line-height: 1.55; }
 .shift-legend { display: flex; flex-wrap: wrap; gap: var(--s-4); margin-top: var(--s-3); color: var(--text-3); font-size: 12px; }
 .shift-legend span { display: inline-flex; align-items: center; gap: 6px; }
 .shift-legend i { width: 9px; height: 9px; border-radius: 3px; }
@@ -77,7 +83,7 @@
 
 @media (max-width: 1250px) {
   .shift-stat-grid { grid-template-columns: repeat(4, minmax(0, 1fr)); }
-  .shift-schedule-layout.with-editor { grid-template-columns: minmax(0, 1fr) 280px; }
+  .shift-schedule-layout.with-panel { grid-template-columns: minmax(0, 1fr) 290px; }
   .shift-change-fields { grid-template-columns: 1fr 1fr; }
   .shift-change-fields .btn { justify-self: start; }
 }
@@ -86,7 +92,7 @@
   .shift-toolbar { align-items: stretch; flex-direction: column; }
   .shift-analyst-filter { width: 100%; }
   .shift-stat-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
-  .shift-schedule-layout.with-editor { grid-template-columns: 1fr; }
+  .shift-schedule-layout.with-panel { grid-template-columns: 1fr; }
   .shift-editor { position: static; }
   .shift-calendar { overflow-x: auto; }
   .shift-calendar-week, .shift-calendar-grid { min-width: 760px; }
