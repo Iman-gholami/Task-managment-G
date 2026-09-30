@@ -3,7 +3,7 @@ name: Shift Feature CI
 on:
   push:
     branches:
-      - feature/soc-shift-scheduling-v2
+      - feature/soc-shift-scheduler-fa
   pull_request:
     branches:
       - main
