@@ -8,6 +8,7 @@ import { PeriodSelector } from "@/components/screens/Dashboard";
 import { TableSkeleton } from "@/components/screens/Misc";
 import { EmptyState } from "@/components/ui/indicators";
 import { isManager } from "@/lib/roles";
+import { SHIFT_TYPES } from "@/lib/shifts";
 import { api, useApp } from "@/components/AppProvider";
 import Icon from "@/components/ui/Icon";
 import { Status, Who } from "@/components/ui/indicators";
@@ -19,10 +20,13 @@ const HINTS = { misp: "IOC count feeds monthly reports", files: "Upload the day'
 export default function ShiftLog({ view }) {
   const app = useApp();
   const { dispatch, toast, me } = app;
+  const { data: liveShift, loading: shiftLoading, error: shiftError } = useFetch(view ? null : "/api/shift");
   const activities = view ? view.activities : app.activities;
   const tickets = view ? view.tickets : app.tickets;
   const shiftDone = view ? !!view.completedAt : app.shiftDone;
   const shiftDate = view ? view.date : app.shiftDate;
+  const shiftType = view ? view.shiftType : liveShift?.shiftType;
+  const shiftInfo = SHIFT_TYPES[shiftType];
   const owner = view ? view.userId : me.id;
   const [saved, setSaved] = useState("autosaved");
   const [issueOpen, setIssueOpen] = useState(null);
@@ -64,22 +68,34 @@ export default function ShiftLog({ view }) {
     setCompleted(true);
   };
 
+  if (!view && activities.length === 0) {
+    return (
+      <div className="page">
+        {shiftLoading && !shiftError ? <TableSkeleton rows={5} /> : <EmptyState icon={<Icon name="cal" />} title="No shift scheduled today" action={<Link className="btn btn-primary" href="/shifts">Open shift calendar</Link>}>Your shift log appears automatically when you have a Morning, Until 20:00, or Night assignment for today.</EmptyState>}
+      </div>
+    );
+  }
+
+  const completion = activities.length ? Math.round((done / activities.length) * 100) : 0;
+
   return (
     <div className="page narrow" style={{ maxWidth: 1080, paddingBottom: 0 }}>
       <div className="page-head" style={{ marginBottom: 0 }}>
         <div><h1>Shift Log — {longDate(shiftDate)}</h1></div>
-        <div className="actions"><Link className="btn btn-ghost" href="/shift/history">History</Link></div>
+        <div className="actions"><Link className="btn btn-ghost" href="/shifts">Schedule</Link><Link className="btn btn-ghost" href="/shift/history">History</Link></div>
       </div>
       <div className="shift-head">
-        <div className="ring" style={{ "--v": (done / activities.length) * 100 }} aria-label={`${Math.round((done / activities.length) * 100)}% complete`} />
+        <div className="ring" style={{ "--v": completion }} aria-label={`${completion}% complete`} />
         <div className="facts">
           <div><small>Analyst</small><Who id={owner} /></div>
-          <div><small>Shift</small>Day · 07:00–15:00</div>
+          <div><small>Shift</small>{shiftInfo ? `${shiftInfo.label} · ${shiftInfo.start}–${shiftInfo.end}` : "Scheduled shift"}</div>
           <div><small>Status</small>{shiftDone ? <span className="badge success">Completed</span> : <span className="badge primary">In progress</span>}</div>
-          <div><small>Completion</small><span className="num">{Math.round((done / activities.length) * 100)}%</span></div>
+          <div><small>Completion</small><span className="num">{completion}%</span></div>
           <div><small>Last updated</small><span className="num" style={saved === "not saved" ? { color: "var(--danger)" } : undefined}>{view ? "read-only" : saved}</span></div>
         </div>
       </div>
+
+      {shiftType !== "evening" && <div className="shift-log-scope-note"><Icon name="cal" /><span>This shift has the standard routine. Traffic report, IOC/MISP, and malicious IP/domain upload tasks are shown only on the 07:30–20:00 shift.</span></div>}
 
       <div className="section-head"><h2>Routine activities</h2><span className="meta num">{done} of {activities.length}</span></div>
       {activities.map((a) => {
@@ -149,7 +165,7 @@ export default function ShiftLog({ view }) {
 
       <div className="summary">
         <span className="s"><b>{done}/{activities.length}</b>Activities</span>
-        <span className="s"><b>{misp.iocs}</b>IOCs added</span>
+        <span className="s"><b>{misp?.iocs ?? 0}</b>IOCs added</span>
         <span className="s"><b>{tickets.length}</b>Tickets created</span>
         <span className="s"><b>{issues}</b>{issues === 1 ? "Issue reported" : "Issues reported"}</span>
         <span className="remain" title={remaining.map((r) => r.title).join("\n")}>
@@ -263,17 +279,18 @@ export function ShiftHistory() {
         <EmptyState icon={<Icon name="shift" />} title="No shift logs">No shift activity was recorded in this period.</EmptyState>
       ) : (
         <table className="dt">
-          <thead><tr><th>Date</th><th>Status</th><th>Activities</th><th className="r">IOCs</th><th className="r">Tickets</th><th className="r">Issues</th><th>Traffic report</th></tr></thead>
+          <thead><tr><th>Date</th><th>Shift</th><th>Status</th><th>Activities</th><th className="r">IOCs</th><th className="r">Tickets</th><th className="r">Issues</th><th>Traffic report</th></tr></thead>
           <tbody>
             {data.logs.map((r) => (
               <tr key={r.date} onClick={() => open(r.date)}>
                 <td className="title num">{fmtDate(r.date)} <span className="muted" style={{ fontWeight: 400 }}>· {weekday(r.date)}</span></td>
+                <td><span className={`shift-chip ${SHIFT_TYPES[r.shiftType]?.className ?? "morning"}`}>{SHIFT_TYPES[r.shiftType]?.label ?? "Morning"}</span></td>
                 <td>{r.completed ? <Status s="done" label="Completed" /> : r.date === data.logs[0].date && r.date >= TODAY ? <Status s="progress" label="In progress" /> : <Status s="returned" label="Incomplete" />}</td>
                 <td><span style={{ display: "inline-flex", alignItems: "center", gap: 10 }}><span className="progress ok" style={{ width: 80 }}><span style={{ width: `${(r.done / r.total) * 100}%` }} /></span><span className="num">{r.done}/{r.total}</span></span></td>
                 <td className="r num">{r.iocs}</td>
                 <td className="r num">{r.tickets}</td>
                 <td className="r num">{r.issues || <span className="muted">0</span>}</td>
-                <td>{r.report ? <span className="sec">Done</span> : <span className="muted">Not done</span>}</td>
+                <td>{r.report ? <span className="sec">Done</span> : <span className="muted">Not required / not done</span>}</td>
               </tr>
             ))}
           </tbody>
@@ -294,7 +311,7 @@ export function ShiftTeam() {
     <div className="page">
       <div className="page-head">
         <div><h1>Team Shift Logs</h1><p>{longDate(TODAY)} · {analysts.length} SOC analysts</p></div>
-        <div className="actions"><Link className="btn btn-secondary" href="/reports/shift">Shift Activity Report</Link></div>
+        <div className="actions"><Link className="btn btn-secondary" href="/shifts">Shift Schedule</Link><Link className="btn btn-secondary" href="/reports/shift">Shift Activity Report</Link></div>
       </div>
       {analysts.length === 0 ? <EmptyState icon={<Icon name="shift" />} title="No SOC analysts">Add analysts to SOC · L1/L2/L3 from the Team page.</EmptyState> : (
         <table className="dt">
@@ -303,11 +320,11 @@ export function ShiftTeam() {
             {analysts.map((a) => {
               const r = byId[a.id];
               return (
-                <tr key={a.id} onClick={() => router.push(r ? `/shift/view?user=${a.id}&date=${TODAY}` : `/shift/history?user=${a.id}`)}>
+                <tr key={a.id} onClick={() => router.push(r?.total != null ? `/shift/view?user=${a.id}&date=${TODAY}` : `/shift/history?user=${a.id}`)}>
                   <td className="title"><Who id={a.id} /></td>
                   <td>{a.team}</td>
-                  <td>{!r ? <span className="badge danger">Not started</span> : r.completed ? <Status s="done" label="Completed" /> : <Status s="progress" label="In progress" />}</td>
-                  <td>{r ? <span style={{ display: "inline-flex", alignItems: "center", gap: 10 }}><span className="progress ok" style={{ width: 80 }}><span style={{ width: `${(r.done / r.total) * 100}%` }} /></span><span className="num">{r.done}/{r.total}</span></span> : <span className="muted">—</span>}</td>
+                  <td>{!r ? <span className="badge">Off</span> : !r.started ? <span className="badge primary">{SHIFT_TYPES[r.shiftType]?.label ?? "Scheduled"}</span> : r.completed ? <Status s="done" label="Completed" /> : <Status s="progress" label="In progress" />}</td>
+                  <td>{r?.total != null ? <span style={{ display: "inline-flex", alignItems: "center", gap: 10 }}><span className="progress ok" style={{ width: 80 }}><span style={{ width: `${(r.done / r.total) * 100}%` }} /></span><span className="num">{r.done}/{r.total}</span></span> : <span className="muted">—</span>}</td>
                   <td className="r num">{r?.iocs ?? "—"}</td>
                   <td className="r num">{r?.tickets ?? "—"}</td>
                   <td className="r num">{r?.issues ?? "—"}</td>
