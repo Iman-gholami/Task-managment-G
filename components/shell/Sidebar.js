@@ -3,7 +3,6 @@
 import Link from "next/link";
 import { useApp } from "@/components/AppProvider";
 import Icon from "@/components/ui/Icon";
-import { Avatar } from "@/components/ui/indicators";
 import { ROLE_LABELS } from "@/lib/roles";
 
 const isOn = (path, prefix) => path === prefix || path.startsWith(prefix + "/");
@@ -73,72 +72,78 @@ export default function Sidebar({ groups, path, collapsed, inert, onProfile, onB
           {...tip(me.name)}
           style={{
             display: "grid",
-            gridTemplateColumns: "28px minmax(0, 1fr) 16px",
+            gridTemplateColumns: collapsed ? "1fr" : "22px minmax(0, 1fr) 16px",
             alignItems: "center",
-            columnGap: 10,
-            minHeight: 48,
+            columnGap: collapsed ? 0 : 10,
+            minHeight: 46,
+            justifyItems: collapsed ? "center" : "stretch",
           }}
         >
           <span
             aria-hidden="true"
             style={{
-              width: 28,
-              height: 28,
+              width: 22,
+              height: 22,
               display: "grid",
               placeItems: "center",
-              overflow: "hidden",
-              borderRadius: "50%",
+              borderRadius: 6,
+              background: "var(--hover)",
+              color: "var(--text-2)",
             }}
           >
-            <Avatar id={me.id} size="sm" />
+            <Icon name="user" size="sm" />
           </span>
 
-          <span
-            className="profile-meta"
-            style={{
-              display: "grid",
-              gap: 4,
-              minWidth: 0,
-              lineHeight: 1.1,
-              overflow: "hidden",
-            }}
-          >
-            <b
+          {!collapsed && (
+            <span
+              className="profile-meta"
               style={{
-                display: "block",
+                display: "grid",
+                gap: 4,
                 minWidth: 0,
+                lineHeight: 1.1,
                 overflow: "hidden",
-                textOverflow: "ellipsis",
-                whiteSpace: "nowrap",
               }}
             >
-              {me.name}
-            </b>
-            <small
-              style={{
-                display: "inline-flex",
-                alignItems: "center",
-                width: "fit-content",
-                maxWidth: "100%",
-                minHeight: 18,
-                padding: "2px 7px",
-                borderRadius: 999,
-                background: "var(--primary-soft)",
-                color: "var(--text-2)",
-                fontSize: 11,
-                lineHeight: 1,
-                overflow: "hidden",
-                textOverflow: "ellipsis",
-                whiteSpace: "nowrap",
-              }}
-            >
-              {ROLE_LABELS[me.role]}
-            </small>
-          </span>
+              <b
+                style={{
+                  display: "block",
+                  minWidth: 0,
+                  overflow: "hidden",
+                  textOverflow: "ellipsis",
+                  whiteSpace: "nowrap",
+                }}
+              >
+                {me.name}
+              </b>
+              <small
+                style={{
+                  display: "inline-flex",
+                  alignItems: "center",
+                  width: "fit-content",
+                  maxWidth: "100%",
+                  minHeight: 18,
+                  padding: "2px 7px",
+                  borderRadius: 999,
+                  background: "var(--primary-soft)",
+                  color: "var(--text-2)",
+                  fontSize: 11,
+                  lineHeight: 1,
+                  overflow: "hidden",
+                  textOverflow: "ellipsis",
+                  whiteSpace: "nowrap",
+                }}
+              >
+                {ROLE_LABELS[me.role]}
+              </small>
+            </span>
+          )}
 
-          <span style={{ display: "grid", placeItems: "center", color: "var(--text-3)" }}>
-            <Icon name="sort" />
-          </span>
+          {!collapsed && (
+            <span style={{ display: "grid", placeItems: "center", color: "var(--text-3)" }}>
+              <Icon name="sort" />
+            </span>
+          )}
         </button>
       </div>
     </aside>
