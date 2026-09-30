@@ -16,7 +16,13 @@ export async function POST(request) {
   if (!isShiftAnalyst(user)) return err(403, "Only SOC analysts can request a shift change.");
   const body = await request.json().catch(() => ({}));
   try {
-    const change = createShiftChangeRequest(user.id, String(body.targetId || ""), String(body.date || ""), String(body.reason || ""));
+    const change = createShiftChangeRequest(
+      user.id,
+      String(body.targetId || ""),
+      String(body.date || ""),
+      String(body.targetDate || ""),
+      String(body.reason || "")
+    );
     return Response.json({ request: change }, { status: 201 });
   } catch (e) {
     return err(409, e.message);
