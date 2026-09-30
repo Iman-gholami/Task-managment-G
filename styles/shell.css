@@ -61,6 +61,7 @@
 }
 .cmdk:hover { border-color: color-mix(in oklab, var(--border) 45%, var(--border-strong)); color: var(--text-2); }
 .cmdk kbd { margin-left: auto; }
+.cmdk-label { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .notif-dot { position: absolute; top: 6px; right: 6px; width: 7px; height: 7px; border-radius: 50%; background: var(--primary); box-shadow: 0 0 0 2px var(--surface); }
 
 .content { flex: 1; min-height: 0; overflow: auto; scroll-padding-top: var(--s-4); }
@@ -102,6 +103,9 @@
   .page { padding: var(--s-6) var(--s-6) var(--s-12); }
   .grid-main { grid-template-columns: minmax(0, 1fr) 300px; }
   .cmdk { width: 220px; }
+}
+@media (max-width: 1199px) {
+  .grid-main { grid-template-columns: minmax(0, 1fr); }
 }
 @media (max-width: 1023px) {
   .app, .app.collapsed { grid-template-columns: minmax(0, 1fr); }

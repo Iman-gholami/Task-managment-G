@@ -1,10 +1,11 @@
 # Sentinel Ops: Design System
 
-A calm, dense, typographic system for a security organization's internal work tool.
-Its look comes from proportion, rhythm, and restraint. It doesn't use decoration.
+A calm, dense, data-first system for a security organization's internal work tool.
+Its look comes from hierarchy, layered surfaces and restraint. It doesn't use decoration.
 
 > Live reference: the Next.js app in this repository (`npm run dev`). Every rule in this document is implemented there.
-> Tokens: `styles/tokens.css`. Component styles: `styles/components.css`. React components: `components/`.
+> Tokens: `styles/tokens.css`. Styles by layer: `styles/base.css`, `shell.css`, `components.css`, `data.css`, `screens.css`.
+> React primitives: `components/ui/`. Palette and contrast checks: `node scripts/palette.mjs`.
 
 ---
 
@@ -12,170 +13,114 @@ Its look comes from proportion, rhythm, and restraint. It doesn't use decoration
 
 | # | Principle | What it means in practice |
 |---|-----------|---------------------------|
-| 1 | **Quiet by default, loud by exception** | About 90% of pixels are neutral. Color appears only when it tells you something: overdue, critical, blocked, missing. |
-| 2 | **Scan before you click** | Every list shows enough (status, priority, complexity, deadline, quality) that opening a record is optional. |
-| 3 | **One surface, many rows** | Tables and continuous surfaces are preferred to card grids. A card has to earn its border. |
-| 4 | **Two kinds of work, never mixed** | *Routine Activity* (Shift Logs) and *Task Performance* are separate everywhere: separate sections, separate labels, separate counts. |
-| 5 | **Speed beats spectacle** | Motion takes 120–200ms and only confirms an action. Common edits happen in place: status, priority, IOC count, ticket entry. |
-| 6 | **Respectful measurement** | Performance data describes output. The default sort is alphabetical, and nothing is ranked or given medals. |
+| 1 | **Quiet by default, loud by exception** | About 90% of pixels are neutral. Colour appears only when it tells you something: overdue, blocked, critical, needs review. |
+| 2 | **Answer the question first** | Every page opens with what is happening and whether anything is wrong (KPIs, "Needs your attention"), then detail. |
+| 3 | **Scan before you click** | Lists show status, priority, complexity, deadline and quality inline, so opening a record is optional. |
+| 4 | **Two kinds of work, never mixed** | *Routine activity* (Shift Logs) and *Task performance* are separate everywhere: separate sections, labels and counts. |
+| 5 | **Speed beats spectacle** | Motion takes 120–220ms and only confirms an action. Common edits happen in place. |
+| 6 | **Respectful measurement** | Performance data describes output. Default order is alphabetical; nothing is ranked. |
+| 7 | **Never invent** | Every number, status and comparison comes from stored data. Missing data is shown as missing ("—", "n/a"), not estimated. |
 
-### Visual identity: "Ink & Signal"
-- **Ink**: cool, faintly blue-slate neutrals (never pure grey, black or white text on white). They make up ~90% of every screen.
-- **Signal**: one deep-teal accent, used only for primary actions, the active nav item, links, focus rings, progress and the brand dot. Because nothing else is teal, anything teal is something to act on.
-- **Signature detail**: page titles, key numbers and the login statement use **Instrument Serif**, an editorial serif, against the Geist sans UI. Everything else stays quiet.
-- **Depth**: the sidebar sits on the page background; the working area is one white (or ink-950) sheet with a hairline outline and a very soft shadow. Radius is 8px for controls and 12px for surfaces.
+### Visual identity
+- **Ink**: cool, faintly blue-slate neutrals for ~90% of every screen. Primary text is off-white (dark) or near-black (light), never pure white/black.
+- **Signal**: one teal accent for primary actions, the active navigation icon, links, focus rings and data emphasis. Because nothing else is teal, anything teal is actionable or "the latest value".
+- **Depth from layering, not shadows**: in dark mode each level is a step lighter — app background → content sheet → cards → insets → menus. Borders are 1px and subtle; spacing does most of the grouping.
+- **One typeface**: Geist (UI) with tabular numbers for all figures; Geist Mono only for IDs, ticket numbers and references. (The earlier display serif was removed: its condensed digits made "11" read as "ll".)
 
 ---
 
 ## 2. Tokens
 
-The tokens live in `styles/tokens.css`. Palette hex values are generated in OKLCH by `scripts/palette.mjs`, which also prints the contrast checks. Components use semantic tokens only.
+Components use semantic tokens only. Hex values come from `scripts/palette.mjs` (OKLCH), which also prints every contrast pair.
 
-### Palette
-| Scale | 50 | 100 | 200 | 300 | 400 | 500 | 600 | 700 | 800 | 900 | 950 | 975 |
-|---|---|---|---|---|---|---|---|---|---|---|---|---|
-| Ink (`--ink-*`) | #F9FAFC | #F1F3F5 | #E4E6E9 | #D0D4D8 | #A4AAB0 | #7F878F | #626A72 | #4C535B | #343A40 | #21262B | #14181B | #0D1013 |
-| Signal (`--signal-*`) | #EEFEFC | #E3F8F5 | #CFEEE9 | #B2DED7 | #6ABAB0 | #009B8F | #007D72 | #00665B | #004940 | #00312A | #00201B | — |
-
-Semantic families (only the steps in use): green `#15632F` / `#86B790`, amber `#784600` / `#C9A26C`, red `#AB413E` / `#E1918A`, blue `#2F6E9E` / `#84AED3`, plum `#6D5C9C` / `#ACA1D2` (light / dark theme).
-
-### Semantic tokens
+### Colour (semantic)
 | Token | Light | Dark | Use |
 |---|---|---|---|
-| `--bg` | ink-100 | ink-975 | Page background, sidebar |
-| `--surface` | #FFFFFF | ink-950 | Main sheet, tables, inputs |
-| `--surface-2` | ink-50 | between 900 and 950 | Hover rows, side panels, segmented controls |
-| `--surface-raised` | #FFFFFF | ink-900 | Menus, modals |
-| `--text` / `--text-2` / `--text-3` | ink-950 / 700 / 600 | ink-50 / 300 / 400 | Primary, secondary, muted text |
-| `--border` / `--border-strong` / `--divider` | ink-200 / 500 / mix | ink-800 / 600 / mix | Surfaces, inputs (3:1), row separators |
-| `--primary` / `--primary-hover` | signal-600 / 700 | signal-400 / 300 | Primary buttons, active states, focus |
-| `--link` | signal-700 | signal-300 | Links and mentions |
-| `--success` `--warning` `--danger` `--info` `--violet` | 700 / 700 / 600 / 600 / 600 | 400 of each | Status text; each has a `-soft` background |
+| `--bg` | #EDF0F4 | #080D11 | App background, sidebar |
+| `--surface` | #F9FAFC | #0F1318 | Main content sheet |
+| `--surface-card` | #FFFFFF | #14191E | Cards, panels, tables |
+| `--surface-inset` | #F3F5F8 | #1A1F24 | Segmented tracks, group rows, side panels, dialog footers |
+| `--surface-raised` | #FFFFFF | #1C2126 | Menus, dialogs, toasts |
+| `--surface-input` | #FFFFFF | #0F1318 | Form controls (inset look in dark) |
+| `--hover` / `--pressed` / `--selected` / `--nav-active` | text or primary at 4–12% alpha | same | Interaction overlays that work on any surface |
+| `--text` / `--text-2` / `--text-3` | #151B22 / #4C535B / #656D75 | #E8EBEF / #B9BEC4 / #949BA1 | Primary, secondary, muted |
+| `--border` / `--divider` / `--border-strong` | #DFE3E8 / #E8EBEF / #7F8790 | #272C31 / #1F2329 / #676C73 | Card outlines, row separators, input borders (≥3:1) |
+| `--primary` / `--primary-hover` / `--link` / `--focus` | #007B70 / #00695F / #00695F / #007B70 | #4EB9AD / #6FCABF / #7AD0C5 / #6FCABF | Primary actions, links, focus rings |
+| `--success` `--warning` `--danger` `--info` `--violet` | 6.0–6.2:1 on white | 6.8–8.7:1 on card | Status text; each has a `-soft` background |
+| `--viz-1…4` | teal ramp, light → dark | teal ramp, dark → light | Complexity mix: Simple → Advanced |
+| `--viz-bar` / `--viz-bar-strong` / `--viz-track` | | | Chart bars (latest value strong), bar tracks |
 
-### Contrast (WCAG AA, checked by `node scripts/palette.mjs`)
+### Contrast (WCAG 2.2 AA, from `node scripts/palette.mjs`)
 | Pair | Light | Dark |
 |---|---|---|
-| Text on background | 17.9 | 18.3 |
-| Secondary text | 7.8 | 12.0 |
-| Muted text | 5.5 | 7.6 |
-| Text on primary button | 5.0 | 8.4 |
-| Link | 6.9 | 12.2 |
+| Text on card | 17.3 | 14.8 |
+| Secondary text on card | 7.8 | 9.5 |
+| Muted text on card / on app background | 5.3 / 4.6 | 6.3 / 6.9 |
+| Label on primary button | 5.2 | 8.2 |
+| Link on card | 6.6 | 9.8 |
 | Input border (3:1 needed) | 3.6 | 3.3 |
-| Status colours | 5.5–7.9 | 7.3–7.8 |
+| Status colours on card | 6.0–6.2 | 6.8–8.7 |
 
 ### Typography
-- **Families:** Geist (UI), Geist Mono (IDs and ticket numbers only), Instrument Serif (page titles and key numbers only). All are bundled locally and OFL-licensed.
-- **Scale:** 12 / 13 / 14 / 16 / 18 / 20 / 24 / 30 / 36 / 48. **Weights:** 400, 500, 600.
-- **Text sizes:** page titles are 36px serif (30px on phones). Prose (descriptions, comments, forms) is 16px/1.6. UI controls and tables are 14px. Metadata is 12px.
+Semantic styles (`--type-*` font shorthands): display 28/600 (sign-in only) · page title 22/600 · section 15/600 · card title 13/600 · body 14/400 · prose 15/1.6 (descriptions, comments) · body-sm 13 · table 13 · label 12/500 · caption 12 · overline 11/500 uppercase · KPI 26/600 tabular. Weights 400/500/600 only.
 
-### Spacing, radius, shadow, motion
-- **Spacing:** 4, 8, 12, 16, 20, 24, 32, 40, 48, 64, 96.
-- **Radius:** 4 (checkbox, kbd), 6 (badges, menu items), 8 (inputs, buttons), 12 (panels, modals).
-- **Shadows:** three levels (`--shadow-sm/md/lg`). Elevation comes from surface lightness in dark mode and from a very soft shadow in light mode.
-- **Motion:** 150 / 200 / 280 ms. Ease-out for entering, ease-in for leaving. Only transform and opacity are animated. `prefers-reduced-motion` turns motion off.
-- **Z-index:** sticky 2, nav 30, scrim 40, modal 41, popover 50, toast 60.
+### Spacing, radius, sizing, motion
+- **Spacing:** 4, 8, 12, 16, 20, 24, 32, 40, 48, 64 (`--s-1` … `--s-16`).
+- **Radius:** 4 (checkbox, kbd, badges) · 6 (buttons, inputs, menu items) · 8 (segmented tracks, tiles) · 10 (cards, panels, popovers) · 12 (main sheet, dialogs).
+- **Controls:** 28 (sm) · 32 (default) · 40 (lg, sign-in). Table rows 40 (36 compact), headers 34. Touch screens raise controls to ≥40px.
+- **Layout:** sidebar 236 (56 collapsed), header 52, content max 1440 (reading pages 960).
+- **Motion:** 120 / 160 / 220ms, ease-out. Only opacity and small translations. `prefers-reduced-motion` turns motion off.
+- **Z-index:** sticky 2 · nav 30 · scrim 40 · modal 41 · popover 50 · tooltip 55 · toast 60.
 
-### Layout
-- **Shell:** a 240px sidebar (60px when collapsed) plus a 56px header. Below 1024px the sidebar becomes a drawer.
-- **Content width:** 1200px maximum for reading pages; tables use the full width and scroll inside their own container.
-- **Breakpoints tested:** 360, 375, 768, 1024, 1280, 1440 and 1536px. On touch screens all controls are at least 44px.
+---
 
 ## 3. Semantic indicators
 
-The three most important indicators each use a different visual shape, so none of them depends on color alone.
+Status, priority and complexity each use a different shape, so none depends on colour alone.
 
-### Status: circle fill + label
-| State | Glyph | Treatment |
-|---|---|---|
-| Backlog | ○ dashed-tone ring | text-3 |
-| To Do | ○ ring | neutral |
-| In Progress | ◐ half fill | info |
-| Review | ◕ ¾ fill | violet |
-| Done | ● full | success |
-| **Blocked** | ● + soft red pill | danger (needs attention) |
-| **Returned** | ○ + soft amber pill | warning (needs attention) |
-| Cancelled | ○ + strikethrough | text-3 |
-
-Only the two exception states get a filled pill. The fill progression lets you read workflow position from the shape alone.
-
-### Priority: signal bars
-- Low has 1 bar, Normal 2 bars, High 3 bars (label in primary text color).
-- **Critical** is shown as a solid red 12px square with "!" and a bold red label. It is the only priority with color, so it stands out without adding noise.
-
-### Complexity: diamond pips (teal)
-`◆◇◇◇ Simple · ◆◆◇◇ Medium · ◆◆◆◇ Complex · ◆◆◆◆ Advanced`
-The rotated squares and teal fill make it impossible to confuse with priority bars.
-
-### Quality: text-first
-- Excellent gets a small amber ★ prefix.
-- Good and Acceptable are plain secondary text.
-- Needs Improvement uses warning-colored text, with no pill.
-- Quality is set only when a task is approved; until then the field shows "—".
+- **Status — circle fill + label.** Backlog ◌ dashed · To Do ○ · In Progress ◐ · Review ◕ (violet) · Done ● (green). Exceptions get a soft pill: **Blocked** (red) and **Returned** (amber). Cancelled is struck through.
+- **Priority — signal bars.** Low 1 bar, Normal 2, High 3 (label in primary text). **Critical** is a red square with "!" — the only coloured priority.
+- **Complexity — diamond pips in ink.** ◆◇◇◇ Simple → ◆◆◆◆ Advanced; never teal, so it doesn't compete with actions.
+- **Quality — text first.** Excellent gets an amber ★; Needs Improvement is amber text. Set only on approval.
+- **Badges** (20px, radius 4) carry text plus an optional dot; tones: neutral, success, warning, danger, info, violet, primary.
 
 ---
 
-## 4. Component library
-
-Each entry lists anatomy, then states, then behavior. Class names refer to `styles/components.css`.
+## 4. Components (`components/ui/`)
 
 | Component | Spec |
 |---|---|
-| **App Shell** | `.app` grid (sidebar + `.main` sheet). The sheet is inset 8px with a 10px radius. Content scrolls inside the sheet, so the header stays fixed. |
-| **Sidebar** | Brand, nav items at 30px height, sub-items at 28px shown only for the active group, then the foot (role and user). The active item gets a `--surface-2` fill plus a 2px indigo tick on the left edge. Collapsed width is 56px, labels are hidden, and a tooltip appears on hover. Collapse animates over 200ms. There are no separators; groups are separated by spacing. |
-| **Top Header** | Sidebar toggle, breadcrumb, spacer, command search (`⌘K`), notifications, theme. It is 52px tall with a divider below. There are no page actions here; those live in the page head. |
-| **Button** | 32px tall (28 for `sm`), radius 8, weight 500 at 13px. **Primary**: indigo, at most one per view. **Secondary**: surface-2 with a hairline. **Ghost**: transparent. **Danger**: soft red. Pressing shifts it down 0.5px. A shortcut hint `<kbd>` can sit inside. |
-| **Icon Button** | 30×30 ghost button. Always has `aria-label` and a tooltip. |
-| **Input / Textarea** | 32px tall, radius 8, 1px border. Hover uses border-strong. Focus uses an indigo border plus a 3px soft ring. Error uses a danger border and a helper text line below. |
-| **Search** | Uses surface-2 with no border and a leading icon. `/` focuses it. It filters as you type, with no submit. |
-| **Select / Multi Select** | The trigger looks like an input. Options open in a popover with type-ahead. Multi-select shows chips inside the trigger, then "+N". |
-| **Date / Range Picker** | A popover with presets on the left (Today, This week, This month, Last month, Quarter) and a single-month calendar on the right. The range highlight uses `--primary-soft`. |
-| **Checkbox** | 16px, radius 4. When checked it fills with success green and the tick draws in over 200ms. |
-| **Radio / Switch** | The switch is 28×16 and turns indigo when on. It is used for binary settings such as "Shared via Bale" and "Review required". |
-| **Segmented control (Tabs)** | Surface-2 track. The active segment is raised. It is used for period selectors and view toggles. Page-level tabs use underline text tabs. |
-| **Badge** | 20px tall, radius 6, label type, soft background. Use sparingly: states only, never decoration. |
-| **Status / Priority / Complexity / Quality** | See §3. They are always inline and never stacked. |
-| **Avatar / Group** | 22px (44px on profiles) with initials on a deterministic hue. Groups overlap by −6px with a 2px ring. |
-| **Tooltip** | Raised surface, 12px text, 400ms delay, no arrow. |
-| **Popover / Dropdown** | Raised surface, radius 10, 4px padding, 30px items, a section header (`.ph`), and a keyboard hint on the right. It opens in 160ms from −4px. |
-| **Command Menu** | `⌘K` opens a centered 560px popover with a search field, "Jump to" and "Actions" groups, and arrow-key navigation. |
-| **Data Table** | See §5. |
-| **Pagination** | A footer row showing "1–50 of 312" plus rows-per-page and prev/next icon buttons. Pagination is used only above 100 rows; below that everything is shown. |
-| **KPI Metric** | A cell inside a **metrics strip**: one bordered surface split by hairlines. Each cell has a 12px label, a 24px tabular value, and an optional delta or sparkline. Alert metrics color only the value. |
-| **Task Row** | A table row: mono ID, title, and inline-editable Status/Priority cells (click opens a popover). |
-| **Task Card (Kanban)** | Surface on a surface-2 column, 10/12 padding. Shows ID, title (2 lines max), priority, and avatar. |
-| **Employee Row** | Avatar with name, role, team (plus an "assisting X" suffix), a workload bar with %, open count, and shift state. |
-| **Activity Row** | A 12px muted line on a 1px left rule: actor, action, and target shown in mono. |
-| **Shift Activity Item** | Number, checkbox, title and hint, then right-side actions (Done toggle, Report an issue, note). Optional extra fields appear in a region indented to the title column. |
-| **Ticket Record** | A grid row: mono ticket number (required), mono reference, description, and link. Adding a ticket inserts an inline editable row with autofocus. |
-| **File Attachment** | A tile with a colored extension block (DOC in blue, TXT neutral, SPL green), file name, and size with the uploader. |
-| **Comment** | Avatar, name, time, and an "edited" note, then the body. `@mentions` appear in indigo weight 500. The composer is a bordered box with @ and 📎 buttons and a `⌘↵` hint. |
-| **Toast** | Bottom-right, raised, with a success tick and message. It auto-dismisses after 2.6s. Undo is offered for destructive actions. |
-| **Modal** | 640px, radius 14, starts at 10vh from the top. The body is followed by a footer with the actions on the right. `Esc` closes it. Focus is trapped inside. |
-| **Drawer** | 480px, slides from the right. It is used for quick views such as the ticket list and a person's quick view. |
-| **Empty State** | A 40px muted glyph tile, a 16px heading, one sentence, and at most one action. There are no illustrations. |
-| **Skeleton** | Shimmer bars sized to the real content, keeping column widths and row height. |
-| **Error State** | The empty-state layout with a danger-tinted glyph, a plain-language cause, and recovery actions (Retry, Go Back, Contact Administrator). |
-| **Chart** | Line (1.5px stroke, end dot), horizontal bar (6px track), or segmented distribution (8px). No axes unless they add value. Gridlines use `--viz-grid`. |
-| **Filter Bar** | Search, active chips (solid, removable), add-filter chips (dashed), Reset, then columns and view controls on the right. |
-| **Breadcrumb** | 13px muted text with a chevron separator. The last item is the primary text. |
+| **App shell** (`shell/`) | Grouped sidebar (Work · Insights · Organization), task views and Shift Log as sub-items with open counts, profile menu (Account, Keyboard shortcuts, Sign out). Collapses to a 56px rail with tooltips; below 1024px it becomes an off-canvas drawer (inert while closed). |
+| **Top bar** | Sidebar toggle, linked breadcrumbs, search trigger (⌘K), notifications, theme. No page actions here. |
+| **Command menu** | ⌘K dialog: searches tasks by ID/title within the viewer's scope, people (managers), and pages; Create task action. Combobox + listbox semantics, ↑/↓/Enter/Esc. |
+| **PageHeader** | Title, a quiet meta line joined with "·" (date range, counts), actions on the right. One primary action per page. |
+| **Panel** | Card section with header (title · meta · actions), body, optional footer (legends, notes). |
+| **Button** | Primary · Secondary · Ghost (tertiary) · Danger · Ghost-danger · Icon (`IconButton`: aria-label + tooltip, always). Sizes 28/32/40. Busy state shows a spinner and blocks repeat clicks. |
+| **Segmented** | Period pickers and view toggles (`radiogroup`), status tabs (`tablist`). Roving focus, ←/→/Home/End. Optional counts. |
+| **Field / FormAlert** | Visible label, control, hint or error (with icon), wired through `aria-describedby`/`aria-invalid`. Validation runs on submit, never before interaction; server errors appear in a `FormAlert`. |
+| **Metric / MetricGrid** | KPI card: label (+ info hint), value with unit, one line of context — a real previous-period `Delta` where the API has it. `alert` tone for values that need action. Cards can link to the filtered list. Grid wraps into balanced rows. |
+| **Bars** | Mini column chart with a baseline; pass `max` to share one scale across rows. Latest value emphasised; values in tooltips and `aria-label`. |
+| **Distribution / CxLegend** | 100% stacked complexity bar with counts in tooltip and `aria-label`; legend with optional totals. |
+| **Meter** | Labelled progress bar (`role="progressbar"`) with a numeric readout. |
+| **Popover** | Anchored menu or panel. Flips above the anchor near the bottom of the viewport, moves focus in, returns it to the trigger, closes on Esc/Tab/outside click/scroll. Digit shortcuts on menu items. |
+| **Dialog** | Title + description, close button, focus trap, Esc. Scrim clicks close only when nothing typed would be lost. Becomes a bottom sheet on phones. Destructive confirmations use a danger button and neutral copy about consequences. |
+| **Tooltip** | One global layer for any `[data-tooltip]`: 400ms hover delay, instant on keyboard focus and between neighbours, fixed positioning so scroll containers never clip it. |
+| **Toasts** | Success / info / error tones with matching icons; errors stay longer and use `role="alert"`; dismissible. |
+| **EmptyState / Notice / ErrorState / Loading** | Empty: what happened, whether it's normal, one next step. Notice: one-line state inside a panel ("All clear"). ErrorState maps failures to network / permission / not found / server copy with Retry where it helps — raw server output is never shown. Skeletons keep layout and fade in late so fast loads never flash. |
 
 ---
 
-## 5. Data table specification
+## 5. Data tables
 
-The data table is the most-used surface in the product.
-
-- **Density**: rows are 36px (32px in compact mode) and headers are 34px. Cell text is 13px.
-- **Separators**: a divider line between rows only, with no vertical lines and no cell boxes.
-- **Header**: sticky, 12px/500 in `--text-3`. The sorted column switches to `--text` with ↑/↓. Clicking toggles direction.
-- **Hover**: the whole row turns `--hover` over 120ms.
-- **Keyboard**: `J/K` or `↑/↓` moves the focused row, which gets `--selected` plus a 2px indigo left edge. `↵` opens the row, `S` opens the status menu, `P` opens priority, `C` creates a task, `/` focuses search, and `Esc` clears.
-- **Inline editing**: the Status and Priority cells show a hover affordance (a raised pill), and clicking opens a popover with numbered shortcuts (`1–8`). The change applies immediately and a toast confirms it.
-- **Numeric columns** are right-aligned with tabular numbers.
-- **Deadline**: shown as "Sep 29". It turns amber when due within 48h and red with "· overdue" when past due on open tasks.
-- **Column visibility**: a "Columns" popover with checkboxes. The chosen set is remembered per view.
-- **Grouping** (optional): a group header row on surface-2 (for example, group by status).
-- **Loading**: skeleton rows that keep the real column widths.
+- **Density:** rows 40px, headers 34px, 13px text with tabular numbers. Divider lines between rows only.
+- **Alignment:** text left, numbers right. Zeros are muted so real values stand out.
+- **Header:** 12px/500 muted. Sortable columns use a real button with a sort icon and `aria-sort`.
+- **Rows:** hover overlay; clickable rows also expose a real link in the title cell for keyboard and screen-reader users.
+- **Keyboard (task lists):** `J/K` or `↑/↓` show and move a row cursor, `Enter` opens, `S`/`P` open status/priority menus, `/` focuses search, `C` creates, `?` lists shortcuts.
+- **Inline editing:** Status and Priority cells open menus that only offer allowed workflow moves.
+- **Grouping:** group header rows on the inset surface (e.g. by assignee) with counts and overdue totals.
+- **Filters:** search, selects (highlighted when set), "Reset filters (n)", and a live "x of y" result count.
+- **Overflow:** wide tables scroll inside their card with edge shadows; task tables keep a minimum width so titles never collapse, and become stacked rows on phones. Report tables paginate above 100 rows and keep a sticky header inside their scroll area.
 
 ---
 
@@ -183,18 +128,17 @@ The data table is the most-used surface in the product.
 
 | Pattern | Rule |
 |---|---|
-| Progressive disclosure | Advanced fields and issue details stay hidden behind a single ghost link until needed. |
-| Inline editing | Anything changed daily (status, priority, hours, IOC count, checklist) is edited in place. |
-| Numeric entry | Steppers show −/value/+ and also accept typing and `↑/↓`. The IOC field is reachable with a single Tab. |
-| Filtering | Chips and popovers only, never a filter modal. Active filters are visible and one click resets them. |
-| Confirmation | Use a toast and avoid confirmation dialogs, except for destructive actions (delete, cancel task) or completing a shift with missing items. |
-| Autosave | The Shift Log and task fields autosave. The header shows "Last updated 09:42 · autosaved". |
-| Notifications | A compact popover with 6 types: Assigned, Returned, Approved, Deadline approaching, Mentioned, Evaluation available. Items are grouped by day and there is no badge count above 9. |
+| Progressive disclosure | Long attention lists show 6 rows then "Show all"; issue details and ticket entry open inline. |
+| Inline editing | Status, priority, hours, IOC count, checklist and tickets are edited in place and saved immediately. |
+| Confirmation | Toasts confirm; dialogs only for destructive actions (remove member, delete comment, remove file). |
+| Autosave | The Shift Log shows "Autosaved / Saving… / Not saved" as a live status. |
+| Deep links | KPI cards link to the relevant list (e.g. `/tasks/team?tab=review`). |
 
 ## 7. Accessibility
-- All text/background pairs meet WCAG AA. `--text-3` is used only for non-essential metadata.
-- Every state pairs color with shape and text (see §3).
-- Focus-visible rings use a 2px background gap plus a 2px indigo outline on every interactive element.
-- Full keyboard paths exist for task triage and for completing a Shift Log.
-- Icon-only buttons have `aria-label` and a tooltip.
-- `prefers-reduced-motion` disables all motion.
+- All text/background pairs meet WCAG AA (see §2); input borders and chart marks meet 3:1 against their surface.
+- Focus is always visible (`:focus-visible` 2px outline); never removed.
+- Landmarks: sidebar `nav`, breadcrumb `nav`, `main#main` with a skip link.
+- Every icon-only control has an accessible name and a tooltip; charts have text alternatives.
+- Dialogs trap focus and restore it; menus move focus in and back out.
+- Forms: visible labels, described hints and errors, errors announced on submit.
+- `prefers-reduced-motion` disables animation.

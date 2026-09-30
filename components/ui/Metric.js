@@ -1,7 +1,10 @@
 "use client";
 
 import Link from "next/link";
+import { Children } from "react";
 import Icon from "@/components/ui/Icon";
+
+const NUM = new Intl.NumberFormat("en-US", { maximumFractionDigits: 1 });
 
 /**
  * KPI card: label, value, and one quiet line of context (comparison or explanation).
@@ -17,7 +20,7 @@ export function Metric({ label, value, unit, foot, tone, href, onClick, aside, l
         {(href || onClick) && <Icon name="chev" size="sm" />}
       </div>
       <div className="metric-body">
-        {loading ? <div className="sk sk-late" aria-hidden="true" /> : <div className="metric-value">{value}{unit && <small>{unit}</small>}</div>}
+        {loading ? <div className="sk sk-late" aria-hidden="true" /> : <div className="metric-value">{typeof value === "number" ? NUM.format(value) : value}{unit && <small>{unit}</small>}</div>}
         {!loading && aside}
       </div>
       <div className="metric-foot">{loading ? " " : foot}</div>
@@ -30,8 +33,14 @@ export function Metric({ label, value, unit, foot, tone, href, onClick, aside, l
   return <div {...common}>{body}</div>;
 }
 
+/** Row of KPI cards. Wraps into balanced rows (3 + 2, 3 + 3, 2 + 2) as its container narrows. */
 export function MetricGrid({ children, label }) {
-  return <div className="metrics" role="group" aria-label={label}>{children}</div>;
+  const n = Children.toArray(children).filter(Boolean).length;
+  return (
+    <div className="metrics-wrap">
+      <div className="metrics" role="group" aria-label={label} data-n={n} style={{ "--n": n }}>{children}</div>
+    </div>
+  );
 }
 
 /**

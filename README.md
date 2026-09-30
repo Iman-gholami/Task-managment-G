@@ -86,11 +86,11 @@ npm test
 |---|---|
 | `app/` | Routes (App Router). `app/(app)/…` are the screens inside the app shell; `app/login` is the sign-in page |
 | `components/screens/` | One component per screen (Dashboard, Tasks, TaskDetail, ShiftLog, Performance, Reports, Team, Admin…) |
-| `components/` | App shell, shared state (`AppProvider`), task table, create-task modal, and UI indicators |
+| `components/` | App shell (`shell/`), shared state (`AppProvider`), UI primitives (`ui/`: dialog, popover, tooltip, metric, charts, states, fields), task table, create-task modal |
 | `app/api/` | REST API: auth, account, tasks (+ checklist, comments, attachments), shift log, performance, reports, members |
 | `lib/server/` | Database, auth/sessions, data access (server only) |
 | `lib/` | Roles and permissions, task workflow rules, formatting helpers, seed data |
-| `styles/` | Design tokens (dark and light themes), component styles, bundled fonts |
+| `styles/` | Design tokens (dark and light themes) and styles by layer: base, shell, components, data, screens; bundled fonts |
 | `design/` | Design system and specs for all 23 screens |
 | `tests/` | Playwright end-to-end tests |
 
@@ -109,4 +109,4 @@ npm test
 | `/admin` | Users & roles |
 | `/login` | Sign in |
 
-Shortcuts: `⌘K` / `Ctrl+K` opens the command menu, `C` creates a task, and `J`/`K`/`Enter`/`S` work in task tables.
+Shortcuts: `⌘K` / `Ctrl+K` searches tasks, people and pages, `C` creates a task, `?` lists all shortcuts, and `J`/`K`/`Enter`/`S`/`P` work in task tables.

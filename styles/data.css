@@ -1,7 +1,10 @@
 /* Sentinel Ops — data display: KPI cards, tables, filters, pagination, charts, attention list. */
 
 /* ---------- KPI metric cards ---------- */
-.metrics { display: grid; grid-template-columns: repeat(auto-fit, minmax(172px, 1fr)); gap: var(--s-3); margin-bottom: var(--s-6); }
+.metrics-wrap { container-type: inline-size; margin-bottom: var(--s-6); }
+.metrics { --cols: var(--n, 4); display: grid; grid-template-columns: repeat(var(--cols), minmax(0, 1fr)); gap: var(--s-3); }
+@container (max-width: 860px) { .metrics[data-n="5"], .metrics[data-n="6"] { --cols: 3; } }
+@container (max-width: 600px) { .metrics[data-n] { --cols: 2; } }
 .metric { position: relative; display: flex; flex-direction: column; gap: 8px; min-width: 0; padding: 14px var(--s-4) 12px; border: 1px solid var(--border); border-radius: var(--r-lg); background: var(--surface-card); color: inherit; text-align: left; transition: border-color var(--t-fast), background-color var(--t-fast); }
 .metric-label { display: flex; align-items: center; gap: 6px; min-width: 0; font: var(--type-label); color: var(--text-2); white-space: nowrap; }
 .metric-label > span { overflow: hidden; text-overflow: ellipsis; }
@@ -33,7 +36,16 @@
 .tabs-row { display: flex; flex-wrap: wrap; align-items: center; gap: var(--s-2) var(--s-3); margin-bottom: var(--s-3); }
 
 /* ---------- Data table ---------- */
-.table-wrap { overflow-x: auto; overscroll-behavior-x: contain; }
+.table-wrap {
+  overflow-x: auto; overscroll-behavior-x: contain;
+  /* Scroll shadows: appear only when there is more table to the left or right. */
+  background:
+    linear-gradient(to right, var(--surface-card) 30%, transparent) left / 32px 100% no-repeat local,
+    linear-gradient(to left, var(--surface-card) 30%, transparent) right / 32px 100% no-repeat local,
+    radial-gradient(farthest-side at 0 50%, rgb(0 0 0 / .22), transparent) left / 10px 100% no-repeat scroll,
+    radial-gradient(farthest-side at 100% 50%, rgb(0 0 0 / .22), transparent) right / 10px 100% no-repeat scroll;
+}
+.dt.fixed { min-width: var(--min-w, 0); }
 .table-wrap.scroll-y { max-height: min(68vh, 720px); overflow-y: auto; }
 table.dt { width: 100%; border-collapse: separate; border-spacing: 0; font: var(--type-table); font-variant-numeric: tabular-nums; }
 .dt thead th { position: sticky; top: 0; z-index: var(--z-sticky); height: 34px; padding: 0 var(--s-3); border-bottom: 1px solid var(--border); background: var(--surface-card); color: var(--text-3); font: var(--type-label); text-align: left; white-space: nowrap; }
@@ -85,8 +97,6 @@ table.dt { width: 100%; border-collapse: separate; border-spacing: 0; font: var(
 /* Distribution: 100% stacked bar (complexity mix). */
 .dist { display: flex; gap: 2px; height: 8px; min-width: 80px; border-radius: var(--r-xs); overflow: hidden; }
 .dist > span { display: block; min-width: 3px; }
-.dist-cell { display: flex; align-items: center; gap: var(--s-2); }
-.dist-cell .dist { flex: 1; }
 .legend { display: flex; flex-wrap: wrap; align-items: center; gap: var(--s-1) var(--s-4); font: var(--type-caption); color: var(--text-2); }
 .legend > span { display: inline-flex; align-items: center; gap: 6px; }
 .legend i { width: 8px; height: 8px; border-radius: 2px; }
@@ -101,7 +111,6 @@ table.dt { width: 100%; border-collapse: separate; border-spacing: 0; font: var(
 .bars.lg { height: 56px; gap: 4px; }
 .bars.lg > span { width: auto; flex: 1; max-width: 18px; }
 .bars.fill { display: flex; width: 100%; }
-.chart-caption { display: flex; justify-content: space-between; margin-top: 6px; font: var(--type-caption); color: var(--text-3); }
 /* Horizontal workload bars */
 .hbar { display: grid; grid-template-columns: minmax(96px, 160px) minmax(0, 1fr) 40px; gap: var(--s-3); align-items: center; min-height: 36px; padding: 0 var(--s-4); font-size: var(--fs-13); }
 .hbar + .hbar { border-top: 1px solid var(--divider); }
@@ -137,7 +146,8 @@ table.dt { width: 100%; border-collapse: separate; border-spacing: 0; font: var(
 
 /* ---------- Responsive ---------- */
 @media (max-width: 767px) {
-  .metrics { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: var(--s-2); margin-bottom: var(--s-5); }
+  .metrics { gap: var(--s-2); }
+  .metrics-wrap { margin-bottom: var(--s-5); }
   .metric { padding: 12px; }
   .metric-value { font-size: var(--fs-22); }
   .toolbar .input, .toolbar select.input { flex: 1 1 140px; min-width: 0; }
@@ -147,6 +157,7 @@ table.dt { width: 100%; border-collapse: separate; border-spacing: 0; font: var(
 /* Phones: task tables become stacked rows instead of a crushed grid. */
 @media (max-width: 639px) {
   .dt.cards { table-layout: auto; min-width: 0; }
+  .table-wrap:has(.dt.cards) { background: none; }
   .dt.cards colgroup, .dt.cards thead { display: none; }
   .dt.cards tbody tr:not(.group-row) { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 6px var(--s-3); padding: 10px var(--s-4); border-bottom: 1px solid var(--divider); }
   .dt.cards tbody tr:last-child { border-bottom: 0; }

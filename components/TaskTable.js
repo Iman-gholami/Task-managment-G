@@ -117,10 +117,12 @@ export default function TaskTable({ list, groups, cols, kb = -1, sort, onSort, e
   };
 
   const hasRows = groups ? groups.length > 0 : list.length > 0;
+  // Fixed columns plus room for the title; narrower containers scroll instead of crushing the title.
+  const minWidth = cols.reduce((s, c) => s + (WIDTH[c] ?? 0), 0) + 260;
 
   return (
     <div className="table-wrap">
-      <table className="dt fixed cards">
+      <table className="dt fixed cards" style={{ "--min-w": `${minWidth}px` }}>
         <colgroup>{cols.map((c) => <col key={c} style={WIDTH[c] ? { width: WIDTH[c] } : undefined} />)}</colgroup>
         <thead><tr>{cols.map(header)}</tr></thead>
         <tbody>

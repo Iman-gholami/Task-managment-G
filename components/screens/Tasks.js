@@ -47,6 +47,7 @@ export default function Tasks({ scope }) {
   const [grouped, setGrouped] = useState(scope !== "my");
   const [view, setView] = useState("table");
   const [kb, setKb] = useState(0);
+  const [kbOn, setKbOn] = useState(false); // the row cursor appears once J/K is used
 
   const base = useMemo(() => tasks.filter((t) =>
     scope === "my" ? t.a === me.id
@@ -83,10 +84,12 @@ export default function Tasks({ scope }) {
   useEffect(() => {
     const onKey = (e) => {
       if (e.target.matches("input, textarea, select, [contenteditable]") || e.metaKey || e.ctrlKey || document.querySelector(".pop, .scrim")) return;
+      if (e.target.closest('[role="tablist"], [role="radiogroup"]')) return; // arrows belong to the control
       if (e.key === "/") { e.preventDefault(); document.getElementById("task-search")?.focus(); return; }
       if (!showKb) return;
-      if (e.key === "j" || e.key === "ArrowDown") { e.preventDefault(); setKb((k) => Math.min(list.length - 1, k + 1)); }
-      if (e.key === "k" || e.key === "ArrowUp") { e.preventDefault(); setKb((k) => Math.max(0, k - 1)); }
+      if (e.key === "j" || e.key === "ArrowDown") { e.preventDefault(); setKbOn(true); setKb((k) => (kbOn ? Math.min(list.length - 1, k + 1) : k)); }
+      if (e.key === "k" || e.key === "ArrowUp") { e.preventDefault(); setKbOn(true); setKb((k) => Math.max(0, k - 1)); }
+      if (!kbOn) return;
       if (e.key === "Enter" && list[kb] && !e.target.closest("a, button")) router.push(`/tasks/${list[kb].id}`);
       if ((e.key === "s" || e.key === "p") && list[kb]) {
         const field = e.key === "s" ? "status" : "prio";
@@ -96,7 +99,7 @@ export default function Tasks({ scope }) {
     };
     document.addEventListener("keydown", onKey);
     return () => document.removeEventListener("keydown", onKey);
-  }, [list, kb, showKb, router, edit]);
+  }, [list, kb, kbOn, showKb, router, edit]);
   useEffect(() => { document.querySelector("tr.kb")?.scrollIntoView({ block: "nearest" }); }, [kb]);
 
   const onSort = (k) => setSort((s) => ({ k, dir: s.k === k ? -s.dir : 1 }));
@@ -132,7 +135,7 @@ export default function Tasks({ scope }) {
       })} />
     );
   } else {
-    body = <TaskTable list={list} cols={cols} kb={showKb ? kb : -1} sort={sort} onSort={onSort} />;
+    body = <TaskTable list={list} cols={cols} kb={showKb && kbOn ? kb : -1} sort={sort} onSort={onSort} />;
   }
 
   return (
