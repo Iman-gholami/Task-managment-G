@@ -162,10 +162,13 @@ export default function AppProvider({ children, initial }) {
     [data, role, peopleMap, members, theme, setTheme, collapsed, setCollapsed, toast, openPopover, closePopover, createOpen, addTask, updateTask]
   );
 
+  // React's special `key` prop must be passed directly, never through a spread object.
+  const { key: popoverKey, ...popoverProps } = popover ?? {};
+
   return (
     <AppContext.Provider value={value}>
       {children}
-      {popover && <Popover key={popover.key} {...popover} onClose={closePopover} />}
+      {popover && <Popover key={popoverKey} {...popoverProps} onClose={closePopover} />}
       <TooltipLayer />
       <div className="toasts" aria-live="polite">
         {toasts.map((t) => (
