@@ -38,6 +38,10 @@ function faDay(date) {
   return new Intl.DateTimeFormat("fa-IR-u-ca-persian", { day: "numeric", timeZone: "UTC" }).format(new Date(`${date}T00:00:00Z`));
 }
 
+function faDate(date) {
+  return new Intl.DateTimeFormat("fa-IR-u-ca-persian", { weekday: "long", year: "numeric", month: "long", day: "numeric", timeZone: "UTC" }).format(new Date(`${date}T00:00:00Z`));
+}
+
 export default function ShiftSchedule() {
   const { me, members, toast } = useApp();
   const manager = isManager(me);
@@ -45,6 +49,7 @@ export default function ShiftSchedule() {
   const [month, setMonth] = useState(TODAY.slice(0, 7));
   const [selectedUser, setSelectedUser] = useState(me.keepsShiftLog ? me.id : analysts[0]?.id ?? "");
   const [selectedDate, setSelectedDate] = useState(TODAY);
+  const [editorOpen, setEditorOpen] = useState(false);
   const [edit, setEdit] = useState({ userId: analysts[0]?.id ?? "", shiftType: "morning" });
   const [saving, setSaving] = useState(false);
   const { data, loading, error, reload } = useFetch(`/api/shifts?month=${month}`);
@@ -59,13 +64,25 @@ export default function ShiftSchedule() {
   }, [schedules]);
   const selectedRows = byDate[selectedDate] ?? [];
 
+  const selectDay = (date) => {
+    setSelectedDate(date);
+    setEditorOpen(false);
+  };
+
+  const openEditor = (date = selectedDate || TODAY) => {
+    if (!manager) return;
+    setSelectedDate(date);
+    setEditorOpen(true);
+  };
+
   const save = async () => {
     if (!selectedDate || !edit.userId) return;
     setSaving(true);
     try {
       await api("/api/shifts", { method: "POST", body: { date: selectedDate, userId: edit.userId, shiftType: edit.shiftType } });
       toast("Shift assignment saved");
-      reload();
+      await reload();
+      setEditorOpen(false);
     } catch (e) {
       toast(e.message);
     } finally {
@@ -95,18 +112,18 @@ export default function ShiftSchedule() {
       <div className="page-head shift-schedule-head">
         <div>
           <h1>Shift Schedule</h1>
-          <p>SOC rota · Tehran time · analysts can view the full team calendar</p>
+          <p>SOC rota · Tehran time · single click shows the day · double click assigns a shift</p>
         </div>
         <div className="actions">
           <Link className="btn btn-secondary" href="/shifts/changes"><Icon name="edit" />Shift changes</Link>
-          {manager && <button className="btn btn-primary" onClick={() => setSelectedDate(selectedDate || TODAY)}><Icon name="plus" />Assign shift</button>}
+          {manager && <button className="btn btn-primary" onClick={() => openEditor(selectedDate || TODAY)}><Icon name="plus" />Assign shift</button>}
         </div>
       </div>
 
       <div className="shift-toolbar">
         <div className="shift-month-nav">
           <button className="btn btn-ghost icon-btn" onClick={() => setMonth(addMonth(month, -1))} aria-label="Previous month">‹</button>
-          <button className="btn btn-ghost" onClick={() => setMonth(TODAY.slice(0, 7))}>Today</button>
+          <button className="btn btn-ghost" onClick={() => { setMonth(TODAY.slice(0, 7)); selectDay(TODAY); }}>Today</button>
           <button className="btn btn-ghost icon-btn" onClick={() => setMonth(addMonth(month, 1))} aria-label="Next month">›</button>
           <div className="shift-month-title"><b>{title.en}</b><small>{title.fa}</small></div>
         </div>
@@ -125,12 +142,19 @@ export default function ShiftSchedule() {
         <Stat label="Night" value={stats.night} />
       </div>
 
-      <div className={`shift-schedule-layout ${manager ? "with-editor" : ""}`}>
+      <div className="shift-schedule-layout with-panel">
         <section className="shift-calendar card">
           <div className="shift-calendar-week">{WEEK.map((d) => <div key={d}>{d}</div>)}</div>
           <div className="shift-calendar-grid" aria-busy={loading}>
             {days.map((date, i) => date ? (
-              <button key={date} type="button" className={`shift-day ${date === selectedDate ? "selected" : ""} ${date === TODAY ? "today" : ""}`} onClick={() => setSelectedDate(date)}>
+              <button
+                key={date}
+                type="button"
+                className={`shift-day ${date === selectedDate ? "selected" : ""} ${date === TODAY ? "today" : ""}`}
+                onClick={() => selectDay(date)}
+                onDoubleClick={() => openEditor(date)}
+                title={manager ? "Click: view day · Double click: assign shift" : "Click: view day"}
+              >
                 <span className="shift-day-number"><b>{Number(date.slice(-2))}</b><small>{faDay(date)}</small></span>
                 <span className="shift-day-items">
                   {(byDate[date] ?? []).map((row) => {
@@ -143,20 +167,42 @@ export default function ShiftSchedule() {
           </div>
         </section>
 
-        {manager && (
-          <aside className="shift-editor card">
-            <div className="section-head"><h2>Assign shift</h2><span className="badge num">{selectedDate}</span></div>
-            <label className="field"><span>Date</span><input className="input" type="date" value={selectedDate} onChange={(e) => setSelectedDate(e.target.value)} /></label>
-            <label className="field"><span>Analyst</span><select className="input" value={edit.userId} onChange={(e) => setEdit({ ...edit, userId: e.target.value })}>{analysts.map((a) => <option key={a.id} value={a.id}>{a.name} · {a.team}</option>)}</select></label>
-            <div className="field"><span>Shift</span><div className="shift-type-picker">{Object.values(SHIFT_TYPES).map((s) => <button type="button" key={s.key} className={`shift-type-option ${s.className} ${edit.shiftType === s.key ? "active" : ""}`} onClick={() => setEdit({ ...edit, shiftType: s.key })}><b>{s.label}</b><small>{s.start}–{s.end} · {s.hours}h</small></button>)}</div></div>
-            <button className="btn btn-primary" disabled={saving || !edit.userId} onClick={save}>Save assignment</button>
-
-            <div className="shift-selected-list">
-              <div className="section-head"><h2>Selected day</h2><span className="meta num">{selectedRows.length}</span></div>
-              {selectedRows.length === 0 ? <p className="muted">No analysts scheduled on this date.</p> : selectedRows.map((row) => <div className="shift-selected-row" key={row.userId}><div><Who id={row.userId} /><small>{SHIFT_TYPES[row.shiftType].label} · {SHIFT_TYPES[row.shiftType].start}–{SHIFT_TYPES[row.shiftType].end}</small></div><button className="btn btn-ghost btn-sm" disabled={saving} onClick={() => remove(row)}>Remove</button></div>)}
-            </div>
-          </aside>
-        )}
+        <aside className="shift-editor shift-day-panel card">
+          {manager && editorOpen ? (
+            <>
+              <div className="section-head">
+                <h2>Assign shift</h2>
+                <button className="btn btn-ghost btn-sm" onClick={() => setEditorOpen(false)}>Back to day</button>
+              </div>
+              <div className="shift-panel-date"><b>{selectedDate}</b><small>{faDate(selectedDate)}</small></div>
+              <label className="field"><span>Date</span><input className="input" type="date" value={selectedDate} onChange={(e) => setSelectedDate(e.target.value)} /></label>
+              <label className="field"><span>Analyst</span><select className="input" value={edit.userId} onChange={(e) => setEdit({ ...edit, userId: e.target.value })}>{analysts.map((a) => <option key={a.id} value={a.id}>{a.name} · {a.team}</option>)}</select></label>
+              <div className="field"><span>Shift</span><div className="shift-type-picker">{Object.values(SHIFT_TYPES).map((s) => <button type="button" key={s.key} className={`shift-type-option ${s.className} ${edit.shiftType === s.key ? "active" : ""}`} onClick={() => setEdit({ ...edit, shiftType: s.key })}><b>{s.label}</b><small>{s.start}–{s.end} · {s.hours}h</small></button>)}</div></div>
+              <button className="btn btn-primary" disabled={saving || !edit.userId} onClick={save}>Save assignment</button>
+            </>
+          ) : (
+            <>
+              <div className="section-head">
+                <h2>Selected day</h2>
+                <span className="badge num">{selectedRows.length}</span>
+              </div>
+              <div className="shift-panel-date"><b>{selectedDate}</b><small>{faDate(selectedDate)}</small></div>
+              <div className="shift-selected-list compact">
+                {selectedRows.length === 0 ? <p className="muted">No analysts scheduled on this date.</p> : selectedRows.map((row) => (
+                  <div className="shift-selected-row" key={row.userId}>
+                    <div>
+                      <Who id={row.userId} />
+                      <small>{SHIFT_TYPES[row.shiftType].label} · {SHIFT_TYPES[row.shiftType].start}–{SHIFT_TYPES[row.shiftType].end}</small>
+                    </div>
+                    {manager && <button className="btn btn-ghost btn-sm" disabled={saving} onClick={() => remove(row)}>Remove</button>}
+                  </div>
+                ))}
+              </div>
+              {manager && <button className="btn btn-secondary shift-panel-assign" onClick={() => openEditor(selectedDate)}><Icon name="plus" />Assign on this day</button>}
+              <p className="shift-panel-help muted">{manager ? "Single click another date to inspect it. Double click a date to assign a shift." : "Click any date to inspect the team shifts for that day."}</p>
+            </>
+          )}
+        </aside>
       </div>
 
       <div className="shift-legend"><span><i className="morning" />Morning 07:30–15:15</span><span><i className="evening" />Until 20:00 07:30–20:00</span><span><i className="night" />Night 20:00–08:00</span></div>
