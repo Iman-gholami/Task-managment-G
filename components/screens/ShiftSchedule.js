@@ -20,7 +20,6 @@ const SHIFT_META = {
 };
 const WEEKDAYS = ["شنبه", "یکشنبه", "دوشنبه", "سه‌شنبه", "چهارشنبه", "پنجشنبه", "جمعه"];
 const TODAY = tehranDate();
-const ZERO_STATS = { hours: 0, total: 0, thursdays: 0, fridays: 0, morning: 0, evening: 0, night: 0 };
 
 const PERSIAN_CAL = new Intl.DateTimeFormat("fa-IR-u-ca-persian", { year: "numeric", month: "numeric", day: "numeric", timeZone: "UTC" });
 const PERSIAN_MONTH = new Intl.DateTimeFormat("fa-IR-u-ca-persian", { year: "numeric", month: "long", timeZone: "UTC" });
@@ -81,7 +80,7 @@ export default function ShiftSchedule() {
 
   const [monthStart, setMonthStart] = useState(() => firstOfJalaliMonth(TODAY));
   const [selectedDate, setSelectedDate] = useState(TODAY);
-  const [selectedUser, setSelectedUser] = useState(me.keepsShiftLog ? me.id : analysts[0]?.id ?? "");
+  const [selectedUser, setSelectedUser] = useState("");
   const [selectedShift, setSelectedShift] = useState("morning");
   const [editor, setEditor] = useState(null);
   const [draftIds, setDraftIds] = useState([]);
@@ -94,7 +93,10 @@ export default function ShiftSchedule() {
   const byDate = useMemo(() => groupByDate(schedules), [schedules]);
   const monthKey = jalaliMonthKey(monthStart);
   const monthSchedules = useMemo(() => schedules.filter((row) => jalaliMonthKey(row.date) === monthKey), [schedules, monthKey]);
-  const stats = useMemo(() => selectedUser ? scheduleStats(monthSchedules.filter((row) => row.userId === selectedUser)) : ZERO_STATS, [monthSchedules, selectedUser]);
+  const stats = useMemo(
+    () => scheduleStats(selectedUser ? monthSchedules.filter((row) => row.userId === selectedUser) : monthSchedules),
+    [monthSchedules, selectedUser]
+  );
   const selectedRows = byDate[selectedDate] ?? [];
   const selectedShiftRows = selectedRows.filter((row) => row.shiftType === selectedShift);
   const cells = useMemo(() => Array.from({ length: daysBetween(range.start, range.end) + 1 }, (_, i) => addDays(range.start, i)), [range.start, range.end]);
@@ -198,6 +200,7 @@ export default function ShiftSchedule() {
             <label className={styles.analystSelect}>
               <span>نمایش آمار</span>
               <select value={selectedUser} onChange={(e) => setSelectedUser(e.target.value)}>
+                <option value="">همه کارشناسان</option>
                 {analysts.map((a) => <option key={a.id} value={a.id}>{a.name}</option>)}
               </select>
             </label>
@@ -237,7 +240,7 @@ export default function ShiftSchedule() {
                     {SHIFT_KEYS.map((shiftType) => {
                       const shiftRows = rows.filter((row) => row.shiftType === shiftType);
                       if (!shiftRows.length) return null;
-                      const includesSelected = shiftRows.some((row) => row.userId === selectedUser);
+                      const includesSelected = selectedUser ? shiftRows.some((row) => row.userId === selectedUser) : false;
                       return (
                         <button
                           type="button"
@@ -267,7 +270,7 @@ export default function ShiftSchedule() {
 
           <div className={styles.legend}>
             {SHIFT_KEYS.map((key) => <span key={key} data-shift={key}><i />{SHIFT_META[key].label}<small>{SHIFT_META[key].time}</small></span>)}
-            <span className={styles.legendHint}>نقطه‌ی پررنگ‌تر یعنی کارشناس انتخاب‌شده در آن شیفت حضور دارد.</span>
+            <span className={styles.legendHint}>{selectedUser ? "نقطه‌ی پررنگ‌تر یعنی کارشناس انتخاب‌شده در آن شیفت حضور دارد." : "در حالت همه کارشناسان، هیچ فردی روی تقویم برجسته نمی‌شود."}</span>
           </div>
         </section>
 
@@ -317,7 +320,7 @@ export default function ShiftSchedule() {
           <section className={styles.analystCard}>
             <div className={styles.analystCardHead}>
               <span>آمار ماهانه</span>
-              <b>{selectedPerson?.name || "کارشناس"}</b>
+              <b>{selectedPerson?.name || "همه کارشناسان"}</b>
             </div>
             <div className={styles.analystPrimary}>
               <div><strong>{faNum(stats.hours)}</strong><span>ساعت</span></div>
