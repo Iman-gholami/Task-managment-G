@@ -1,7 +1,8 @@
+import { Suspense } from "react";
 import Tasks from "@/components/screens/Tasks";
 
-export const metadata = { title: "Assigned by Me" };
+export const metadata = { title: "Assigned by me" };
 
 export default function Page() {
-  return <Tasks scope="assigned" />;
+  return <Suspense><Tasks scope="assigned" /></Suspense>;
 }

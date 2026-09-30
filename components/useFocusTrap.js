@@ -17,7 +17,7 @@ export default function useFocusTrap(onClose) {
     const opener = document.activeElement;
     const node = ref.current;
     if (!node) return;
-    if (!node.contains(document.activeElement)) node.querySelector("[autofocus]")?.focus() ?? node.querySelector(FOCUSABLE)?.focus();
+    if (!node.contains(document.activeElement)) (node.querySelector("[autofocus], [data-autofocus]") ?? node.querySelector(FOCUSABLE))?.focus();
 
     const onKey = (e) => {
       if (e.key === "Escape" && !document.querySelector(".pop")) { e.stopPropagation(); close.current?.(); return; }

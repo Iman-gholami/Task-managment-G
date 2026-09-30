@@ -1,195 +1,186 @@
 /* ==========================================================================
-   Sentinel Ops — Design Tokens ("Ink & Signal")
-   One semantic token set, two tuned themes. Components use semantic tokens only.
-   Palette values come from scripts/palette.mjs (OKLCH, contrast-checked).
+   Sentinel Ops — Design tokens
+   Components use the semantic tokens below only; never raw hex values.
+   Colour values come from scripts/palette.mjs (OKLCH, contrast-checked).
+   The theme is applied as <html data-theme="light|dark"> before first paint (app/layout.js).
    ========================================================================== */
 
-@font-face { font-family: "Instrument Serif"; src: url("fonts/InstrumentSerif-Regular.woff2") format("woff2"); font-weight: 400; font-style: normal; font-display: swap; }
-@font-face { font-family: "Instrument Serif"; src: url("fonts/InstrumentSerif-Italic.woff2") format("woff2"); font-weight: 400; font-style: italic; font-display: swap; }
-
 :root {
-  /* ---- Palette: Ink (cool, faintly blue-slate neutrals) ---------------- */
-  --ink-50: #F9FAFC; --ink-100: #F1F3F5; --ink-200: #E4E6E9; --ink-300: #D0D4D8; --ink-400: #A4AAB0;
-  --ink-500: #7F878F; --ink-600: #626A72; --ink-700: #4C535B; --ink-800: #343A40; --ink-900: #21262B;
-  --ink-950: #14181B; --ink-975: #0D1013;
-
-  /* ---- Palette: Signal (deep teal accent) ------------------------------ */
-  --signal-50: #EEFEFC; --signal-100: #E3F8F5; --signal-200: #CFEEE9; --signal-300: #B2DED7; --signal-400: #6ABAB0;
-  --signal-500: #009B8F; --signal-600: #007D72; --signal-700: #00665B; --signal-800: #004940; --signal-900: #00312A; --signal-950: #00201B;
-
-  /* ---- Palette: semantic families (tuned to sit with Ink & Signal) ----- */
-  --green-50: #F3FEF4; --green-100: #E9F7EB; --green-400: #86B790; --green-600: #317A45; --green-700: #15632F;
-  --amber-50: #FFF9ED; --amber-100: #FDF1E1; --amber-400: #C9A26C; --amber-600: #905D00; --amber-700: #784600;
-  --red-50: #FFF5F3;   --red-100: #FFECE9;   --red-400: #E1918A;   --red-500: #CA625C; --red-600: #AB413E; --red-700: #902828;
-  --blue-50: #F2FCFF;  --blue-100: #E8F5FF;  --blue-400: #84AED3;  --blue-600: #2F6E9E;
-  --plum-50: #FBF8FF;  --plum-100: #F3F0FF;  --plum-400: #ACA1D2;  --plum-600: #6D5C9C;
-
   /* ---- Typography ------------------------------------------------------ */
   --font-sans: var(--font-geist), "Geist", ui-sans-serif, system-ui, sans-serif;
   --font-mono: var(--font-geist-mono), "Geist Mono", ui-monospace, SFMono-Regular, monospace;
-  --font-display: "Instrument Serif", Georgia, "Times New Roman", serif; /* signature: page titles only */
 
-  --fs-12: 12px; --fs-13: 13px; --fs-14: 14px; --fs-16: 16px; --fs-18: 18px;
-  --fs-20: 20px; --fs-24: 24px; --fs-30: 30px; --fs-36: 36px; --fs-48: 48px;
+  --fs-11: 11px; --fs-12: 12px; --fs-13: 13px; --fs-14: 14px; --fs-15: 15px;
+  --fs-16: 16px; --fs-18: 18px; --fs-20: 20px; --fs-22: 22px; --fs-26: 26px; --fs-28: 28px;
   --fw-regular: 400; --fw-medium: 500; --fw-semibold: 600;
 
-  --text-display: var(--fw-regular) var(--fs-36)/1.1 var(--font-display); /* page titles (signature) */
-  --text-title:   var(--fw-regular) var(--fs-30)/1.15 var(--font-display);
-  --text-section: var(--fw-semibold) var(--fs-16)/1.4 var(--font-sans);
-  --text-body:    var(--fw-regular) var(--fs-16)/1.6 var(--font-sans);    /* prose: descriptions, comments */
-  --text-ui:      var(--fw-regular) var(--fs-14)/1.45 var(--font-sans);   /* controls, navigation */
-  --text-table:   var(--fw-regular) var(--fs-14)/1.4 var(--font-sans);
-  --text-meta:    var(--fw-regular) var(--fs-12)/1.4 var(--font-sans);
-  --text-label:   var(--fw-medium) var(--fs-12)/1.4 var(--font-sans);
-  --tracking-tight: -0.006em;
-  --tracking-title: -0.01em;
+  /* Semantic type styles (font shorthand). */
+  --type-display:    var(--fw-semibold) var(--fs-28)/1.2 var(--font-sans);   /* sign-in only */
+  --type-page-title: var(--fw-semibold) var(--fs-22)/1.25 var(--font-sans);
+  --type-section:    var(--fw-semibold) var(--fs-15)/1.35 var(--font-sans);
+  --type-card-title: var(--fw-semibold) var(--fs-13)/1.4 var(--font-sans);
+  --type-body:       var(--fw-regular) var(--fs-14)/1.5 var(--font-sans);
+  --type-prose:      var(--fw-regular) var(--fs-15)/1.6 var(--font-sans);   /* descriptions, comments */
+  --type-body-sm:    var(--fw-regular) var(--fs-13)/1.45 var(--font-sans);
+  --type-table:      var(--fw-regular) var(--fs-13)/1.4 var(--font-sans);
+  --type-label:      var(--fw-medium) var(--fs-12)/1.35 var(--font-sans);
+  --type-caption:    var(--fw-regular) var(--fs-12)/1.4 var(--font-sans);
+  --type-kpi:        var(--fw-semibold) var(--fs-26)/1.1 var(--font-sans);
+  --type-overline:   var(--fw-medium) var(--fs-11)/1.3 var(--font-sans);
+  --tracking-title: -0.018em;
+  --tracking-ui: -0.004em;
   --tracking-caps: 0.06em;
 
   /* ---- Spacing (4 / 8 grid) --------------------------------------------- */
   --s-1: 4px; --s-2: 8px; --s-3: 12px; --s-4: 16px; --s-5: 20px; --s-6: 24px;
-  --s-8: 32px; --s-10: 40px; --s-12: 48px; --s-16: 64px; --s-24: 96px;
+  --s-8: 32px; --s-10: 40px; --s-12: 48px; --s-16: 64px;
 
-  /* ---- Radius (one family: 6 / 8 / 12) ----------------------------------- */
-  --r-xs: 4px;   /* checkbox, kbd */
-  --r-sm: 6px;   /* badges, chips, menu items */
-  --r-md: 8px;   /* inputs, buttons */
-  --r-lg: 12px;  /* panels, main sheet, modals */
+  /* ---- Radius ----------------------------------------------------------- */
+  --r-xs: 4px;    /* checkbox, kbd, bars */
+  --r-sm: 6px;    /* buttons, inputs, badges, menu items */
+  --r-md: 8px;    /* segmented tracks, tooltips, small tiles */
+  --r-lg: 10px;   /* cards, panels, popovers */
+  --r-xl: 12px;   /* main sheet, dialogs */
   --r-full: 999px;
 
-  /* ---- Sizing ------------------------------------------------------------ */
-  --sidebar-w: 240px;
-  --sidebar-w-collapsed: 60px;
-  --header-h: 56px;
-  --row-h: 44px;
-  --control-h: 36px;
-  --control-h-sm: 30px;
-  --content-max: 1200px;
-  --prose-max: 68ch;
+  /* ---- Sizing ----------------------------------------------------------- */
+  --sidebar-w: 236px;
+  --sidebar-w-collapsed: 56px;
+  --header-h: 52px;
+  --control-h: 32px;
+  --control-h-sm: 28px;
+  --control-h-lg: 40px;
+  --row-h: 40px;
+  --row-h-compact: 36px;
+  --icon: 16px;
+  --icon-sm: 14px;
+  --content-max: 1440px;
+  --content-read: 960px;
+  --prose-max: 70ch;
 
   /* ---- Z-index ------------------------------------------------------------ */
-  --z-sticky: 2; --z-nav: 30; --z-scrim: 40; --z-modal: 41; --z-pop: 50; --z-toast: 60;
+  --z-sticky: 2; --z-nav: 30; --z-scrim: 40; --z-modal: 41; --z-pop: 50; --z-tooltip: 55; --z-toast: 60;
 
-  /* ---- Motion -------------------------------------------------------------- */
+  /* ---- Motion ---------------------------------------------------------------- */
   --ease-out: cubic-bezier(.16, 1, .3, 1);
   --ease-in: cubic-bezier(.7, 0, .84, 0);
-  --ease: var(--ease-out);
-  --t-fast: 150ms;
-  --t-base: 200ms;
-  --t-slow: 280ms;
+  --ease-standard: cubic-bezier(.2, 0, 0, 1);
+  --t-fast: 120ms;
+  --t-base: 160ms;
+  --t-slow: 220ms;
 }
 
 /* ==========================================================================
-   LIGHT (default)
+   LIGHT
    ========================================================================== */
-:root, [data-theme="light"] {
+:root, :root[data-theme="light"] {
   color-scheme: light;
 
-  --bg: var(--ink-100);
-  --surface: #FFFFFF;
-  --surface-2: var(--ink-50);
-  --surface-raised: #FFFFFF;
-  --hover: color-mix(in oklab, var(--ink-100) 70%, #FFFFFF);
-  --selected: color-mix(in oklab, var(--signal-600) 7%, #FFFFFF);
+  --bg: #EDF0F4;               /* app background, sidebar */
+  --surface: #F9FAFC;          /* main sheet */
+  --surface-card: #FFFFFF;     /* cards, panels, tables */
+  --surface-inset: #F3F5F8;    /* segmented tracks, table headers, side panels */
+  --surface-raised: #FFFFFF;   /* menus, dialogs */
+  --surface-input: #FFFFFF;
 
-  --text: var(--ink-950);
-  --text-2: var(--ink-700);
-  --text-3: var(--ink-600);
+  --hover: color-mix(in oklab, #151B22 4.5%, transparent);
+  --pressed: color-mix(in oklab, #151B22 8%, transparent);
+  --nav-active: color-mix(in oklab, #151B22 6.5%, transparent);
+  --selected: color-mix(in oklab, #007B70 9%, transparent);
+
+  --text: #151B22;
+  --text-2: #4C535B;
+  --text-3: #656D75;
   --text-on-primary: #FFFFFF;
 
-  --border: var(--ink-200);
-  --border-strong: var(--ink-500);       /* input borders: 3.6:1 */
-  --divider: color-mix(in oklab, var(--ink-200) 75%, #FFFFFF);
+  --border: #DFE3E8;
+  --divider: #E8EBEF;
+  --border-strong: #7F8790;   /* input borders: 3.6:1 */
 
-  --primary: var(--signal-600);          /* white text 5.0:1 */
-  --primary-hover: var(--signal-700);
-  --primary-soft: color-mix(in oklab, var(--signal-600) 10%, #FFFFFF);
-  --link: var(--signal-700);
-  --focus-ring: 0 0 0 2px var(--surface), 0 0 0 4px color-mix(in oklab, var(--signal-600) 70%, transparent);
+  --primary: #007B70;         /* white label 5.2:1 */
+  --primary-hover: #00695F;
+  --primary-soft: color-mix(in oklab, #007B70 10%, transparent);
+  --link: #00695F;
+  --focus: #007B70;
 
-  --success: var(--green-700);  --success-soft: var(--green-100);
-  --warning: var(--amber-700);  --warning-soft: var(--amber-100);
-  --danger:  var(--red-600);    --danger-soft:  var(--red-100);
-  --info:    var(--blue-600);   --info-soft:    var(--blue-100);
-  --violet:  var(--plum-600);   --violet-soft:  var(--plum-100);
-  --neutral: var(--ink-500);    --neutral-soft: var(--ink-100);
+  --success: #246E3A;  --warning: #8D5406;  --danger: #B33736;  --info: #296898;  --violet: #685796;  --neutral: #656D75;
+  --success-soft: color-mix(in oklab, #246E3A 10%, transparent);
+  --warning-soft: color-mix(in oklab, #8D5406 11%, transparent);
+  --danger-soft:  color-mix(in oklab, #B33736 9%, transparent);
+  --info-soft:    color-mix(in oklab, #296898 9%, transparent);
+  --violet-soft:  color-mix(in oklab, #685796 10%, transparent);
+  --neutral-soft: color-mix(in oklab, #656D75 10%, transparent);
+  --danger-solid: #B33736;
+  --on-danger: #FFFFFF;
 
-  --shadow-sm: 0 1px 2px rgb(20 24 27 / .04);
-  --shadow-md: 0 1px 2px rgb(20 24 27 / .04), 0 8px 24px -12px rgb(20 24 27 / .16), 0 0 0 1px var(--border);
-  --shadow-lg: 0 2px 4px rgb(20 24 27 / .04), 0 24px 48px -16px rgb(20 24 27 / .22), 0 0 0 1px var(--border);
-  --scrim: rgb(20 24 27 / .32);
+  --shadow-xs: 0 1px 1px rgb(21 27 34 / .04);
+  --shadow-sm: 0 1px 2px rgb(21 27 34 / .06), 0 1px 1px rgb(21 27 34 / .03);
+  --shadow-md: 0 4px 12px -2px rgb(21 27 34 / .10), 0 2px 4px -2px rgb(21 27 34 / .06);
+  --shadow-lg: 0 16px 40px -12px rgb(21 27 34 / .22), 0 4px 10px -4px rgb(21 27 34 / .08);
+  --scrim: rgb(21 27 34 / .36);
 
-  --viz-1: var(--signal-200); --viz-2: var(--signal-400); --viz-3: var(--signal-600); --viz-4: var(--signal-800);
-  --viz-grid: var(--ink-200);
+  /* Complexity ramp (Simple → Advanced), bars, tracks */
+  --viz-1: #92CBC3; --viz-2: #43A89D; --viz-3: #008176; --viz-4: #00554D;
+  --viz-bar: #43A89D;
+  --viz-bar-strong: #007B70;
+  --viz-track: #E8EBEF;
+  --surface-toggle: #FFFFFF;
+  --tooltip-bg: #151B22; --tooltip-text: #F9FAFC;
 }
 
 /* ==========================================================================
-   DARK (prefers-color-scheme, or manual toggle)
+   DARK — layered surfaces: bg < sheet < card < inset < raised
    ========================================================================== */
-@media (prefers-color-scheme: dark) {
-  :root:not([data-theme="light"]) {
-    color-scheme: dark;
-    --bg: var(--ink-975);
-    --surface: var(--ink-950);
-    --surface-2: color-mix(in oklab, var(--ink-900) 55%, var(--ink-950));
-    --surface-raised: var(--ink-900);
-    --hover: color-mix(in oklab, var(--ink-900) 80%, var(--ink-950));
-    --selected: color-mix(in oklab, var(--signal-400) 10%, var(--ink-950));
-    --text: var(--ink-50);
-    --text-2: var(--ink-300);
-    --text-3: var(--ink-400);
-    --text-on-primary: var(--ink-975);
-    --border: var(--ink-800);
-    --border-strong: var(--ink-600);
-    --divider: color-mix(in oklab, var(--ink-800) 70%, var(--ink-950));
-    --primary: var(--signal-400);
-    --primary-hover: var(--signal-300);
-    --primary-soft: color-mix(in oklab, var(--signal-400) 14%, var(--ink-950));
-    --link: var(--signal-300);
-    --focus-ring: 0 0 0 2px var(--surface), 0 0 0 4px color-mix(in oklab, var(--signal-400) 75%, transparent);
-    --success: var(--green-400);  --success-soft: color-mix(in oklab, var(--green-400) 14%, var(--ink-950));
-    --warning: var(--amber-400);  --warning-soft: color-mix(in oklab, var(--amber-400) 14%, var(--ink-950));
-    --danger:  var(--red-400);    --danger-soft:  color-mix(in oklab, var(--red-400) 14%, var(--ink-950));
-    --info:    var(--blue-400);   --info-soft:    color-mix(in oklab, var(--blue-400) 14%, var(--ink-950));
-    --violet:  var(--plum-400);   --violet-soft:  color-mix(in oklab, var(--plum-400) 14%, var(--ink-950));
-    --neutral: var(--ink-400);    --neutral-soft: var(--ink-900);
-    --shadow-sm: 0 1px 2px rgb(0 0 0 / .3);
-    --shadow-md: 0 8px 24px -12px rgb(0 0 0 / .6), 0 0 0 1px var(--border);
-    --shadow-lg: 0 24px 48px -16px rgb(0 0 0 / .7), 0 0 0 1px var(--border);
-    --scrim: rgb(0 0 0 / .55);
-    --viz-1: var(--signal-800); --viz-2: var(--signal-600); --viz-3: var(--signal-400); --viz-4: var(--signal-200);
-    --viz-grid: var(--ink-800);
-  }
-}
-[data-theme="dark"] {
+:root[data-theme="dark"] {
   color-scheme: dark;
-  --bg: var(--ink-975);
-  --surface: var(--ink-950);
-  --surface-2: color-mix(in oklab, var(--ink-900) 55%, var(--ink-950));
-  --surface-raised: var(--ink-900);
-  --hover: color-mix(in oklab, var(--ink-900) 80%, var(--ink-950));
-  --selected: color-mix(in oklab, var(--signal-400) 10%, var(--ink-950));
-  --text: var(--ink-50);
-  --text-2: var(--ink-300);
-  --text-3: var(--ink-400);
-  --text-on-primary: var(--ink-975);
-  --border: var(--ink-800);
-  --border-strong: var(--ink-600);
-  --divider: color-mix(in oklab, var(--ink-800) 70%, var(--ink-950));
-  --primary: var(--signal-400);
-  --primary-hover: var(--signal-300);
-  --primary-soft: color-mix(in oklab, var(--signal-400) 14%, var(--ink-950));
-  --link: var(--signal-300);
-  --focus-ring: 0 0 0 2px var(--surface), 0 0 0 4px color-mix(in oklab, var(--signal-400) 75%, transparent);
-  --success: var(--green-400);  --success-soft: color-mix(in oklab, var(--green-400) 14%, var(--ink-950));
-  --warning: var(--amber-400);  --warning-soft: color-mix(in oklab, var(--amber-400) 14%, var(--ink-950));
-  --danger:  var(--red-400);    --danger-soft:  color-mix(in oklab, var(--red-400) 14%, var(--ink-950));
-  --info:    var(--blue-400);   --info-soft:    color-mix(in oklab, var(--blue-400) 14%, var(--ink-950));
-  --violet:  var(--plum-400);   --violet-soft:  color-mix(in oklab, var(--plum-400) 14%, var(--ink-950));
-  --neutral: var(--ink-400);    --neutral-soft: var(--ink-900);
-  --shadow-sm: 0 1px 2px rgb(0 0 0 / .3);
-  --shadow-md: 0 8px 24px -12px rgb(0 0 0 / .6), 0 0 0 1px var(--border);
-  --shadow-lg: 0 24px 48px -16px rgb(0 0 0 / .7), 0 0 0 1px var(--border);
-  --scrim: rgb(0 0 0 / .55);
-  --viz-1: var(--signal-800); --viz-2: var(--signal-600); --viz-3: var(--signal-400); --viz-4: var(--signal-200);
-  --viz-grid: var(--ink-800);
+
+  --bg: #080D11;
+  --surface: #0F1318;
+  --surface-card: #14191E;
+  --surface-inset: #1A1F24;
+  --surface-raised: #1C2126;
+  --surface-input: #0F1318;
+
+  --hover: color-mix(in oklab, #E8EBEF 5%, transparent);
+  --pressed: color-mix(in oklab, #E8EBEF 9%, transparent);
+  --nav-active: color-mix(in oklab, #E8EBEF 8%, transparent);
+  --selected: color-mix(in oklab, #4EB9AD 12%, transparent);
+
+  --text: #E8EBEF;
+  --text-2: #B9BEC4;
+  --text-3: #949BA1;
+  --text-on-primary: #080D11;
+
+  --border: #272C31;
+  --divider: #1F2329;
+  --border-strong: #676C73;   /* input borders: 3.3:1 */
+
+  --primary: #4EB9AD;         /* dark label 8.2:1 */
+  --primary-hover: #6FCABF;
+  --primary-soft: color-mix(in oklab, #4EB9AD 14%, transparent);
+  --link: #7AD0C5;
+  --focus: #6FCABF;
+
+  --success: #73C385;  --warning: #E4AC59;  --danger: #EB827B;  --info: #79B1E0;  --violet: #AFA0DE;  --neutral: #949BA1;
+  --success-soft: color-mix(in oklab, #73C385 13%, transparent);
+  --warning-soft: color-mix(in oklab, #E4AC59 13%, transparent);
+  --danger-soft:  color-mix(in oklab, #EB827B 13%, transparent);
+  --info-soft:    color-mix(in oklab, #79B1E0 13%, transparent);
+  --violet-soft:  color-mix(in oklab, #AFA0DE 13%, transparent);
+  --neutral-soft: color-mix(in oklab, #949BA1 13%, transparent);
+  --danger-solid: #C04442;
+  --on-danger: #FFFFFF;
+
+  --shadow-xs: none;
+  --shadow-sm: 0 1px 2px rgb(0 0 0 / .35);
+  --shadow-md: 0 8px 24px -8px rgb(0 0 0 / .6), 0 0 0 1px rgb(255 255 255 / .02);
+  --shadow-lg: 0 24px 56px -16px rgb(0 0 0 / .75);
+  --scrim: rgb(3 5 8 / .62);
+
+  --viz-1: #2B5C56; --viz-2: #2A857B; --viz-3: #3FACA0; --viz-4: #84DACE;
+  --viz-bar: #2A857B;
+  --viz-bar-strong: #4EB9AD;
+  --viz-track: #1F2329;
+  --surface-toggle: #272D34;  /* selected segment on an inset track */
+  --tooltip-bg: #E8EBEF; --tooltip-text: #0F1318;
 }

@@ -4,6 +4,8 @@ import { createContext, useCallback, useContext, useEffect, useMemo, useReducer,
 import { SOC_TEAMS, dashboardFor } from "@/lib/roles";
 import { isOpen } from "@/lib/format";
 import Icon from "@/components/ui/Icon";
+import Popover from "@/components/ui/Popover";
+import TooltipLayer from "@/components/ui/Tooltip";
 
 const AppContext = createContext(null);
 export const useApp = () => useContext(AppContext);
@@ -16,8 +18,6 @@ function reducer(state, action) {
       return { ...state, tasks: [action.task, ...state.tasks] };
     case "activity/update":
       return { ...state, activities: state.activities.map((a) => (a.n === action.n ? { ...a, ...action.patch } : a)) };
-    case "ticket/add":
-      return { ...state, tickets: [...state.tickets, action.ticket] };
     case "activities/set":
       return { ...state, activities: action.activities };
     case "tickets/set":
@@ -48,15 +48,34 @@ function writePref(key, value) {
   } catch {}
 }
 
-/** JSON fetch helper for the app's API. Throws Error(message) on non-2xx. `body` may be FormData. */
+/** Error from the app's API. `kind` is "network" when the server couldn't be reached; `status` is the HTTP status otherwise. */
+export class ApiError extends Error {
+  constructor(message, { status = 0, kind = "http" } = {}) {
+    super(message);
+    this.status = status;
+    this.kind = kind;
+  }
+}
+
+/** JSON fetch helper for the app's API. Throws ApiError with a user-facing message on failure. `body` may be FormData. */
 export async function api(url, { method = "GET", body } = {}) {
   const form = typeof FormData !== "undefined" && body instanceof FormData;
-  const res = await fetch(url, { method, headers: body && !form ? { "Content-Type": "application/json" } : undefined, body: body ? (form ? body : JSON.stringify(body)) : undefined });
+  let res;
+  try {
+    res = await fetch(url, { method, headers: body && !form ? { "Content-Type": "application/json" } : undefined, body: body ? (form ? body : JSON.stringify(body)) : undefined });
+  } catch {
+    throw new ApiError("Can't reach the server. Check your connection and try again.", { kind: "network" });
+  }
   const json = await res.json().catch(() => ({}));
   if (res.status === 401 && !url.startsWith("/api/auth/")) window.location.href = "/login";
-  if (!res.ok) throw new Error(json.error || "Something went wrong. Try again.");
+  if (!res.ok) {
+    const fallback = res.status >= 500 ? "The server couldn't complete the request. Try again in a moment." : "Something went wrong. Try again.";
+    throw new ApiError(json.error || fallback, { status: res.status });
+  }
   return json;
 }
+
+const TOAST_MS = { success: 3200, info: 4500, error: 6500 };
 
 export default function AppProvider({ children, initial }) {
   const [data, dispatch] = useReducer(reducer, {
@@ -76,11 +95,11 @@ export default function AppProvider({ children, initial }) {
   const [popover, setPopover] = useState(null);
   const [createOpen, setCreateOpen] = useState(false);
   const toastId = useRef(0);
+  const popoverId = useRef(0);
 
-  // Restore per-viewer preferences after hydration.
+  // Restore per-viewer preferences after hydration (the theme attribute is set before paint in app/layout.js).
   useEffect(() => {
-    // Effective theme: a remembered manual choice, otherwise the OS preference.
-    setThemeState(document.documentElement.dataset.theme || (window.matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light"));
+    setThemeState(document.documentElement.dataset.theme === "dark" ? "dark" : "light");
     setCollapsedState(readPref("so.collapsed", "0") === "1");
   }, []);
 
@@ -94,16 +113,17 @@ export default function AppProvider({ children, initial }) {
     writePref("so.collapsed", c ? "1" : "0");
   }, []);
 
-  const toast = useCallback((message) => {
+  const dismissToast = useCallback((id) => setToasts((t) => t.filter((x) => x.id !== id)), []);
+  /** toast(message) confirms; toast(message, "error" | "info") for failures and notes. */
+  const toast = useCallback((message, tone = "success") => {
     const id = ++toastId.current;
-    setToasts((t) => [...t, { id, message }]);
-    setTimeout(() => setToasts((t) => t.filter((x) => x.id !== id)), 2600);
-  }, []);
+    setToasts((t) => [...t.slice(-3), { id, message, tone }]);
+    setTimeout(() => dismissToast(id), TOAST_MS[tone] ?? TOAST_MS.success);
+  }, [dismissToast]);
 
-  /** Open a menu anchored under `anchor`. `items`: [{ value, label, kbd }] or `render()` for custom content. */
+  /** Open a menu anchored to `anchor`; opening it again from the same anchor closes it. See components/ui/Popover. */
   const openPopover = useCallback((anchor, options) => {
-    const r = anchor.getBoundingClientRect();
-    setPopover({ ...options, left: Math.min(r.left, window.innerWidth - 340), top: r.bottom + 6 });
+    setPopover((p) => (p?.anchor === anchor && !options.force ? null : { ...options, anchor, key: ++popoverId.current }));
   }, []);
   const closePopover = useCallback(() => setPopover(null), []);
 
@@ -122,7 +142,7 @@ export default function AppProvider({ children, initial }) {
       return true;
     } catch (e) {
       dispatch({ type: "task/update", id: task.id, patch: task });
-      toast(e.message);
+      toast(e.message, "error");
       return false;
     }
   }, [toast]);
@@ -135,7 +155,7 @@ export default function AppProvider({ children, initial }) {
     return { ...u, open, load: Math.min(100, Math.round((open / 6) * 100)), shift: isShiftAnalyst ? shift ?? "missing" : null };
   }), [data.users, data.tasks, data.me.id, data.shiftDone, initial.shiftStatus]);
 
-  const peopleMap = useMemo(() => ({ ...Object.fromEntries(data.users.map((u) => [u.id, u])) }), [data.users]);
+  const peopleMap = useMemo(() => Object.fromEntries(data.users.map((u) => [u.id, u])), [data.users]);
 
   const value = useMemo(
     () => ({ ...data, dispatch, role, peopleMap, members, theme, setTheme, collapsed, setCollapsed, toast, openPopover, closePopover, createOpen, setCreateOpen, addTask, updateTask }),
@@ -145,52 +165,17 @@ export default function AppProvider({ children, initial }) {
   return (
     <AppContext.Provider value={value}>
       {children}
-      {popover && <Popover {...popover} onClose={closePopover} />}
-      <div className="toasts" role="status" aria-live="polite">
+      {popover && <Popover key={popover.key} {...popover} onClose={closePopover} />}
+      <TooltipLayer />
+      <div className="toasts" aria-live="polite">
         {toasts.map((t) => (
-          <div key={t.id} className="toast">
-            <span className="ok"><Icon name="check" /></span>
-            {t.message}
+          <div key={t.id} className="toast" data-tone={t.tone} role={t.tone === "error" ? "alert" : "status"}>
+            <span className="t-icon"><Icon name={t.tone === "error" ? "alert" : t.tone === "info" ? "info" : "checkCircle"} /></span>
+            <span>{t.message}</span>
+            <button type="button" className="btn btn-ghost icon-btn btn-sm" aria-label="Dismiss notification" onClick={() => dismissToast(t.id)}><Icon name="x" size="sm" /></button>
           </div>
         ))}
       </div>
     </AppContext.Provider>
-  );
-}
-
-function Popover({ left, top, title, items, render, onPick, onClose, width }) {
-  const ref = useRef(null);
-  const [hl, setHl] = useState(0);
-
-  useEffect(() => {
-    const onDown = (e) => { if (ref.current && !ref.current.contains(e.target)) onClose(); };
-    const onKey = (e) => {
-      if (e.key === "Escape") return onClose();
-      if (!items) return;
-      if (e.key === "ArrowDown") { e.preventDefault(); setHl((h) => Math.min(items.length - 1, h + 1)); }
-      if (e.key === "ArrowUp") { e.preventDefault(); setHl((h) => Math.max(0, h - 1)); }
-      if (e.key === "Enter") { e.preventDefault(); pick(items[hl].value); }
-      const n = Number(e.key);
-      if (n >= 1 && n <= items.length && items[n - 1].kbd === String(n)) pick(items[n - 1].value);
-    };
-    const pick = (v) => { onClose(); onPick?.(v); };
-    // Defer so the click that opened the popover doesn't immediately close it.
-    const id = setTimeout(() => document.addEventListener("mousedown", onDown));
-    document.addEventListener("keydown", onKey, true);
-    return () => { clearTimeout(id); document.removeEventListener("mousedown", onDown); document.removeEventListener("keydown", onKey, true); };
-  }, [items, hl, onClose, onPick]);
-
-  return (
-    <div className="pop" ref={ref} style={{ left, top, width }} role="menu">
-      {title && <div className="ph">{title}</div>}
-      {render
-        ? render(onClose)
-        : items.map((it, i) => (
-            <div key={it.value} role="menuitem" className={`mi ${i === hl ? "hl" : ""}`} onMouseEnter={() => setHl(i)} onClick={() => { onClose(); onPick?.(it.value); }}>
-              {it.label}
-              {it.kbd && <kbd>{it.kbd}</kbd>}
-            </div>
-          ))}
-    </div>
   );
 }

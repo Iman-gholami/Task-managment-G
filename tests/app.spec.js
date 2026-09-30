@@ -114,7 +114,7 @@ test.describe("shift logs are for SOC analysts only", () => {
     await page.getByLabel("Ticket number").fill("INC-2026-4480");
     await page.getByLabel("Description").fill("Defacement attempt blocked by WAF");
     await page.getByLabel("Description").press("Enter");
-    await expect(page.getByText("Tickets Created: 1")).toBeVisible();
+    await expect(page.getByTestId("ticket-count")).toHaveText("1 ticket");
     await expect(page.getByText("autosaved")).toBeVisible();
     await page.reload();
     await expect(page.getByLabel("IOC count", { exact: true })).toHaveValue("12");
@@ -133,11 +133,11 @@ test.describe("manager assigns and follows up tasks", () => {
     await page.locator("body").press("c");
     const dialog = page.getByRole("dialog", { name: "Create task" });
     await dialog.getByPlaceholder("Task title").fill("Tune Splunk correlation rule for VPN logins");
-    await dialog.getByRole("button", { name: /Create Task/ }).click();
+    await dialog.getByRole("button", { name: /Create task/ }).click();
     await expect(dialog.getByText("Choose who this task is for.")).toBeVisible();
     await dialog.getByRole("button", { name: "Assign to…" }).click();
     await page.getByRole("menuitem", { name: /Sara Rahimi/ }).click();
-    await dialog.getByRole("button", { name: /Create Task/ }).click();
+    await dialog.getByRole("button", { name: /Create task/ }).click();
     await expect(dialog).toBeHidden();
 
     ids.t1 = "T-1001";
@@ -153,7 +153,7 @@ test.describe("manager assigns and follows up tasks", () => {
     await expect(page.locator("tbody tr:not(.group-row)")).toHaveCount(1);
     await page.getByRole("button", { name: "Reset" }).click();
     await page.getByRole("tab", { name: /Needs review/ }).click();
-    await expect(page.getByText("Nothing here")).toBeVisible();
+    await expect(page.getByText("Nothing waiting for review")).toBeVisible();
   });
 
   test("analysts see their assigned tasks and a notification", async ({ page }) => {

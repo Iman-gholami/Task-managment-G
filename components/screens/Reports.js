@@ -5,11 +5,12 @@ import { useSearchParams } from "next/navigation";
 import { useState } from "react";
 import { useApp } from "@/components/AppProvider";
 import useFetch from "@/components/useFetch";
-import { PeriodSelector, periodQuery } from "@/components/screens/Dashboard";
-import { TableSkeleton } from "@/components/screens/Misc";
+import PeriodSelector from "@/components/PeriodSelector";
 import Icon from "@/components/ui/Icon";
-import { EmptyState } from "@/components/ui/indicators";
-import { CX, QUAL, STATUS } from "@/lib/format";
+import { PageHeader, Panel } from "@/components/ui/layout";
+import { EmptyState, ErrorState, Loading } from "@/components/ui/states";
+import { CX, QUAL, STATUS, fmtRange, plural } from "@/lib/format";
+import { periodQuery } from "@/lib/period";
 import { REPORTS } from "@/lib/reports";
 import { isManager } from "@/lib/roles";
 
@@ -22,6 +23,7 @@ const FILTERS = {
   tickets: ["user", "q"],
 };
 const TEAMS = ["SOC", "Design & Automation", "Threat Intelligence"];
+const PAGE_SIZE = 100;
 
 export default function Reports({ report }) {
   const { me, members } = useApp();
@@ -39,64 +41,106 @@ export default function Reports({ report }) {
   const qs = [periodQuery(period, range), ...Object.entries(f).filter(([k, v]) => v && FILTERS[key].includes(k)).map(([k, v]) => `${k}=${encodeURIComponent(v)}`)].join("&");
   const { data, loading, error, reload } = useFetch(`/api/reports/${key}?${qs}`);
   const people = key === "shift" || key === "tickets" ? members.filter((m) => m.shift !== null) : members.filter((m) => m.role !== "security_manager");
-  const filtered = Object.entries(f).some(([k, v]) => v && FILTERS[key].includes(k) && !(k === "user" && key === "employee"));
+  const activeFilters = Object.entries(f).filter(([k, v]) => v && FILTERS[key].includes(k) && !(k === "user" && key === "employee")).length;
+  const reset = () => setF((x) => ({ ...x, team: "", status: "", cx: "", quality: "", q: "", user: key === "employee" ? x.user : "" }));
+  const sel = (k, v) => `input ${v ? "is-set" : ""}`;
 
   return (
     <div className="split">
       <nav className="split-nav" aria-label="Reports">
-        {reportsFor.map(([k, n]) => <Link key={k} className={`nav-item ${k === key ? "active" : ""}`} href={`/reports/${k}`}><span>{n}</span></Link>)}
+        <div className="nav-label">Reports</div>
+        {reportsFor.map(([k, n]) => (
+          <Link key={k} className={`nav-item ${k === key ? "active" : ""}`} href={`/reports/${k}`} aria-current={k === key ? "page" : undefined}>
+            <span className="label">{n}</span>
+          </Link>
+        ))}
       </nav>
-      <div className="page" style={{ minWidth: 0 }}>
-        <div className="page-head">
-          <div><h1>{cur[1]}</h1><p>{cur[2]}</p></div>
-          <div className="actions">
-            <a className="btn btn-primary" href={`/api/reports/${key}?${qs}&format=xlsx`} download data-testid="export"><Icon name="xls" />Export to Excel</a>
-          </div>
-        </div>
-        <div className="toolbar" style={{ gap: 8 }}>
+      <div className="page">
+        <PageHeader
+          title={cur[1]}
+          meta={[cur[2], data ? fmtRange(data.period.from, data.period.to) : null]}
+          actions={
+            <a className="btn btn-primary" href={`/api/reports/${key}?${qs}&format=xlsx`} download data-testid="export" data-tooltip="Same filters and period as the preview below">
+              <Icon name="download" />Export to Excel
+            </a>
+          }
+        />
+        <div className="toolbar" role="search" aria-label="Report filters">
           <PeriodSelector value={period} onChange={setPeriod} custom range={range} onRange={setRange} />
           {show("user") && (
-            <select className="input" style={{ width: 180, height: 28 }} value={f.user} onChange={set("user")} aria-label="Employee">
+            <select className={sel("user", f.user && key !== "employee")} style={{ width: 190 }} value={f.user} onChange={set("user")} aria-label="Employee">
               {key !== "employee" && <option value="">All employees</option>}
               {people.map((m) => <option key={m.id} value={m.id}>{m.name}</option>)}
             </select>
           )}
-          {show("team") && <select className="input" style={{ width: 170, height: 28 }} value={f.team} onChange={set("team")} aria-label="Team"><option value="">All teams</option>{TEAMS.map((t) => <option key={t}>{t}</option>)}</select>}
-          {show("status") && <select className="input" style={{ width: 140, height: 28 }} value={f.status} onChange={set("status")} aria-label="Task status"><option value="">Any status</option>{Object.entries(STATUS).map(([k, l]) => <option key={k} value={k}>{l}</option>)}</select>}
-          {show("cx") && <select className="input" style={{ width: 140, height: 28 }} value={f.cx} onChange={set("cx")} aria-label="Complexity"><option value="">Any complexity</option>{CX.slice(1).map((c, i) => <option key={c} value={i + 1}>{c}</option>)}</select>}
-          {show("quality") && <select className="input" style={{ width: 170, height: 28 }} value={f.quality} onChange={set("quality")} aria-label="Quality"><option value="">Any quality</option>{Object.entries(QUAL).map(([k, l]) => <option key={k} value={k}>{l}</option>)}</select>}
-          {show("q") && <div className="search"><Icon name="search" /><input className="input" placeholder="Search ticket number or description" value={f.q} onChange={set("q")} /></div>}
-          {filtered && <button className="btn btn-ghost btn-sm" onClick={() => setF((x) => ({ ...x, team: "", status: "", cx: "", quality: "", q: "", user: key === "employee" ? x.user : "" }))}>Reset</button>}
+          {show("team") && <select className={sel("team", f.team)} style={{ width: 180 }} value={f.team} onChange={set("team")} aria-label="Team"><option value="">All teams</option>{TEAMS.map((t) => <option key={t}>{t}</option>)}</select>}
+          {show("status") && <select className={sel("status", f.status)} style={{ width: 150 }} value={f.status} onChange={set("status")} aria-label="Task status"><option value="">Any status</option>{Object.entries(STATUS).map(([k, l]) => <option key={k} value={k}>{l}</option>)}</select>}
+          {show("cx") && <select className={sel("cx", f.cx)} style={{ width: 160 }} value={f.cx} onChange={set("cx")} aria-label="Complexity"><option value="">Any complexity</option>{CX.slice(1).map((c, i) => <option key={c} value={i + 1}>{c}</option>)}</select>}
+          {show("quality") && <select className={sel("quality", f.quality)} style={{ width: 180 }} value={f.quality} onChange={set("quality")} aria-label="Quality"><option value="">Any quality</option>{Object.entries(QUAL).map(([k, l]) => <option key={k} value={k}>{l}</option>)}</select>}
+          {show("q") && <div className="search"><Icon name="search" /><input type="search" className="input" placeholder="Ticket number or description" aria-label="Search tickets" value={f.q} onChange={set("q")} /></div>}
+          {activeFilters > 0 && <button type="button" className="btn btn-ghost btn-sm" onClick={reset}><Icon name="x" />Reset filters ({activeFilters})</button>}
         </div>
-        {data && <p className="muted" style={{ fontSize: 12, margin: "4px 0 12px" }}>Period {data.period.from} – {data.period.to}</p>}
 
-        {loading && !data ? <TableSkeleton rows={8} /> : error ? (
-          <EmptyState danger icon={<Icon name="alert" />} title="Couldn't load the report" action={<button className="btn btn-secondary btn-sm" onClick={reload}>Retry</button>}>{error}</EmptyState>
-        ) : data?.sheets.map((s) => (
-          <section key={s.name} className="section">
-            <div className="section-head"><h2>{s.name}</h2><span className="meta">{s.rows.length} rows</span></div>
-            {s.rows.length === 0 ? <EmptyState icon={<Icon name="report" />} title="Nothing to report">No activity was found for the selected period.</EmptyState> : (
-              <div className="table-wrap">
-                <table className="dt">
-                  <thead><tr>{s.columns.map((c) => <th key={c.key} className={c.num ? "r" : ""} title={c.header}>{c.short ?? c.header}</th>)}</tr></thead>
-                  <tbody>
-                    {s.rows.map((r, i) => (
-                      <tr key={i} style={{ cursor: "default" }}>
-                        {s.columns.map((c, j) => (
-                          <td key={c.key} className={`${c.num ? "r num" : ""} ${j === 0 ? "title" : ""} ${c.key === "no" || c.key === "ref" ? "mono" : ""}`} style={{ maxWidth: 320, overflow: "hidden", textOverflow: "ellipsis" }}>
-                            {r[c.key] === "" || r[c.key] == null ? <span className="muted">—</span> : String(r[c.key])}
-                          </td>
-                        ))}
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-            )}
-            {s.summary && <div style={{ display: "flex", gap: 20, marginTop: 10, fontSize: 13 }} className="sec">{s.summary.map(([k, v]) => <span key={k}>{k} <b className="num" style={{ color: "var(--text)" }}>{v}</b></span>)}</div>}
-          </section>
-        ))}
+        {loading && !data ? <div className="panel"><Loading label="Loading report" rows={8} /></div> : error ? (
+          <div className="panel"><ErrorState error={error} title="Couldn't load the report" onRetry={reload} /></div>
+        ) : (
+          <div className="stack-lg">
+            {data?.sheets.map((s) => <Sheet key={s.name} sheet={s} filtered={activeFilters > 0} onReset={reset} />)}
+          </div>
+        )}
       </div>
     </div>
+  );
+}
+
+/** One report sheet: the same columns as the Excel export, paginated above 100 rows. */
+function Sheet({ sheet: s, filtered, onReset }) {
+  const [page, setPage] = useState(0);
+  const pages = Math.max(1, Math.ceil(s.rows.length / PAGE_SIZE));
+  const at = Math.min(page, pages - 1);
+  const rows = s.rows.slice(at * PAGE_SIZE, (at + 1) * PAGE_SIZE);
+  const summary = s.summary && <div className="legend">{s.summary.map(([k, v]) => <span key={k}>{k} <b>{v}</b></span>)}</div>;
+
+  return (
+    <Panel title={s.name} meta={plural(s.rows.length, "row")} footer={s.rows.length > 0 && summary}>
+      {s.rows.length === 0 ? (
+        <EmptyState compact icon="report" title="Nothing to report" action={filtered ? <button type="button" className="btn btn-secondary btn-sm" onClick={onReset}>Reset filters</button> : null}>
+          {filtered ? "No rows match these filters in this period." : "No activity was recorded in this period. Try a longer period."}
+        </EmptyState>
+      ) : (
+        <>
+          <div className="table-wrap scroll-y">
+            <table className="dt hover">
+              <thead><tr>{s.columns.map((c) => <th key={c.key} scope="col" className={c.num ? "r" : ""} data-tooltip={c.short ? c.header : undefined}>{c.short ?? c.header}</th>)}</tr></thead>
+              <tbody>
+                {rows.map((r, i) => (
+                  <tr key={i}>
+                    {s.columns.map((c, j) => {
+                      const v = r[c.key];
+                      const empty = v === "" || v == null;
+                      return (
+                        <td key={c.key} className={`${c.num ? "r" : ""} ${j === 0 ? "title" : ""} ${c.key === "no" || c.key === "ref" ? "mono" : ""} truncate`} style={{ maxWidth: 320 }} title={!empty && String(v).length > 40 ? String(v) : undefined}>
+                          {empty ? <span className="muted">—</span> : String(v)}
+                        </td>
+                      );
+                    })}
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+          {pages > 1 && (
+            <div className="table-foot">
+              <span>{at * PAGE_SIZE + 1}–{Math.min(s.rows.length, (at + 1) * PAGE_SIZE)} of {s.rows.length}</span>
+              <span className="pager">
+                <button type="button" className="btn btn-ghost icon-btn btn-sm" aria-label="Previous page" data-tooltip="Previous page" disabled={at === 0} onClick={() => setPage(at - 1)}><Icon name="left" /></button>
+                <span className="num">Page {at + 1} of {pages}</span>
+                <button type="button" className="btn btn-ghost icon-btn btn-sm" aria-label="Next page" data-tooltip="Next page" disabled={at >= pages - 1} onClick={() => setPage(at + 1)}><Icon name="chev" /></button>
+              </span>
+            </div>
+          )}
+        </>
+      )}
+    </Panel>
   );
 }
