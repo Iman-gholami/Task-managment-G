@@ -1,11 +1,12 @@
 "use client";
 
 import Link from "next/link";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { api, useApp } from "@/components/AppProvider";
 import useFetch from "@/components/useFetch";
 import Icon from "@/components/ui/Icon";
 import { Who } from "@/components/ui/indicators";
+import { addDays } from "@/lib/format";
 import { isManager, SOC_TEAMS } from "@/lib/roles";
 import { SHIFT_TYPES, tehranDate } from "@/lib/shifts";
 import styles from "./ShiftChanges.module.css";
@@ -19,6 +20,8 @@ const STATUS_LABEL = {
   cancelled: "لغو شد",
 };
 const SHIFT_FA = { morning: "صبح", evening: "تا ۸ شب", night: "شب" };
+const WEEKDAYS = ["ش", "ی", "د", "س", "چ", "پ", "ج"];
+const TODAY = tehranDate();
 const PERSIAN_LONG = new Intl.DateTimeFormat("fa-IR-u-ca-persian", {
   weekday: "long",
   year: "numeric",
@@ -26,8 +29,53 @@ const PERSIAN_LONG = new Intl.DateTimeFormat("fa-IR-u-ca-persian", {
   day: "numeric",
   timeZone: "UTC",
 });
+const PERSIAN_MONTH = new Intl.DateTimeFormat("fa-IR-u-ca-persian", {
+  year: "numeric",
+  month: "long",
+  timeZone: "UTC",
+});
+const PERSIAN_CAL = new Intl.DateTimeFormat("fa-IR-u-ca-persian", {
+  year: "numeric",
+  month: "numeric",
+  day: "numeric",
+  timeZone: "UTC",
+});
+const FA_NUM = new Intl.NumberFormat("fa-IR", { useGrouping: false });
+
 const dateObj = (iso) => new Date(`${iso}T00:00:00Z`);
 const longFa = (iso) => (iso ? PERSIAN_LONG.format(dateObj(iso)) : "—");
+const faNum = (n) => FA_NUM.format(n);
+const toEnglishDigits = (value) => String(value).replace(/[۰-۹]/g, (d) => "۰۱۲۳۴۵۶۷۸۹".indexOf(d));
+
+function jalaliParts(iso) {
+  const parts = PERSIAN_CAL.formatToParts(dateObj(iso));
+  const pick = (type) => Number(toEnglishDigits(parts.find((p) => p.type === type)?.value || 0));
+  return { year: pick("year"), month: pick("month"), day: pick("day") };
+}
+
+function jalaliMonthKey(iso) {
+  const { year, month } = jalaliParts(iso);
+  return `${year}-${String(month).padStart(2, "0")}`;
+}
+
+function firstOfJalaliMonth(iso) {
+  return addDays(iso, -(jalaliParts(iso).day - 1));
+}
+
+function shiftJalaliMonth(monthStart, amount) {
+  return amount > 0 ? firstOfJalaliMonth(addDays(monthStart, 32)) : firstOfJalaliMonth(addDays(monthStart, -1));
+}
+
+function monthCells(monthStart) {
+  const firstWeekday = dateObj(monthStart).getUTCDay();
+  const start = addDays(monthStart, -((firstWeekday + 1) % 7));
+  const nextMonth = shiftJalaliMonth(monthStart, 1);
+  const lastDay = addDays(nextMonth, -1);
+  const lastWeekday = dateObj(lastDay).getUTCDay();
+  const end = addDays(lastDay, (5 - lastWeekday + 7) % 7);
+  const count = Math.round((dateObj(end).getTime() - dateObj(start).getTime()) / 864e5) + 1;
+  return Array.from({ length: count }, (_, i) => addDays(start, i));
+}
 
 export default function ShiftChanges() {
   const { me, members, toast } = useApp();
@@ -38,15 +86,40 @@ export default function ShiftChanges() {
   );
   const targets = analysts.filter((a) => a.id !== me.id);
   const [form, setForm] = useState({
-    date: tehranDate(),
+    date: "",
     targetId: targets[0]?.id ?? "",
-    targetDate: tehranDate(),
+    targetDate: "",
     reason: "",
   });
   const [busy, setBusy] = useState(false);
   const [filter, setFilter] = useState("open");
+  const [picker, setPicker] = useState(null);
   const { data, loading, error, reload } = useFetch("/api/shift/changes");
+  const scheduleUrl = me.keepsShiftLog ? `/api/shift/schedule?from=${TODAY}&to=${addDays(TODAY, 370)}` : null;
+  const { data: scheduleData, error: scheduleError } = useFetch(scheduleUrl);
   const requests = data?.requests ?? [];
+  const schedules = scheduleData?.schedules ?? [];
+
+  const ownSchedules = useMemo(
+    () => schedules.filter((row) => row.userId === me.id && row.date >= TODAY).sort((a, b) => a.date.localeCompare(b.date)),
+    [schedules, me.id]
+  );
+  const targetSchedules = useMemo(
+    () => schedules.filter((row) => row.userId === form.targetId && row.date >= TODAY).sort((a, b) => a.date.localeCompare(b.date)),
+    [schedules, form.targetId]
+  );
+
+  useEffect(() => {
+    if (!scheduleData) return;
+    setForm((current) => {
+      const ownValid = ownSchedules.some((row) => row.date === current.date);
+      const targetValid = targetSchedules.some((row) => row.date === current.targetDate);
+      const nextDate = ownValid ? current.date : (ownSchedules[0]?.date ?? "");
+      const nextTargetDate = targetValid ? current.targetDate : (targetSchedules[0]?.date ?? "");
+      if (nextDate === current.date && nextTargetDate === current.targetDate) return current;
+      return { ...current, date: nextDate, targetDate: nextTargetDate };
+    });
+  }, [scheduleData, ownSchedules, targetSchedules]);
 
   const openCount = requests.filter((r) => OPEN.has(r.status)).length;
   const resolvedCount = requests.length - openCount;
@@ -56,6 +129,14 @@ export default function ShiftChanges() {
     return true;
   });
 
+  const changeTarget = (targetId) => {
+    const first = schedules
+      .filter((row) => row.userId === targetId && row.date >= TODAY)
+      .sort((a, b) => a.date.localeCompare(b.date))[0];
+    setForm((current) => ({ ...current, targetId, targetDate: first?.date ?? "" }));
+    setPicker(null);
+  };
+
   const submit = async () => {
     if (!form.date || !form.targetId || !form.targetDate || busy) return;
     setBusy(true);
@@ -64,6 +145,7 @@ export default function ShiftChanges() {
       toast("درخواست تغییر شیفت ثبت شد");
       setForm({ ...form, reason: "" });
       setFilter("open");
+      setPicker(null);
       reload();
     } catch (e) {
       toast(e.message, "error");
@@ -97,7 +179,7 @@ export default function ShiftChanges() {
       <header className={styles.hero}>
         <div>
           <h1>تغییر شیفت</h1>
-          <p>شیفت خودتان را با شیفت یک کارشناس دیگر جابه‌جا کنید.</p>
+          <p>فقط روزهایی که واقعاً شیفت دارید قابل انتخاب هستند.</p>
         </div>
         <Link className={styles.calendarLink} href="/shift/schedule">
           <Icon name="cal" />
@@ -110,30 +192,36 @@ export default function ShiftChanges() {
           <div className={styles.cardHead}>
             <div>
               <h2>درخواست جدید</h2>
-              <p>دو تاریخ و کارشناس مقصد را انتخاب کنید.</p>
+              <p>شیفت خودتان و شیفت کارشناس مقصد را از تقویم انتخاب کنید.</p>
             </div>
             <span className={styles.pendingHint}>تأیید کارشناس ← تأیید مدیر</span>
           </div>
 
           <div className={styles.compactForm}>
-            <label className={styles.field}>
-              <span>تاریخ شیفت من</span>
-              <input type="date" value={form.date} min={tehranDate()} onChange={(e) => setForm({ ...form, date: e.target.value })} />
-              <small>{longFa(form.date)}</small>
-            </label>
+            <ShiftDateField
+              label="شیفت من"
+              rows={ownSchedules}
+              value={form.date}
+              open={picker === "mine"}
+              onToggle={() => setPicker((v) => v === "mine" ? null : "mine")}
+              onChange={(date) => { setForm((v) => ({ ...v, date })); setPicker(null); }}
+            />
 
             <label className={styles.field}>
               <span>کارشناس مقصد</span>
-              <select value={form.targetId} onChange={(e) => setForm({ ...form, targetId: e.target.value })}>
+              <select value={form.targetId} onChange={(e) => changeTarget(e.target.value)}>
                 {targets.map((a) => <option value={a.id} key={a.id}>{a.name} · {a.team}</option>)}
               </select>
             </label>
 
-            <label className={styles.field}>
-              <span>تاریخ شیفت او</span>
-              <input type="date" value={form.targetDate} min={tehranDate()} onChange={(e) => setForm({ ...form, targetDate: e.target.value })} />
-              <small>{longFa(form.targetDate)}</small>
-            </label>
+            <ShiftDateField
+              label="شیفت کارشناس مقصد"
+              rows={targetSchedules}
+              value={form.targetDate}
+              open={picker === "target"}
+              onToggle={() => setPicker((v) => v === "target" ? null : "target")}
+              onChange={(targetDate) => { setForm((v) => ({ ...v, targetDate })); setPicker(null); }}
+            />
 
             <label className={`${styles.field} ${styles.reasonField}`}>
               <span>دلیل <em>اختیاری</em></span>
@@ -154,8 +242,9 @@ export default function ShiftChanges() {
             </button>
           </div>
 
+          {scheduleError && <p className={styles.scheduleError}>دریافت تقویم شیفت‌ها ناموفق بود. صفحه را دوباره بارگذاری کنید.</p>}
           <p className={styles.managerNote}>
-            پس از تأیید کارشناس مقصد، تأیید یکی از مدیران کافی است. در صورت در دسترس نبودن کارشناس، مدیر می‌تواند مستقیم تأیید کند.
+            کارشناس مقصد و مدیران از درخواست جدید نوتیفیکیشن می‌گیرند. بعد از تأیید کارشناس مقصد، تأیید یکی از مدیران کافی است؛ مدیر می‌تواند در صورت نیاز مستقیم تأیید و اعمال کند.
           </p>
         </section>
       )}
@@ -226,6 +315,78 @@ export default function ShiftChanges() {
           ))}
         </div>
       </section>
+    </div>
+  );
+}
+
+function ShiftDateField({ label, rows, value, open, onToggle, onChange }) {
+  const rowMap = useMemo(() => new Map(rows.map((row) => [row.date, row])), [rows]);
+  const selectedRow = rowMap.get(value);
+  const [monthStart, setMonthStart] = useState(() => firstOfJalaliMonth(value || rows[0]?.date || TODAY));
+
+  useEffect(() => {
+    const anchor = value || rows[0]?.date;
+    if (anchor) setMonthStart(firstOfJalaliMonth(anchor));
+  }, [value, rows]);
+
+  return (
+    <div className={`${styles.field} ${styles.dateField}`}>
+      <span>{label}</span>
+      <button type="button" className={styles.dateTrigger} onClick={onToggle} disabled={!rows.length} aria-expanded={open}>
+        <Icon name="cal" />
+        <span>{value ? longFa(value) : "شیفت آینده‌ای ثبت نشده"}</span>
+        {selectedRow && <small>{SHIFT_FA[selectedRow.shiftType] || selectedRow.shiftType}</small>}
+      </button>
+      {open && rows.length > 0 && (
+        <MiniShiftCalendar
+          monthStart={monthStart}
+          setMonthStart={setMonthStart}
+          rows={rows}
+          value={value}
+          onChange={onChange}
+        />
+      )}
+    </div>
+  );
+}
+
+function MiniShiftCalendar({ monthStart, setMonthStart, rows, value, onChange }) {
+  const rowMap = useMemo(() => new Map(rows.map((row) => [row.date, row])), [rows]);
+  const cells = useMemo(() => monthCells(monthStart), [monthStart]);
+  const monthKey = jalaliMonthKey(monthStart);
+  const availableInMonth = rows.some((row) => jalaliMonthKey(row.date) === monthKey);
+
+  return (
+    <div className={styles.datePopover}>
+      <div className={styles.datePopoverHead}>
+        <button type="button" onClick={() => setMonthStart(shiftJalaliMonth(monthStart, -1))} aria-label="ماه قبل">‹</button>
+        <b>{PERSIAN_MONTH.format(dateObj(monthStart))}</b>
+        <button type="button" onClick={() => setMonthStart(shiftJalaliMonth(monthStart, 1))} aria-label="ماه بعد">›</button>
+      </div>
+      <div className={styles.miniWeekdays}>{WEEKDAYS.map((day) => <span key={day}>{day}</span>)}</div>
+      <div className={styles.miniGrid}>
+        {cells.map((date) => {
+          const row = rowMap.get(date);
+          const currentMonth = jalaliMonthKey(date) === monthKey;
+          const selected = date === value;
+          return (
+            <button
+              type="button"
+              key={date}
+              data-shift={row?.shiftType || "none"}
+              data-selected={selected || undefined}
+              data-outside={!currentMonth || undefined}
+              disabled={!row || !currentMonth}
+              onClick={() => onChange(date)}
+              title={row ? `${longFa(date)} · ${SHIFT_FA[row.shiftType]}` : undefined}
+            >
+              <span>{faNum(jalaliParts(date).day)}</span>
+              {row && currentMonth && <i />}
+            </button>
+          );
+        })}
+      </div>
+      {!availableInMonth && <div className={styles.noMonthShift}>در این ماه شیفتی برای انتخاب وجود ندارد.</div>}
     </div>
   );
 }
