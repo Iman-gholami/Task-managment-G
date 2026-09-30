@@ -183,12 +183,19 @@ export default function ShiftSchedule() {
           <div className={styles.week}>{WEEK.map((d) => <div key={d}>{d}</div>)}</div>
           <div className={styles.grid} aria-busy={loading}>
             {days.map((date, i) => date ? (
-              <button
+              <div
                 key={date}
-                type="button"
+                role="button"
+                tabIndex={0}
                 className={`${styles.day} ${date === selectedDate ? styles.daySelected : ""} ${date === TODAY ? styles.dayToday : ""}`}
                 onClick={() => setSelectedDate(date)}
                 onDoubleClick={() => openAssign(date)}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter" || e.key === " ") {
+                    e.preventDefault();
+                    setSelectedDate(date);
+                  }
+                }}
                 aria-label={`${longDay(date)}${manager ? ". Double-click to assign shift." : ""}`}
               >
                 <span className={styles.dayNumber}><b>{Number(date.slice(-2))}</b><small>{faDay(date)}</small></span>
@@ -212,7 +219,7 @@ export default function ShiftSchedule() {
                   })}
                   {(byDate[date] ?? []).length > 5 && <span className={styles.more}>+{(byDate[date] ?? []).length - 5} more</span>}
                 </span>
-              </button>
+              </div>
             ) : <div className={styles.dayBlank} key={`blank-${i}`} />)}
           </div>
         </Panel>
