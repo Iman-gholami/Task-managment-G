@@ -1,8 +1,8 @@
 "use client";
 
 import { Panel } from "@/components/ui/layout";
-import { CompareBars, CxLegend, Distribution, TrendLines } from "@/components/ui/charts";
-import { fmtRange, lastMonths } from "@/lib/format";
+import { CompareBars, CxLegend, Distribution, DonutBreakdown } from "@/components/ui/charts";
+import { fmtRange } from "@/lib/format";
 import styles from "./Performance.module.css";
 
 const teamRows = (teams, field) => teams.map((team) => ({ label: team.team, value: team[field] ?? 0 }));
@@ -11,7 +11,10 @@ export default function ManagerPerformanceCharts({ data, loading }) {
   if (loading || !data?.teams?.length) return null;
 
   const teams = data.teams;
-  const months = lastMonths(6).map((label) => label.split(" ")[0]);
+  const delivery = teams.map((team) => ({
+    label: team.team,
+    value: (team.trend ?? []).reduce((sum, value) => sum + (Number(value) || 0), 0),
+  }));
   const complexity = teams.reduce(
     (total, team) => total.map((n, i) => n + (team.complexity?.[i] ?? 0)),
     [0, 0, 0, 0]
@@ -20,12 +23,11 @@ export default function ManagerPerformanceCharts({ data, loading }) {
 
   return (
     <section className={styles.managerCharts} aria-label="Manager performance charts">
-      <Panel title="Delivery trend" meta="Completed tasks · last 6 calendar months">
+      <Panel title="Delivery mix" meta="Share of completed tasks · last 6 calendar months">
         <div className={styles.chartBody}>
-          <TrendLines
-            name="Six-month completed-task trend by team"
-            labels={months}
-            series={teams.map((team) => ({ name: team.team, values: team.trend }))}
+          <DonutBreakdown
+            name="Six-month completed-task share by team"
+            rows={delivery}
           />
         </div>
       </Panel>
