@@ -22,6 +22,8 @@ function crumbsFor(path, peopleMap) {
       return ["Tasks", TASK_VIEWS[b] ?? b];
     case "shift":
       return ["Shift Log", b === "history" ? "History" : "Today"];
+    case "shifts":
+      return ["Shift Schedule", b === "changes" ? "Changes" : "Calendar"];
     case "team":
       return ["Team"];
     case "performance":
@@ -62,7 +64,6 @@ export default function AppShell({ children }) {
   const notifications = useNotifications();
   const [navOpen, setNavOpen] = useState(false);
 
-  // Mobile drawer: close on navigation and on Escape.
   useEffect(() => { setNavOpen(false); }, [path]);
   useEffect(() => {
     if (!navOpen) return;
@@ -79,10 +80,10 @@ export default function AppShell({ children }) {
   const taskViews = manager
     ? [["/tasks/assigned", "Assigned by Me"], ["/tasks/team", "Team Tasks"], ["/tasks/my", "My Tasks"]]
     : [["/tasks/my", "My Tasks"], ["/tasks/team", "Team Tasks"]];
-  // Shift logs belong to SOC analysts only; managers see shift figures in Performance and Reports.
   const NAV = [
     ["/dashboard", "Dashboard", "home"],
     ["/tasks", "Tasks", "tasks", taskViews],
+    (manager || me.keepsShiftLog) && ["/shifts", "Shift Schedule", "cal", [["/shifts", "Calendar"], ["/shifts/changes", "Changes"]]],
     me.keepsShiftLog && ["/shift", "Shift Log", "shift", [["/shift", "Today"], ["/shift/history", "History"]]],
     ["/team", "Team", "team"],
     manager ? ["/performance", "Performance", "perf", [["/performance/overview", "Overview"]]] : [`/performance/employees/${me.id}`, "My Performance", "perf"],
@@ -93,6 +94,7 @@ export default function AppShell({ children }) {
 
   const jumps = [
     ["/dashboard", "Dashboard"], ...taskViews,
+    (manager || me.keepsShiftLog) && ["/shifts", "Shift Schedule"],
     me.keepsShiftLog && ["/shift", "Shift Log"],
     manager ? ["/performance/overview", "Performance"] : [`/performance/employees/${me.id}`, "My Performance"],
     ["/reports/employee", "Reports"], ["/account", "Account & password"],
