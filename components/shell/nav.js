@@ -9,14 +9,25 @@ export const TASK_VIEWS = { my: "My tasks", assigned: "Assigned by me", team: "T
 export function navFor(me, counts = {}) {
   const manager = isManager(me);
   const taskViews = (manager ? ["assigned", "team", "my"] : ["my", "team"]).map((k) => ({ href: `/tasks/${k}`, label: TASK_VIEWS[k], count: counts[k] }));
+  const shiftPlanning = me.keepsShiftLog || manager;
   return [
     {
       id: "work",
       items: [
         { href: "/dashboard", label: "Dashboard", icon: "home" },
         { href: taskViews[0].href, match: "/tasks", label: "Tasks", icon: "tasks", subs: taskViews },
-        // Shift logs belong to SOC analysts only; managers see shift figures in Performance and Reports.
+        // Shift logs belong to SOC analysts only; scheduling is visible to analysts and managers.
         me.keepsShiftLog && { href: "/shift", match: "/shift", label: "Shift Log", icon: "shift", subs: [{ href: "/shift", label: "Today" }, { href: "/shift/history", label: "History" }] },
+        shiftPlanning && {
+          href: "/shift/schedule",
+          match: "/shift/schedule",
+          label: "Shift Schedule",
+          icon: "cal",
+          subs: [
+            { href: "/shift/schedule", label: "Calendar" },
+            { href: "/shift/changes", label: "Shift changes" },
+          ],
+        },
       ].filter(Boolean),
     },
     {
@@ -63,6 +74,8 @@ export function crumbsFor(path, peopleMap, me) {
     case "tasks":
       return [{ label: "Tasks", href: "/tasks" }, { label: TASK_VIEWS[b] ?? b }];
     case "shift":
+      if (b === "schedule") return [{ label: "Shift Schedule" }];
+      if (b === "changes") return [{ label: "Shift Schedule", href: "/shift/schedule" }, { label: "Shift changes" }];
       return [{ label: "Shift Log", href: "/shift" }, { label: b === "history" ? "History" : "Today" }];
     case "team":
       return [{ label: "Team" }];
