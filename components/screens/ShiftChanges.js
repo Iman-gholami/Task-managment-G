@@ -95,102 +95,81 @@ export default function ShiftChanges() {
   return (
     <div className={`page ${styles.page}`} dir="rtl">
       <header className={styles.hero}>
-        <div className={styles.heroCopy}>
-          <span className={styles.eyebrow}>مدیریت برنامه شیفت</span>
+        <div>
           <h1>تغییر شیفت</h1>
-          <p>درخواست جابه‌جایی را ثبت کنید؛ تأییدها مرحله‌ای انجام می‌شوند و بعد از تأیید نهایی، تقویم خودکار به‌روزرسانی می‌شود.</p>
+          <p>شیفت خودتان را با شیفت یک کارشناس دیگر جابه‌جا کنید.</p>
         </div>
         <Link className={styles.calendarLink} href="/shift/schedule">
           <Icon name="cal" />
-          <span>بازگشت به تقویم</span>
+          <span>تقویم شیفت</span>
         </Link>
       </header>
 
-      <section className={styles.overview} aria-label="خلاصه درخواست‌های تغییر شیفت">
-        <Summary label="در انتظار اقدام" value={openCount} tone="open" />
-        <Summary label="نهایی‌شده" value={resolvedCount} />
-        <Summary label="کل درخواست‌ها" value={requests.length} />
-      </section>
-
       {me.keepsShiftLog && (
         <section className={styles.requestCard}>
-          <div className={styles.sectionHead}>
+          <div className={styles.cardHead}>
             <div>
-              <span className={styles.sectionKicker}>درخواست جدید</span>
-              <h2>کدام دو شیفت جابه‌جا شوند؟</h2>
-              <p>شیفت خودتان و شیفت کارشناس مقصد را انتخاب کنید. تاریخ‌ها می‌توانند متفاوت باشند.</p>
+              <h2>درخواست جدید</h2>
+              <p>دو تاریخ و کارشناس مقصد را انتخاب کنید.</p>
             </div>
-            <span className={styles.swapBadge}>جابه‌جایی دو شیفت</span>
+            <span className={styles.pendingHint}>تأیید کارشناس ← تأیید مدیر</span>
           </div>
 
-          <div className={styles.swapComposer}>
-            <div className={styles.slotCard}>
-              <div className={styles.slotLabel}><span>۱</span> شیفت من</div>
-              <label className={styles.field}>
-                <span>تاریخ شیفت</span>
-                <strong>{longFa(form.date)}</strong>
-                <input type="date" value={form.date} min={tehranDate()} onChange={(e) => setForm({ ...form, date: e.target.value })} />
-              </label>
-            </div>
+          <div className={styles.compactForm}>
+            <label className={styles.field}>
+              <span>تاریخ شیفت من</span>
+              <input type="date" value={form.date} min={tehranDate()} onChange={(e) => setForm({ ...form, date: e.target.value })} />
+              <small>{longFa(form.date)}</small>
+            </label>
 
-            <div className={styles.swapArrow} aria-hidden="true"><span>↔</span></div>
+            <label className={styles.field}>
+              <span>کارشناس مقصد</span>
+              <select value={form.targetId} onChange={(e) => setForm({ ...form, targetId: e.target.value })}>
+                {targets.map((a) => <option value={a.id} key={a.id}>{a.name} · {a.team}</option>)}
+              </select>
+            </label>
 
-            <div className={styles.slotCard}>
-              <div className={styles.slotLabel}><span>۲</span> شیفت مقصد</div>
-              <label className={styles.field}>
-                <span>کارشناس مقصد</span>
-                <select value={form.targetId} onChange={(e) => setForm({ ...form, targetId: e.target.value })}>
-                  {targets.map((a) => <option value={a.id} key={a.id}>{a.name} · {a.team}</option>)}
-                </select>
-              </label>
-              <label className={styles.field}>
-                <span>تاریخ شیفت او</span>
-                <strong>{longFa(form.targetDate)}</strong>
-                <input type="date" value={form.targetDate} min={tehranDate()} onChange={(e) => setForm({ ...form, targetDate: e.target.value })} />
-              </label>
-            </div>
-          </div>
+            <label className={styles.field}>
+              <span>تاریخ شیفت او</span>
+              <input type="date" value={form.targetDate} min={tehranDate()} onChange={(e) => setForm({ ...form, targetDate: e.target.value })} />
+              <small>{longFa(form.targetDate)}</small>
+            </label>
 
-          <div className={styles.requestBottom}>
-            <label className={styles.reasonField}>
-              <span>دلیل یا توضیح <small>اختیاری</small></span>
+            <label className={`${styles.field} ${styles.reasonField}`}>
+              <span>دلیل <em>اختیاری</em></span>
               <input
                 value={form.reason}
                 onChange={(e) => setForm({ ...form, reason: e.target.value })}
-                placeholder="مثلاً مرخصی، مأموریت یا هماهنگی شخصی"
+                placeholder="مرخصی، مأموریت یا هماهنگی شخصی"
               />
             </label>
+
             <button
               className={styles.submitButton}
               disabled={busy || !form.date || !form.targetId || !form.targetDate}
               onClick={submit}
             >
               <Icon name="plus" />
-              {busy ? "در حال ثبت..." : "ثبت درخواست"}
+              {busy ? "در حال ثبت" : "ثبت درخواست"}
             </button>
           </div>
 
-          <div className={styles.approvalFlow}>
-            <div><i>۱</i><span><b>ثبت درخواست</b><small>توسط شما</small></span></div>
-            <em />
-            <div><i>۲</i><span><b>تأیید کارشناس مقصد</b><small>Accept / Reject</small></span></div>
-            <em />
-            <div><i>۳</i><span><b>تأیید مدیر</b><small>و اعمال روی تقویم</small></span></div>
-          </div>
-          <p className={styles.managerNote}>اگر کارشناس مقصد در دسترس نباشد، SOC Manager یا Security Manager می‌تواند به‌جای او تأیید و درخواست را اعمال کند.</p>
+          <p className={styles.managerNote}>
+            پس از تأیید کارشناس مقصد، تأیید یکی از مدیران کافی است. در صورت در دسترس نبودن کارشناس، مدیر می‌تواند مستقیم تأیید کند.
+          </p>
         </section>
       )}
 
       <section className={styles.requestsCard}>
         <div className={styles.listHeader}>
-          <div>
-            <span className={styles.sectionKicker}>{manager ? "نمای تیم" : "پیگیری درخواست‌ها"}</span>
-            <h2>{manager ? "درخواست‌های تغییر شیفت تیم" : "درخواست‌های من"}</h2>
+          <div className={styles.listTitle}>
+            <h2>{manager ? "درخواست‌های تیم" : "درخواست‌های من"}</h2>
+            <span>{requests.length.toLocaleString("fa-IR")} درخواست</span>
           </div>
           <div className={styles.filters}>
-            <button data-active={filter === "open"} onClick={() => setFilter("open")}>در انتظار <b>{openCount}</b></button>
-            <button data-active={filter === "resolved"} onClick={() => setFilter("resolved")}>نهایی‌شده <b>{resolvedCount}</b></button>
-            <button data-active={filter === "all"} onClick={() => setFilter("all")}>همه <b>{requests.length}</b></button>
+            <button data-active={filter === "open"} onClick={() => setFilter("open")}>در انتظار <b>{openCount.toLocaleString("fa-IR")}</b></button>
+            <button data-active={filter === "resolved"} onClick={() => setFilter("resolved")}>نهایی <b>{resolvedCount.toLocaleString("fa-IR")}</b></button>
+            <button data-active={filter === "all"} onClick={() => setFilter("all")}>همه</button>
           </div>
         </div>
 
@@ -204,48 +183,45 @@ export default function ShiftChanges() {
         <div className={styles.requestList}>
           {!loading && !error && visibleRequests.length === 0 && (
             <div className={styles.emptyState}>
-              <div className={styles.emptyIcon}>↔</div>
               <b>{filter === "open" ? "درخواست بازی وجود ندارد" : "درخواستی در این بخش نیست"}</b>
-              <span>{me.keepsShiftLog && filter === "open" ? "درخواست جدید را از بخش بالا ثبت کنید." : "با تغییر فیلتر، سایر درخواست‌ها را ببینید."}</span>
+              <span>{me.keepsShiftLog && filter === "open" ? "از فرم بالا یک درخواست جدید ثبت کنید." : "فیلتر دیگری را انتخاب کنید."}</span>
             </div>
           )}
 
           {visibleRequests.map((r) => (
-            <article className={styles.requestItem} data-status={r.status} key={r.id}>
-              <div className={styles.requestTop}>
+            <article className={styles.requestItem} key={r.id}>
+              <div className={styles.requestMain}>
                 <div className={styles.people}>
                   <Who id={r.requesterId} />
                   <span className={styles.peopleArrow}>↔</span>
                   <Who id={r.targetId} />
+                  <span className={styles.status} data-status={r.status}>{STATUS_LABEL[r.status] || r.status}</span>
                 </div>
-                <span className={styles.status} data-status={r.status}>{STATUS_LABEL[r.status] || r.status}</span>
+
+                <div className={styles.swapLine}>
+                  <ShiftInline date={r.date} type={r.requesterShift} />
+                  <span>↔</span>
+                  <ShiftInline date={r.targetDate} type={r.targetShift} />
+                </div>
+
+                {r.reason && <div className={styles.reason}>{r.reason}</div>}
               </div>
 
-              <div className={styles.requestSwap}>
-                <ShiftCell label="شیفت درخواست‌کننده" date={r.date} type={r.requesterShift} />
-                <div className={styles.requestSwapArrow}>↔</div>
-                <ShiftCell label="شیفت کارشناس مقصد" date={r.targetDate} type={r.targetShift} />
+              <div className={styles.actions}>
+                {r.status === "pending_target" && me.id === r.targetId && <>
+                  <button className={styles.secondaryAction} disabled={busy} onClick={() => act(r.id, "reject")}>رد</button>
+                  <button className={styles.primaryAction} disabled={busy} onClick={() => act(r.id, "accept")}>تأیید</button>
+                </>}
+                {OPEN.has(r.status) && me.id === r.requesterId && (
+                  <button className={styles.ghostAction} disabled={busy} onClick={() => act(r.id, "cancel")}>لغو</button>
+                )}
+                {manager && OPEN.has(r.status) && <>
+                  <button className={styles.secondaryAction} disabled={busy} onClick={() => act(r.id, "reject")}>رد</button>
+                  <button className={styles.primaryAction} disabled={busy} onClick={() => act(r.id, "approve")}>
+                    {r.status === "pending_target" ? "تأیید و اعمال" : "اعمال"}
+                  </button>
+                </>}
               </div>
-
-              {r.reason && <div className={styles.reason}><span>توضیح</span>{r.reason}</div>}
-
-              {(OPEN.has(r.status) || (r.status === "pending_target" && me.id === r.targetId)) && (
-                <div className={styles.actions}>
-                  {r.status === "pending_target" && me.id === r.targetId && <>
-                    <button className={styles.secondaryAction} disabled={busy} onClick={() => act(r.id, "reject")}>رد درخواست</button>
-                    <button className={styles.primaryAction} disabled={busy} onClick={() => act(r.id, "accept")}>تأیید و ارسال برای مدیر</button>
-                  </>}
-                  {OPEN.has(r.status) && me.id === r.requesterId && (
-                    <button className={styles.ghostAction} disabled={busy} onClick={() => act(r.id, "cancel")}>لغو درخواست</button>
-                  )}
-                  {manager && OPEN.has(r.status) && <>
-                    <button className={styles.secondaryAction} disabled={busy} onClick={() => act(r.id, "reject")}>رد</button>
-                    <button className={styles.primaryAction} disabled={busy} onClick={() => act(r.id, "approve")}>
-                      {r.status === "pending_target" ? "تأیید به‌جای کارشناس و اعمال" : "تأیید و اعمال"}
-                    </button>
-                  </>}
-                </div>
-              )}
             </article>
           ))}
         </div>
@@ -254,17 +230,12 @@ export default function ShiftChanges() {
   );
 }
 
-function Summary({ label, value, tone = "default" }) {
-  return <div className={styles.summary} data-tone={tone}><span>{label}</span><b>{value.toLocaleString("fa-IR")}</b></div>;
-}
-
-function ShiftCell({ label, date, type }) {
+function ShiftInline({ date, type }) {
   const shift = SHIFT_TYPES[type];
   return (
-    <div className={styles.shiftCell} data-shift={type || "none"}>
-      <span>{label}</span>
+    <span className={styles.shiftInline}>
       <b>{longFa(date)}</b>
       <small>{shift ? `${SHIFT_FA[type] || shift.label} · ${shift.start}–${shift.end}` : "شیفت نامشخص"}</small>
-    </div>
+    </span>
   );
 }
