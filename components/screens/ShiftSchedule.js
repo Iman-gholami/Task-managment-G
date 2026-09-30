@@ -7,82 +7,118 @@ import useFetch from "@/components/useFetch";
 import Dialog from "@/components/ui/Dialog";
 import Icon from "@/components/ui/Icon";
 import { Who } from "@/components/ui/indicators";
-import { PageHeader, Panel } from "@/components/ui/layout";
 import { isManager, SOC_TEAMS } from "@/lib/roles";
-import { SHIFT_TYPES, tehranDate } from "@/lib/shifts";
+import { addDays } from "@/lib/format";
+import { SHIFT_TYPES, scheduleStats, tehranDate } from "@/lib/shifts";
 import styles from "./ShiftSchedule.module.css";
 
-const WEEK = ["Sat", "Sun", "Mon", "Tue", "Wed", "Thu", "Fri"];
-const ZERO_STATS = { hours: 0, total: 0, thursdays: 0, fridays: 0, morning: 0, evening: 0, night: 0 };
+const SHIFT_KEYS = ["morning", "evening", "night"];
+const SHIFT_META = {
+  morning: { label: "شیفت صبح", short: "صبح", time: "۰۷:۳۰ تا ۱۵:۱۵" },
+  evening: { label: "شیفت تا ۸ شب", short: "تا ۸", time: "۰۷:۳۰ تا ۲۰:۰۰" },
+  night: { label: "شیفت شب", short: "شب", time: "۲۰:۰۰ تا ۰۸:۰۰" },
+};
+const WEEKDAYS = ["شنبه", "یکشنبه", "دوشنبه", "سه‌شنبه", "چهارشنبه", "پنجشنبه", "جمعه"];
 const TODAY = tehranDate();
+const ZERO_STATS = { hours: 0, total: 0, thursdays: 0, fridays: 0, morning: 0, evening: 0, night: 0 };
 
-function addMonth(month, delta) {
-  const [y, m] = month.split("-").map(Number);
-  const d = new Date(Date.UTC(y, m - 1 + delta, 1));
-  return `${d.getUTCFullYear()}-${String(d.getUTCMonth() + 1).padStart(2, "0")}`;
+const PERSIAN_CAL = new Intl.DateTimeFormat("fa-IR-u-ca-persian", { year: "numeric", month: "numeric", day: "numeric", timeZone: "UTC" });
+const PERSIAN_MONTH = new Intl.DateTimeFormat("fa-IR-u-ca-persian", { year: "numeric", month: "long", timeZone: "UTC" });
+const PERSIAN_LONG = new Intl.DateTimeFormat("fa-IR-u-ca-persian", { weekday: "long", year: "numeric", month: "long", day: "numeric", timeZone: "UTC" });
+const FA_NUM = new Intl.NumberFormat("fa-IR", { useGrouping: false });
+
+const toEnglishDigits = (value) => String(value).replace(/[۰-۹]/g, (d) => "۰۱۲۳۴۵۶۷۸۹".indexOf(d));
+const faNum = (value) => FA_NUM.format(value ?? 0);
+const dateObj = (iso) => new Date(`${iso}T00:00:00Z`);
+const daysBetween = (a, b) => Math.round((dateObj(b).getTime() - dateObj(a).getTime()) / 864e5);
+
+function jalaliParts(iso) {
+  const parts = PERSIAN_CAL.formatToParts(dateObj(iso));
+  const pick = (type) => Number(toEnglishDigits(parts.find((p) => p.type === type)?.value || 0));
+  return { year: pick("year"), month: pick("month"), day: pick("day") };
 }
 
-function monthTitle(month) {
-  const [y, m] = month.split("-").map(Number);
-  const date = new Date(Date.UTC(y, m - 1, 1));
-  const en = new Intl.DateTimeFormat("en", { month: "long", year: "numeric", timeZone: "UTC" }).format(date);
-  const fa = new Intl.DateTimeFormat("fa-IR-u-ca-persian", { month: "long", year: "numeric", timeZone: "UTC" }).format(date);
-  return { en, fa };
+function jalaliMonthKey(iso) {
+  const { year, month } = jalaliParts(iso);
+  return `${year}-${String(month).padStart(2, "0")}`;
 }
 
-function calendarDays(month, to) {
-  const first = new Date(`${month}-01T00:00:00Z`).getUTCDay();
-  const leading = (first + 1) % 7;
-  const count = Number(to.slice(-2));
-  return [...Array(leading).fill(null), ...Array.from({ length: count }, (_, i) => `${month}-${String(i + 1).padStart(2, "0")}`)];
+function firstOfJalaliMonth(iso) {
+  const { day } = jalaliParts(iso);
+  return addDays(iso, -(day - 1));
 }
 
-function faDay(date) {
-  return new Intl.DateTimeFormat("fa-IR-u-ca-persian", { day: "numeric", timeZone: "UTC" }).format(new Date(`${date}T00:00:00Z`));
+function shiftJalaliMonth(monthStart, amount) {
+  return amount > 0 ? firstOfJalaliMonth(addDays(monthStart, 32)) : firstOfJalaliMonth(addDays(monthStart, -1));
 }
 
-function longDay(date) {
-  return new Intl.DateTimeFormat("en", { weekday: "long", month: "long", day: "numeric", year: "numeric", timeZone: "UTC" }).format(new Date(`${date}T00:00:00Z`));
+function calendarRange(monthStart) {
+  const firstWeekday = dateObj(monthStart).getUTCDay();
+  const start = addDays(monthStart, -((firstWeekday + 1) % 7));
+  const nextMonth = shiftJalaliMonth(monthStart, 1);
+  const lastDay = addDays(nextMonth, -1);
+  const lastWeekday = dateObj(lastDay).getUTCDay();
+  return { start, end: addDays(lastDay, (5 - lastWeekday + 7) % 7) };
+}
+
+function longDay(iso) {
+  return PERSIAN_LONG.format(dateObj(iso));
+}
+
+function groupByDate(schedules) {
+  const map = {};
+  for (const row of schedules || []) (map[row.date] ??= []).push(row);
+  for (const rows of Object.values(map)) rows.sort((a, b) => SHIFT_KEYS.indexOf(a.shiftType) - SHIFT_KEYS.indexOf(b.shiftType) || a.name.localeCompare(b.name));
+  return map;
 }
 
 export default function ShiftSchedule() {
   const { me, members, toast } = useApp();
   const manager = isManager(me);
-  const analysts = useMemo(() => members.filter((m) => m.active !== false && m.role === "analyst" && SOC_TEAMS.includes(m.team)), [members]);
-  const [month, setMonth] = useState(TODAY.slice(0, 7));
+  const analysts = useMemo(
+    () => members.filter((m) => m.active !== false && m.role === "analyst" && SOC_TEAMS.includes(m.team)),
+    [members]
+  );
+
+  const [monthStart, setMonthStart] = useState(() => firstOfJalaliMonth(TODAY));
   const [selectedDate, setSelectedDate] = useState(TODAY);
   const [selectedUser, setSelectedUser] = useState(me.keepsShiftLog ? me.id : analysts[0]?.id ?? "");
   const [editorOpen, setEditorOpen] = useState(false);
   const [edit, setEdit] = useState({ date: TODAY, userId: analysts[0]?.id ?? "", shiftType: "morning" });
   const [saving, setSaving] = useState(false);
-  const { data, loading, error, reload } = useFetch(`/api/shift/schedule?month=${month}`);
 
+  const range = useMemo(() => calendarRange(monthStart), [monthStart]);
+  const { data, loading, error, reload } = useFetch(`/api/shift/schedule?from=${range.start}&to=${range.end}`);
   const schedules = data?.schedules ?? [];
-  const title = monthTitle(month);
-  const stats = data?.statsByUser?.[selectedUser] ?? ZERO_STATS;
-  const days = data ? calendarDays(month, data.to) : [];
-  const byDate = useMemo(() => {
-    const map = {};
-    for (const row of schedules) (map[row.date] ??= []).push(row);
-    return map;
-  }, [schedules]);
+  const byDate = useMemo(() => groupByDate(schedules), [schedules]);
+  const monthKey = jalaliMonthKey(monthStart);
+  const monthSchedules = useMemo(() => schedules.filter((row) => jalaliMonthKey(row.date) === monthKey), [schedules, monthKey]);
+  const stats = useMemo(() => {
+    if (!selectedUser) return ZERO_STATS;
+    return scheduleStats(monthSchedules.filter((row) => row.userId === selectedUser));
+  }, [monthSchedules, selectedUser]);
   const selectedRows = byDate[selectedDate] ?? [];
+  const cells = useMemo(
+    () => Array.from({ length: daysBetween(range.start, range.end) + 1 }, (_, i) => addDays(range.start, i)),
+    [range]
+  );
 
   const openAssign = (date = selectedDate, userId = selectedUser) => {
     if (!manager) return;
-    const existing = (byDate[date] ?? []).find((r) => r.userId === userId);
-    setEdit({ date, userId: userId || analysts[0]?.id || "", shiftType: existing?.shiftType || "morning" });
+    const chosenUser = userId || analysts[0]?.id || "";
+    const existing = (byDate[date] ?? []).find((r) => r.userId === chosenUser);
+    setEdit({ date, userId: chosenUser, shiftType: existing?.shiftType || "morning" });
     setEditorOpen(true);
   };
 
-  const changeMonth = (delta) => {
-    const next = addMonth(month, delta);
-    setMonth(next);
-    setSelectedDate(`${next}-01`);
+  const changeMonth = (amount) => {
+    const next = shiftJalaliMonth(monthStart, amount);
+    setMonthStart(next);
+    setSelectedDate(next);
   };
 
   const goToday = () => {
-    setMonth(TODAY.slice(0, 7));
+    setMonthStart(firstOfJalaliMonth(TODAY));
     setSelectedDate(TODAY);
   };
 
@@ -91,12 +127,12 @@ export default function ShiftSchedule() {
     setSaving(true);
     try {
       await api("/api/shift/schedule", { method: "POST", body: edit });
-      toast("Shift assignment saved");
+      toast("شیفت ثبت شد");
       setSelectedDate(edit.date);
       setSelectedUser(edit.userId);
+      setMonthStart(firstOfJalaliMonth(edit.date));
       setEditorOpen(false);
-      if (edit.date.slice(0, 7) !== month) setMonth(edit.date.slice(0, 7));
-      else reload();
+      reload();
     } catch (e) {
       toast(e.message, "error");
     } finally {
@@ -109,7 +145,7 @@ export default function ShiftSchedule() {
     setSaving(true);
     try {
       await api("/api/shift/schedule", { method: "DELETE", body: { date: row.date, userId: row.userId } });
-      toast("Shift assignment removed");
+      toast("شیفت حذف شد");
       reload();
     } catch (e) {
       toast(e.message, "error");
@@ -118,141 +154,166 @@ export default function ShiftSchedule() {
     }
   };
 
+  const selectedPerson = analysts.find((a) => a.id === selectedUser);
+
   return (
-    <div className={`page ${styles.page}`}>
-      <PageHeader
-        title="Shift Schedule"
-        meta={["SOC rota", "Tehran time", "single-click a day to inspect · double-click to assign"]}
-        actions={<>
-          <Link className="btn btn-secondary" href="/shift/changes"><Icon name="edit" />Shift changes</Link>
-          {manager && <button className="btn btn-primary" onClick={() => openAssign()}><Icon name="plus" />Assign shift</button>}
-        </>}
-      />
-
-      <div className={styles.toolbar}>
-        <div className={styles.monthNav}>
-          <button className="btn btn-ghost icon-btn" onClick={() => changeMonth(-1)} aria-label="Previous month">‹</button>
-          <button className="btn btn-ghost" onClick={goToday}>Today</button>
-          <button className="btn btn-ghost icon-btn" onClick={() => changeMonth(1)} aria-label="Next month">›</button>
-          <div className={styles.monthTitle}><b>{title.en}</b><small>{title.fa}</small></div>
+    <div className={`page ${styles.page}`} dir="rtl">
+      <header className={styles.hero}>
+        <div className={styles.heroText}>
+          <span className={styles.kicker}><Icon name="cal" /> برنامه‌ریزی شیفت SOC</span>
+          <h1>تقویم شیفت نیروها</h1>
+          <p>برنامه ماهانه تیم را ببینید، روی هر روز کلیک کنید و شیفت‌ها را از همان تقویم مدیریت کنید.</p>
         </div>
-        <select className={`input ${styles.analystSelect}`} value={selectedUser} onChange={(e) => setSelectedUser(e.target.value)} aria-label="Analyst statistics">
-          {analysts.map((a) => <option key={a.id} value={a.id}>{a.name} · {a.team}</option>)}
-        </select>
-      </div>
+        <div className={styles.heroActions}>
+          <Link className="btn btn-secondary" href="/shift/changes"><Icon name="edit" />تغییر شیفت</Link>
+          {manager && <button className="btn btn-primary" onClick={() => openAssign()}><Icon name="plus" />ثبت شیفت</button>}
+        </div>
+      </header>
 
-      <div className={styles.stats}>
-        <Stat label="Hours this month" value={stats.hours} suffix="h" />
-        <Stat label="Total shifts" value={stats.total} />
-        <Stat label="Thursdays" value={stats.thursdays} />
-        <Stat label="Fridays" value={stats.fridays} />
-        <Stat label="Until 20:00" value={stats.evening} />
-        <Stat label="Morning / normal" value={stats.morning} />
-        <Stat label="Night" value={stats.night} />
-      </div>
+      <section className={styles.controlBar}>
+        <div className={styles.monthControls}>
+          <button className={styles.navButton} onClick={() => changeMonth(-1)} aria-label="ماه قبل"><Icon name="chev" /></button>
+          <button className={styles.todayButton} onClick={goToday}>امروز</button>
+          <button className={`${styles.navButton} ${styles.nextButton}`} onClick={() => changeMonth(1)} aria-label="ماه بعد"><Icon name="chev" /></button>
+          <div className={styles.monthName}><small>تقویم ماهانه</small><b>{PERSIAN_MONTH.format(dateObj(monthStart))}</b></div>
+        </div>
+
+        <label className={styles.employeeFilter}>
+          <span>آمار کارشناس</span>
+          <select className="input" value={selectedUser} onChange={(e) => setSelectedUser(e.target.value)}>
+            {analysts.map((a) => <option key={a.id} value={a.id}>{a.name} · {a.team}</option>)}
+          </select>
+        </label>
+      </section>
+
+      <section className={styles.stats} aria-label="آمار ماهانه کارشناس">
+        <Stat label="ساعت ماه" value={stats.hours} suffix=" ساعت" />
+        <Stat label="کل شیفت" value={stats.total} />
+        <Stat label="پنجشنبه" value={stats.thursdays} />
+        <Stat label="جمعه" value={stats.fridays} />
+        <Stat label="تا ۸ شب" value={stats.evening} />
+        <Stat label="صبح" value={stats.morning} />
+        <Stat label="شب" value={stats.night} />
+      </section>
 
       <div className={styles.layout}>
-        <Panel className={styles.side}>
+        <aside className={styles.side} dir="rtl">
           <div className={styles.sideHead}>
-            <div><small>Selected day</small><h2>{longDay(selectedDate)}</h2></div>
-            {manager && <button className="btn btn-ghost icon-btn btn-sm" aria-label="Assign shift on selected day" onClick={() => openAssign()}><Icon name="plus" /></button>}
+            <div><span>روز انتخاب‌شده</span><h2>{longDay(selectedDate)}</h2></div>
+            {manager && <button className={styles.addDayButton} onClick={() => openAssign()} aria-label="ثبت شیفت برای این روز"><Icon name="plus" /></button>}
           </div>
 
-          <div className={styles.dayList}>
-            {selectedRows.length === 0 ? <div className={styles.dayEmpty}>No analysts are scheduled on this date.</div> : selectedRows.map((row) => {
-              const info = SHIFT_TYPES[row.shiftType];
+          <div className={styles.daySummary}>
+            {SHIFT_KEYS.map((key) => {
+              const rows = selectedRows.filter((r) => r.shiftType === key);
               return (
-                <div className={styles.dayRow} key={row.userId}>
-                  <div className={styles.dayPerson}>
-                    <Who id={row.userId} />
-                    <small>{info.label} · {info.start}–{info.end}</small>
+                <section className={styles.shiftGroup} data-shift={key} key={key}>
+                  <div className={styles.shiftGroupHead}>
+                    <div><i /><span><b>{SHIFT_META[key].label}</b><small>{SHIFT_META[key].time}</small></span></div>
+                    <strong>{faNum(rows.length)} نفر</strong>
                   </div>
-                  {manager && <button className="btn btn-ghost btn-sm" disabled={saving} onClick={() => remove(row)}>Remove</button>}
-                </div>
+                  <div className={styles.shiftPeople}>
+                    {rows.length === 0 ? <span className={styles.emptyShift}>نیرویی ثبت نشده</span> : rows.map((row) => (
+                      <div className={styles.sidePerson} key={row.userId}>
+                        <button className={styles.personButton} onClick={() => setSelectedUser(row.userId)}><Who id={row.userId} /></button>
+                        {manager && <button className={styles.removeButton} onClick={() => remove(row)} disabled={saving}>حذف</button>}
+                      </div>
+                    ))}
+                  </div>
+                </section>
               );
             })}
           </div>
 
-          <div className={styles.hint}>
-            One click selects a day and shows its rota here. Managers can double-click any calendar day to open the assignment form immediately.
+          <div className={styles.sideNote}>
+            <b>{selectedPerson?.name || "کارشناس"}</b>
+            <span>در این ماه {faNum(stats.total)} شیفت و {faNum(stats.hours)} ساعت برنامه دارد.</span>
           </div>
-        </Panel>
+        </aside>
 
-        <Panel className={styles.calendar}>
-          {error && <div style={{ padding: 16, color: "var(--danger)" }}>Could not load the schedule. <button className="btn btn-ghost btn-sm" onClick={reload}>Retry</button></div>}
-          <div className={styles.week}>{WEEK.map((d) => <div key={d}>{d}</div>)}</div>
-          <div className={styles.grid} aria-busy={loading}>
-            {days.map((date, i) => date ? (
-              <div
-                key={date}
-                role="button"
-                tabIndex={0}
-                className={`${styles.day} ${date === selectedDate ? styles.daySelected : ""} ${date === TODAY ? styles.dayToday : ""}`}
-                onClick={() => setSelectedDate(date)}
-                onDoubleClick={() => openAssign(date)}
-                onKeyDown={(e) => {
-                  if (e.key === "Enter" || e.key === " ") {
-                    e.preventDefault();
-                    setSelectedDate(date);
-                  }
-                }}
-                aria-label={`${longDay(date)}${manager ? ". Double-click to assign shift." : ""}`}
-              >
-                <span className={styles.dayNumber}><b>{Number(date.slice(-2))}</b><small>{faDay(date)}</small></span>
-                <span className={styles.pills}>
-                  {(byDate[date] ?? []).slice(0, 5).map((row) => {
-                    const info = SHIFT_TYPES[row.shiftType];
-                    return (
+        <section className={styles.calendar} dir="rtl">
+          {error && <div className={styles.errorBar}><span>دریافت برنامه شیفت ناموفق بود.</span><button onClick={reload}>تلاش دوباره</button></div>}
+          <div className={styles.weekdays}>{WEEKDAYS.map((day) => <div key={day}>{day}</div>)}</div>
+          <div className={`${styles.grid} ${loading && !data ? styles.loading : ""}`}>
+            {cells.map((date) => {
+              const parts = jalaliParts(date);
+              const currentMonth = jalaliMonthKey(date) === monthKey;
+              const rows = byDate[date] ?? [];
+              const isFriday = dateObj(date).getUTCDay() === 5;
+              return (
+                <div
+                  key={date}
+                  role="button"
+                  tabIndex={0}
+                  className={`${styles.day} ${!currentMonth ? styles.outside : ""} ${date === selectedDate ? styles.selectedDay : ""} ${date === TODAY ? styles.today : ""} ${isFriday ? styles.friday : ""}`}
+                  onClick={() => setSelectedDate(date)}
+                  onDoubleClick={() => openAssign(date)}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter" || e.key === " ") {
+                      e.preventDefault();
+                      setSelectedDate(date);
+                    }
+                  }}
+                  aria-label={longDay(date)}
+                >
+                  <div className={styles.dayTop}>
+                    <b>{faNum(parts.day)}</b>
+                    {date === TODAY && <span>امروز</span>}
+                  </div>
+                  <div className={styles.dayItems}>
+                    {rows.length === 0 ? <span className={styles.noSchedule}>—</span> : rows.slice(0, 5).map((row) => (
                       <button
                         type="button"
                         key={row.userId}
-                        className={styles.pill}
                         data-shift={row.shiftType}
-                        title={`${row.name} · ${info.start}–${info.end}`}
+                        className={styles.shiftPill}
                         onClick={(e) => { e.stopPropagation(); setSelectedDate(date); setSelectedUser(row.userId); }}
+                        onDoubleClick={(e) => e.stopPropagation()}
+                        title={`${row.name} · ${SHIFT_META[row.shiftType].time}`}
                       >
-                        <span className={styles.dot} style={{ background: row.color }} />
+                        <i />
                         <span>{row.name}</span>
-                        <small>{info.shortLabel}</small>
+                        <small>{SHIFT_META[row.shiftType].short}</small>
                       </button>
-                    );
-                  })}
-                  {(byDate[date] ?? []).length > 5 && <span className={styles.more}>+{(byDate[date] ?? []).length - 5} more</span>}
-                </span>
-              </div>
-            ) : <div className={styles.dayBlank} key={`blank-${i}`} />)}
+                    ))}
+                    {rows.length > 5 && <span className={styles.more}>+{faNum(rows.length - 5)} نفر</span>}
+                  </div>
+                </div>
+              );
+            })}
           </div>
-        </Panel>
+        </section>
       </div>
 
       <div className={styles.legend}>
-        <span><i data-shift="morning" />Morning 07:30–15:15</span>
-        <span><i data-shift="evening" />Until 20:00 07:30–20:00</span>
-        <span><i data-shift="night" />Night 20:00–08:00</span>
+        {SHIFT_KEYS.map((key) => <span key={key} data-shift={key}><i />{SHIFT_META[key].label} · {SHIFT_META[key].time}</span>)}
       </div>
 
       {editorOpen && (
-        <Dialog label="Assign shift" title="Assign shift" description="One analyst can have only one shift per day." onClose={() => setEditorOpen(false)} width={620}>
-          <div className="modal-body">
-            <div className={styles.modalFields}>
-              <label className="field"><span>Date</span><input className="input" type="date" value={edit.date} onChange={(e) => setEdit({ ...edit, date: e.target.value })} /></label>
-              <label className="field"><span>Analyst</span><select className="input" value={edit.userId} onChange={(e) => setEdit({ ...edit, userId: e.target.value })}>{analysts.map((a) => <option key={a.id} value={a.id}>{a.name} · {a.team}</option>)}</select></label>
+        <Dialog label="ثبت شیفت" onClose={() => setEditorOpen(false)} width={620}>
+          <div className={styles.modal} dir="rtl">
+            <div className={styles.modalHead}>
+              <div><span>ثبت / ویرایش شیفت</span><h2>{longDay(edit.date)}</h2></div>
+            </div>
+            <div className={styles.modalBody}>
+              <label className="field"><span>تاریخ</span><input className="input" type="date" value={edit.date} onChange={(e) => setEdit({ ...edit, date: e.target.value })} /><small className={styles.jalaliHint}>{edit.date ? longDay(edit.date) : ""}</small></label>
+              <label className="field"><span>کارشناس</span><select className="input" value={edit.userId} onChange={(e) => setEdit({ ...edit, userId: e.target.value })}>{analysts.map((a) => <option key={a.id} value={a.id}>{a.name} · {a.team}</option>)}</select></label>
               <div className="field">
-                <span>Shift</span>
+                <span>نوع شیفت</span>
                 <div className={styles.shiftPicker}>
-                  {Object.values(SHIFT_TYPES).map((s) => (
-                    <button type="button" key={s.key} data-shift={s.key} className={`${styles.shiftOption} ${edit.shiftType === s.key ? styles.shiftOptionActive : ""}`} onClick={() => setEdit({ ...edit, shiftType: s.key })}>
-                      <b>{s.label}</b><small>{s.start}–{s.end} · {s.hours}h</small>
+                  {SHIFT_KEYS.map((key) => (
+                    <button type="button" key={key} data-shift={key} className={`${styles.shiftOption} ${edit.shiftType === key ? styles.shiftOptionActive : ""}`} onClick={() => setEdit({ ...edit, shiftType: key })}>
+                      <i /><span><b>{SHIFT_META[key].label}</b><small>{SHIFT_META[key].time}</small></span>
                     </button>
                   ))}
                 </div>
               </div>
-              <div className={styles.modalNote}>The 07:30–20:00 shift receives all routine Shift Log tasks. Morning and Night omit the three extended-shift-only tasks.</div>
+              <div className={styles.modalNote}>شیفت «تا ۸ شب» همه فعالیت‌های پایه Shift Log را دارد و سه فعالیت Daily Traffic Report، MISP/Bale و Upload Malicious IP/Domain نیز به آن اضافه می‌شود.</div>
             </div>
-          </div>
-          <div className="modal-foot">
-            <button className="btn btn-ghost" onClick={() => setEditorOpen(false)}>Cancel</button>
-            <button className="btn btn-primary" disabled={saving || !edit.userId || !edit.date} onClick={save}>{saving ? "Saving…" : "Save assignment"}</button>
+            <div className={styles.modalFoot}>
+              <button className="btn btn-ghost" onClick={() => setEditorOpen(false)}>انصراف</button>
+              <button className="btn btn-primary" disabled={saving || !edit.userId || !edit.date} onClick={save}>{saving ? "در حال ثبت…" : "ثبت شیفت"}</button>
+            </div>
           </div>
         </Dialog>
       )}
@@ -261,5 +322,5 @@ export default function ShiftSchedule() {
 }
 
 function Stat({ label, value, suffix = "" }) {
-  return <div className={styles.stat}><span>{label}</span><b className="num">{value}{suffix}</b></div>;
+  return <div className={styles.stat}><span>{label}</span><b>{faNum(value)}{suffix}</b></div>;
 }
