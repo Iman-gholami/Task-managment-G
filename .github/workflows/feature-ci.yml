@@ -1,0 +1,23 @@
+name: Feature CI
+
+on:
+  push:
+    branches:
+      - feature/soc-shift-scheduling
+  pull_request:
+
+jobs:
+  build-and-test:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - name: Shift scheduling unit tests
+        run: node --experimental-default-type=module --test tests/shifts.unit.test.mjs
+      - name: Next.js production build
+        run: npm run build
