@@ -1,17 +1,18 @@
 "use client";
 
 import Link from "next/link";
-import { Fragment } from "react";
+import { Fragment, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { useApp } from "@/components/AppProvider";
+import useFetch from "@/components/useFetch";
 import Icon from "@/components/ui/Icon";
 import { IconButton } from "@/components/ui/layout";
 import { Notice } from "@/components/ui/states";
 import { TODAY, addDays, isOpen } from "@/lib/format";
 import { inTeamScope, isManager } from "@/lib/roles";
 
-// Notification kinds, derived from live task data (there is no separate notification store).
-const KINDS = {
+const OPEN_SHIFT = new Set(["pending_target", "pending_manager"]);
+const TASK_KINDS = {
   returned: { label: "Task returned for changes", icon: "arrowLeft", tone: "var(--warning)" },
   review: { label: "Waiting for your review", icon: "review", tone: "var(--violet)" },
   overdue: { label: "Overdue", icon: "flag", tone: "var(--danger)" },
@@ -19,26 +20,76 @@ const KINDS = {
   assigned: { label: "New task assigned", icon: "inbox", tone: "var(--info)" },
 };
 
-function useNotifications() {
+function useNotifications(shiftRequests = []) {
   const { tasks, me, peopleMap } = useApp();
   const manager = isManager(me);
   const list = [];
+
+  for (const r of shiftRequests) {
+    if (r.status === "pending_target" && r.targetId === me.id) {
+      list.push({
+        key: `shift-target-${r.id}`,
+        label: "درخواست تغییر شیفت",
+        detail: `${r.requesterName} درخواست جابه‌جایی شیفت داده است`,
+        icon: "cal",
+        tone: "var(--primary)",
+        href: "/shift/changes",
+      });
+    } else if (manager && OPEN_SHIFT.has(r.status)) {
+      list.push({
+        key: `shift-manager-${r.id}`,
+        label: r.status === "pending_target" ? "درخواست تغییر شیفت جدید" : "تغییر شیفت آماده تأیید",
+        detail: `${r.requesterName} ↔ ${r.targetName}`,
+        icon: "cal",
+        tone: "var(--primary)",
+        href: "/shift/changes",
+      });
+    }
+  }
+
   for (const t of tasks) {
     const mine = t.a === me.id;
-    if (mine && t.status === "returned") list.push(["returned", t]);
-    else if (manager && t.status === "review" && !mine && (t.createdBy === me.id || inTeamScope(me, peopleMap[t.a]))) list.push(["review", t]);
-    else if (mine && isOpen(t) && t.due !== "—" && t.due < TODAY) list.push(["overdue", t]);
-    else if (mine && isOpen(t) && t.due !== "—" && t.due <= addDays(TODAY, 2)) list.push(["soon", t]);
-    else if (mine && t.status === "todo" && t.createdBy && t.createdBy !== me.id) list.push(["assigned", t]);
+    let kind = null;
+    if (mine && t.status === "returned") kind = "returned";
+    else if (manager && t.status === "review" && !mine && (t.createdBy === me.id || inTeamScope(me, peopleMap[t.a]))) kind = "review";
+    else if (mine && isOpen(t) && t.due !== "—" && t.due < TODAY) kind = "overdue";
+    else if (mine && isOpen(t) && t.due !== "—" && t.due <= addDays(TODAY, 2)) kind = "soon";
+    else if (mine && t.status === "todo" && t.createdBy && t.createdBy !== me.id) kind = "assigned";
+
+    if (kind) {
+      const meta = TASK_KINDS[kind];
+      list.push({
+        key: `${kind}-${t.id}`,
+        label: meta.label,
+        detail: `${t.id} · ${t.title}`,
+        icon: meta.icon,
+        tone: meta.tone,
+        href: `/tasks/${t.id}`,
+      });
+    }
   }
+
   return list.slice(0, 12);
 }
 
 export default function Topbar({ crumbs, onToggleNav, navLabel, navExpanded, onSearch }) {
-  const { theme, setTheme, openPopover } = useApp();
+  const { theme, setTheme, openPopover, me } = useApp();
   const router = useRouter();
-  const notifications = useNotifications();
+  const shiftCapable = isManager(me) || !!me?.keepsShiftLog;
+  const { data: shiftData, reload: reloadShiftNotifications } = useFetch(shiftCapable ? "/api/shift/changes" : null);
+  const notifications = useNotifications(shiftData?.requests ?? []);
   const count = notifications.length;
+
+  useEffect(() => {
+    if (!shiftCapable) return undefined;
+    const refresh = () => reloadShiftNotifications();
+    const timer = window.setInterval(refresh, 30000);
+    window.addEventListener("focus", refresh);
+    return () => {
+      window.clearInterval(timer);
+      window.removeEventListener("focus", refresh);
+    };
+  }, [shiftCapable, reloadShiftNotifications]);
 
   const openNotifications = (anchor) =>
     openPopover(anchor, {
@@ -51,12 +102,12 @@ export default function Topbar({ crumbs, onToggleNav, navLabel, navExpanded, onS
           <Notice icon="checkCircle">You&apos;re all caught up. Nothing needs your attention.</Notice>
         ) : (
           <div className="notif-list">
-            {notifications.map(([kind, t]) => (
-              <button key={kind + t.id} type="button" className="mi notif" onClick={() => { close(false); router.push(`/tasks/${t.id}`); }}>
-                <span className="notif-ic" style={{ color: KINDS[kind].tone }}><Icon name={KINDS[kind].icon} /></span>
+            {notifications.map((item) => (
+              <button key={item.key} type="button" className="mi notif" onClick={() => { close(false); router.push(item.href); }}>
+                <span className="notif-ic" style={{ color: item.tone }}><Icon name={item.icon} /></span>
                 <span className="notif-body">
-                  <b>{KINDS[kind].label}</b>
-                  <span><span className="mono">{t.id}</span> · {t.title}</span>
+                  <b>{item.label}</b>
+                  <span>{item.detail}</span>
                 </span>
               </button>
             ))}
