@@ -63,11 +63,19 @@ export default function Sidebar({ groups, path, collapsed, inert, onProfile, onB
       </nav>
 
       <div className="sidebar-foot">
-        <button type="button" className="profile" onClick={(e) => onProfile(e.currentTarget)} aria-haspopup="menu" aria-label={`Account menu for ${me.name}`} {...tip(me.name)}>
-          <Avatar id={me.id} />
+        <button
+          type="button"
+          className="profile"
+          onClick={(e) => onProfile(e.currentTarget)}
+          aria-haspopup="menu"
+          aria-label={`Account menu for ${me.name}`}
+          title={`${ROLE_LABELS[me.role]} · ${me.team}`}
+          {...tip(me.name)}
+        >
+          <Avatar id={me.id} size="sm" />
           <span className="profile-meta">
             <b>{me.name}</b>
-            <small>{ROLE_LABELS[me.role]} · {me.team}</small>
+            <small>{ROLE_LABELS[me.role]}</small>
           </span>
           <Icon name="sort" />
         </button>
