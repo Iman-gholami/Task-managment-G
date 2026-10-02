@@ -25,7 +25,7 @@ export async function GET(request) {
   let month = null;
 
   if (fromParam || toParam) {
-    if (!isIsoDate(fromParam) || !isIsoDate(toParam) || fromParam > toParam || daysBetween(fromParam, toParam) > 55) {
+    if (!isIsoDate(fromParam) || !isIsoDate(toParam) || fromParam > toParam || daysBetween(fromParam, toParam) > 400) {
       return err(400, "Invalid date range.");
     }
     bounds = { from: fromParam, to: toParam };
