@@ -3,6 +3,7 @@ import { err, viewableTask } from "@/lib/server/access";
 import { addEvent, getTaskDetails, getUser, updateTask } from "@/lib/server/repo";
 import { actionLabel, allowedTransitions, canTransition } from "@/lib/workflow";
 import { PRIO, QUAL, STATUS } from "@/lib/format";
+import { canAssignTask } from "@/lib/roles";
 
 export async function GET(request, { params }) {
   const [user, denied] = await requireUser();
@@ -77,6 +78,7 @@ export async function PATCH(request, { params }) {
   if ("a" in body && body.a !== task.a) {
     const assignee = getUser(body.a);
     if (!assignee || !assignee.active) return err(400, "Assignee not found.");
+    if (!canAssignTask(user, assignee)) return err(403, "You can't assign a task to this member.");
     patch.a = assignee.id;
     patch.team = assignee.team;
     events.push(`reassigned to ${assignee.name}`);
