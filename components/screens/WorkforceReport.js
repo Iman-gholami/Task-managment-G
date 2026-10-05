@@ -10,8 +10,8 @@ import { Panel } from "@/components/ui/layout";
 import { Metric, MetricGrid } from "@/components/ui/Metric";
 import { EmptyState, ErrorState, Loading } from "@/components/ui/states";
 import { Who } from "@/components/ui/indicators";
-import { monthKeyLabel, periodChoices } from "@/lib/jalali";
-import { COMPONENTS, PROFILE_FA, WEIGHTS, toneFor } from "@/lib/workforce";
+import { fmtJalali, monthKeyLabel, periodChoices } from "@/lib/jalali";
+import { COMPONENTS, PROFILE_FA, QUAL_FA, WEIGHTS, toneFor } from "@/lib/workforce";
 import { tehranDate } from "@/lib/shifts";
 import styles from "./WorkforceReport.module.css";
 
@@ -270,7 +270,7 @@ export default function WorkforceReport() {
   );
 }
 
-/** One person's figures for the period, score breakdown and the manager's evaluations. */
+/** One person's figures for the period, score breakdown, the manager's evaluations and the titles of their completed tasks. */
 function Details({ person: p, self }) {
   const weights = WEIGHTS[p.profile];
   const figures = [
@@ -318,6 +318,21 @@ function Details({ person: p, self }) {
               </li>
             ))}
           </ul>
+        )}
+      </section>
+      <section className={styles.taskList}>
+        <h3>تسک‌های انجام‌شده <span className="muted">({FA.format(p.doneTasks.length)})</span></h3>
+        {p.doneTasks.length === 0 ? <p className="muted">در این دوره تسکی تأیید نشده است.</p> : (
+          <ol className={styles.titles}>
+            {p.doneTasks.map((t, i) => (
+              <li key={t.id}>
+                <span className={styles.n}>{FA.format(i + 1)}.</span>
+                <Link href={`/tasks/${t.id}`}>{t.title}</Link>
+                <span className="muted">{fmtJalali(t.completed, { fa: true })}</span>
+                {t.quality && <span className="muted">{QUAL_FA[t.quality]}</span>}
+              </li>
+            ))}
+          </ol>
         )}
       </section>
     </div>

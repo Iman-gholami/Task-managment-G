@@ -378,6 +378,7 @@ test.describe("workforce performance report", () => {
     expect(data.people.map((p) => p.id).sort()).toEqual([ids.arash, ids.sara].sort());
     const sara = data.people.find((p) => p.id === ids.sara);
     expect(sara.completed).toBe(1);
+    expect(sara.doneTasks.map((t) => t.title)).toEqual(["Tune Splunk correlation rule for VPN logins"]);
     expect(sara.shift).toMatchObject({ scheduled: 1, logged: 1, missing: 0, iocs: 12, tickets: 1, issues: 1 });
     expect(sara.score).toBeGreaterThan(0);
     expect(data.canEvaluate.sort()).toEqual([ids.arash, ids.sara].sort());
@@ -419,6 +420,9 @@ test.describe("workforce performance report", () => {
     await dialog.getByRole("button", { name: "ذخیره" }).click();
     await expect(dialog).toBeHidden();
     await expect(page.locator(`tr[data-person="${ids.sara}"]`)).toContainText("۴ از ۵");
+    // The details list the titles of the tasks behind the count.
+    await page.locator(`tr[data-person="${ids.sara}"] td.title`).click();
+    await expect(page.getByRole("link", { name: "Tune Splunk correlation rule for VPN logins" })).toBeVisible();
 
     await signIn(page, "admin");
     expect((await put({ userId: ids.soc, month: jalaliMonth(), score: 5, comment: "بررسی تسک‌ها به‌موقع" })).status()).toBe(200);
@@ -449,7 +453,7 @@ test.describe("workforce performance report", () => {
 
     await signIn(page, "admin");
     let wb = await load();
-    expect(wb.worksheets.map((w) => w.name)).toEqual(["خلاصه عملکرد", "خلاصه تیم‌ها", "مدیران", "شیفت‌ها", "ریز تسک‌ها", "ریز شیفت‌ها", "ارزیابی مدیران", "راهنمای نمره", "مشخصات گزارش"]);
+    expect(wb.worksheets.map((w) => w.name)).toEqual(["خلاصه عملکرد", "تسک‌های انجام‌شده", "خلاصه تیم‌ها", "مدیران", "شیفت‌ها", "همه‌ی تسک‌های دوره", "ریز شیفت‌ها", "ارزیابی مدیران", "راهنمای نمره", "مشخصات گزارش"]);
     const summary = wb.getWorksheet("خلاصه عملکرد");
     expect(summary.views[0].rightToLeft).toBe(true);
     expect(summary.getRow(1).getCell(2).value).toBe("نام");
@@ -457,9 +461,13 @@ test.describe("workforce performance report", () => {
     const sara = rowsOf(summary).find((r) => r.getCell(2).value === U.sara.name);
     expect(typeof sara.getCell(6).value).toBe("number");
     expect(sara.getCell(27).value).toContain("در شیفت عصر دقیق و منظم بود.");
+    expect(summary.getRow(1).getCell(28).value).toBe("عنوان تسک‌های انجام‌شده");
+    expect(sara.getCell(28).value).toBe("۱- Tune Splunk correlation rule for VPN logins");
+    const done = rowsOf(wb.getWorksheet("تسک‌های انجام‌شده")).filter((r) => r.getCell(1).value === U.sara.name);
+    expect(done.map((r) => [r.getCell(3).value, r.getCell(4).value])).toEqual([[1, "Tune Splunk correlation rule for VPN logins"]]);
     expect(rowsOf(summary).map((r) => r.getCell(2).value).sort()).toEqual([U.arash.name, U.mina.name, U.sara.name, U.soc.name].sort());
     expect(rowsOf(wb.getWorksheet("مدیران")).map((r) => r.getCell(1).value)).toEqual([U.soc.name]);
-    expect(rowsOf(wb.getWorksheet("ریز تسک‌ها")).map((r) => r.getCell(1).value)).toContain(ids.t1);
+    expect(rowsOf(wb.getWorksheet("همه‌ی تسک‌های دوره")).map((r) => r.getCell(1).value)).toContain(ids.t1);
 
     await signIn(page, "soc");
     wb = await load();

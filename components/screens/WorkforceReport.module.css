@@ -38,6 +38,14 @@
 .evals li { padding: var(--s-2) var(--s-3); border: 1px solid var(--divider); border-radius: var(--r-md); background: var(--surface-card); }
 .evals li > div { display: flex; flex-wrap: wrap; align-items: center; gap: var(--s-2); }
 .evals p { margin: 6px 0 0; color: var(--text-2); white-space: pre-wrap; }
+.taskList { grid-column: 1 / -1; justify-items: stretch !important; }
+.titles { display: grid; grid-template-columns: repeat(auto-fill, minmax(320px, 1fr)); align-content: start; gap: 0 var(--s-8); max-height: 360px; margin: 0; padding: 0; list-style: none; overflow-y: auto; }
+/* Flex items are isolated from each other, so a title ending in digits never runs into the date. */
+.titles li { display: flex; align-items: baseline; gap: var(--s-2); padding: 4px 0; border-bottom: 1px dashed var(--divider); color: var(--text); }
+.titles li .n { min-width: 2.2em; margin: 0; color: var(--text-3); font-variant-numeric: tabular-nums; }
+.titles li a { min-width: 0; color: inherit; }
+.titles li a:hover { text-decoration: underline; text-underline-offset: 3px; }
+.titles li span { flex: none; font: var(--type-caption); }
 
 .guide { padding: 0; }
 .guide summary { padding: var(--s-3) var(--s-4); cursor: pointer; font: var(--type-card-title); color: var(--text); }

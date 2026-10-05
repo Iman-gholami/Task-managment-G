@@ -31,7 +31,8 @@ Figures are computed from the database for the selected period (this month, last
 - **One row per person** with an **overall score out of 100**: tasks completed, quality, on-time delivery, returns for changes, overdue work, and for SOC analysts shift attendance (shifts with a Shift Log), routine completion, IOCs and tickets.
 - **The score** is a weighted mean of parts that each run 0–100; parts without data are left out and their weight is shared by the rest. Weights differ for SOC shift analysts, engineers / Threat Intelligence, and the SOC Manager (whose parts include review speed and the analysts' average score). The page and the workbook both explain the formula (`lib/workforce.js`).
 - **Monthly evaluation:** a manager gives each member they manage a score (1–5) and a comment for a Jalali month. It counts toward the score, appears in the report and the workbook, and the member sees it on their own report.
-- **Excel** (Persian, right-to-left): summary per person, team summary, managers, shifts per analyst, every task and every shift of the period, evaluations, and the scoring guide. Members removed during the period are kept, marked inactive.
+- **Task titles:** each person's details on the page list the titles of the tasks they completed in the period, and the workbook has them in the summary row and, one row per task, in the *Completed tasks* sheet.
+- **Excel** (Persian, right-to-left): summary per person (with the titles of their completed tasks), completed tasks person by person, team summary, managers, shifts per analyst, every task and every shift of the period, evaluations, and the scoring guide. Members removed during the period are kept, marked inactive.
 
 Uploaded files are stored next to the database in `data/uploads/` (max 20 MB each).
 
