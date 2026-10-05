@@ -76,11 +76,12 @@ test.describe("fresh install", () => {
 });
 
 test.describe("shift logs are for SOC analysts only", () => {
-  test("SOC manager has no shift log anywhere", async ({ page }) => {
+  test("SOC manager has shift scheduling but no personal shift log", async ({ page }) => {
     await signIn(page, "soc");
     await page.goto("/dashboard", { waitUntil: "networkidle" });
     await expect(page.locator("h1")).toHaveText("SOC overview");
-    await expect(page.locator(".sidebar")).not.toContainText("Shift");
+    await expect(page.locator(".sidebar")).toContainText("Shift Schedule");
+    await expect(page.locator(".sidebar")).not.toContainText("Shift Log");
     await expect(page.locator(".content")).not.toContainText("Shift Log");
     for (const path of ["/shift", "/shift/history", "/shift/team"]) {
       await page.goto(path);
@@ -89,13 +90,18 @@ test.describe("shift logs are for SOC analysts only", () => {
     expect((await page.request.patch("/api/shift", { data: { n: 1, patch: { done: true } } })).status()).toBe(403);
   });
 
-  test("security manager and engineers have none either", async ({ page }) => {
-    for (const who of ["admin", "mina"]) {
-      await signIn(page, who);
-      await page.goto("/dashboard", { waitUntil: "networkidle" });
-      await expect(page.locator(".sidebar")).not.toContainText("Shift");
-      expect((await page.request.post("/api/shift/tickets", { data: { no: "X-1" } })).status()).toBe(403);
-    }
+  test("security manager has scheduling; engineers have no shift features", async ({ page }) => {
+    await signIn(page, "admin");
+    await page.goto("/dashboard", { waitUntil: "networkidle" });
+    await expect(page.locator(".sidebar")).toContainText("Shift Schedule");
+    await expect(page.locator(".sidebar")).not.toContainText("Shift Log");
+    expect((await page.request.post("/api/shift/tickets", { data: { no: "X-1" } })).status()).toBe(403);
+
+    await signIn(page, "mina");
+    await page.goto("/dashboard", { waitUntil: "networkidle" });
+    await expect(page.locator(".sidebar")).not.toContainText("Shift Schedule");
+    await expect(page.locator(".sidebar")).not.toContainText("Shift Log");
+    expect((await page.request.post("/api/shift/tickets", { data: { no: "X-1" } })).status()).toBe(403);
   });
 
   test("analyst fills today's log: activities, IOC count, issue, tickets, complete", async ({ page }) => {
