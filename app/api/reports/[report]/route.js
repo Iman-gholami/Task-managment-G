@@ -1,5 +1,7 @@
 import { isManager, requireUser } from "@/lib/server/auth";
 import { err } from "@/lib/server/access";
+import { inReportScope } from "@/lib/roles";
+import { getUser } from "@/lib/server/repo";
 import { buildReport, reportFileName, toXlsx } from "@/lib/server/reports";
 import { resolvePeriod } from "@/lib/server/stats";
 
@@ -15,7 +17,14 @@ export async function GET(request, { params }) {
     if (report === "team") return err(403, "Team reports are available to managers.");
     q.user = user.id;
   }
-  const data = buildReport(report, { period, userId: q.user || (report === "employee" ? user.id : undefined), team: q.team, status: q.status, cx: q.cx, quality: q.quality, q: q.q });
+  // A SOC Manager's reports cover their SOC analysts only.
+  if (q.user) {
+    const target = getUser(q.user);
+    if (!target) return err(404, "Employee not found.");
+    if (!inReportScope(user, target)) return err(403, "This employee is outside your team.");
+  }
+  const scope = (u) => inReportScope(user, u);
+  const data = buildReport(report, { period, scope, userId: q.user || (report === "employee" ? user.id : undefined), team: q.team, status: q.status, cx: q.cx, quality: q.quality, q: q.q });
   if (!data) return err(404, "Report not found.");
   if (q.format !== "xlsx") return Response.json({ period, ...data });
   const file = await toXlsx(data, period);

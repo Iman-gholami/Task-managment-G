@@ -24,6 +24,16 @@ Only SOC analysts (SOC · L1/L2/L3) have a Shift Log. Managers, engineers and Th
 ### Performance & reports
 Figures are computed from the database for the selected period (this month, last month, quarter, or a custom range): completed tasks by completion date, hours, complexity and quality, and — for SOC analysts — shift logs, routine completion, IOC count, tickets, traffic reports and issues. Every report has **Export to Excel** (`.xlsx`). Analysts see their own data; team reports are for managers.
 
+**Who sees whose figures:** a Security Manager sees everyone; a SOC Manager sees the analysts of SOC · L1/L2/L3; everyone else sees only themselves. The server enforces this for Performance and every report.
+
+### Workforce Performance report (گزارش عملکرد نیروها)
+`/reports/workforce` — the first report in **Reports**, in Persian with Jalali periods (a month, a season, a year, or a custom range).
+- **One row per person** with an **overall score out of 100**: tasks completed, quality, on-time delivery, returns for changes, overdue work, and for SOC analysts shift attendance (shifts with a Shift Log), routine completion, IOCs and tickets.
+- **The score** is a weighted mean of parts that each run 0–100; parts without data are left out and their weight is shared by the rest. Weights differ for SOC shift analysts, engineers / Threat Intelligence, and the SOC Manager (whose parts include review speed and the analysts' average score). The page and the workbook both explain the formula (`lib/workforce.js`).
+- **Monthly evaluation:** a manager gives each member they manage a score (1–5) and a comment for a Jalali month. It counts toward the score, appears in the report and the workbook, and the member sees it on their own report.
+- **Task titles:** each person's details on the page list the titles of the tasks they completed in the period, and the workbook has them in the summary row and, one row per task, in the *Completed tasks* sheet.
+- **Excel** (Persian, right-to-left): summary per person (with the titles of their completed tasks), completed tasks person by person, team summary, managers, shifts per analyst, every task and every shift of the period, evaluations, and the scoring guide. Members removed during the period are kept, marked inactive.
+
 Uploaded files are stored next to the database in `data/uploads/` (max 20 MB each).
 
 ## First run
@@ -105,7 +115,7 @@ npm test
 | `/shift` · `/shift/history` | Today's Shift Log · history (SOC analysts only) |
 | `/account` | Profile and password |
 | `/performance/overview` · `/performance/employees/<id>` | Performance overview · one employee |
-| `/reports/employee` · `/reports/shift` · `/reports/tickets` … | Reports |
+| `/reports/workforce` · `/reports/employee` · `/reports/shift` · `/reports/tickets` … | Reports (Workforce Performance first) |
 | `/admin` | Users & roles |
 | `/login` | Sign in |
 

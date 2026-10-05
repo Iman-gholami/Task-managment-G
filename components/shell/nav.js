@@ -37,7 +37,7 @@ export function navFor(me, counts = {}) {
         manager
           ? { href: "/performance/overview", match: "/performance", label: "Performance", icon: "perf" }
           : { href: `/performance/employees/${me.id}`, match: "/performance", label: "My performance", icon: "perf" },
-        { href: "/reports/employee", match: "/reports", label: "Reports", icon: "report" },
+        { href: "/reports/workforce", match: "/reports", label: "Reports", icon: "report" },
       ],
     },
     {
