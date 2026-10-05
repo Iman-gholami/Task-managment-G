@@ -13,7 +13,7 @@ import { EmptyState, ErrorState, Loading } from "@/components/ui/states";
 import { Avatar, Complexity, Due, Priority, Quality, Status, Who } from "@/components/ui/indicators";
 import { STATUS, when } from "@/lib/format";
 import { cxItems, peopleItems } from "@/components/ui/menus";
-import { isManager } from "@/lib/roles";
+import { canAssignTask, isManager } from "@/lib/roles";
 import { actionLabel } from "@/lib/workflow";
 
 const size = (n) => (n > 1048576 ? `${(n / 1048576).toFixed(1)} MB` : `${Math.max(1, Math.round(n / 1024))} KB`);
@@ -51,6 +51,7 @@ export default function TaskDetail({ id }) {
 
   const canEdit = t.a === me.id || isManager(me);
   const manager = isManager(me);
+  const assignableMembers = members.filter((person) => person.active !== false && canAssignTask(me, person));
   const closed = t.status === "done" || t.status === "cancelled";
   const d = data?.details;
   const transitions = data?.transitions ?? [];
@@ -246,7 +247,7 @@ export default function TaskDetail({ id }) {
         {!transitions.length && data && <p className="side-note">{t.status === "review" ? "Waiting for a reviewer." : closed ? "This task is closed." : "No workflow actions are available to you."}</p>}
         <dl className="kv">
           <dt>Status</dt><dd><span className="cell-edit" role="button" tabIndex={0} aria-label={`Status: ${STATUS[t.status]}. Change status`} onClick={(e) => edit(e.currentTarget, "status", t)} onKeyDown={(e) => (e.key === "Enter" || e.key === " ") && (e.preventDefault(), edit(e.currentTarget, "status", t))}><Status s={t.status} /></span></dd>
-          <dt>Assignee</dt><dd>{canDetail ? <span className="cell-edit" role="button" tabIndex={0} aria-label="Reassign" onClick={(e) => openPopover(e.currentTarget, { title: "Reassign to", width: 320, items: peopleItems(members), onPick: (a) => a !== t.a && updateTask(t, { a }) })} onKeyDown={(e) => (e.key === "Enter" || e.key === " ") && (e.preventDefault(), e.currentTarget.click())}><Who id={t.a} /></span> : <Who id={t.a} />}</dd>
+          <dt>Assignee</dt><dd>{canDetail ? <span className="cell-edit" role="button" tabIndex={0} aria-label="Reassign" onClick={(e) => openPopover(e.currentTarget, { title: "Reassign to", width: 320, items: peopleItems(assignableMembers), onPick: (a) => a !== t.a && updateTask(t, { a }) })} onKeyDown={(e) => (e.key === "Enter" || e.key === " ") && (e.preventDefault(), e.currentTarget.click())}><Who id={t.a} /></span> : <Who id={t.a} />}</dd>
           <dt>Priority</dt><dd><span className="cell-edit" role="button" tabIndex={0} aria-label="Change priority" onClick={(e) => edit(e.currentTarget, "prio", t)} onKeyDown={(e) => (e.key === "Enter" || e.key === " ") && (e.preventDefault(), e.currentTarget.click())}><Priority p={t.prio} /></span></dd>
           <dt>Complexity</dt><dd>{canDetail ? <span className="cell-edit" role="button" tabIndex={0} aria-label="Change complexity" onClick={(e) => openPopover(e.currentTarget, { title: "Complexity", items: cxItems(), onPick: (cx) => updateTask(t, { cx }) })} onKeyDown={(e) => (e.key === "Enter" || e.key === " ") && (e.preventDefault(), e.currentTarget.click())}><Complexity c={t.cx} /></span> : <Complexity c={t.cx} />}</dd>
           <dt>Deadline</dt><dd>{canDetail
