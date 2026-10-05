@@ -4,6 +4,8 @@ out/
 test-results/
 playwright-report/
 *.log
-.env*.local
+.env
+.env.*
+!.env.example
 .DS_Store
 data/
