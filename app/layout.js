@@ -8,6 +8,7 @@ import "@/styles/data.css";
 import "@/styles/screens.css";
 import "@/styles/rtl.css";
 import "@/styles/themes.css";
+import "@/styles/motion.css";
 import { THEME_IDS, THEME_KEY } from "@/lib/themes";
 
 const geist = localFont({ src: "../styles/fonts/Geist-Variable.woff2", variable: "--font-geist", weight: "100 900", display: "swap" });

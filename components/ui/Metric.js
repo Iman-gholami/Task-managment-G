@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { Children } from "react";
+import { Children, Fragment } from "react";
 import Icon from "@/components/ui/Icon";
 
 const NUM = new Intl.NumberFormat("en-US", { maximumFractionDigits: 1 });
@@ -34,9 +34,12 @@ export function Metric({ label, value, unit, foot, tone, href, onClick, aside, l
   return <div {...common}>{body}</div>;
 }
 
+// Cards inside fragments (`{r && <>…</>}`) count one by one, so the grid gets the real column count.
+const countCards = (children) => Children.toArray(children).reduce((n, c) => n + (c?.type === Fragment ? countCards(c.props.children) : c ? 1 : 0), 0);
+
 /** Row of KPI cards. Wraps into balanced rows (3 + 2, 3 + 3, 2 + 2) as its container narrows. */
 export function MetricGrid({ children, label }) {
-  const n = Children.toArray(children).filter(Boolean).length;
+  const n = countCards(children);
   return (
     <div className="metrics-wrap">
       <div className="metrics" role="group" aria-label={label} data-n={n} style={{ "--n": n }}>{children}</div>
