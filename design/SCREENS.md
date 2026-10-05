@@ -7,7 +7,7 @@ Shared conventions (states, tokens, components) are in `DESIGN_SYSTEM.md`.
 **Global shell (all screens except Login)**
 ```
 ┌────────────┬──────────────────────────────────────────────────────────────┐
-│ S Sentinel │ [≡] Tasks › Team Tasks          [⌕ Search or jump… ⌘K] 🔔 ☀ │
+│ S Sentinel │ [≡] Tasks › Team Tasks          [⌕ Search or jump… ⌘K] 🔔 🎨│
 │            ├──────────────────────────────────────────────────────────────┤
 │ ⌂ Dashboard│  Page title                                  [Secondary][Primary]
 │ ☑ Tasks    │  subtitle / count                                             │
@@ -22,7 +22,8 @@ Shared conventions (states, tokens, components) are in `DESIGN_SYSTEM.md`.
 │            │                                                               │
 │ (SR) Sara  │                                                               │
 └────────────┴──────────────────────────────────────────────────────────────┘
- bg (--bg)      surface sheet (--surface), inset 8px, radius 12 — see DESIGN_SYSTEM.md
+ bg (--bg + ambient light)   surface sheet (--surface), inset 8px, radius 14 — see DESIGN_SYSTEM.md
+ 🎨 = theme menu (Daylight · Graphite · Black Gold · Midnight)
 ```
 
 **Standard states (they apply unless a screen overrides them)**
@@ -37,24 +38,25 @@ Shared conventions (states, tokens, components) are in `DESIGN_SYSTEM.md`.
 |---|---|
 | **Purpose** | Authenticate into the Security Department workspace |
 | **Primary user** | Everyone |
-| **Hierarchy** | Brand → "Sign in" → SSO → credentials → help |
-| **Layout** | Split 50/50: the form on `--bg` on the left, a quiet surface panel with a one-line product statement on the right |
+| **Hierarchy** | Brand + theme swatches → "Welcome back" → credentials → Sign in → help |
+| **Layout** | Split ~48/52: brand, theme swatches and the form on the left; on the right a rounded hero panel (`--hero-*`, dark in every theme) with a slow radar sweep around the brand mark, three feature chips, and the product statement. Below 1024px only the left side shows |
 | **Primary action** | Sign in (or Continue with SSO, when SSO is configured it becomes primary) |
 | **Secondary** | Contact administrator link |
-| **Components** | Input (40px, lg), Button (lg), Brand mark |
+| **Components** | Input (40px, lg), Button (lg, 44px), Brand mark, Theme swatches (radio group) |
 | **Empty** | n/a |
 | **Loading** | The button shows an inline spinner and "Signing in…", and the fields become read-only |
 | **Error** | "Email or password is incorrect." inline above the button. Locked accounts see "Your account is locked. Contact your administrator." |
 ```
 ┌─────────────────────────────┬──────────────────────────────┐
-│   [S] Sentinel Ops          │                              │
-│   Sign in                   │                              │
-│   Security Dept workspace   │                              │
-│   [ Continue with SSO    ]  │   TODAY · SEP 28             │
-│   ──────── or ────────      │   Tasks, shift logs and team │
-│   Work email  [__________]  │   output — in one quiet place│
-│   Password    [__________]  │   Internal use only.         │
-│   [■■■■■■ Sign in ■■■■■■]   │                              │
+│ [S] Sentinel Ops   (◉○○○)   │ ╭──────────────────────────╮ │
+│                             │ │ (Review workflow)  ◜◝    │ │
+│   SECURITY DEPT WORKSPACE   │ │        ◟ [S] ◞ (Shift Log)│ │
+│   Welcome back              │ │ (Excel reports)          │ │
+│   Sign in to pick up…       │ │ SECURITY DEPARTMENT      │ │
+│   Work email  [__________]  │ │ Every task, every shift —│ │
+│   Password    [__________]  │ │ in one calm place.       │ │
+│   [■■■■■ Sign in → ■■■■■]   │ │ ✓ … ✓ … ✓ …              │ │
+│ 🔒 Internal use only        │ ╰──────────────────────────╯ │
 └─────────────────────────────┴──────────────────────────────┘
 ```
 

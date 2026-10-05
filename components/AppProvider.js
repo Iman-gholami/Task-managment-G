@@ -6,6 +6,7 @@ import { isOpen } from "@/lib/format";
 import Icon from "@/components/ui/Icon";
 import Popover from "@/components/ui/Popover";
 import TooltipLayer from "@/components/ui/Tooltip";
+import { applyTheme, currentTheme, syncThemeColor } from "@/components/theme";
 
 const AppContext = createContext(null);
 export const useApp = () => useContext(AppContext);
@@ -99,14 +100,15 @@ export default function AppProvider({ children, initial }) {
 
   // Restore per-viewer preferences after hydration (the theme attribute is set before paint in app/layout.js).
   useEffect(() => {
-    setThemeState(document.documentElement.dataset.theme === "dark" ? "dark" : "light");
+    setThemeState(currentTheme());
+    syncThemeColor();
     setCollapsedState(readPref("so.collapsed", "0") === "1");
   }, []);
 
-  const setTheme = useCallback((t) => {
+  /** setTheme(id, origin?) — `origin` ({ x, y }) is where the new theme spreads from (components/theme.js). */
+  const setTheme = useCallback((t, origin) => {
     setThemeState(t);
-    document.documentElement.dataset.theme = t;
-    writePref("so.theme", t);
+    applyTheme(t, origin);
   }, []);
   const setCollapsed = useCallback((c) => {
     setCollapsedState(c);

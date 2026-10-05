@@ -1,11 +1,13 @@
 "use client";
 
 import { useEffect, useId, useLayoutEffect, useRef, useState } from "react";
+import Icon from "@/components/ui/Icon";
 
 /**
  * Anchored menu or panel (opened through `openPopover` from AppProvider).
- * - `items`: [{ value, label, kbd?, hint?, icon?, danger? } | { separator: true }] renders a keyboard menu:
+ * - `items`: [{ value, label, kbd?, hint?, icon?, danger?, checked? } | { separator: true }] renders a keyboard menu:
  *   ↑/↓ move, Enter picks, digits pick items that show a digit shortcut, Esc closes.
+ *   Items with `checked` (true/false) are radio items (`menuitemradio`) and show a check mark when chosen.
  * - `render(close)`: custom content (notifications, profile).
  * Placement flips above the anchor when there is no room below; focus returns to the anchor on close.
  */
@@ -14,7 +16,8 @@ export default function Popover({ anchor, title, header, items, render, onPick, 
   const uid = useId();
   const [pos, setPos] = useState(null);
   const actionable = items ? items.filter((it) => !it.separator) : [];
-  const [hl, setHl] = useState(0);
+  // Radio menus open on the chosen item.
+  const [hl, setHl] = useState(() => Math.max(0, actionable.findIndex((it) => it.checked)));
 
   const close = (restoreFocus = true) => {
     onClose();
@@ -97,14 +100,16 @@ export default function Popover({ anchor, title, header, items, render, onPick, 
               <div
                 key={it.value}
                 id={optionId(idx)}
-                role="menuitem"
-                className={`mi ${idx === hl ? "hl" : ""} ${it.danger ? "danger" : ""}`}
+                role={it.checked === undefined ? "menuitem" : "menuitemradio"}
+                aria-checked={it.checked}
+                className={`mi ${idx === hl ? "hl" : ""} ${it.danger ? "danger" : ""} ${it.checked ? "checked" : ""}`}
                 onMouseEnter={() => setHl(idx)}
                 onClick={() => pick(it.value)}
               >
                 {it.icon}
                 {it.label}
                 {it.hint && <span className="hint">{it.hint}</span>}
+                {it.checked && <Icon name="check" className="i mi-check" />}
                 {it.kbd && <kbd>{it.kbd}</kbd>}
               </div>
             );

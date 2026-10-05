@@ -2,7 +2,8 @@
    Sentinel Ops — Design tokens
    Components use the semantic tokens below only; never raw hex values.
    Colour values come from scripts/palette.mjs (OKLCH, contrast-checked).
-   The theme is applied as <html data-theme="light|dark"> before first paint (app/layout.js).
+   The theme is applied as <html data-theme="light|dark|gold|midnight"> before first paint (app/layout.js);
+   the list of themes lives in lib/themes.js. Every theme defines the same set of colour tokens.
    ========================================================================== */
 
 :root {
@@ -11,12 +12,12 @@
   --font-mono: var(--font-geist-mono), "Geist Mono", ui-monospace, SFMono-Regular, monospace;
 
   --fs-11: 11px; --fs-12: 12px; --fs-13: 13px; --fs-14: 14px; --fs-15: 15px;
-  --fs-16: 16px; --fs-18: 18px; --fs-20: 20px; --fs-22: 22px; --fs-26: 26px; --fs-28: 28px;
+  --fs-16: 16px; --fs-18: 18px; --fs-20: 20px; --fs-22: 22px; --fs-24: 24px; --fs-26: 26px; --fs-28: 28px; --fs-32: 32px; --fs-36: 36px;
   --fw-regular: 400; --fw-medium: 500; --fw-semibold: 600;
 
   /* Semantic type styles (font shorthand). */
   --type-display:    var(--fw-semibold) var(--fs-28)/1.2 var(--font-sans);   /* sign-in only */
-  --type-page-title: var(--fw-semibold) var(--fs-22)/1.25 var(--font-sans);
+  --type-page-title: var(--fw-semibold) var(--fs-24)/1.25 var(--font-sans);
   --type-section:    var(--fw-semibold) var(--fs-15)/1.35 var(--font-sans);
   --type-card-title: var(--fw-semibold) var(--fs-13)/1.4 var(--font-sans);
   --type-body:       var(--fw-regular) var(--fs-14)/1.5 var(--font-sans);
@@ -25,7 +26,7 @@
   --type-table:      var(--fw-regular) var(--fs-13)/1.4 var(--font-sans);
   --type-label:      var(--fw-medium) var(--fs-12)/1.35 var(--font-sans);
   --type-caption:    var(--fw-regular) var(--fs-12)/1.4 var(--font-sans);
-  --type-kpi:        var(--fw-semibold) var(--fs-26)/1.1 var(--font-sans);
+  --type-kpi:        var(--fw-semibold) var(--fs-28)/1.1 var(--font-sans);
   --type-overline:   var(--fw-medium) var(--fs-11)/1.3 var(--font-sans);
   --tracking-title: -0.018em;
   --tracking-ui: -0.004em;
@@ -39,8 +40,9 @@
   --r-xs: 4px;    /* checkbox, kbd, bars */
   --r-sm: 6px;    /* buttons, inputs, badges, menu items */
   --r-md: 8px;    /* segmented tracks, tooltips, small tiles */
-  --r-lg: 10px;   /* cards, panels, popovers */
-  --r-xl: 12px;   /* main sheet, dialogs */
+  --r-lg: 12px;   /* cards, panels, popovers */
+  --r-xl: 14px;   /* main sheet, dialogs */
+  --r-2xl: 20px;  /* sign-in hero panel */
   --r-full: 999px;
 
   /* ---- Sizing ----------------------------------------------------------- */
@@ -68,6 +70,19 @@
   --t-fast: 120ms;
   --t-base: 160ms;
   --t-slow: 220ms;
+  --ease-spring: cubic-bezier(.34, 1.4, .64, 1);
+
+  /* ---- Signature effects (built from each theme's colours) ----------------
+     One gradient (primary → accent) marks the brand, primary actions and progress fills.
+     Ambient light is two soft glows behind the app; it never sits behind text that needs contrast. */
+  --grad-signal: linear-gradient(135deg, var(--primary) 0%, var(--accent) 100%);
+  --grad-signal-soft: linear-gradient(135deg, color-mix(in oklab, var(--primary) 16%, transparent), color-mix(in oklab, var(--accent) 10%, transparent));
+  --glow-sm: 0 0 0 1px color-mix(in oklab, var(--primary) 30%, transparent), 0 2px 10px -2px var(--primary-glow);
+  --glow-md: 0 0 0 1px color-mix(in oklab, var(--primary) 36%, transparent), 0 8px 24px -6px var(--primary-glow);
+  --ring: 0 0 0 3px var(--primary-soft);
+  --ambient:
+    radial-gradient(900px 520px at 0% -10%, var(--ambient-1), transparent 70%),
+    radial-gradient(760px 480px at 100% 110%, var(--ambient-2), transparent 70%);
 }
 
 /* ==========================================================================
@@ -82,6 +97,7 @@
   --surface-inset: #F3F5F8;    /* segmented tracks, table headers, side panels */
   --surface-raised: #FFFFFF;   /* menus, dialogs */
   --surface-input: #FFFFFF;
+  --surface-2: var(--surface-inset);
 
   --hover: color-mix(in oklab, #151B22 4.5%, transparent);
   --pressed: color-mix(in oklab, #151B22 8%, transparent);
@@ -100,8 +116,14 @@
   --primary: #007B70;         /* white label 5.2:1 */
   --primary-hover: #00695F;
   --primary-soft: color-mix(in oklab, #007B70 10%, transparent);
+  --primary-glow: color-mix(in oklab, #007B70 30%, transparent);
+  --accent: #006E8E;          /* gradient stop; white label 5.8:1 */
   --link: #00695F;
   --focus: #007B70;
+  --ambient-1: color-mix(in oklab, #007B70 9%, transparent);
+  --ambient-2: color-mix(in oklab, #006E8E 7%, transparent);
+  --sheen: rgb(255 255 255 / .22);   /* top highlight on filled controls */
+  --edge: rgb(255 255 255 / .7);     /* top highlight on cards */
 
   --success: #246E3A;  --warning: #8D5406;  --danger: #B33736;  --info: #296898;  --violet: #685796;  --neutral: #656D75;
   --success-soft: color-mix(in oklab, #246E3A 10%, transparent);
@@ -117,7 +139,12 @@
   --shadow-sm: 0 1px 2px rgb(21 27 34 / .06), 0 1px 1px rgb(21 27 34 / .03);
   --shadow-md: 0 4px 12px -2px rgb(21 27 34 / .10), 0 2px 4px -2px rgb(21 27 34 / .06);
   --shadow-lg: 0 16px 40px -12px rgb(21 27 34 / .22), 0 4px 10px -4px rgb(21 27 34 / .08);
+  --shadow-card: 0 1px 2px rgb(21 27 34 / .04), 0 6px 20px -12px rgb(21 27 34 / .12);
   --scrim: rgb(21 27 34 / .36);
+
+  /* Sign-in hero panel: stays dark in the light theme so the radar glows. */
+  --hero-bg: #0B1116; --hero-text: #E8EBEF; --hero-text-2: #B9BEC4; --hero-line: #272C31;
+  --hero-signal: #4EB9AD; --hero-accent: #54BBD2;
 
   /* Complexity ramp (Simple → Advanced), bars, tracks */
   --viz-1: #92CBC3; --viz-2: #43A89D; --viz-3: #008176; --viz-4: #00554D;
@@ -140,6 +167,7 @@
   --surface-inset: #1A1F24;
   --surface-raised: #1C2126;
   --surface-input: #0F1318;
+  --surface-2: var(--surface-inset);
 
   --hover: color-mix(in oklab, #E8EBEF 5%, transparent);
   --pressed: color-mix(in oklab, #E8EBEF 9%, transparent);
@@ -158,8 +186,14 @@
   --primary: #4EB9AD;         /* dark label 8.2:1 */
   --primary-hover: #6FCABF;
   --primary-soft: color-mix(in oklab, #4EB9AD 14%, transparent);
+  --primary-glow: color-mix(in oklab, #4EB9AD 32%, transparent);
+  --accent: #54BBD2;
   --link: #7AD0C5;
   --focus: #6FCABF;
+  --ambient-1: color-mix(in oklab, #4EB9AD 9%, transparent);
+  --ambient-2: color-mix(in oklab, #54BBD2 6%, transparent);
+  --sheen: rgb(255 255 255 / .28);
+  --edge: rgb(255 255 255 / .035);
 
   --success: #73C385;  --warning: #E4AC59;  --danger: #EB827B;  --info: #79B1E0;  --violet: #AFA0DE;  --neutral: #949BA1;
   --success-soft: color-mix(in oklab, #73C385 13%, transparent);
@@ -175,7 +209,11 @@
   --shadow-sm: 0 1px 2px rgb(0 0 0 / .35);
   --shadow-md: 0 8px 24px -8px rgb(0 0 0 / .6), 0 0 0 1px rgb(255 255 255 / .02);
   --shadow-lg: 0 24px 56px -16px rgb(0 0 0 / .75);
+  --shadow-card: 0 1px 2px rgb(0 0 0 / .25);
   --scrim: rgb(3 5 8 / .62);
+
+  --hero-bg: var(--bg); --hero-text: var(--text); --hero-text-2: var(--text-2); --hero-line: var(--border);
+  --hero-signal: var(--primary); --hero-accent: var(--accent);
 
   --viz-1: #2B5C56; --viz-2: #2A857B; --viz-3: #3FACA0; --viz-4: #84DACE;
   --viz-bar: #2A857B;
@@ -183,4 +221,142 @@
   --viz-track: #1F2329;
   --surface-toggle: #272D34;  /* selected segment on an inset track */
   --tooltip-bg: #E8EBEF; --tooltip-text: #0F1318;
+}
+
+/* ==========================================================================
+   BLACK GOLD — near-black warm surfaces, one bright gold signal
+   ========================================================================== */
+:root[data-theme="gold"] {
+  color-scheme: dark;
+
+  --bg: #090807;
+  --surface: #100F0D;
+  --surface-card: #171513;
+  --surface-inset: #1E1C19;
+  --surface-raised: #211F1B;
+  --surface-input: #100F0D;
+  --surface-2: var(--surface-inset);
+
+  --hover: color-mix(in oklab, #F2F0E7 5%, transparent);
+  --pressed: color-mix(in oklab, #F2F0E7 9%, transparent);
+  --nav-active: color-mix(in oklab, #FBC629 10%, transparent);
+  --selected: color-mix(in oklab, #FBC629 11%, transparent);
+
+  --text: #F2F0E7;
+  --text-2: #C7C4BA;
+  --text-3: #A29E93;
+  --text-on-primary: #090807;  /* 12.6:1 on gold, 9.1:1 on amber */
+
+  --border: #2F2C27;
+  --divider: #25231F;
+  --border-strong: #726E66;    /* input borders: 3.6:1 */
+
+  --primary: #FBC629;
+  --primary-hover: #FFD456;
+  --primary-soft: color-mix(in oklab, #FBC629 13%, transparent);
+  --primary-glow: color-mix(in oklab, #FBC629 34%, transparent);
+  --accent: #EBA002;
+  --link: #FDCE4E;
+  --focus: #FFD456;
+  --ambient-1: color-mix(in oklab, #FBC629 10%, transparent);
+  --ambient-2: color-mix(in oklab, #EBA002 7%, transparent);
+  --sheen: rgb(255 255 255 / .38);
+  --edge: rgb(255 236 180 / .04);
+
+  /* Warning is orange here so it never reads as the gold accent. */
+  --success: #6CCD83;  --warning: #FA934E;  --danger: #FA706A;  --info: #76BDEE;  --violet: #BCA1ED;  --neutral: #A29E93;
+  --success-soft: color-mix(in oklab, #6CCD83 13%, transparent);
+  --warning-soft: color-mix(in oklab, #FA934E 14%, transparent);
+  --danger-soft:  color-mix(in oklab, #FA706A 13%, transparent);
+  --info-soft:    color-mix(in oklab, #76BDEE 13%, transparent);
+  --violet-soft:  color-mix(in oklab, #BCA1ED 13%, transparent);
+  --neutral-soft: color-mix(in oklab, #A29E93 13%, transparent);
+  --danger-solid: #C04442;
+  --on-danger: #FFFFFF;
+
+  --shadow-xs: none;
+  --shadow-sm: 0 1px 2px rgb(0 0 0 / .45);
+  --shadow-md: 0 8px 24px -8px rgb(0 0 0 / .7), 0 0 0 1px rgb(255 236 180 / .03);
+  --shadow-lg: 0 24px 56px -16px rgb(0 0 0 / .8);
+  --shadow-card: 0 1px 2px rgb(0 0 0 / .25);
+  --scrim: rgb(4 3 2 / .66);
+
+  --hero-bg: var(--bg); --hero-text: var(--text); --hero-text-2: var(--text-2); --hero-line: var(--border);
+  --hero-signal: var(--primary); --hero-accent: var(--accent);
+
+  --viz-1: #6C5514; --viz-2: #97750D; --viz-3: #CA9E0D; --viz-4: #FFD152;
+  --viz-bar: #97750D;
+  --viz-bar-strong: #FBC629;
+  --viz-track: #25231F;
+  --surface-toggle: #2E2B26;
+  --tooltip-bg: #F2F0E7; --tooltip-text: #100F0D;
+}
+
+/* ==========================================================================
+   MIDNIGHT — deep navy surfaces with a violet → azure signal
+   ========================================================================== */
+:root[data-theme="midnight"] {
+  color-scheme: dark;
+
+  --bg: #0A0B1E;
+  --surface: #101126;
+  --surface-card: #16182F;
+  --surface-inset: #1B1E36;
+  --surface-raised: #1E213C;
+  --surface-input: #101126;
+  --surface-2: var(--surface-inset);
+
+  --hover: color-mix(in oklab, #EEF0F8 5%, transparent);
+  --pressed: color-mix(in oklab, #EEF0F8 9%, transparent);
+  --nav-active: color-mix(in oklab, #A491FE 13%, transparent);
+  --selected: color-mix(in oklab, #A491FE 14%, transparent);
+
+  --text: #EEF0F8;
+  --text-2: #BFC3D8;
+  --text-3: #9BA0BB;
+  --text-on-primary: #0A0B1E;  /* 7.5:1 on violet, 7.9:1 on azure */
+
+  --border: #2A2E49;
+  --divider: #21243D;
+  --border-strong: #6D7292;    /* input borders: 3.7:1 */
+
+  --primary: #A491FE;
+  --primary-hover: #B6A8FF;
+  --primary-soft: color-mix(in oklab, #A491FE 15%, transparent);
+  --primary-glow: color-mix(in oklab, #A491FE 38%, transparent);
+  --accent: #5CABF2;
+  --link: #BDB0FF;
+  --focus: #B6A8FF;
+  --ambient-1: color-mix(in oklab, #A491FE 15%, transparent);
+  --ambient-2: color-mix(in oklab, #5CABF2 11%, transparent);
+  --sheen: rgb(255 255 255 / .32);
+  --edge: rgb(200 205 255 / .045);
+
+  /* Review is rose here so it stays distinct from the violet accent. */
+  --success: #62CD94;  --warning: #EEB154;  --danger: #F47A79;  --info: #61C1ED;  --violet: #EF8BC5;  --neutral: #9BA0BB;
+  --success-soft: color-mix(in oklab, #62CD94 13%, transparent);
+  --warning-soft: color-mix(in oklab, #EEB154 13%, transparent);
+  --danger-soft:  color-mix(in oklab, #F47A79 13%, transparent);
+  --info-soft:    color-mix(in oklab, #61C1ED 13%, transparent);
+  --violet-soft:  color-mix(in oklab, #EF8BC5 13%, transparent);
+  --neutral-soft: color-mix(in oklab, #9BA0BB 13%, transparent);
+  --danger-solid: #C04442;
+  --on-danger: #FFFFFF;
+
+  --shadow-xs: none;
+  --shadow-sm: 0 1px 2px rgb(2 3 12 / .45);
+  --shadow-md: 0 8px 24px -8px rgb(2 3 12 / .7), 0 0 0 1px rgb(200 205 255 / .03);
+  --shadow-lg: 0 24px 56px -16px rgb(2 3 12 / .8);
+  --shadow-card: 0 1px 2px rgb(0 0 0 / .25);
+  --scrim: rgb(3 4 14 / .64);
+
+  --hero-bg: var(--bg); --hero-text: var(--text); --hero-text-2: var(--text-2); --hero-line: var(--border);
+  --hero-signal: var(--primary); --hero-accent: var(--accent);
+
+  --viz-1: #584D8C; --viz-2: #7867C1; --viz-3: #9B89F1; --viz-4: #CCC3FF;
+  --viz-bar: #7867C1;
+  --viz-bar-strong: #A491FE;
+  --viz-track: #21243D;
+  --surface-toggle: #2C3052;
+  --tooltip-bg: #EEF0F8; --tooltip-text: #101126;
 }

@@ -2,7 +2,7 @@
   --shift-morning: #54c8a0;
   --shift-evening: #d8a557;
   --shift-night: #9d8bd3;
-  --calendar-accent: #7f91ff;
+  --calendar-accent: var(--primary);
   --calendar-line: color-mix(in srgb, var(--border) 78%, transparent);
   --calendar-muted: color-mix(in srgb, var(--text-3) 88%, transparent);
   max-width: 1520px;
@@ -258,14 +258,15 @@
   color: var(--text-2);
 }
 .today .dayTop b {
-  color: #fff;
-  background: var(--calendar-accent);
+  color: var(--text-on-primary);
+  background: var(--grad-signal);
+  box-shadow: 0 4px 12px -4px var(--primary-glow);
 }
 .dayTop span {
   padding: 2px 6px;
   border-radius: 999px;
-  background: color-mix(in srgb, var(--calendar-accent) 10%, transparent);
-  color: var(--calendar-accent);
+  background: color-mix(in srgb, var(--calendar-accent) 12%, transparent);
+  color: var(--link);
   font-size: 8px;
   font-weight: 700;
 }

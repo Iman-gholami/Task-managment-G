@@ -1,10 +1,12 @@
 # Sentinel Ops: Design System
 
 A calm, dense, data-first system for a security organization's internal work tool.
-Its look comes from hierarchy, layered surfaces and restraint. It doesn't use decoration.
+Its look comes from hierarchy, layered surfaces and one signature gradient. Four themes share every rule;
+only the colours change.
 
 > Live reference: the Next.js app in this repository (`npm run dev`). Every rule in this document is implemented there.
-> Tokens: `styles/tokens.css`. Styles by layer: `styles/base.css`, `shell.css`, `components.css`, `data.css`, `screens.css`.
+> Tokens: `styles/tokens.css`. Styles by layer: `styles/base.css`, `shell.css`, `components.css`, `data.css`, `screens.css`, `themes.css`.
+> Theme list: `lib/themes.js`. Theme switching: `components/theme.js`, `components/ThemePicker.js`.
 > React primitives: `components/ui/`. Palette and contrast checks: `node scripts/palette.mjs`.
 
 ---
@@ -17,14 +19,16 @@ Its look comes from hierarchy, layered surfaces and restraint. It doesn't use de
 | 2 | **Answer the question first** | Every page opens with what is happening and whether anything is wrong (KPIs, "Needs your attention"), then detail. |
 | 3 | **Scan before you click** | Lists show status, priority, complexity, deadline and quality inline, so opening a record is optional. |
 | 4 | **Two kinds of work, never mixed** | *Routine activity* (Shift Logs) and *Task performance* are separate everywhere: separate sections, labels and counts. |
-| 5 | **Speed beats spectacle** | Motion takes 120–220ms and only confirms an action. Common edits happen in place. |
+| 5 | **Speed beats spectacle** | Motion takes 120–220ms and only confirms an action. Common edits happen in place. The two deliberate exceptions — the theme reveal and the sign-in radar — never block input, and `prefers-reduced-motion` turns them off. |
 | 6 | **Respectful measurement** | Performance data describes output. Default order is alphabetical; nothing is ranked. |
 | 7 | **Never invent** | Every number, status and comparison comes from stored data. Missing data is shown as missing ("—", "n/a"), not estimated. |
 
 ### Visual identity
 - **Ink**: cool, faintly blue-slate neutrals for ~90% of every screen. Primary text is off-white (dark) or near-black (light), never pure white/black.
-- **Signal**: one teal accent for primary actions, the active navigation icon, links, focus rings and data emphasis. Because nothing else is teal, anything teal is actionable or "the latest value".
-- **Depth from layering, not shadows**: in dark mode each level is a step lighter — app background → content sheet → cards → insets → menus. Borders are 1px and subtle; spacing does most of the grouping.
+- **Signal**: one accent per theme (teal, gold or violet) for primary actions, the active navigation item, links, focus rings and data emphasis. Because nothing else uses it, anything in the accent colour is actionable or "the latest value".
+- **Signature gradient**: the accent runs into a second stop (`--accent`) as one 135° gradient. It marks the brand mark, primary buttons, the active-page bar, checked controls, progress fills and the latest chart bar — never text that has to be read, and never large areas.
+- **Light, not decoration**: a faint ambient glow in the accent colour sits behind the app, at the top of the content sheet and in the corner of KPI cards. It is always behind opaque cards, so it never changes text contrast.
+- **Depth from layering**: in the dark themes each level is a step lighter — app background → content sheet → cards → insets → menus — with a 1px top highlight (`--edge`) on cards. In the light theme cards get a soft two-layer shadow (`--shadow-card`). Menus, toasts and the dialog scrim blur what is behind them.
 - **One typeface**: Geist (UI) with tabular numbers for all figures; Geist Mono only for IDs, ticket numbers and references. (The earlier display serif was removed: its condensed digits made "11" read as "ll".)
 
 ---
@@ -32,6 +36,21 @@ Its look comes from hierarchy, layered surfaces and restraint. It doesn't use de
 ## 2. Tokens
 
 Components use semantic tokens only. Hex values come from `scripts/palette.mjs` (OKLCH), which also prints every contrast pair.
+
+### Themes
+Each theme is one block in `tokens.css` (`<html data-theme="…">`) that defines the full set of colour tokens below; nothing else in the CSS knows which theme is active.
+
+| Id | Name | Surfaces | Signal → accent | Notes |
+|---|---|---|---|---|
+| `light` | Daylight | cool white and slate | teal #007B70 → #006E8E | White labels on the gradient |
+| `dark` | Graphite | blue-slate, layered | teal #4EB9AD → #54BBD2 | |
+| `gold` | Black Gold | warm near-black | gold #FBC629 → amber #EBA002 | Warning moves to orange (#FA934E) so it never reads as the accent |
+| `midnight` | Midnight | deep navy | violet #A491FE → azure #5CABF2 | Review moves to rose (#EF8BC5) so it stays distinct from the violet accent |
+
+- **Choosing a theme:** the palette button in the top bar (menu, digits 1–4), Account › Appearance (preview cards), the swatches on the sign-in page, or ⌘K ("theme", "gold", "midnight"…). The choice is stored per device (`localStorage["so.theme"]`); with no choice the OS preference picks Daylight or Graphite.
+- **No flash:** `app/layout.js` sets `data-theme` before first paint; `components/theme.js` also updates `<meta name="theme-color">`.
+- **Reveal:** where the browser supports view transitions, the new theme spreads in a circle from the control that picked it (560ms). With reduced motion it switches instantly.
+- **Adding a theme:** add it to `scripts/palette.mjs` and check the contrast output, add a `:root[data-theme="<id>"]` block with every colour token, and add an entry to `lib/themes.js` (name, note, swatches).
 
 ### Colour (semantic)
 | Token | Light | Dark | Use |
@@ -46,30 +65,37 @@ Components use semantic tokens only. Hex values come from `scripts/palette.mjs` 
 | `--text` / `--text-2` / `--text-3` | #151B22 / #4C535B / #656D75 | #E8EBEF / #B9BEC4 / #949BA1 | Primary, secondary, muted |
 | `--border` / `--divider` / `--border-strong` | #DFE3E8 / #E8EBEF / #7F8790 | #272C31 / #1F2329 / #676C73 | Card outlines, row separators, input borders (≥3:1) |
 | `--primary` / `--primary-hover` / `--link` / `--focus` | #007B70 / #00695F / #00695F / #007B70 | #4EB9AD / #6FCABF / #7AD0C5 / #6FCABF | Primary actions, links, focus rings |
+| `--accent` | #006E8E | #54BBD2 | Second stop of the signature gradient; carries the same label colour as `--primary` |
+| `--grad-signal` / `--grad-signal-soft` | | | primary → accent at 135°; a 10–16% tint of it for icon tiles |
+| `--primary-glow` / `--glow-sm` / `--glow-md` / `--ring` | | | Coloured glow under primary buttons and the brand mark; 3px focus ring on inputs |
+| `--ambient-1` / `--ambient-2` / `--ambient` | | | Background light behind the app and in KPI card corners |
+| `--sheen` / `--edge` | | | 1px top highlight on filled controls / on cards |
+| `--shadow-card` | soft two-layer | 1px dark | Resting elevation of panels, KPI and board cards |
+| `--hero-*` | dark (stays dark) | = theme | Sign-in hero panel: background, text, line, signal, accent |
 | `--success` `--warning` `--danger` `--info` `--violet` | 6.0–6.2:1 on white | 6.8–8.7:1 on card | Status text; each has a `-soft` background |
 | `--viz-1…4` | teal ramp, light → dark | teal ramp, dark → light | Complexity mix: Simple → Advanced |
 | `--viz-bar` / `--viz-bar-strong` / `--viz-track` | | | Chart bars (latest value strong), bar tracks |
 
 ### Contrast (WCAG 2.2 AA, from `node scripts/palette.mjs`)
-| Pair | Light | Dark |
-|---|---|---|
-| Text on card | 17.3 | 14.8 |
-| Secondary text on card | 7.8 | 9.5 |
-| Muted text on card / on app background | 5.3 / 4.6 | 6.3 / 6.9 |
-| Label on primary button | 5.2 | 8.2 |
-| Link on card | 6.6 | 9.8 |
-| Input border (3:1 needed) | 3.6 | 3.3 |
-| Status colours on card | 6.0–6.2 | 6.8–8.7 |
+| Pair | Daylight | Graphite | Black Gold | Midnight |
+|---|---|---|---|---|
+| Text on card | 17.3 | 14.8 | 16.0 | 15.3 |
+| Secondary text on card | 7.8 | 9.5 | 10.4 | 10.0 |
+| Muted text on card / on app background | 5.3 / 4.6 | 6.3 / 6.9 | 6.8 / 7.5 | 6.8 / 7.5 |
+| Label on primary / on accent (both gradient stops) | 5.2 / 5.8 | 8.2 / 8.8 | 12.6 / 9.1 | 7.5 / 7.9 |
+| Link on card | 6.6 | 9.8 | 12.2 | 9.0 |
+| Input border (3:1 needed) | 3.6 | 3.3 | 3.6 | 3.7 |
+| Status colours on card | 6.0–6.2 | 6.8–8.7 | 6.6–9.3 | 6.6–9.2 |
 
 ### Typography
-Semantic styles (`--type-*` font shorthands): display 28/600 (sign-in only) · page title 22/600 · section 15/600 · card title 13/600 · body 14/400 · prose 15/1.6 (descriptions, comments) · body-sm 13 · table 13 · label 12/500 · caption 12 · overline 11/500 uppercase · KPI 26/600 tabular. Weights 400/500/600 only.
+Semantic styles (`--type-*` font shorthands): display 28/600 (sign-in heading 32) · page title 24/600 · section 15/600 · card title 13/600 · body 14/400 · prose 15/1.6 (descriptions, comments) · body-sm 13 · table 13 · label 12/500 · caption 12 · overline 11/500 uppercase · KPI 28/600 tabular. Weights 400/500/600 only.
 
 ### Spacing, radius, sizing, motion
 - **Spacing:** 4, 8, 12, 16, 20, 24, 32, 40, 48, 64 (`--s-1` … `--s-16`).
-- **Radius:** 4 (checkbox, kbd, badges) · 6 (buttons, inputs, menu items) · 8 (segmented tracks, tiles) · 10 (cards, panels, popovers) · 12 (main sheet, dialogs).
+- **Radius:** 4 (checkbox, kbd, badges) · 6 (buttons, inputs, menu items) · 8 (segmented tracks, tiles, brand mark) · 12 (cards, panels, popovers) · 14 (main sheet, dialogs) · 20 (sign-in hero).
 - **Controls:** 28 (sm) · 32 (default) · 40 (lg, sign-in). Table rows 40 (36 compact), headers 34. Touch screens raise controls to ≥40px.
 - **Layout:** sidebar 236 (56 collapsed), header 52, content max 1440 (reading pages 960).
-- **Motion:** 120 / 160 / 220ms, ease-out. Only opacity and small translations. `prefers-reduced-motion` turns motion off.
+- **Motion:** 120 / 160 / 220ms, ease-out; a spring curve (`--ease-spring`) for check marks and toasts. Only opacity, small translations (linked cards and primary buttons lift 1–2px on hover) and the theme reveal. `prefers-reduced-motion` turns motion off.
 - **Z-index:** sticky 2 · nav 30 · scrim 40 · modal 41 · popover 50 · tooltip 55 · toast 60.
 
 ---
@@ -91,14 +117,15 @@ Status, priority and complexity each use a different shape, so none depends on c
 | Component | Spec |
 |---|---|
 | **App shell** (`shell/`) | Grouped sidebar (Work · Insights · Organization), task views and Shift Log as sub-items with open counts, profile menu (Account, Keyboard shortcuts, Sign out). Collapses to a 56px rail with tooltips; below 1024px it becomes an off-canvas drawer (inert while closed). |
-| **Top bar** | Sidebar toggle, linked breadcrumbs, search trigger (⌘K), notifications, theme. No page actions here. |
+| **Top bar** | Sidebar toggle, linked breadcrumbs, search trigger (⌘K), notifications, theme menu. No page actions here. |
+| **Theme menu / Appearance** (`ThemePicker.js`) | Top bar: a radio menu (`menuitemradio`) with a miniature of each theme, digits 1–4. Account › Appearance: radio cards with larger previews, ←/→ move and select. Sign-in: round swatches. Previews draw each theme in its own colours from `lib/themes.js`. |
 | **Command menu** | ⌘K dialog: searches tasks by ID/title within the viewer's scope, people (managers), and pages; Create task action. Combobox + listbox semantics, ↑/↓/Enter/Esc. |
 | **PageHeader** | Title, a quiet meta line joined with "·" (date range, counts), actions on the right. One primary action per page. |
 | **Panel** | Card section with header (title · meta · actions), body, optional footer (legends, notes). |
 | **Button** | Primary · Secondary · Ghost (tertiary) · Danger · Ghost-danger · Icon (`IconButton`: aria-label + tooltip, always). Sizes 28/32/40. Busy state shows a spinner and blocks repeat clicks. |
 | **Segmented** | Period pickers and view toggles (`radiogroup`), status tabs (`tablist`). Roving focus, ←/→/Home/End. Optional counts. |
 | **Field / FormAlert** | Visible label, control, hint or error (with icon), wired through `aria-describedby`/`aria-invalid`. Validation runs on submit, never before interaction; server errors appear in a `FormAlert`. |
-| **Metric / MetricGrid** | KPI card: label (+ info hint), value with unit, one line of context — a real previous-period `Delta` where the API has it. `alert` tone for values that need action. Cards can link to the filtered list. Grid wraps into balanced rows. |
+| **Metric / MetricGrid** | KPI card: label (+ info hint), value with unit, one line of context — a real previous-period `Delta` where the API has it. `alert` tone for values that need action (the corner light turns red). Cards can link to the filtered list; linked cards lift and show a gradient top edge on hover. Grid wraps into balanced rows. |
 | **Bars** | Mini column chart with a baseline; pass `max` to share one scale across rows. Latest value emphasised; values in tooltips and `aria-label`. |
 | **Distribution / CxLegend** | 100% stacked complexity bar with counts in tooltip and `aria-label`; legend with optional totals. |
 | **Meter** | Labelled progress bar (`role="progressbar"`) with a numeric readout. |

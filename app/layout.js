@@ -7,6 +7,8 @@ import "@/styles/components.css";
 import "@/styles/data.css";
 import "@/styles/screens.css";
 import "@/styles/rtl.css";
+import "@/styles/themes.css";
+import { THEME_IDS, THEME_KEY } from "@/lib/themes";
 
 const geist = localFont({ src: "../styles/fonts/Geist-Variable.woff2", variable: "--font-geist", weight: "100 900", display: "swap" });
 const geistMono = localFont({ src: "../styles/fonts/GeistMono-Variable.woff2", variable: "--font-geist-mono", weight: "100 900", display: "swap" });
@@ -34,7 +36,7 @@ export const viewport = {
 };
 
 // Applies the theme before first paint: a remembered manual choice, otherwise the OS preference.
-const themeScript = `try{var t=localStorage.getItem("so.theme");document.documentElement.dataset.theme=t==="light"||t==="dark"?t:matchMedia("(prefers-color-scheme: dark)").matches?"dark":"light"}catch(e){}`;
+const themeScript = `try{var t=localStorage.getItem(${JSON.stringify(THEME_KEY)});document.documentElement.dataset.theme=${JSON.stringify(THEME_IDS)}.indexOf(t)>-1?t:matchMedia("(prefers-color-scheme: dark)").matches?"dark":"light"}catch(e){}`;
 
 export default function RootLayout({ children }) {
   return (

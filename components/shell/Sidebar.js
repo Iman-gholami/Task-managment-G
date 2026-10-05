@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useApp } from "@/components/AppProvider";
 import Icon from "@/components/ui/Icon";
 import { ROLE_LABELS } from "@/lib/roles";
+import { initials } from "@/lib/format";
 
 const isOn = (path, prefix) => path === prefix || path.startsWith(prefix + "/");
 
@@ -72,80 +73,13 @@ export default function Sidebar({ groups, path, collapsed, inert, onProfile, onB
           aria-label={`Account menu for ${me.name}`}
           title={`${ROLE_LABELS[me.role]} · ${me.team}`}
           {...tip(me.name)}
-          style={{
-            display: "grid",
-            gridTemplateColumns: collapsed ? "1fr" : "22px minmax(0, 1fr) 16px",
-            alignItems: "center",
-            columnGap: collapsed ? 0 : 10,
-            minHeight: 46,
-            justifyItems: collapsed ? "center" : "stretch",
-          }}
         >
-          <span
-            aria-hidden="true"
-            style={{
-              width: 22,
-              height: 22,
-              display: "grid",
-              placeItems: "center",
-              borderRadius: 6,
-              background: "var(--hover)",
-              color: "var(--text-2)",
-            }}
-          >
-            <Icon name="user" size="sm" />
+          <span className="profile-avatar" aria-hidden="true">{initials(me.name).slice(0, 2)}</span>
+          <span className="profile-meta">
+            <b>{me.name}</b>
+            <small>{ROLE_LABELS[me.role]}</small>
           </span>
-
-          {!collapsed && (
-            <span
-              className="profile-meta"
-              style={{
-                display: "grid",
-                gap: 4,
-                minWidth: 0,
-                lineHeight: 1.1,
-                overflow: "hidden",
-              }}
-            >
-              <b
-                style={{
-                  display: "block",
-                  minWidth: 0,
-                  overflow: "hidden",
-                  textOverflow: "ellipsis",
-                  whiteSpace: "nowrap",
-                }}
-              >
-                {me.name}
-              </b>
-              <small
-                style={{
-                  display: "inline-flex",
-                  alignItems: "center",
-                  width: "fit-content",
-                  maxWidth: "100%",
-                  minHeight: 18,
-                  padding: "2px 7px",
-                  borderRadius: 999,
-                  background: "var(--primary-soft)",
-                  color: "var(--text-2)",
-                  fontSize: 11,
-                  lineHeight: 1,
-                  overflow: "hidden",
-                  textOverflow: "ellipsis",
-                  whiteSpace: "nowrap",
-                }}
-              >
-                {ROLE_LABELS[me.role]}
-              </small>
-            </span>
-          )}
-
-          {!collapsed && (
-            <span style={{ display: "grid", placeItems: "center", color: "var(--text-3)" }}>
-              <Icon name="sort" />
-            </span>
-          )}
+          <Icon name="sort" />
         </button>
       </div>
     </aside>

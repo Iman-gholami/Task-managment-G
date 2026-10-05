@@ -90,7 +90,7 @@ npm test
 | `app/api/` | REST API: auth, account, tasks (+ checklist, comments, attachments), shift log, performance, reports, members |
 | `lib/server/` | Database, auth/sessions, data access (server only) |
 | `lib/` | Roles and permissions, task workflow rules, formatting helpers, seed data |
-| `styles/` | Design tokens (dark and light themes) and styles by layer: base, shell, components, data, screens; bundled fonts |
+| `styles/` | Design tokens (four themes) and styles by layer: base, shell, components, data, screens, themes; bundled fonts |
 | `design/` | Design system and specs for all 23 screens |
 | `tests/` | Playwright end-to-end tests |
 
@@ -110,3 +110,6 @@ npm test
 | `/login` | Sign in |
 
 Shortcuts: `⌘K` / `Ctrl+K` searches tasks, people and pages, `C` creates a task, `?` lists all shortcuts, and `J`/`K`/`Enter`/`S`/`P` work in task tables.
+
+### Themes
+Four themes: **Daylight** (light, teal), **Graphite** (dark slate, teal), **Black Gold** (black and gold) and **Midnight** (navy, violet and azure). Switch from the palette button in the top bar, **Account › Appearance**, the swatches on the sign-in page, or `⌘K` → "theme". The choice is remembered per device; without one, the OS light/dark setting decides. Colours and contrast checks are in `scripts/palette.mjs` and `design/DESIGN_SYSTEM.md`.

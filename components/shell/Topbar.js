@@ -8,6 +8,8 @@ import useFetch from "@/components/useFetch";
 import Icon from "@/components/ui/Icon";
 import { IconButton } from "@/components/ui/layout";
 import { Notice } from "@/components/ui/states";
+import { themeMenuItems } from "@/components/ThemePicker";
+import { centerOf } from "@/components/theme";
 import { TODAY, addDays, isOpen } from "@/lib/format";
 import { inTeamScope, isManager } from "@/lib/roles";
 
@@ -115,6 +117,16 @@ export default function Topbar({ crumbs, onToggleNav, navLabel, navExpanded, onS
         ),
     });
 
+  const openThemes = (anchor) =>
+    openPopover(anchor, {
+      label: "Theme",
+      title: "Theme",
+      width: 288,
+      align: "end",
+      items: themeMenuItems(theme),
+      onPick: (id) => setTheme(id, centerOf(anchor)),
+    });
+
   return (
     <header className="header">
       <IconButton icon="side" label={navLabel} aria-controls="sidebar" aria-expanded={navExpanded} onClick={onToggleNav} side="bottom" />
@@ -141,7 +153,7 @@ export default function Topbar({ crumbs, onToggleNav, navLabel, navExpanded, onS
           <Icon name="bell" />
           {count > 0 && <span className="notif-dot" aria-hidden="true" />}
         </button>
-        <IconButton icon={theme === "dark" ? "sun" : "moon"} label={theme === "dark" ? "Switch to light theme" : "Switch to dark theme"} side="bottom" onClick={() => setTheme(theme === "dark" ? "light" : "dark")} />
+        <IconButton icon="palette" label="Theme" tooltip="Theme" aria-haspopup="menu" side="bottom" onClick={(e) => openThemes(e.currentTarget)} />
       </div>
     </header>
   );

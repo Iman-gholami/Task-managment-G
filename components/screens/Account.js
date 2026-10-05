@@ -5,10 +5,11 @@ import { api, useApp } from "@/components/AppProvider";
 import { Field, FormAlert } from "@/components/ui/Field";
 import { PageHeader, Panel } from "@/components/ui/layout";
 import { Avatar } from "@/components/ui/indicators";
+import { ThemeChooser } from "@/components/ThemePicker";
 import { ROLE_LABELS } from "@/lib/roles";
 
 export default function Account() {
-  const { me, toast } = useApp();
+  const { me, toast, theme, setTheme } = useApp();
   const [form, setForm] = useState({ current: "", next: "", confirm: "" });
   const [errors, setErrors] = useState({});
   const [serverError, setServerError] = useState("");
@@ -47,6 +48,11 @@ export default function Account() {
             <dt>Role</dt><dd>{ROLE_LABELS[me.role]}</dd>
             <dt>Primary team</dt><dd>{me.team}</dd>
           </dl>
+        </Panel>
+        <Panel title="Appearance" meta="Saved on this device · also in the top bar">
+          <div className="panel-body">
+            <ThemeChooser value={theme} onChange={setTheme} />
+          </div>
         </Panel>
         <Panel title="Change password" meta="Changing it signs you out on your other devices">
           <form onSubmit={submit} noValidate className="panel-body form-narrow">

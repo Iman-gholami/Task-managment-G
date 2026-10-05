@@ -66,7 +66,7 @@
 .timeline { display: grid; gap: var(--s-3); font-size: var(--fs-12); color: var(--text-3); }
 .timeline > li { position: relative; padding-left: var(--s-4); line-height: 1.45; }
 .timeline > li::before { content: ""; position: absolute; left: 0; top: 6px; width: 5px; height: 5px; border-radius: 50%; background: var(--border-strong); }
-.timeline > li:first-child::before { background: var(--primary); }
+.timeline > li:first-child::before { background: var(--grad-signal); box-shadow: 0 0 0 3px var(--primary-soft); }
 .timeline b { color: var(--text-2); font-weight: var(--fw-medium); }
 .timeline time { display: block; color: var(--text-3); }
 
@@ -74,8 +74,8 @@
 .board { display: grid; grid-template-columns: repeat(5, minmax(220px, 1fr)); gap: var(--s-3); overflow-x: auto; padding-bottom: var(--s-2); }
 .board-col { min-width: 0; padding: var(--s-2); border: 1px solid var(--border); border-radius: var(--r-lg); background: var(--surface-inset); }
 .board-col-head { display: flex; align-items: center; justify-content: space-between; height: 28px; margin: 0 4px var(--s-2); }
-.board-card { display: block; margin-bottom: var(--s-2); padding: 10px 12px; border: 1px solid var(--border); border-radius: var(--r-md); background: var(--surface-card); box-shadow: var(--shadow-xs); color: inherit; transition: border-color var(--t-fast); }
-.board-card:hover { border-color: color-mix(in oklab, var(--border) 45%, var(--border-strong)); }
+.board-card { display: block; margin-bottom: var(--s-2); padding: 10px 12px; border: 1px solid var(--border); border-radius: var(--r-md); background: var(--surface-card); box-shadow: var(--shadow-card), inset 0 1px 0 var(--edge); color: inherit; transition: border-color var(--t-fast), box-shadow var(--t-base), transform var(--t-base) var(--ease-out); }
+.board-card:hover { border-color: color-mix(in oklab, var(--primary) 34%, var(--border)); box-shadow: var(--shadow-md); transform: translateY(-1px); }
 .board-card .t { display: -webkit-box; margin: 4px 0 10px; overflow: hidden; -webkit-line-clamp: 2; -webkit-box-orient: vertical; color: var(--text); font-size: var(--fs-13); font-weight: var(--fw-medium); line-height: 1.4; }
 .board-card .meta { display: flex; align-items: center; gap: var(--s-3); font-size: var(--fs-12); }
 .board-card .meta .avatar { margin-left: auto; }
@@ -117,18 +117,63 @@
 .summary .remain { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; text-align: right; font-size: var(--fs-12); color: var(--warning); }
 .shift-page { padding-bottom: 0; }
 
-/* ---------- Login ---------- */
-.login { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); min-height: 100dvh; background: var(--surface); }
-.login-l { display: grid; place-items: center; padding: var(--s-10) var(--s-6); }
-.login-form { display: grid; gap: var(--s-4); width: 100%; max-width: 360px; }
-.login-form h1 { font: var(--type-display); letter-spacing: var(--tracking-title); color: var(--text); }
-.login-form .brand { margin-bottom: var(--s-6); padding: 0; }
-.login-r { position: relative; display: flex; flex-direction: column; justify-content: space-between; padding: var(--s-12); border-left: 1px solid var(--border); background: var(--bg); overflow: hidden; }
-.login-r .statement { max-width: 20ch; font: var(--fw-semibold) var(--fs-28)/1.25 var(--font-sans); letter-spacing: -0.02em; color: var(--text); }
-.login-r .statement em { font-style: normal; color: var(--primary); }
-.login-r ul { display: grid; gap: var(--s-3); margin-top: var(--s-8); max-width: 44ch; font-size: var(--fs-14); color: var(--text-2); }
+/* ---------- Login ----------
+   Left: brand, theme swatches, the form. Right: a hero panel with a slow radar sweep (decorative, aria-hidden).
+   The hero uses --hero-* tokens so it stays dark and luminous in every theme. */
+.login { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1.08fr); min-height: 100dvh; background: var(--ambient), var(--surface); }
+.login-l { display: grid; grid-template-rows: auto 1fr auto; gap: var(--s-6); min-width: 0; padding: var(--s-6) clamp(var(--s-5), 5vw, var(--s-16)); }
+.login-bar { display: flex; align-items: center; justify-content: space-between; gap: var(--s-4); }
+.login-bar .brand { margin: 0; }
+.login-form { align-self: center; justify-self: center; display: grid; gap: var(--s-4); width: 100%; max-width: 380px; animation: rise 420ms var(--ease-out) both; }
+.login-title { display: grid; gap: var(--s-2); margin-bottom: var(--s-2); }
+.login-title .eyebrow { color: var(--link); }
+.login-title h1 { font: var(--fw-semibold) var(--fs-32)/1.15 var(--font-sans); letter-spacing: -0.03em; color: var(--text); }
+.login-form .btn-lg { height: 44px; margin-top: var(--s-1); font-size: var(--fs-15); }
+.login-form .btn-lg svg.i { transition: transform var(--t-base) var(--ease-out); }
+.login-form .btn-lg:hover svg.i { transform: translateX(3px); }
+.login-foot { display: flex; align-items: center; gap: 6px; }
+
+.login-r {
+  position: relative; isolation: isolate; display: flex; flex-direction: column; justify-content: flex-end;
+  margin: var(--s-3); padding: var(--s-12); overflow: hidden;
+  border: 1px solid var(--hero-line); border-radius: var(--r-2xl); color: var(--hero-text);
+  background:
+    radial-gradient(620px 420px at 62% 30%, color-mix(in oklab, var(--hero-signal) 18%, transparent), transparent 70%),
+    radial-gradient(520px 380px at 0% 100%, color-mix(in oklab, var(--hero-accent) 14%, transparent), transparent 70%),
+    var(--hero-bg);
+  box-shadow: 0 30px 80px -40px rgb(0 0 0 / .6), inset 0 1px 0 rgb(255 255 255 / .05);
+}
+/* Fade the radar out behind the copy so the text keeps full contrast. */
+.login-r::after { content: ""; position: absolute; z-index: -1; inset: auto 0 0; height: 58%; background: linear-gradient(transparent, var(--hero-bg) 62%); }
+.login-grid { position: absolute; z-index: -2; inset: 0; background-image: radial-gradient(color-mix(in oklab, var(--hero-text) 16%, transparent) 1px, transparent 1.2px); background-size: 22px 22px; -webkit-mask-image: radial-gradient(ellipse 70% 60% at 60% 34%, #000 10%, transparent 75%); mask-image: radial-gradient(ellipse 70% 60% at 60% 34%, #000 10%, transparent 75%); }
+
+.radar { position: absolute; z-index: -2; top: 36%; left: 60%; width: min(520px, 78%); aspect-ratio: 1; translate: -50% -50%; border-radius: 50%; }
+.radar::before { content: ""; position: absolute; inset: 0; border-radius: 50%; background: linear-gradient(transparent calc(50% - .5px), color-mix(in oklab, var(--hero-signal) 20%, transparent) 0 calc(50% + .5px), transparent 0), linear-gradient(90deg, transparent calc(50% - .5px), color-mix(in oklab, var(--hero-signal) 20%, transparent) 0 calc(50% + .5px), transparent 0); }
+.radar-ring { position: absolute; inset: 0; border-radius: 50%; border: 1px solid color-mix(in oklab, var(--hero-signal) 24%, transparent); }
+.radar-ring.r2 { inset: 17%; border-color: color-mix(in oklab, var(--hero-signal) 30%, transparent); }
+.radar-ring.r3 { inset: 33%; border-style: dashed; border-color: color-mix(in oklab, var(--hero-signal) 34%, transparent); }
+.radar-sweep { position: absolute; inset: 0; border-radius: 50%; background: conic-gradient(from 0deg, transparent 0 290deg, color-mix(in oklab, var(--hero-signal) 42%, transparent) 360deg); animation: spin 7s linear infinite; }
+.radar-blip { position: absolute; width: 8px; height: 8px; border-radius: 50%; background: var(--hero-signal); box-shadow: 0 0 14px 2px var(--hero-signal); animation: blip 3.5s ease-in-out infinite; }
+.radar-blip.b1 { top: 22%; left: 66%; }
+.radar-blip.b2 { top: 60%; left: 22%; animation-delay: -1.2s; }
+.radar-blip.b3 { top: 72%; left: 70%; animation-delay: -2.4s; background: var(--hero-accent); box-shadow: 0 0 14px 2px var(--hero-accent); }
+@keyframes blip { 0%, 100% { opacity: .2; transform: scale(.7); } 50% { opacity: 1; transform: scale(1.15); } }
+.radar-core { position: absolute; inset: 41%; display: grid; place-items: center; border-radius: 28%; background: linear-gradient(135deg, var(--hero-signal), var(--hero-accent)); color: var(--hero-bg); box-shadow: 0 0 0 10px color-mix(in oklab, var(--hero-signal) 10%, transparent), 0 0 70px -4px var(--hero-signal), inset 0 1px 0 rgb(255 255 255 / .35); }
+.radar-core svg.i { width: 46%; height: 46%; stroke-width: 1.8; }
+
+.login-chip { position: absolute; z-index: 0; display: inline-flex; align-items: center; gap: 10px; padding: 6px 14px 6px 6px; border: 1px solid color-mix(in oklab, var(--hero-text) 12%, transparent); border-radius: var(--r-full); background: color-mix(in oklab, var(--hero-bg) 58%, transparent); -webkit-backdrop-filter: blur(10px); backdrop-filter: blur(10px); color: var(--hero-text); font: var(--fw-medium) var(--fs-13)/1 var(--font-sans); white-space: nowrap; box-shadow: 0 14px 34px -16px rgb(0 0 0 / .7); animation: float 7s ease-in-out infinite; }
+.login-chip > span { width: 28px; height: 28px; display: grid; place-items: center; border-radius: 50%; background: color-mix(in oklab, var(--hero-signal) 18%, transparent); color: var(--hero-signal); }
+.login-chip.c1 { top: 9%; left: 9%; }
+.login-chip.c2 { top: 30%; right: 6%; animation-delay: -2.4s; }
+.login-chip.c3 { top: 50%; left: 12%; animation-delay: -4.8s; }
+
+.login-copy { position: relative; display: grid; gap: var(--s-4); }
+.login-copy .eyebrow { color: var(--hero-signal); }
+.login-r .statement { max-width: 18ch; font: var(--fw-semibold) var(--fs-36)/1.15 var(--font-sans); letter-spacing: -0.03em; color: var(--hero-text); }
+.login-r .statement em { font-style: normal; background: linear-gradient(90deg, var(--hero-signal), var(--hero-accent)); -webkit-background-clip: text; background-clip: text; color: transparent; }
+.login-r ul { display: grid; gap: var(--s-3); max-width: 46ch; font-size: var(--fs-14); color: var(--hero-text-2); }
 .login-r li { display: flex; gap: var(--s-3); }
-.login-r li svg.i { margin-top: 2px; color: var(--primary); }
+.login-r li svg.i { margin-top: 2px; color: var(--hero-signal); }
 
 /* ---------- Standalone states (404, errors outside the shell) ---------- */
 .standalone { display: grid; place-items: center; min-height: 100dvh; padding: var(--s-6); background: var(--surface); }
