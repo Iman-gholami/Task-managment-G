@@ -16,7 +16,7 @@ import { EmptyState, ErrorState, Loading } from "@/components/ui/states";
 import { Avatar, Complexity, Quality, Who } from "@/components/ui/indicators";
 import { QUAL, fmtRange, plural } from "@/lib/format";
 import { periodQuery } from "@/lib/period";
-import { ROLE_LABELS, isManager } from "@/lib/roles";
+import { ROLE_LABELS, inReportScope, isManager } from "@/lib/roles";
 
 const dt = (s) => (s ? s.replace("T", " ").slice(0, 10) : "—");
 
@@ -62,7 +62,7 @@ export function EmployeePerformance({ userId }) {
           <>
             {manager && (
               <select className="input" style={{ width: 200 }} value={userId} onChange={(e) => router.push(`/performance/employees/${e.target.value}`)} aria-label="Employee">
-                {members.filter((m) => m.role !== "security_manager").map((m) => <option key={m.id} value={m.id}>{m.name}</option>)}
+                {members.filter((m) => m.role !== "security_manager" && inReportScope(me, m)).map((m) => <option key={m.id} value={m.id}>{m.name}</option>)}
               </select>
             )}
             <ExportLink report="employee" query={`user=${userId}&${p.query}`} />
@@ -157,6 +157,7 @@ export function EmployeePerformance({ userId }) {
 }
 
 export function PerformanceOverview() {
+  const { me } = useApp();
   const router = useRouter();
   const p = usePeriod();
   const { data, loading, error, reload } = useFetch(`/api/performance?${p.query}`);
@@ -171,7 +172,7 @@ export function PerformanceOverview() {
     <div className="page">
       <PageHeader
         title="Performance overview"
-        meta={[data ? fmtRange(data.period.from, data.period.to) : null, "All teams"]}
+        meta={[data ? fmtRange(data.period.from, data.period.to) : null, me.role === "soc_manager" ? "SOC analysts" : "All teams"]}
         actions={<ExportLink report="team" query={p.query} />}
       />
       <div className="page-toolbar"><PeriodSelector value={p.period} onChange={p.setPeriod} custom range={p.range} onRange={p.setRange} /></div>

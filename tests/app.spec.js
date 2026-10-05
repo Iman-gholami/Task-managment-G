@@ -27,6 +27,15 @@ async function createTask(page, title, assignee) {
   return (await res.json()).task.id;
 }
 
+/** Current Jalali month key ("1405-07") in Tehran. */
+function jalaliMonth(offset = 0) {
+  const parts = Object.fromEntries(new Intl.DateTimeFormat("en-u-ca-persian", { timeZone: "Asia/Tehran", year: "numeric", month: "numeric" })
+    .formatToParts(new Date()).map((p) => [p.type, p.value]));
+  const m0 = Number(parts.month) - 1 + offset;
+  const year = Number(parts.year) + Math.floor(m0 / 12);
+  return `${year}-${String(((m0 % 12) + 12) % 12 + 1).padStart(2, "0")}`;
+}
+
 function tehranDate() {
   const parts = new Intl.DateTimeFormat("en-CA", {
     timeZone: "Asia/Tehran", year: "numeric", month: "2-digit", day: "2-digit",
@@ -312,6 +321,16 @@ test.describe("performance", () => {
     await expect(page.locator(".metric", { hasText: "Completed tasks" })).toContainText("0");
     await expect(page.getByText("Tune Splunk correlation rule")).toHaveCount(0);
 
+    // A SOC Manager's reports cover SOC · L1/L2/L3 analysts only.
+    expect((await page.request.get(`/api/performance?user=${ids.mina}`)).status()).toBe(403);
+    expect((await page.request.get(`/api/reports/employee?user=${ids.mina}`)).status()).toBe(403);
+    const overview = await (await page.request.get("/api/performance?period=this")).json();
+    expect(overview.rows.map((r) => r.id).sort()).toEqual([ids.arash, ids.sara].sort());
+    expect(overview.teams.map((t) => t.team)).toEqual(["SOC"]);
+    await page.goto(`/performance/employees/${ids.mina}`);
+    await expect(page).toHaveURL(/\/performance\/overview$/);
+
+    await signIn(page, "admin");
     await page.goto("/team");
     await page.locator("tr", { hasText: "Mina Sadeghi" }).locator("td.title").click();
     await expect(page.locator("h1")).toHaveText("Mina Sadeghi");
@@ -341,6 +360,111 @@ test.describe("reports", () => {
     await signIn(page, "soc");
     await page.goto("/reports/tickets");
     await expect(page.locator("tbody")).toContainText("INC-2026-4480");
+  });
+});
+
+test.describe("workforce performance report", () => {
+  const report = async (page, query = "") => {
+    const res = await page.request.get(`/api/reports/workforce${query}`);
+    expect(res.status()).toBe(200);
+    return res.json();
+  };
+
+  test("the SOC manager sees SOC analysts, the security manager everyone, an analyst only themselves", async ({ page }) => {
+    await signIn(page, "soc");
+    let data = await report(page);
+    expect(data.scope).toBe("soc");
+    expect(data.period.key).toBe(jalaliMonth());
+    expect(data.people.map((p) => p.id).sort()).toEqual([ids.arash, ids.sara].sort());
+    const sara = data.people.find((p) => p.id === ids.sara);
+    expect(sara.completed).toBe(1);
+    expect(sara.shift).toMatchObject({ scheduled: 1, logged: 1, missing: 0, iocs: 12, tickets: 1, issues: 1 });
+    expect(sara.score).toBeGreaterThan(0);
+    expect(data.canEvaluate.sort()).toEqual([ids.arash, ids.sara].sort());
+    // The team filter is for Security Managers only.
+    expect((await report(page, "?team=Design%20%26%20Automation")).people).toHaveLength(2);
+
+    await signIn(page, "admin");
+    data = await report(page);
+    expect(data.scope).toBe("all");
+    expect(data.people.map((p) => p.id).sort()).toEqual([ids.arash, ids.mina, ids.sara, ids.soc].sort());
+    const soc = data.people.find((p) => p.id === ids.soc);
+    expect(soc.profile).toBe("manager");
+    expect(soc.mgr.reviewed).toBeGreaterThan(0);
+    expect(data.people.find((p) => p.id === ids.mina).shift).toBeNull();
+    expect((await report(page, "?team=Design%20%26%20Automation")).people.map((p) => p.id)).toEqual([ids.mina]);
+
+    await signIn(page, "sara");
+    data = await report(page);
+    expect(data.scope).toBe("self");
+    expect(data.people.map((p) => p.id)).toEqual([ids.sara]);
+    expect(data.canEvaluate).toEqual([]);
+  });
+
+  test("a manager evaluates an analyst for the month; the analyst sees it", async ({ page }) => {
+    await signIn(page, "soc");
+    const put = (data) => page.request.put("/api/evaluations", { data });
+    expect((await put({ userId: ids.mina, month: jalaliMonth(), score: 4 })).status()).toBe(403);
+    expect((await put({ userId: ids.sara, month: jalaliMonth(1), score: 4 })).status()).toBe(400);
+    expect((await put({ userId: ids.sara, month: jalaliMonth(), score: 7 })).status()).toBe(400);
+
+    await page.goto("/reports/workforce");
+    await expect(page.locator("h1")).toHaveText("گزارش عملکرد نیروها");
+    await page.getByRole("button", { name: `ارزیابی ${U.sara.name}` }).click();
+    const dialog = page.getByRole("dialog", { name: "ارزیابی ماهانه" });
+    await dialog.getByRole("button", { name: "ذخیره" }).click();
+    await expect(dialog.getByText("یک نمره انتخاب کنید.")).toBeVisible();
+    await dialog.getByRole("radio", { name: "۴ — خوب" }).click();
+    await dialog.getByLabel("نظر مدیر").fill("در شیفت عصر دقیق و منظم بود.");
+    await dialog.getByRole("button", { name: "ذخیره" }).click();
+    await expect(dialog).toBeHidden();
+    await expect(page.locator(`tr[data-person="${ids.sara}"]`)).toContainText("۴ از ۵");
+
+    await signIn(page, "admin");
+    expect((await put({ userId: ids.soc, month: jalaliMonth(), score: 5, comment: "بررسی تسک‌ها به‌موقع" })).status()).toBe(200);
+
+    await signIn(page, "sara");
+    const [mine] = (await report(page)).people;
+    expect(mine.evalScore).toBe(4);
+    expect(mine.evaluations).toMatchObject([{ by: ids.soc, score: 4, comment: "در شیفت عصر دقیق و منظم بود." }]);
+    expect((await put({ userId: ids.arash, month: jalaliMonth(), score: 3 })).status()).toBe(403);
+  });
+
+  test("exports a Persian, right-to-left Excel workbook", async ({ page }) => {
+    const ExcelJS = require("exceljs");
+    const load = async () => {
+      const res = await page.request.get("/api/reports/workforce?format=xlsx");
+      expect(res.status()).toBe(200);
+      expect(res.headers()["content-type"]).toContain("spreadsheetml");
+      expect(res.headers()["content-disposition"]).toContain("filename*=UTF-8''");
+      const wb = new ExcelJS.Workbook();
+      await wb.xlsx.load(await res.body());
+      return wb;
+    };
+    const rowsOf = (ws) => {
+      const out = [];
+      ws.eachRow((r, i) => i > 1 && out.push(r));
+      return out;
+    };
+
+    await signIn(page, "admin");
+    let wb = await load();
+    expect(wb.worksheets.map((w) => w.name)).toEqual(["خلاصه عملکرد", "خلاصه تیم‌ها", "مدیران", "شیفت‌ها", "ریز تسک‌ها", "ریز شیفت‌ها", "ارزیابی مدیران", "راهنمای نمره", "مشخصات گزارش"]);
+    const summary = wb.getWorksheet("خلاصه عملکرد");
+    expect(summary.views[0].rightToLeft).toBe(true);
+    expect(summary.getRow(1).getCell(2).value).toBe("نام");
+    expect(summary.getRow(1).getCell(6).value).toBe("نمره کلی (از ۱۰۰)");
+    const sara = rowsOf(summary).find((r) => r.getCell(2).value === U.sara.name);
+    expect(typeof sara.getCell(6).value).toBe("number");
+    expect(sara.getCell(27).value).toContain("در شیفت عصر دقیق و منظم بود.");
+    expect(rowsOf(summary).map((r) => r.getCell(2).value).sort()).toEqual([U.arash.name, U.mina.name, U.sara.name, U.soc.name].sort());
+    expect(rowsOf(wb.getWorksheet("مدیران")).map((r) => r.getCell(1).value)).toEqual([U.soc.name]);
+    expect(rowsOf(wb.getWorksheet("ریز تسک‌ها")).map((r) => r.getCell(1).value)).toContain(ids.t1);
+
+    await signIn(page, "soc");
+    wb = await load();
+    expect(wb.worksheets.map((w) => w.name)).not.toContain("مدیران");
+    expect(rowsOf(wb.getWorksheet("خلاصه عملکرد")).map((r) => r.getCell(2).value).sort()).toEqual([U.arash.name, U.sara.name].sort());
   });
 });
 
@@ -396,9 +520,9 @@ test.describe("members and accounts", () => {
 
 test.describe("every screen renders without console errors", () => {
   const screens = {
-    sara: ["/dashboard", "/tasks/my", "/tasks/team", "/shift", "/shift/history", "/team", "/reports/employee", "/reports/tickets", "/account"],
-    soc: ["/dashboard", "/tasks/assigned", "/tasks/team", "/tasks/my", "/performance/overview", "/reports/team", "/reports/task", "/reports/shift", "/admin", "/team"],
-    admin: ["/dashboard", "/tasks/team", "/performance/overview", "/team"],
+    sara: ["/dashboard", "/tasks/my", "/tasks/team", "/shift", "/shift/history", "/team", "/reports/workforce", "/reports/employee", "/reports/tickets", "/account"],
+    soc: ["/dashboard", "/tasks/assigned", "/tasks/team", "/tasks/my", "/performance/overview", "/reports/workforce", "/reports/team", "/reports/task", "/reports/shift", "/admin", "/team"],
+    admin: ["/dashboard", "/tasks/team", "/performance/overview", "/reports/workforce", "/team"],
   };
   for (const [who, paths] of Object.entries(screens)) {
     test(who, async ({ page }) => {

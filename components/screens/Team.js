@@ -13,13 +13,13 @@ import { Meter } from "@/components/ui/charts";
 import { EmptyState } from "@/components/ui/states";
 import { Who } from "@/components/ui/indicators";
 import { plural } from "@/lib/format";
-import { ROLE_LABELS, assignableFor, canManageMember, isManager } from "@/lib/roles";
+import { ROLE_LABELS, assignableFor, canManageMember, inReportScope, isManager } from "@/lib/roles";
 
 /** People with role, team and live workload (open tasks; 6 = full). Rows open the person's performance. */
 export function PeopleTable({ list, onRemove, onEdit }) {
   const router = useRouter();
   const { me } = useApp();
-  const canView = (p) => p.id === me.id || isManager(me);
+  const canView = (p) => inReportScope(me, p);
   const hasActions = list.some((p) => canView(p) || (onEdit && canManageMember(me, p)));
   return (
     <div className="table-wrap">
