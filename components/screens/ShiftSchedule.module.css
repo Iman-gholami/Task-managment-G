@@ -336,11 +336,18 @@
 .shiftTabs [data-shift="night"],
 .shiftPicker [data-shift="night"] { --tone: var(--shift-night); }
 .shiftBand[data-selected-person="true"] {
-  border-color: color-mix(in srgb, var(--tone) 44%, transparent);
-  background: color-mix(in srgb, var(--tone) 11%, var(--surface));
+  border-color: var(--tone);
+  background: var(--surface-2);
+  box-shadow: inset 0 0 0 1px var(--tone);
+}
+.shiftBand[data-selected-person="true"] span,
+.shiftBand[data-selected-person="true"] strong {
+  color: var(--tone);
 }
 .shiftBand[data-selected-person="true"] i {
-  box-shadow: 0 0 0 3px color-mix(in srgb, var(--tone) 14%, transparent);
+  box-shadow:
+    0 0 0 2px var(--surface),
+    0 0 0 4px var(--tone);
 }
 .emptyDay {
   display: block;
