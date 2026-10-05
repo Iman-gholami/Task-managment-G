@@ -1,7 +1,8 @@
 import { requireUser } from "@/lib/server/auth";
+import { listVisibleTasks } from "@/lib/server/access";
 import { db } from "@/lib/server/db";
-import { canAccessTask, canAssignTask } from "@/lib/roles";
-import { addEvent, createTask, getUser, listTasks } from "@/lib/server/repo";
+import { canAssignTask } from "@/lib/roles";
+import { addEvent, createTask, getUser } from "@/lib/server/repo";
 
 const PRIOS = ["low", "normal", "high", "critical"];
 const DATE = /^\d{4}-\d{2}-\d{2}$/;
@@ -9,7 +10,7 @@ const DATE = /^\d{4}-\d{2}-\d{2}$/;
 export async function GET() {
   const [user, denied] = await requireUser();
   if (denied) return denied;
-  return Response.json({ tasks: listTasks().filter((task) => canAccessTask(user, task)) });
+  return Response.json({ tasks: listVisibleTasks(user) });
 }
 
 export async function POST(request) {
