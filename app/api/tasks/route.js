@@ -1,13 +1,15 @@
-import { isManager, requireUser } from "@/lib/server/auth";
+import { requireUser } from "@/lib/server/auth";
 import { db } from "@/lib/server/db";
+import { canAccessTask, canAssignTask } from "@/lib/roles";
 import { addEvent, createTask, getUser, listTasks } from "@/lib/server/repo";
 
 const PRIOS = ["low", "normal", "high", "critical"];
 const DATE = /^\d{4}-\d{2}-\d{2}$/;
 
 export async function GET() {
-  const [, denied] = await requireUser();
-  return denied ?? Response.json({ tasks: listTasks() });
+  const [user, denied] = await requireUser();
+  if (denied) return denied;
+  return Response.json({ tasks: listTasks().filter((task) => canAccessTask(user, task)) });
 }
 
 export async function POST(request) {
@@ -18,7 +20,7 @@ export async function POST(request) {
   if (!title) return Response.json({ error: "Title is required." }, { status: 400 });
   const assignee = getUser(body.a);
   if (!assignee || !assignee.active) return Response.json({ error: "Assignee not found." }, { status: 400 });
-  if (!isManager(user) && assignee.id !== user.id) return Response.json({ error: "You can only create tasks for yourself." }, { status: 403 });
+  if (!canAssignTask(user, assignee)) return Response.json({ error: "You can't assign a task to this member." }, { status: 403 });
 
   const start = DATE.test(body.start ?? "") ? body.start : null;
   const task = createTask({

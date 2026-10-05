@@ -1,11 +1,13 @@
 import { requireUser } from "@/lib/server/auth";
-import { err } from "@/lib/server/access";
+import { err, viewableTask } from "@/lib/server/access";
 import { deleteComment, editComment, getComment, getTaskDetails } from "@/lib/server/repo";
 
 async function own(params) {
   const [user, denied] = await requireUser();
   if (denied) return [null, denied];
   const { id, commentId } = await params;
+  const [, no] = viewableTask(user, id);
+  if (no) return [null, no];
   const c = getComment(Number(commentId));
   if (!c || c.task_id !== id) return [null, err(404, "Comment not found.")];
   if (c.user_id !== user.id) return [null, err(403, "You can only change your own comments.")];

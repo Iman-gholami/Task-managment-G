@@ -1,12 +1,14 @@
 import { requireUser } from "@/lib/server/auth";
-import { editableTask, err } from "@/lib/server/access";
+import { editableTask, err, viewableTask } from "@/lib/server/access";
 import { deleteAttachment, getAttachment, getTaskDetails } from "@/lib/server/repo";
 import { readUpload, removeUpload } from "@/lib/server/uploads";
 
 export async function GET(request, { params }) {
-  const [, denied] = await requireUser();
+  const [user, denied] = await requireUser();
   if (denied) return denied;
   const { id, attachmentId } = await params;
+  const [, no] = viewableTask(user, id);
+  if (no) return no;
   const a = getAttachment(Number(attachmentId));
   if (!a || a.task_id !== id) return err(404, "File not found.");
   let data;

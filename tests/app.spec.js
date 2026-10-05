@@ -163,6 +163,25 @@ test.describe("manager assigns and follows up tasks", () => {
     await page.getByRole("button", { name: "Notifications" }).click();
     await expect(page.locator(".pop")).toContainText("New task assigned");
   });
+
+  test("analysts cannot enumerate or access another analyst's tasks", async ({ page }) => {
+    await signIn(page, "arash");
+    const list = await page.request.get("/api/tasks");
+    expect(list.status()).toBe(200);
+    const tasks = (await list.json()).tasks;
+    expect(tasks.every((task) => task.a === ids.arash)).toBeTruthy();
+    expect(tasks.map((task) => task.id)).not.toContain(ids.t1);
+    expect(tasks.map((task) => task.id)).not.toContain(ids.t3);
+    expect((await page.request.get(`/api/tasks/${ids.t1}`)).status()).toBe(404);
+    expect((await page.request.post(`/api/tasks/${ids.t1}/comments`, { data: { body: "should not be allowed" } })).status()).toBe(404);
+    expect((await page.request.post(`/api/tasks/${ids.t1}/checklist`, { data: { label: "should not be allowed" } })).status()).toBe(404);
+  });
+
+  test("SOC managers cannot assign tasks outside their SOC scope", async ({ page }) => {
+    await signIn(page, "soc");
+    const res = await page.request.post("/api/tasks", { data: { title: "Out of scope", a: ids.mina, prio: "normal", cx: 2 } });
+    expect(res.status()).toBe(403);
+  });
 });
 
 test.describe("task workflow", () => {
@@ -227,6 +246,17 @@ test.describe("task workflow", () => {
     await expect(page.getByText("Started on this")).toBeVisible();
     const [download] = await Promise.all([page.waitForEvent("download"), page.getByRole("link", { name: /inventory\.txt/ }).click()]);
     expect(download.suggestedFilename()).toBe("inventory.txt");
+  });
+
+  test("attachments cannot be downloaded across task ownership", async ({ page }) => {
+    await signIn(page, "sara");
+    const own = await page.request.get(`/api/tasks/${ids.t3}`);
+    expect(own.status()).toBe(200);
+    const attachmentId = (await own.json()).details.attachments[0].id;
+
+    await signIn(page, "arash");
+    expect((await page.request.get(`/api/tasks/${ids.t3}/attachments/${attachmentId}`)).status()).toBe(404);
+    expect((await page.request.delete(`/api/tasks/${ids.t3}/attachments/${attachmentId}`)).status()).toBe(404);
   });
 });
 

@@ -6,7 +6,7 @@ import Icon from "@/components/ui/Icon";
 import Dialog from "@/components/ui/Dialog";
 import { Field } from "@/components/ui/Field";
 import { CX, PRIO, TODAY } from "@/lib/format";
-import { isManager } from "@/lib/roles";
+import { canAssignTask, isManager } from "@/lib/roles";
 
 const blank = { title: "", description: "", prio: "normal", cx: 2, start: TODAY, due: "" };
 
@@ -56,9 +56,7 @@ function CreateTaskDialog({ onClose }) {
     }
   };
 
-  const people = users
-    .filter((u) => u.active !== false && u.id !== me.id)
-    .concat(users.filter((u) => u.id === me.id));
+  const people = users.filter((u) => u.active !== false && canAssignTask(me, u));
   const dirty = form.title.trim() || form.description.trim() || form.due || form.start !== TODAY;
 
   return (

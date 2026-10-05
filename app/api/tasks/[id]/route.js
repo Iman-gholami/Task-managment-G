@@ -1,6 +1,6 @@
 import { isManager, requireUser } from "@/lib/server/auth";
-import { err } from "@/lib/server/access";
-import { addEvent, getTask, getTaskDetails, getUser, updateTask } from "@/lib/server/repo";
+import { err, viewableTask } from "@/lib/server/access";
+import { addEvent, getTaskDetails, getUser, updateTask } from "@/lib/server/repo";
 import { actionLabel, allowedTransitions, canTransition } from "@/lib/workflow";
 import { PRIO, QUAL, STATUS } from "@/lib/format";
 
@@ -8,8 +8,8 @@ export async function GET(request, { params }) {
   const [user, denied] = await requireUser();
   if (denied) return denied;
   const { id } = await params;
-  const task = getTask(id);
-  if (!task) return err(404, "Task not found.");
+  const [task, no] = viewableTask(user, id);
+  if (no) return no;
   return Response.json({ task, details: getTaskDetails(id), transitions: allowedTransitions(user, task) });
 }
 
@@ -17,10 +17,8 @@ export async function PATCH(request, { params }) {
   const [user, denied] = await requireUser();
   if (denied) return denied;
   const { id } = await params;
-  const task = getTask(id);
-  if (!task) return err(404, "Task not found.");
-  const mine = task.a === user.id;
-  if (!mine && !isManager(user)) return err(403, "You can only edit your own tasks.");
+  const [task, no] = viewableTask(user, id);
+  if (no) return no;
 
   const body = await request.json().catch(() => ({}));
   const patch = {};
