@@ -62,6 +62,17 @@ input[type="date"].input { font-variant-numeric: tabular-nums; }
 .form-alert { display: flex; align-items: flex-start; gap: 8px; padding: 10px 12px; border-radius: var(--r-sm); background: var(--danger-soft); color: var(--danger); font-size: var(--fs-13); }
 .form-alert svg.i { margin-top: 1px; }
 
+/* Input with a leading icon and an optional trailing action (show password). */
+.input-wrap { position: relative; display: flex; align-items: center; }
+.input-wrap > svg.i { position: absolute; left: 12px; color: var(--text-3); pointer-events: none; transition: color var(--t-fast); }
+.input-wrap:focus-within > svg.i { color: var(--primary); }
+.input-wrap .input { padding-left: 38px; }
+.input-wrap .input:has(+ .input-action) { padding-right: 44px; }
+.input-action { position: absolute; right: 4px; display: grid; place-items: center; width: 34px; height: calc(100% - 8px); border: 0; border-radius: var(--r-sm); background: transparent; color: var(--text-3); cursor: pointer; transition: background-color var(--t-fast), color var(--t-fast); }
+.input-action:hover { background: var(--hover); color: var(--text); }
+.input-action[aria-pressed="true"] { color: var(--primary); }
+.caps-hint { display: inline-flex; align-items: center; gap: 6px; color: var(--warning); animation: pop var(--t-base) var(--ease-out); }
+
 .search { position: relative; width: 260px; max-width: 100%; }
 .search svg.i { position: absolute; left: 9px; top: 50%; margin-top: -8px; color: var(--text-3); pointer-events: none; }
 .search .input { padding-left: 32px; }

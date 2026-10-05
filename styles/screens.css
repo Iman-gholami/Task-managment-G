@@ -121,7 +121,10 @@
    Left: brand, theme swatches, the form. Right: a hero panel with a slow radar sweep (decorative, aria-hidden).
    The hero uses --hero-* tokens so it stays dark and luminous in every theme. */
 .login { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1.08fr); min-height: 100dvh; background: var(--ambient), var(--surface); }
-.login-l { display: grid; grid-template-rows: auto 1fr auto; gap: var(--s-6); min-width: 0; padding: var(--s-6) clamp(var(--s-5), 5vw, var(--s-16)); }
+.login-l { position: relative; isolation: isolate; display: grid; grid-template-rows: auto 1fr auto; gap: var(--s-6); min-width: 0; padding: var(--s-6) clamp(var(--s-5), 5vw, var(--s-16)); }
+/* A soft pool of light and a faint dot grid behind the form, fading out toward the edges. */
+.login-l::before { content: ""; position: absolute; z-index: -1; inset: 0; background: radial-gradient(440px 340px at 50% 50%, var(--ambient-1), transparent 72%); pointer-events: none; }
+.login-l::after { content: ""; position: absolute; z-index: -1; inset: 0; background-image: radial-gradient(color-mix(in oklab, var(--text) 9%, transparent) 1px, transparent 1.2px); background-size: 22px 22px; -webkit-mask-image: radial-gradient(ellipse 46% 40% at 50% 50%, #000 0%, transparent 100%); mask-image: radial-gradient(ellipse 46% 40% at 50% 50%, #000 0%, transparent 100%); pointer-events: none; }
 .login-bar { display: flex; align-items: center; justify-content: space-between; gap: var(--s-4); }
 .login-bar .brand { margin: 0; }
 .login-form { align-self: center; justify-self: center; display: grid; gap: var(--s-4); width: 100%; max-width: 380px; animation: rise 420ms var(--ease-out) both; }

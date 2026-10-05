@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useState } from "react";
 import { useApp } from "@/components/AppProvider";
 import useFetch from "@/components/useFetch";
+import useGreeting from "@/components/useGreeting";
 import PeriodSelector from "@/components/PeriodSelector";
 import Icon from "@/components/ui/Icon";
 import { PageHeader, Panel } from "@/components/ui/layout";
@@ -18,7 +19,8 @@ const total = (teams, key) => teams.reduce((s, t) => s + t[key], 0);
 
 /** Department-wide view for the Security Manager: output, risk, what needs a decision, who is loaded. */
 export default function SecurityDashboard() {
-  const { members } = useApp();
+  const { members, me } = useApp();
+  const greeting = useGreeting(me.name);
   const [period, setPeriod] = useState("this");
   const query = periodQuery(period);
   const { data, loading, error, reload } = useFetch(`/api/performance?${query}`);
@@ -38,6 +40,7 @@ export default function SecurityDashboard() {
   return (
     <div className="page">
       <PageHeader
+        eyebrow={greeting}
         title="Security Department"
         meta={[data ? fmtRange(data.period.from, data.period.to) : null, data ? plural(teams.length, "team") : null, plural(members.length, "person", "people")]}
         actions={
@@ -52,14 +55,14 @@ export default function SecurityDashboard() {
 
       <MetricGrid label="Department summary">
         <Metric
-          label="Work completed"
+          label="Work completed" icon="checkCircle"
           hint="Tasks approved in this period, by completion date."
           value={total(teams, "completed")}
           loading={busy}
           foot={prevTeams ? <Delta now={total(teams, "completed")} before={total(prevTeams, "completed")} label={prev.label} /> : "Approved tasks"}
         />
         <Metric
-          label="Task hours logged"
+          label="Task hours logged" icon="clock"
           hint="Actual hours recorded on tasks completed in this period."
           value={Math.round(total(teams, "hours"))}
           unit="h"
@@ -67,21 +70,21 @@ export default function SecurityDashboard() {
           foot={prevTeams ? <Delta now={Math.round(total(teams, "hours"))} before={Math.round(total(prevTeams, "hours"))} label={prev.label} goodWhen={null} /> : "On completed tasks"}
         />
         <Metric
-          label="Active tasks"
+          label="Active tasks" icon="tasks"
           value={total(teams, "active")}
           loading={busy}
           href="/tasks/team"
           foot={blocked ? <span className="overdue">{blocked} blocked</span> : "None blocked"}
         />
         <Metric
-          label="Overdue"
+          label="Overdue" icon="flag"
           value={overdue}
           tone={overdue ? "alert" : undefined}
           loading={busy}
           foot={overdue ? `Across ${plural(overdueTeams, "team")}` : "Nothing past its deadline"}
         />
         <Metric
-          label="Awaiting review"
+          label="Awaiting review" icon="review"
           value={reviews}
           href="/tasks/team?tab=review"
           foot={reviews ? "Waiting for approval" : "No reviews waiting"}

@@ -76,13 +76,13 @@ export function EmployeePerformance({ userId }) {
       ) : data && (
         <>
           <MetricGrid label="Performance summary">
-            <Metric label="Completed tasks" value={data.completedTasks} foot="Approved in this period" />
-            <Metric label="Task hours" value={data.taskHours} unit="h" foot="On completed work" />
+            <Metric label="Completed tasks" icon="checkCircle" value={data.completedTasks} foot="Approved in this period" />
+            <Metric label="Task hours" icon="clock" value={data.taskHours} unit="h" foot="On completed work" />
             {r && (
               <>
-                <Metric label="Shift logs completed" value={r.completed} unit={`/ ${r.logs}`} foot={r.logs - r.completed ? `${r.logs - r.completed} not completed` : "Every log completed"} />
-                <Metric label="MISP IOCs" value={r.iocs} foot={r.logs ? `${(r.iocs / r.logs).toFixed(1)} per shift on average` : "No shifts logged"} />
-                <Metric label="Tickets created" value={r.tickets} onClick={showTickets} testId="tickets-metric" foot="Show the list" />
+                <Metric label="Shift logs completed" icon="shift" value={r.completed} unit={`/ ${r.logs}`} foot={r.logs - r.completed ? `${r.logs - r.completed} not completed` : "Every log completed"} />
+                <Metric label="MISP IOCs" icon="shield" value={r.iocs} foot={r.logs ? `${(r.iocs / r.logs).toFixed(1)} per shift on average` : "No shifts logged"} />
+                <Metric label="Tickets created" icon="inbox" value={r.tickets} onClick={showTickets} testId="tickets-metric" foot="Show the list" />
               </>
             )}
           </MetricGrid>
@@ -178,11 +178,11 @@ export function PerformanceOverview() {
       {error ? <div className="panel"><ErrorState error={error} title="Couldn't load performance" onRetry={reload} /></div> : (
         <>
           <MetricGrid label="Department totals">
-            <Metric label="Tasks completed" value={total((r) => r.completedTasks)} loading={busy} foot="Approved in this period" />
-            <Metric label="Task hours" value={Math.round(total((r) => r.taskHours))} unit="h" loading={busy} foot="On completed work" />
-            <Metric label="Shift logs" value={total((r) => r.routine?.logs)} loading={busy} foot="Started by SOC analysts" />
-            <Metric label="MISP IOCs" value={total((r) => r.routine?.iocs)} loading={busy} foot="Added in shift logs" />
-            <Metric label="Tickets" value={total((r) => r.routine?.tickets)} loading={busy} foot="Registered in shift logs" />
+            <Metric label="Tasks completed" icon="checkCircle" value={total((r) => r.completedTasks)} loading={busy} foot="Approved in this period" />
+            <Metric label="Task hours" icon="clock" value={Math.round(total((r) => r.taskHours))} unit="h" loading={busy} foot="On completed work" />
+            <Metric label="Shift logs" icon="shift" value={total((r) => r.routine?.logs)} loading={busy} foot="Started by SOC analysts" />
+            <Metric label="MISP IOCs" icon="shield" value={total((r) => r.routine?.iocs)} loading={busy} foot="Added in shift logs" />
+            <Metric label="Tickets" icon="inbox" value={total((r) => r.routine?.tickets)} loading={busy} foot="Registered in shift logs" />
           </MetricGrid>
 
           <ManagerPerformanceCharts data={data} loading={busy} />

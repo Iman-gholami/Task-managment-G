@@ -5,15 +5,17 @@ import Icon from "@/components/ui/Icon";
 
 /**
  * Page header: Level 1 identity (title), quiet context line (`meta`: string or list, joined with "·"),
- * and the page's actions on the right. `leading` sits before the title (avatar on profile pages).
+ * and the page's actions on the right. `leading` sits before the title (avatar on profile pages);
+ * `eyebrow` is a short line above the title (the greeting on dashboards).
  */
-export function PageHeader({ title, meta, actions, leading }) {
+export function PageHeader({ title, meta, actions, leading, eyebrow }) {
   const parts = (Array.isArray(meta) ? meta : [meta]).filter((m) => m !== null && m !== undefined && m !== false && m !== "");
   return (
     <header className="page-head">
       <div className="page-head-main">
         {leading}
         <div>
+          {eyebrow !== undefined && <span className="page-eyebrow">{eyebrow}</span>}
           <h1>{title}</h1>
           {parts.length > 0 && <p className="page-meta">{parts.map((m, i) => <span key={i}>{m}</span>)}</p>}
         </div>

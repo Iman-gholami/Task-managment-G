@@ -82,6 +82,8 @@
 .page-head-main { flex: 1 1 280px; min-width: 0; display: flex; align-items: center; gap: var(--s-4); }
 .page-head-main > div { min-width: 0; }
 .page-head h1 { font: var(--type-page-title); letter-spacing: -0.024em; color: var(--text); overflow-wrap: anywhere; }
+.page-eyebrow { display: block; min-height: 18px; margin-bottom: 2px; font: var(--type-label); color: var(--text-3); }
+.page-eyebrow:not(:empty) { animation: rise var(--t-slow) var(--ease-out); }
 .page-meta { display: flex; flex-wrap: wrap; align-items: center; gap: 2px 0; margin-top: 6px; font: var(--type-body-sm); color: var(--text-3); }
 .page-meta > * + *::before { content: "·"; margin: 0 8px; color: var(--border-strong); }
 .page-actions { display: flex; flex-wrap: wrap; align-items: center; gap: var(--s-2); }

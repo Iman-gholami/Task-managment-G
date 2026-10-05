@@ -9,12 +9,13 @@ const NUM = new Intl.NumberFormat("en-US", { maximumFractionDigits: 1 });
 /**
  * KPI card: label, value, and one quiet line of context (comparison or explanation).
  * `tone="alert"` colours the value when it needs action. `href` makes the whole card a link.
- * `loading` keeps the card's height while data is on its way.
+ * `loading` keeps the card's height while data is on its way. `icon` adds a small tile before the label.
  */
-export function Metric({ label, value, unit, foot, tone, href, onClick, aside, loading, hint, testId }) {
+export function Metric({ label, value, unit, foot, tone, href, onClick, aside, loading, hint, testId, icon }) {
   const body = (
     <>
       <div className="metric-label">
+        {icon && <span className="metric-icon" aria-hidden="true"><Icon name={icon} size="sm" /></span>}
         <span>{label}</span>
         {hint && <span className="metric-hint" tabIndex={0} role="img" aria-label={hint} data-tooltip={hint}><Icon name="info" size="sm" /></span>}
         {(href || onClick) && <Icon name="chev" size="sm" />}

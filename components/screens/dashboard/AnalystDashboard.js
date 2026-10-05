@@ -37,12 +37,12 @@ export default function AnalystDashboard() {
       />
 
       <MetricGrid label="My summary">
-        <Metric label="Assigned to me" value={mine.length} href="/tasks/my" foot={inReview ? `${inReview} awaiting review` : "Open tasks"} />
-        <Metric label="Due within 48h" value={dueSoon} foot={dueSoon ? "Due in the next 2 days" : "Nothing due soon"} />
-        <Metric label="Overdue" value={overdue} tone={overdue ? "alert" : undefined} foot={overdue ? "Past their deadline" : "All on schedule"} />
-        <Metric label={`Completed · ${month}`} value={stats.my.completed} href={`/performance/employees/${me.id}`} foot="Approved this month" />
-        {shift && <Metric label={`MISP IOCs · ${month}`} value={stats.my.iocs} foot="From your shift logs" />}
-        {shift && <Metric label={`Tickets · ${month}`} value={stats.my.tickets} foot="Registered in shift logs" />}
+        <Metric label="Assigned to me" icon="tasks" value={mine.length} href="/tasks/my" foot={inReview ? `${inReview} awaiting review` : "Open tasks"} />
+        <Metric label="Due within 48h" icon="cal" value={dueSoon} foot={dueSoon ? "Due in the next 2 days" : "Nothing due soon"} />
+        <Metric label="Overdue" icon="flag" value={overdue} tone={overdue ? "alert" : undefined} foot={overdue ? "Past their deadline" : "All on schedule"} />
+        <Metric label={`Completed · ${month}`} icon="checkCircle" value={stats.my.completed} href={`/performance/employees/${me.id}`} foot="Approved this month" />
+        {shift && <Metric label={`MISP IOCs · ${month}`} icon="shield" value={stats.my.iocs} foot="From your shift logs" />}
+        {shift && <Metric label={`Tickets · ${month}`} icon="inbox" value={stats.my.tickets} foot="Registered in shift logs" />}
       </MetricGrid>
 
       <div className={shift ? "grid-main" : ""}>
