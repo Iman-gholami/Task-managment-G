@@ -33,6 +33,8 @@ export const themes = {
     success: oklch(0.48, 0.11, 150), warning: oklch(0.5, 0.11, 65), danger: oklch(0.52, 0.16, 25), info: oklch(0.5, 0.1, 245), violet: oklch(0.5, 0.1, 295),
     // Complexity ramp: Simple → Advanced gets darker (more ink = more effort).
     viz: [teal(0.8, 0.06), teal(0.67, 0.095), teal(0.54, 0.1), teal(0.4, 0.08)],
+    // Shift Schedule tones: morning, until-8pm, night. Categorical, never status; each reads as text on a card.
+    shift: [oklch(0.5, 0.1, 165), oklch(0.52, 0.11, 62), oklch(0.5, 0.12, 285)],
   },
   dark: {
     bg: ink(0.155), sheet: ink(0.185), card: ink(0.21), inset: ink(0.235), raised: ink(0.245),
@@ -42,6 +44,7 @@ export const themes = {
     success: oklch(0.75, 0.12, 150), warning: oklch(0.78, 0.12, 75), danger: oklch(0.72, 0.13, 25), info: oklch(0.74, 0.09, 245), violet: oklch(0.74, 0.09, 295),
     // In dark mode emphasis is lightness: Advanced is the brightest step, capped so it never reads as white.
     viz: [teal(0.44, 0.055), teal(0.56, 0.085), teal(0.68, 0.1), teal(0.83, 0.085)],
+    shift: [oklch(0.77, 0.11, 165), oklch(0.79, 0.11, 72), oklch(0.74, 0.1, 285)],
   },
   // Black Gold: near-black warm surfaces, one bright gold signal. Warning shifts to orange so it never reads as the accent.
   gold: {
@@ -51,6 +54,8 @@ export const themes = {
     primary: gold(0.85, 0.165), primaryHover: gold(0.89, 0.15), link: gold(0.87, 0.15), accent: oklch(0.76, 0.16, 75),
     success: oklch(0.77, 0.14, 150), warning: oklch(0.76, 0.15, 52), danger: oklch(0.71, 0.17, 25), info: oklch(0.77, 0.1, 240), violet: oklch(0.76, 0.11, 300),
     viz: [gold(0.46, 0.085), gold(0.58, 0.115), gold(0.72, 0.145), gold(0.88, 0.15)],
+    // The until-8pm shift is orange (like warning) so it never reads as the gold accent.
+    shift: [oklch(0.78, 0.12, 160), oklch(0.76, 0.15, 52), oklch(0.75, 0.1, 295)],
   },
   // Midnight: deep navy surfaces with a violet → azure signal. Review moves to rose so it stays distinct from the accent.
   midnight: {
@@ -60,6 +65,8 @@ export const themes = {
     primary: oklch(0.72, 0.155, 290), primaryHover: oklch(0.78, 0.13, 290), link: oklch(0.8, 0.12, 290), accent: oklch(0.72, 0.13, 248),
     success: oklch(0.77, 0.13, 158), warning: oklch(0.8, 0.13, 75), danger: oklch(0.72, 0.15, 22), info: oklch(0.77, 0.11, 230), violet: oklch(0.76, 0.14, 345),
     viz: [oklch(0.46, 0.1, 290), oklch(0.57, 0.135, 290), oklch(0.69, 0.15, 290), oklch(0.85, 0.1, 290)],
+    // Night is cyan here so it stays distinct from the violet accent.
+    shift: [oklch(0.78, 0.12, 162), oklch(0.8, 0.12, 72), oklch(0.77, 0.1, 215)],
   },
 };
 
@@ -76,6 +83,7 @@ if (process.argv[1]?.endsWith("palette.mjs")) {
       "input border (3:1)": [t.borderStrong, t.card], "primary vs card (3:1)": [t.primary, t.card],
       success: [t.success, t.card], warning: [t.warning, t.card], danger: [t.danger, t.card], info: [t.info, t.card], review: [t.violet, t.card],
       "viz simple vs card (3:1)": [t.viz[0], t.card],
+      "shift morning": [t.shift[0], t.card], "shift until 8pm": [t.shift[1], t.card], "shift night": [t.shift[2], t.card],
     };
     for (const [k, [fg, bg]] of Object.entries(pairs)) console.log(`  ${k.padEnd(26)} ${fg} on ${bg}  ${contrast(fg, bg).toFixed(2)}`);
   }

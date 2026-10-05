@@ -67,7 +67,7 @@ function groupByDate(schedules) {
 }
 
 function formatDate(iso) {
-  return PERSIAN_LONG.format(dateObj(iso));
+  return PERSIAN_LONG.format(dateObj(iso)).replace(",", "،"); // Persian comma
 }
 
 export default function ShiftSchedule() {
@@ -172,41 +172,43 @@ export default function ShiftSchedule() {
 
   return (
     <div className={`page ${styles.page}`} dir="rtl">
-      <header className={styles.hero}>
-        <div>
-          <h1>مدیریت شیفت نیروها</h1>
-          <p>تقویم ماهانه تیم، جزئیات هر روز و آمار هر کارشناس در یک نمای خلوت و سریع.</p>
+      <header className="page-head">
+        <div className="page-head-main">
+          <div>
+            <h1>مدیریت شیفت نیروها</h1>
+            <div className="page-meta">
+              <span>{PERSIAN_MONTH.format(dateObj(monthStart))}</span>
+              <span>{faNum(monthSchedules.length)} شیفت ثبت‌شده</span>
+              <span>{faNum(analysts.length)} کارشناس</span>
+            </div>
+          </div>
         </div>
-        <div className={styles.heroActions}>
-          <Link className="btn btn-secondary" href="/shift/changes"><Icon name="edit" /> تغییر شیفت</Link>
+        <div className="page-actions">
+          <Link className="btn btn-secondary" href="/shift/changes"><Icon name="swap" /> تغییر شیفت</Link>
           {manager && <button className="btn btn-primary" onClick={() => openComposer()}><Icon name="plus" /> ثبت شیفت</button>}
         </div>
       </header>
 
       <div className={styles.workspace}>
-        <section className={styles.calendarCard}>
+        <section className={`panel ${styles.calendarCard}`} aria-label="تقویم ماهانه">
           <div className={styles.calendarHeader}>
+            <h2 className={styles.monthTitle}>{PERSIAN_MONTH.format(dateObj(monthStart))}</h2>
             <div className={styles.monthNav}>
-              <button className={styles.iconBtn} aria-label="ماه قبل" onClick={() => changeMonth(-1)}><Icon name="chev" /></button>
-              <button className={styles.todayBtn} onClick={goToday}>امروز</button>
-              <button className={`${styles.iconBtn} ${styles.next}`} aria-label="ماه بعد" onClick={() => changeMonth(1)}><Icon name="chev" /></button>
-            </div>
-
-            <div className={styles.monthTitle}>
-              <span>تقویم ماهانه</span>
-              <h2>{PERSIAN_MONTH.format(dateObj(monthStart))}</h2>
+              <button className="btn btn-ghost icon-btn btn-sm" aria-label="ماه قبل" data-tooltip="ماه قبل" onClick={() => changeMonth(-1)}><Icon name="chev" /></button>
+              <button className="btn btn-ghost btn-sm" onClick={goToday}>امروز</button>
+              <button className="btn btn-ghost icon-btn btn-sm" aria-label="ماه بعد" data-tooltip="ماه بعد" onClick={() => changeMonth(1)}><Icon name="left" /></button>
             </div>
 
             <label className={styles.analystSelect}>
               <span>نمایش آمار</span>
-              <select value={selectedUser} onChange={(e) => setSelectedUser(e.target.value)}>
+              <select className={`input input-sm ${selectedUser ? "is-set" : ""}`} value={selectedUser} onChange={(e) => setSelectedUser(e.target.value)}>
                 <option value="">همه کارشناسان</option>
                 {analysts.map((a) => <option key={a.id} value={a.id}>{a.name}</option>)}
               </select>
             </label>
           </div>
 
-          {error && <div className={styles.errorBar}><span>دریافت برنامه شیفت ناموفق بود.</span><button onClick={reload}>تلاش دوباره</button></div>}
+          {error && <div className={styles.errorBar}><Icon name="alert" /><span>دریافت برنامه شیفت ناموفق بود.</span><button className="btn btn-ghost btn-sm" onClick={reload}>تلاش دوباره</button></div>}
 
           <div className={styles.weekdays}>{WEEKDAYS.map((day) => <div key={day}>{day}</div>)}</div>
           <div className={`${styles.grid} ${loading && !data ? styles.loading : ""}`}>
@@ -220,6 +222,7 @@ export default function ShiftSchedule() {
                   key={date}
                   role="button"
                   tabIndex={0}
+                  aria-pressed={date === selectedDate}
                   className={`${styles.day} ${!currentMonth ? styles.outside : ""} ${date === selectedDate ? styles.selectedDay : ""} ${date === TODAY ? styles.today : ""} ${isFriday ? styles.friday : ""}`}
                   onClick={() => setSelectedDate(date)}
                   onDoubleClick={() => openComposer(date, selectedShift)}
@@ -247,13 +250,14 @@ export default function ShiftSchedule() {
                           className={styles.shiftBand}
                           data-shift={shiftType}
                           data-selected-person={includesSelected ? "true" : "false"}
+                          data-dim={selectedUser && !includesSelected ? "true" : undefined}
                           key={shiftType}
                           onClick={(e) => {
                             e.stopPropagation();
                             setSelectedDate(date);
                             setSelectedShift(shiftType);
                           }}
-                          title={`${SHIFT_META[shiftType].label} · ${faNum(shiftRows.length)} نفر`}
+                          data-tooltip={`${SHIFT_META[shiftType].label} · ${faNum(shiftRows.length)} نفر`}
                         >
                           <i />
                           <span>{SHIFT_META[shiftType].short}</span>
@@ -261,7 +265,6 @@ export default function ShiftSchedule() {
                         </button>
                       );
                     })}
-                    {!rows.length && currentMonth && <span className={styles.emptyDay}>—</span>}
                   </div>
                 </div>
               );
@@ -270,30 +273,32 @@ export default function ShiftSchedule() {
 
           <div className={styles.legend}>
             {SHIFT_KEYS.map((key) => <span key={key} data-shift={key}><i />{SHIFT_META[key].label}<small>{SHIFT_META[key].time}</small></span>)}
-            <span className={styles.legendHint}>{selectedUser ? "نقطه‌ی پررنگ‌تر یعنی کارشناس انتخاب‌شده در آن شیفت حضور دارد." : "در حالت همه کارشناسان، هیچ فردی روی تقویم برجسته نمی‌شود."}</span>
+            <span className={styles.legendHint}>{selectedUser ? "شیفت‌های کارشناس انتخاب‌شده پررنگ شده‌اند." : "برای برجسته کردن شیفت‌های یک نفر، از «نمایش آمار» کارشناس را انتخاب کنید."}</span>
           </div>
         </section>
 
-        <aside className={styles.detailsCard}>
+        <aside className={`panel ${styles.detailsCard}`} aria-label="جزئیات روز">
           <div className={styles.detailsHead}>
-            <div><span>روز انتخاب‌شده</span><h2>{formatDate(selectedDate)}</h2></div>
-            {manager && <button className={styles.roundBtn} onClick={() => openComposer(selectedDate, selectedShift)} aria-label="ثبت شیفت"><Icon name="plus" /></button>}
+            <div><span className="eyebrow">روز انتخاب‌شده</span><h2>{formatDate(selectedDate)}</h2></div>
+            {manager && <button className="btn btn-secondary icon-btn" onClick={() => openComposer(selectedDate, selectedShift)} aria-label="ثبت شیفت" data-tooltip="ثبت شیفت برای این روز"><Icon name="plus" /></button>}
           </div>
 
-          <div className={styles.shiftTabs}>
+          <div className={`seg ${styles.shiftTabs}`} role="tablist" aria-label="شیفت">
             {SHIFT_KEYS.map((key) => {
               const count = selectedRows.filter((row) => row.shiftType === key).length;
               return (
                 <button
                   type="button"
+                  role="tab"
+                  aria-selected={selectedShift === key}
                   key={key}
                   data-shift={key}
-                  className={selectedShift === key ? styles.shiftTabActive : ""}
+                  className={selectedShift === key ? "on" : ""}
                   onClick={() => setSelectedShift(key)}
                 >
                   <i />
                   <span>{SHIFT_META[key].short}</span>
-                  <strong>{faNum(count)}</strong>
+                  <span className="count">{faNum(count)}</span>
                 </button>
               );
             })}
@@ -301,17 +306,21 @@ export default function ShiftSchedule() {
 
           <section className={styles.selectedShiftBlock} data-shift={selectedShift}>
             <div className={styles.selectedShiftHead}>
-              <div><b>{SHIFT_META[selectedShift].label}</b><small>{SHIFT_META[selectedShift].time}</small></div>
-              {manager && <button onClick={() => openComposer(selectedDate, selectedShift)}><Icon name="edit" /> ویرایش</button>}
+              <i />
+              <div><b>{SHIFT_META[selectedShift].label}</b><small><Icon name="clock" size="sm" />{SHIFT_META[selectedShift].time}</small></div>
+              {manager && <button className="btn btn-ghost btn-sm" onClick={() => openComposer(selectedDate, selectedShift)}><Icon name="edit" /> ویرایش</button>}
             </div>
 
             <div className={styles.peopleList}>
               {selectedShiftRows.length === 0 ? (
-                <div className={styles.emptyPeople}>برای این شیفت نیرویی ثبت نشده است.</div>
+                <div className={styles.emptyPeople}>
+                  <span className={styles.emptyGlyph}><Icon name="user" /></span>
+                  برای این شیفت نیرویی ثبت نشده است.
+                </div>
               ) : selectedShiftRows.map((row) => (
-                <div className={styles.personRow} key={row.userId}>
-                  <button className={styles.person} onClick={() => setSelectedUser(row.userId)}><Who id={row.userId} /></button>
-                  {manager && <button className={styles.removeBtn} onClick={() => remove(row)} disabled={saving}>حذف</button>}
+                <div className={styles.personRow} key={row.userId} data-active={row.userId === selectedUser || undefined}>
+                  <button className={styles.person} onClick={() => setSelectedUser(row.userId)} data-tooltip="نمایش آمار این کارشناس"><Who id={row.userId} /></button>
+                  {manager && <button className="btn btn-ghost danger icon-btn btn-sm" aria-label="حذف از شیفت" data-tooltip="حذف از شیفت" onClick={() => remove(row)} disabled={saving}><Icon name="x" /></button>}
                 </div>
               ))}
             </div>
@@ -319,23 +328,24 @@ export default function ShiftSchedule() {
 
           <section className={styles.analystCard}>
             <div className={styles.analystCardHead}>
-              <span>آمار ماهانه</span>
+              <span className="eyebrow">آمار ماهانه</span>
               <b>{selectedPerson?.name || "همه کارشناسان"}</b>
+              {selectedUser && <button className="btn btn-ghost btn-sm" onClick={() => setSelectedUser("")}>همه</button>}
             </div>
             <div className={styles.analystPrimary}>
               <div><strong>{faNum(stats.hours)}</strong><span>ساعت</span></div>
               <div><strong>{faNum(stats.total)}</strong><span>شیفت</span></div>
             </div>
             <div className={styles.analystMiniGrid}>
+              <MiniStat label="صبح" value={stats.morning} tone="morning" />
+              <MiniStat label="تا ۸" value={stats.evening} tone="evening" />
+              <MiniStat label="شب" value={stats.night} tone="night" />
               <MiniStat label="پنجشنبه" value={stats.thursdays} />
               <MiniStat label="جمعه" value={stats.fridays} />
-              <MiniStat label="تا ۸" value={stats.evening} tone="evening" />
-              <MiniStat label="صبح" value={stats.morning} tone="morning" />
-              <MiniStat label="شب" value={stats.night} tone="night" />
             </div>
           </section>
 
-          <div className={styles.tip}>یک کلیک برای مشاهده جزئیات است. دابل‌کلیک روی روز، فرم ثبت همان روز را برای مدیر باز می‌کند.</div>
+          <p className={styles.tip}><Icon name="info" size="sm" />{manager ? "یک کلیک جزئیات روز را نشان می‌دهد؛ با دابل‌کلیک فرم ثبت شیفت همان روز باز می‌شود." : "برای دیدن نیروهای هر شیفت، روی روز موردنظر کلیک کنید."}</p>
         </aside>
       </div>
 
@@ -345,26 +355,28 @@ export default function ShiftSchedule() {
           title={`ثبت شیفت · ${formatDate(editor.date)}`}
           description="نیروهای این شیفت را انتخاب کنید. اگر فردی همان روز شیفت دیگری داشته باشد، به شیفت جدید منتقل می‌شود."
           onClose={closeComposer}
-          width={680}
+          width={640}
+          className={styles.composer}
         >
-          <div className={styles.modalBody} dir="rtl">
-            <div className={styles.shiftPicker}>
+          <div className={`modal-body ${styles.modalBody}`}>
+            <div className={styles.shiftPicker} role="radiogroup" aria-label="نوع شیفت">
               {SHIFT_KEYS.map((key) => (
-                <button key={key} type="button" data-shift={key} className={editor.shiftType === key ? styles.shiftChoiceActive : ""} onClick={() => changeEditorShift(key)}>
+                <button key={key} type="button" role="radio" aria-checked={editor.shiftType === key} data-shift={key} className={editor.shiftType === key ? styles.shiftChoiceActive : ""} onClick={() => changeEditorShift(key)}>
                   <i /><span><b>{SHIFT_META[key].label}</b><small>{SHIFT_META[key].time}</small></span>
                 </button>
               ))}
             </div>
 
-            <div className={styles.searchBox}><Icon name="search" /><input value={query} onChange={(e) => setQuery(e.target.value)} placeholder="جستجوی کارشناس..." /></div>
+            <div className={`search ${styles.searchBox}`}><Icon name="search" /><input className="input" type="search" value={query} onChange={(e) => setQuery(e.target.value)} placeholder="جستجوی کارشناس..." aria-label="جستجوی کارشناس" /></div>
 
             <div className={styles.memberList}>
+              {visibleAnalysts.length === 0 && <div className={styles.emptyPeople}>کارشناسی با این نام پیدا نشد.</div>}
               {visibleAnalysts.map((person) => {
                 const checked = draftIds.includes(person.id);
                 const current = (byDate[editor.date] ?? []).find((row) => row.userId === person.id);
                 return (
                   <label className={`${styles.memberRow} ${checked ? styles.memberRowChecked : ""}`} key={person.id}>
-                    <input type="checkbox" checked={checked} onChange={() => toggleDraft(person.id)} />
+                    <input className="cb" type="checkbox" checked={checked} onChange={() => toggleDraft(person.id)} />
                     <Who id={person.id} />
                     <span className={styles.memberTeam}>{person.team}</span>
                     {current && <span className={styles.currentShift} data-shift={current.shiftType}>{SHIFT_META[current.shiftType].short}</span>}
@@ -373,10 +385,10 @@ export default function ShiftSchedule() {
               })}
             </div>
           </div>
-          <div className="modal-foot" dir="rtl">
-            <span className={styles.selectedCount}>{faNum(draftIds.length)} نفر انتخاب شده</span>
+          <div className="modal-foot">
+            <span className={`lead ${styles.selectedCount}`}><b>{faNum(draftIds.length)}</b> نفر انتخاب شده</span>
             <button className="btn btn-ghost" onClick={closeComposer}>انصراف</button>
-            <button className="btn btn-primary" disabled={saving} onClick={save}>{saving ? "در حال ذخیره..." : "ذخیره برنامه"}</button>
+            <button className="btn btn-primary" aria-busy={saving || undefined} disabled={saving} onClick={save}>ذخیره برنامه</button>
           </div>
         </Dialog>
       )}

@@ -38,6 +38,7 @@ const PATHS = {
   arrowDown: '<path d="M10 4.5v11M5.5 11 10 15.5 14.5 11"/>',
   arrowLeft: '<path d="M15.5 10h-11M9 5.5 4.5 10 9 14.5"/>',
   arrowRight: '<path d="M4.5 10h11M11 5.5l4.5 4.5-4.5 4.5"/>',
+  swap: '<path d="M4 7h11.5M12.5 4l3 3-3 3"/><path d="M16 13H4.5M7.5 10l-3 3 3 3"/>',
   // Objects & states
   cal: '<rect x="3" y="4.5" width="14" height="12" rx="2"/><path d="M3 8.5h14M7 3v3M13 3v3"/>',
   clock: '<circle cx="10" cy="10" r="7"/><path d="M10 6v4l2.5 1.5"/>',

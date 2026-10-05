@@ -151,6 +151,8 @@
   --viz-bar: #43A89D;
   --viz-bar-strong: #007B70;
   --viz-track: #E8EBEF;
+  /* Shift Schedule tones (categorical): morning, until 8pm, night */
+  --shift-morning: #117555; --shift-evening: #955816; --shift-night: #5D57A4;
   --surface-toggle: #FFFFFF;
   --tooltip-bg: #151B22; --tooltip-text: #F9FAFC;
 }
@@ -219,6 +221,7 @@
   --viz-bar: #2A857B;
   --viz-bar-strong: #4EB9AD;
   --viz-track: #1F2329;
+  --shift-morning: #69CBA3; --shift-evening: #E6AF68; --shift-night: #A4A2E8;
   --surface-toggle: #272D34;  /* selected segment on an inset track */
   --tooltip-bg: #E8EBEF; --tooltip-text: #0F1318;
 }
@@ -288,6 +291,7 @@
   --viz-bar: #97750D;
   --viz-bar-strong: #FBC629;
   --viz-track: #25231F;
+  --shift-morning: #6BCF9D; --shift-evening: #FA934E; --shift-night: #B2A1E7;
   --surface-toggle: #2E2B26;
   --tooltip-bg: #F2F0E7; --tooltip-text: #100F0D;
 }
@@ -357,6 +361,7 @@
   --viz-bar: #7867C1;
   --viz-bar-strong: #A491FE;
   --viz-track: #21243D;
+  --shift-morning: #67CFA0; --shift-evening: #EDB161; --shift-night: #5FC4DC;
   --surface-toggle: #2C3052;
   --tooltip-bg: #EEF0F8; --tooltip-text: #101126;
 }

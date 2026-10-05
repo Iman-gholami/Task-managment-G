@@ -1,52 +1,53 @@
 /* Persian / RTL presentation layer.
-   Keep the English shell on Geist, but use a Persian-first typeface for RTL product screens. */
-.page[dir="rtl"] {
-  font-family: var(--font-vazirmatn), Tahoma, Arial, sans-serif;
+   The shell stays English on Geist; RTL screens (Shift Schedule, Shift changes) use Vazirmatn.
+   The semantic type tokens are redefined here, so every component that uses `font: var(--type-*)`
+   renders in Persian with the same hierarchy as the rest of the app. Arabic script reads smaller and
+   needs more leading than Latin at the same size, so sizes go up half a step and line heights open up. */
+[dir="rtl"] {
+  --font-fa: var(--font-vazirmatn), Tahoma, Arial, sans-serif;
+  --type-page-title: var(--fw-semibold) var(--fs-24)/1.45 var(--font-fa);
+  --type-section:    var(--fw-semibold) var(--fs-15)/1.6 var(--font-fa);
+  --type-card-title: var(--fw-semibold) 13.5px/1.6 var(--font-fa);
+  --type-body:       var(--fw-regular) var(--fs-14)/1.75 var(--font-fa);
+  --type-body-sm:    var(--fw-regular) var(--fs-13)/1.7 var(--font-fa);
+  --type-table:      var(--fw-regular) var(--fs-13)/1.6 var(--font-fa);
+  --type-label:      var(--fw-medium) 12.5px/1.6 var(--font-fa);
+  --type-caption:    var(--fw-regular) 12.5px/1.65 var(--font-fa);
+  --type-kpi:        var(--fw-semibold) var(--fs-28)/1.2 var(--font-fa);
+  --type-overline:   var(--fw-medium) 11.5px/1.5 var(--font-fa);
+  font-family: var(--font-fa);
   letter-spacing: 0;
   font-kerning: normal;
   text-rendering: optimizeLegibility;
 }
 
-.page[dir="rtl"] button,
-.page[dir="rtl"] input,
-.page[dir="rtl"] select,
-.page[dir="rtl"] textarea {
+[dir="rtl"] :is(button, input, select, textarea, .btn, .badge, .seg > button) {
   font-family: inherit;
   letter-spacing: 0;
 }
+/* Persian has no capitals and no tracking. */
+[dir="rtl"] :is(.eyebrow, .nav-label, .side-h) { text-transform: none; letter-spacing: 0; }
+[dir="rtl"] .page-head h1 { letter-spacing: 0; }
 
-/* Native select menus otherwise inherit the light text from the dark theme while
-   some browsers still paint the popup with a white system background. Force a
-   theme-matched option surface so every analyst name stays readable. */
-.page[dir="rtl"] select option,
-.page[dir="rtl"] select optgroup {
+/* Native select menus otherwise inherit light text from a dark theme while some browsers
+   still paint the popup white. Match the option surface to the theme. */
+[dir="rtl"] select option,
+[dir="rtl"] select optgroup {
   background: var(--surface-raised);
   color: var(--text);
-  font-family: var(--font-vazirmatn), Tahoma, Arial, sans-serif;
-  font-size: 13px;
-  font-weight: 450;
+  font-family: var(--font-fa);
+  font-size: var(--fs-13);
 }
+:root:is([data-theme="dark"], [data-theme="gold"], [data-theme="midnight"]) [dir="rtl"] select { color-scheme: dark; }
+:root[data-theme="light"] [dir="rtl"] select { color-scheme: light; }
 
-:root:is([data-theme="dark"], [data-theme="gold"], [data-theme="midnight"]) .page[dir="rtl"] select {
-  color-scheme: dark;
-}
-
-:root[data-theme="light"] .page[dir="rtl"] select {
-  color-scheme: light;
-}
-
-/* Persian labels benefit from a little more vertical breathing room than Geist. */
-.page[dir="rtl"] h1,
-.page[dir="rtl"] h2,
-.page[dir="rtl"] h3,
-.page[dir="rtl"] label,
-.page[dir="rtl"] button,
-.page[dir="rtl"] select {
-  line-height: 1.55;
-}
-
-.page[dir="rtl"] h1,
-.page[dir="rtl"] h2,
-.page[dir="rtl"] h3 {
-  font-weight: 700;
-}
+/* Shared components, mirrored. */
+[dir="rtl"] select.input { padding-right: 10px; padding-left: 30px; background-position: left 8px center; }
+[dir="rtl"] .search svg.i { left: auto; right: 9px; }
+[dir="rtl"] .search .input { padding-left: 10px; padding-right: 32px; }
+[dir="rtl"] .modal-close { right: auto; left: 14px; }
+[dir="rtl"] .modal-foot .lead { margin-right: 0; margin-left: auto; }
+[dir="rtl"] .panel-head .right { margin-left: 0; margin-right: auto; }
+[dir="rtl"] .page-meta > * + *::before { margin: 0 8px; }
+[dir="rtl"] .btn kbd { margin-right: 0; margin-left: -4px; }
+[dir="rtl"] .avatar { font-family: var(--font-sans); }
