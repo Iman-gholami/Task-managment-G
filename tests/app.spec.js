@@ -291,7 +291,7 @@ test.describe("performance", () => {
     await expect(page.locator(".metric", { hasText: "MISP IOCs" })).toContainText("12");
     await expect(page.locator("tbody")).toContainText("Tune Splunk correlation rule");
 
-    await page.getByLabel("Employee").selectOption(ids.arash);
+    await page.getByLabel("Employee", { exact: true }).selectOption(ids.arash);
     await expect(page).toHaveURL(new RegExp(`/performance/employees/${ids.arash}$`));
     await expect(page.locator("h1")).toHaveText("Arash Moradi");
     await expect(page.locator(".metric", { hasText: "Completed tasks" })).toContainText("0");
