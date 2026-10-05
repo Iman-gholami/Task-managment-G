@@ -27,6 +27,14 @@ async function createTask(page, title, assignee) {
   return (await res.json()).task.id;
 }
 
+function tehranDate() {
+  const parts = new Intl.DateTimeFormat("en-CA", {
+    timeZone: "Asia/Tehran", year: "numeric", month: "2-digit", day: "2-digit",
+  }).formatToParts(new Date());
+  const values = Object.fromEntries(parts.map((part) => [part.type, part.value]));
+  return `${values.year}-${values.month}-${values.day}`;
+}
+
 test.describe("fresh install", () => {
   test("starts with only the administrator and no sample data", async ({ page }) => {
     await page.goto("/login");
@@ -105,6 +113,12 @@ test.describe("shift logs are for SOC analysts only", () => {
   });
 
   test("analyst fills today's log: activities, IOC count, issue, tickets, complete", async ({ page }) => {
+    await signIn(page, "soc");
+    const assigned = await page.request.post("/api/shift/schedule", {
+      data: { userId: ids.sara, date: tehranDate(), shiftType: "evening" },
+    });
+    expect(assigned.status()).toBe(201);
+
     await signIn(page, "sara");
     await page.goto("/shift");
     await expect(page.locator("h1")).toContainText("Shift Log —");
