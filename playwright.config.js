@@ -10,6 +10,7 @@ const DB = path.join(os.tmpdir(), `sentinel-test-${Date.now()}.db`);
 
 module.exports = defineConfig({
   testDir: "./tests",
+  testIgnore: ["**/*.unit.test.mjs"],
   timeout: 30_000,
   retries: 0,
   workers: 1, // tests share one database
