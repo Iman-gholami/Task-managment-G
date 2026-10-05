@@ -27,7 +27,7 @@
   font-weight: 450;
 }
 
-:root[data-theme="dark"] .page[dir="rtl"] select {
+:root:is([data-theme="dark"], [data-theme="gold"], [data-theme="midnight"]) .page[dir="rtl"] select {
   color-scheme: dark;
 }
 

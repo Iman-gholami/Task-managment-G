@@ -415,3 +415,37 @@ test.describe("every screen renders without console errors", () => {
     });
   }
 });
+
+test.describe("themes", () => {
+  test("theme menu, Appearance and sign-in swatches switch and remember the theme", async ({ page }) => {
+    await signIn(page, "admin");
+    await page.goto("/dashboard");
+    const theme = () => page.evaluate(() => document.documentElement.dataset.theme);
+
+    await page.getByRole("button", { name: "Theme" }).click();
+    await page.getByRole("menuitemradio", { name: /Black Gold/ }).click();
+    await expect.poll(theme).toBe("gold");
+
+    // Remembered across reloads, applied before first paint.
+    await page.reload();
+    expect(await theme()).toBe("gold");
+    await page.getByRole("button", { name: "Theme" }).click();
+    await expect(page.getByRole("menuitemradio", { name: /Black Gold/ })).toHaveAttribute("aria-checked", "true");
+    await page.keyboard.press("4");
+    await expect.poll(theme).toBe("midnight");
+
+    await page.goto("/account");
+    const appearance = page.getByRole("radiogroup", { name: "Theme" });
+    await expect(appearance.getByRole("radio", { name: /Midnight/ })).toHaveAttribute("aria-checked", "true");
+    await appearance.getByRole("radio", { name: /Daylight/ }).click();
+    await expect.poll(theme).toBe("light");
+    await appearance.getByRole("radio", { name: /Daylight/ }).press("ArrowRight");
+    await expect.poll(theme).toBe("dark");
+
+    await page.context().clearCookies();
+    await page.goto("/login");
+    expect(await theme()).toBe("dark");
+    await page.getByRole("radio", { name: "Black Gold" }).click();
+    await expect.poll(theme).toBe("gold");
+  });
+});

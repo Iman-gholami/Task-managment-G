@@ -1,13 +1,13 @@
 /* Sentinel Ops — app shell: sidebar, top bar, content sheet, page and section headers. */
 
-.app { display: grid; grid-template-columns: var(--sidebar-w) minmax(0, 1fr); height: 100dvh; transition: grid-template-columns var(--t-slow) var(--ease-out); }
+.app { display: grid; grid-template-columns: var(--sidebar-w) minmax(0, 1fr); height: 100dvh; background: var(--ambient), var(--bg); transition: grid-template-columns var(--t-slow) var(--ease-out); }
 .app.collapsed { grid-template-columns: var(--sidebar-w-collapsed) minmax(0, 1fr); }
 
 /* ---------- Sidebar ---------- */
-.sidebar { display: flex; flex-direction: column; min-height: 0; padding: var(--s-3) var(--s-2) var(--s-2); background: var(--bg); overflow-x: hidden; overflow-y: auto; }
-.brand { display: flex; align-items: center; gap: 10px; height: 32px; padding: 0 6px; margin-bottom: var(--s-4); font: var(--fw-semibold) var(--fs-14)/1 var(--font-sans); letter-spacing: -0.01em; color: var(--text); white-space: nowrap; }
-.brand-mark { width: 24px; height: 24px; flex: none; display: grid; place-items: center; border-radius: var(--r-sm); background: var(--primary); color: var(--text-on-primary); }
-.brand-mark svg { width: 15px; height: 15px; stroke-width: 1.9; }
+.sidebar { display: flex; flex-direction: column; min-height: 0; padding: var(--s-3) var(--s-2) var(--s-2); background: transparent; overflow-x: hidden; overflow-y: auto; }
+.brand { display: flex; align-items: center; gap: 10px; height: 36px; padding: 0 4px; margin-bottom: var(--s-4); font: var(--fw-semibold) var(--fs-15)/1 var(--font-sans); letter-spacing: -0.015em; color: var(--text); white-space: nowrap; }
+.brand-mark { position: relative; width: 28px; height: 28px; flex: none; display: grid; place-items: center; border-radius: 8px; background: var(--grad-signal); color: var(--text-on-primary); box-shadow: inset 0 1px 0 var(--sheen), var(--glow-sm); }
+.brand-mark svg { width: 17px; height: 17px; stroke-width: 1.9; }
 
 .nav { display: flex; flex-direction: column; gap: var(--s-4); }
 .nav-group, .nav-group > ul { display: flex; flex-direction: column; gap: 1px; }
@@ -22,6 +22,10 @@
 .nav-item:hover { background: var(--hover); color: var(--text); }
 .nav-item:hover svg.i { color: var(--text-2); }
 .nav-item.active { background: var(--nav-active); color: var(--text); }
+/* Active page: a short gradient bar on the sidebar edge. Sub-items light up their part of the tree line instead. */
+.nav-item.active::before { content: ""; position: absolute; left: -8px; top: 8px; bottom: 8px; width: 3px; border-radius: 0 3px 3px 0; background: var(--grad-signal); box-shadow: 0 0 10px var(--primary-glow); }
+.nav-sub .nav-item.active::before { left: -11.5px; top: 5px; bottom: 5px; width: 2px; border-radius: 2px; }
+.nav-item.active .nav-count { background: var(--primary-soft); color: var(--link); }
 .nav-item.active svg.i, .nav-item.open svg.i { color: var(--primary); }
 .nav-item.open { color: var(--text); }
 .nav-item .label { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; }
@@ -31,9 +35,10 @@
 .nav-sub .nav-item.active { font-weight: var(--fw-medium); }
 
 .sidebar-foot { margin-top: auto; padding-top: var(--s-3); }
-.profile { display: flex; align-items: center; gap: 10px; width: 100%; padding: 6px; border: 0; border-radius: var(--r-md); background: transparent; color: var(--text); text-align: left; cursor: pointer; transition: background-color var(--t-fast); }
-.profile:hover, .profile[aria-expanded="true"] { background: var(--hover); }
-.profile-meta { flex: 1; min-width: 0; line-height: 1.3; }
+.profile { display: grid; grid-template-columns: 30px minmax(0, 1fr) 16px; align-items: center; column-gap: 10px; width: 100%; min-height: 48px; padding: 8px; border: 1px solid transparent; border-radius: var(--r-lg); background: transparent; color: var(--text); text-align: left; cursor: pointer; transition: background-color var(--t-fast), border-color var(--t-fast); }
+.profile:hover, .profile[aria-expanded="true"] { background: var(--hover); border-color: var(--border); }
+.profile-avatar { width: 30px; height: 30px; display: grid; place-items: center; border-radius: 9px; background: var(--grad-signal); color: var(--text-on-primary); font: var(--fw-semibold) var(--fs-11)/1 var(--font-sans); letter-spacing: .02em; box-shadow: inset 0 1px 0 var(--sheen); }
+.profile-meta { display: grid; gap: 3px; min-width: 0; line-height: 1.15; }
 .profile-meta b { display: block; font-size: var(--fs-13); font-weight: var(--fw-medium); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .profile-meta small { display: block; font-size: var(--fs-12); color: var(--text-3); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .profile > svg.i { color: var(--text-3); }
@@ -43,11 +48,12 @@
 .collapsed .brand > span:not(.brand-mark), .collapsed .nav-item .label, .collapsed .nav-count, .collapsed .nav-sub, .collapsed .profile-meta, .collapsed .profile > svg.i { display: none; }
 .collapsed .nav-label { height: 1px; margin: 0 8px 4px; padding: 0; overflow: hidden; color: transparent; background: var(--divider); }
 .collapsed .nav-item, .collapsed .brand { justify-content: center; padding: 0; }
-.collapsed .profile { justify-content: center; }
+.collapsed .profile { grid-template-columns: 1fr; justify-items: center; padding: 8px 0; }
 
 /* ---------- Main sheet ---------- */
-.main { display: flex; flex-direction: column; min-width: 0; min-height: 0; margin: var(--s-2) var(--s-2) var(--s-2) 0; background: var(--surface); border: 1px solid var(--border); border-radius: var(--r-xl); box-shadow: var(--shadow-xs); overflow: hidden; }
-.header { position: relative; z-index: var(--z-sticky); display: flex; align-items: center; gap: var(--s-2); height: var(--header-h); flex: none; padding: 0 var(--s-4) 0 var(--s-3); border-bottom: 1px solid var(--divider); background: var(--surface); }
+/* The sheet carries a soft light at the top in the theme's signal colour. */
+.main { display: flex; flex-direction: column; min-width: 0; min-height: 0; margin: var(--s-2) var(--s-2) var(--s-2) 0; background: radial-gradient(1100px 300px at 22% -140px, var(--ambient-1), transparent 72%), var(--surface); border: 1px solid var(--border); border-radius: var(--r-xl); box-shadow: var(--shadow-card), inset 0 1px 0 var(--edge); overflow: hidden; }
+.header { position: relative; z-index: var(--z-sticky); display: flex; align-items: center; gap: var(--s-2); height: var(--header-h); flex: none; padding: 0 var(--s-4) 0 var(--s-3); border-bottom: 1px solid var(--divider); background: transparent; }
 .crumbs { display: flex; align-items: center; gap: 2px; min-width: 0; margin-left: var(--s-1); font-size: var(--fs-13); color: var(--text-3); white-space: nowrap; }
 .crumbs a, .crumbs span { padding: 3px 6px; border-radius: var(--r-xs); }
 .crumbs a:hover { color: var(--text); background: var(--hover); }
@@ -56,13 +62,14 @@
 .header-actions { display: flex; align-items: center; gap: 2px; margin-left: auto; }
 .cmdk {
   display: flex; align-items: center; gap: 8px; width: 280px; height: var(--control-h); margin-right: var(--s-2); padding: 0 6px 0 10px;
-  border: 1px solid var(--border); border-radius: var(--r-sm); background: var(--surface-input); color: var(--text-3);
-  font-size: var(--fs-13); cursor: pointer; transition: border-color var(--t-fast), color var(--t-fast);
+  border: 1px solid var(--border); border-radius: var(--r-md); background: color-mix(in oklab, var(--surface-input) 70%, transparent); color: var(--text-3);
+  font-size: var(--fs-13); cursor: pointer; transition: border-color var(--t-fast), color var(--t-fast), box-shadow var(--t-base);
 }
-.cmdk:hover { border-color: color-mix(in oklab, var(--border) 45%, var(--border-strong)); color: var(--text-2); }
+.cmdk:hover { border-color: color-mix(in oklab, var(--primary) 40%, var(--border)); color: var(--text-2); box-shadow: var(--ring); }
 .cmdk kbd { margin-left: auto; }
 .cmdk-label { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.notif-dot { position: absolute; top: 6px; right: 6px; width: 7px; height: 7px; border-radius: 50%; background: var(--primary); box-shadow: 0 0 0 2px var(--surface); }
+.notif-dot { position: absolute; top: 6px; right: 6px; width: 7px; height: 7px; border-radius: 50%; background: var(--grad-signal); box-shadow: 0 0 0 2px var(--surface); }
+.notif-dot::after { content: ""; position: absolute; inset: 0; border-radius: 50%; background: var(--primary); animation: ping 2.6s cubic-bezier(0, 0, .2, 1) 3; }
 
 .content { flex: 1; min-height: 0; overflow: auto; scroll-padding-top: var(--s-4); }
 .content > .route { display: flex; flex-direction: column; min-height: 100%; animation: fade var(--t-slow) var(--ease-out); }
@@ -74,7 +81,7 @@
 .page-head { display: flex; align-items: flex-end; flex-wrap: wrap; gap: var(--s-3) var(--s-6); margin-bottom: var(--s-6); }
 .page-head-main { flex: 1 1 280px; min-width: 0; display: flex; align-items: center; gap: var(--s-4); }
 .page-head-main > div { min-width: 0; }
-.page-head h1 { font: var(--type-page-title); letter-spacing: var(--tracking-title); color: var(--text); overflow-wrap: anywhere; }
+.page-head h1 { font: var(--type-page-title); letter-spacing: -0.024em; color: var(--text); overflow-wrap: anywhere; }
 .page-meta { display: flex; flex-wrap: wrap; align-items: center; gap: 2px 0; margin-top: 6px; font: var(--type-body-sm); color: var(--text-3); }
 .page-meta > * + *::before { content: "·"; margin: 0 8px; color: var(--border-strong); }
 .page-actions { display: flex; flex-wrap: wrap; align-items: center; gap: var(--s-2); }
@@ -92,7 +99,7 @@
 
 /* Split view: secondary navigation + content (Reports, Administration) */
 .split { display: grid; grid-template-columns: 232px minmax(0, 1fr); flex: 1; min-height: 100%; }
-.split-nav { display: flex; flex-direction: column; gap: 1px; padding: var(--s-6) var(--s-2); border-right: 1px solid var(--divider); background: var(--surface); }
+.split-nav { display: flex; flex-direction: column; gap: 1px; padding: var(--s-6) var(--s-2); border-right: 1px solid var(--divider); background: transparent; }
 .split-nav .nav-label { margin-bottom: 2px; }
 .split-nav .nav-item { font-weight: var(--fw-regular); height: 32px; }
 .split-nav .nav-item.active { font-weight: var(--fw-medium); }
@@ -109,7 +116,7 @@
 }
 @media (max-width: 1023px) {
   .app, .app.collapsed { grid-template-columns: minmax(0, 1fr); }
-  .sidebar { position: fixed; inset: 0 auto 0 0; z-index: var(--z-nav); width: min(288px, 86vw); padding-top: var(--s-4); transform: translateX(-102%); transition: transform var(--t-slow) var(--ease-out); box-shadow: var(--shadow-lg); border-right: 1px solid var(--border); }
+  .sidebar { position: fixed; inset: 0 auto 0 0; z-index: var(--z-nav); width: min(288px, 86vw); padding-top: var(--s-4); background: var(--ambient), var(--bg); transform: translateX(-102%); transition: transform var(--t-slow) var(--ease-out); box-shadow: var(--shadow-lg); border-right: 1px solid var(--border); }
   .app.nav-open .sidebar { transform: none; }
   .app.nav-open .nav-scrim { display: block; position: fixed; inset: 0; z-index: calc(var(--z-nav) - 1); background: var(--scrim); animation: fade var(--t-base) var(--ease-out); }
   /* The drawer always shows labels, even if the desktop rail was collapsed. */
@@ -117,7 +124,7 @@
   .collapsed .nav-sub { display: flex; }
   .collapsed .nav-label { height: 24px; margin: 0; padding: 0 8px; color: var(--text-3); background: none; }
   .collapsed .nav-item, .collapsed .brand { justify-content: flex-start; padding: 0 8px; }
-  .collapsed .profile { justify-content: flex-start; }
+  .collapsed .profile { grid-template-columns: 30px minmax(0, 1fr) 16px; justify-items: stretch; padding: 8px; }
   .main { margin: 0; border: 0; border-radius: 0; box-shadow: none; }
   .cmdk { width: var(--control-h); padding: 0; justify-content: center; margin-right: 0; border-color: transparent; background: transparent; }
   .cmdk .cmdk-label, .cmdk kbd { display: none; }
@@ -126,6 +133,7 @@
   .split-nav { flex-direction: row; overflow-x: auto; padding: var(--s-2) var(--s-4); border-right: 0; border-bottom: 1px solid var(--divider); scrollbar-width: none; }
   .split-nav .nav-label { display: none; }
   .split-nav .nav-item { flex: none; width: auto; }
+  .split-nav .nav-item.active::before { left: 8px; right: 8px; top: auto; bottom: -8px; width: auto; height: 2px; border-radius: 2px; }
 }
 @media (max-width: 767px) {
   .header { padding: 0 var(--s-2); }

@@ -253,7 +253,7 @@
 
 :global(.compare-bar) {
   display: grid;
-  grid-template-columns: minmax(100px, 148px) minmax(80px, 1fr) minmax(42px, auto);
+  grid-template-columns: minmax(72px, 148px) minmax(48px, 1fr) minmax(32px, auto);
   align-items: center;
   gap: var(--s-3);
   min-height: 28px;

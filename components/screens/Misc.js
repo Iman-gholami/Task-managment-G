@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { api, useApp } from "@/components/AppProvider";
 import { ROLE_LABELS, TEAMS } from "@/lib/roles";
 import Icon from "@/components/ui/Icon";
@@ -11,6 +11,8 @@ import { PageHeader, Panel } from "@/components/ui/layout";
 import { EmptyState } from "@/components/ui/states";
 import { Who } from "@/components/ui/indicators";
 import { plural } from "@/lib/format";
+import { ThemeChooser } from "@/components/ThemePicker";
+import { applyTheme, currentTheme, syncThemeColor } from "@/components/theme";
 
 // What each role can do, as enforced by the API (lib/roles.js, lib/workflow.js, app/api/*).
 const ROLES = ["analyst", "engineer", "soc_manager", "security_manager"];
@@ -106,6 +108,10 @@ export function Login() {
   const router = useRouter();
   const [error, setError] = useState("");
   const [busy, setBusy] = useState(false);
+  const [theme, setTheme] = useState("light");
+  useEffect(() => { setTheme(currentTheme()); syncThemeColor(); }, []);
+  const changeTheme = (id, origin) => { setTheme(id); applyTheme(id, origin); };
+
   const submit = async (e) => {
     e.preventDefault();
     const f = new FormData(e.currentTarget);
@@ -123,26 +129,41 @@ export function Login() {
   return (
     <div className="login">
       <main className="login-l">
-        <form className="login-form" onSubmit={submit}>
+        <div className="login-bar">
           <div className="brand"><span className="brand-mark" aria-hidden="true"><Icon name="brand" /></span><span>Sentinel Ops</span></div>
-          <div>
-            <h1>Sign in</h1>
-            <p className="sec" style={{ marginTop: "var(--s-2)" }}>Security Department workspace</p>
+          <ThemeChooser variant="dots" value={theme} onChange={changeTheme} />
+        </div>
+        <form className="login-form" onSubmit={submit}>
+          <div className="login-title">
+            <span className="eyebrow">Security Department workspace</span>
+            <h1>Welcome back</h1>
+            <p className="sec">Sign in to pick up your tasks, shifts and reports.</p>
           </div>
           <Field label="Work email" htmlFor="email">
-            <input id="email" name="email" type="email" className="input input-lg" autoComplete="username" inputMode="email" required autoFocus aria-invalid={!!error || undefined} readOnly={busy} />
+            <input id="email" name="email" type="email" className="input input-lg" placeholder="name@company" autoComplete="username" inputMode="email" required autoFocus aria-invalid={!!error || undefined} readOnly={busy} />
           </Field>
           <Field label="Password" htmlFor="password">
             <input id="password" name="password" className="input input-lg" type="password" autoComplete="current-password" required aria-invalid={!!error || undefined} readOnly={busy} />
           </Field>
           <FormAlert>{error}</FormAlert>
-          <button type="submit" className="btn btn-primary btn-lg btn-block" disabled={busy}>{busy ? "Signing in…" : "Sign in"}</button>
+          <button type="submit" className="btn btn-primary btn-lg btn-block" disabled={busy}>{busy ? "Signing in…" : <>Sign in<Icon name="arrowRight" /></>}</button>
           <p className="muted small">Trouble signing in? Ask your administrator to reset your password.</p>
         </form>
+        <p className="login-foot muted small"><Icon name="lock" size="sm" />Internal use only · Security Department</p>
       </main>
       <aside className="login-r" aria-hidden="true">
-        <div className="eyebrow">Security Department</div>
-        <div>
+        <div className="login-grid" />
+        <div className="radar">
+          <span className="radar-ring r1" /><span className="radar-ring r2" /><span className="radar-ring r3" />
+          <span className="radar-sweep" />
+          <span className="radar-blip b1" /><span className="radar-blip b2" /><span className="radar-blip b3" />
+          <span className="radar-core"><Icon name="brand" /></span>
+        </div>
+        <div className="login-chip c1"><span><Icon name="tasks" /></span>Review workflow</div>
+        <div className="login-chip c2"><span><Icon name="shift" /></span>SOC Shift Log</div>
+        <div className="login-chip c3"><span><Icon name="report" /></span>Excel reports</div>
+        <div className="login-copy">
+          <div className="eyebrow">Security Department</div>
           <p className="statement">Every task, every shift — <em>in one calm place.</em></p>
           <ul>
             <li><Icon name="tasks" />Assign, review and approve work with a clear workflow.</li>
@@ -150,7 +171,6 @@ export function Login() {
             <li><Icon name="report" />See what the team accomplished, with Excel-ready reports.</li>
           </ul>
         </div>
-        <div className="muted small">Internal use only</div>
       </aside>
     </div>
   );

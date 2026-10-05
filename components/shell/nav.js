@@ -64,7 +64,9 @@ export function pagesFor(me) {
   const reports = isManager(me) ? REPORTS : REPORTS.filter(([k]) => k !== "team");
   reports.forEach(([k, n]) => out.push({ href: `/reports/${k}`, label: n, icon: "sheet" }));
   out.push({ href: "/account", label: "Account & password", icon: "user" });
-  return out;
+  // The Reports nav item links to the first report, which the report list also adds; keep one entry per page.
+  const seen = new Set();
+  return out.filter((p) => !seen.has(p.href) && seen.add(p.href));
 }
 
 /** Breadcrumb trail for a path: [{ label, href? }]; the last entry is the current page. */

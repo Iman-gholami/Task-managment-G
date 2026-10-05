@@ -7,6 +7,8 @@ import useFocusTrap from "@/components/useFocusTrap";
 import Icon from "@/components/ui/Icon";
 import { Avatar, Status } from "@/components/ui/indicators";
 import { pagesFor } from "@/components/shell/nav";
+import { ThemeDot } from "@/components/ThemePicker";
+import { THEMES } from "@/lib/themes";
 import { inTeamScope, isManager } from "@/lib/roles";
 
 const norm = (s) => s.toLowerCase();
@@ -16,7 +18,7 @@ const norm = (s) => s.toLowerCase();
  * plus the Create task action. ↑/↓ move, Enter opens, Esc closes.
  */
 export default function CommandMenu({ onClose }) {
-  const { me, tasks, members, peopleMap, setCreateOpen } = useApp();
+  const { me, tasks, members, peopleMap, setCreateOpen, theme, setTheme } = useApp();
   const router = useRouter();
   const ref = useFocusTrap(onClose);
   const listId = useId();
@@ -48,8 +50,19 @@ export default function CommandMenu({ onClose }) {
     }
     const pages = pagesFor(me).filter((p) => match(p.label)).slice(0, term ? 6 : 20);
     if (pages.length) out.push(["Go to", pages.map((p) => ({ key: p.href, label: <span className="title">{p.label}</span>, icon: p.icon, run: () => router.push(p.href) }))]);
+    // Themes appear once the search mentions them ("theme", "dark", "gold", "midnight"…).
+    const themes = term ? THEMES.filter((t) => match(`theme ${t.name} ${t.note} ${t.scheme} ${t.id}`)) : [];
+    if (themes.length) {
+      out.push(["Theme", themes.map((t) => ({
+        key: `theme-${t.id}`,
+        label: <span className="title">Theme: {t.name}</span>,
+        lead: <ThemeDot theme={t} />,
+        hint: t.id === theme ? "Current" : t.note,
+        run: () => setTheme(t.id),
+      }))]);
+    }
     return out;
-  }, [q, tasks, me, peopleMap, members, manager, router, setCreateOpen]);
+  }, [q, tasks, me, peopleMap, members, manager, router, setCreateOpen, theme, setTheme]);
 
   const flat = groups.flatMap(([, items]) => items);
   const current = Math.min(active, Math.max(0, flat.length - 1));

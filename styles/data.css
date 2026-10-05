@@ -5,7 +5,10 @@
 .metrics { --cols: var(--n, 4); display: grid; grid-template-columns: repeat(var(--cols), minmax(0, 1fr)); gap: var(--s-3); }
 @container (max-width: 860px) { .metrics[data-n="5"], .metrics[data-n="6"] { --cols: 3; } }
 @container (max-width: 600px) { .metrics[data-n] { --cols: 2; } }
-.metric { position: relative; display: flex; flex-direction: column; gap: 8px; min-width: 0; padding: 14px var(--s-4) 12px; border: 1px solid var(--border); border-radius: var(--r-lg); background: var(--surface-card); color: inherit; text-align: left; transition: border-color var(--t-fast), background-color var(--t-fast); }
+.metric { position: relative; isolation: isolate; display: flex; flex-direction: column; gap: 8px; min-width: 0; padding: 14px var(--s-4) 12px; overflow: hidden; border: 1px solid var(--border); border-radius: var(--r-lg); background: var(--surface-card); box-shadow: var(--shadow-card), inset 0 1px 0 var(--edge); color: inherit; text-align: left; transition: border-color var(--t-fast), background-color var(--t-fast), box-shadow var(--t-base), transform var(--t-base) var(--ease-out); }
+/* A faint signal-coloured light in the corner, and a gradient edge that appears on linked cards. */
+.metric::before { content: ""; position: absolute; z-index: -1; top: -90px; right: -70px; width: 190px; height: 190px; border-radius: 50%; background: radial-gradient(closest-side, var(--ambient-1), transparent); pointer-events: none; }
+.metric::after { content: ""; position: absolute; inset: 0 0 auto; height: 2px; background: var(--grad-signal); opacity: 0; transition: opacity var(--t-base); }
 .metric-label { display: flex; align-items: center; gap: 6px; min-width: 0; font: var(--type-label); color: var(--text-2); white-space: nowrap; }
 .metric-label > span { overflow: hidden; text-overflow: ellipsis; }
 .metric-label svg.i { width: 14px; height: 14px; color: var(--text-3); }
@@ -24,7 +27,9 @@
 .metric.alert .metric-value { color: var(--danger); }
 .metric.alert .metric-label::before { content: ""; width: 6px; height: 6px; flex: none; border-radius: 50%; background: var(--danger); }
 .metric.link { cursor: pointer; }
-.metric.link:hover { border-color: color-mix(in oklab, var(--border) 45%, var(--border-strong)); background-image: linear-gradient(var(--hover), var(--hover)); }
+.metric.link:hover { border-color: color-mix(in oklab, var(--primary) 34%, var(--border)); box-shadow: var(--shadow-md); transform: translateY(-2px); }
+.metric.link:hover::after, .metric.link:focus-visible::after { opacity: 1; }
+.metric.alert::before { background: radial-gradient(closest-side, var(--danger-soft), transparent); }
 .metric .sk { height: 22px; width: 56px; margin: 4px 0; }
 
 /* ---------- Filter toolbar ---------- */
@@ -69,6 +74,7 @@ table.dt { width: 100%; border-collapse: separate; border-spacing: 0; font: var(
 .dt tbody tr.is-link { cursor: pointer; }
 .dt tbody tr td { transition: background-color var(--t-fast); }
 .dt tbody tr.is-link:hover td, .dt.hover tbody tr:hover td { background: var(--hover); }
+.dt tbody tr.is-link:hover td:first-child { box-shadow: inset 2px 0 0 color-mix(in oklab, var(--primary) 70%, transparent); }
 .dt tbody tr.kb td { background: var(--selected); }
 .dt tbody tr.kb td:first-child { box-shadow: inset 2px 0 0 var(--primary); }
 .dt.fixed { table-layout: fixed; }
@@ -104,7 +110,7 @@ table.dt { width: 100%; border-collapse: separate; border-spacing: 0; font: var(
 /* Mini column chart with a shared baseline; the latest value is emphasised. */
 .bars { display: inline-flex; align-items: flex-end; gap: 3px; height: 24px; padding-bottom: 1px; border-bottom: 1px solid var(--border); vertical-align: middle; }
 .bars > span { position: relative; width: 8px; min-height: 1px; height: calc(var(--h, 0) * 100%); border-radius: 2px 2px 0 0; background: var(--viz-bar); opacity: .55; transition: opacity var(--t-fast); }
-.bars > span.last { background: var(--viz-bar-strong); opacity: 1; }
+.bars > span.last { background: linear-gradient(180deg, var(--primary), var(--accent)); opacity: 1; }
 .bars > span.zero { background: transparent; }
 .bars:hover > span { opacity: .45; }
 .bars:hover > span:hover { opacity: 1; }
@@ -115,7 +121,7 @@ table.dt { width: 100%; border-collapse: separate; border-spacing: 0; font: var(
 .hbar { display: grid; grid-template-columns: minmax(96px, 160px) minmax(0, 1fr) 40px; gap: var(--s-3); align-items: center; min-height: 36px; padding: 0 var(--s-4); font-size: var(--fs-13); }
 .hbar + .hbar { border-top: 1px solid var(--divider); }
 .hbar .track { height: 6px; border-radius: var(--r-full); background: var(--viz-track); overflow: hidden; }
-.hbar .track > span { display: block; height: 100%; border-radius: inherit; background: var(--viz-bar-strong); transition: width var(--t-slow) var(--ease-out); }
+.hbar .track > span { display: block; height: 100%; border-radius: inherit; background: var(--grad-signal); transition: width var(--t-slow) var(--ease-out); }
 .hbar .track > span.full { background: var(--warning); }
 
 /* ---------- Attention list ---------- */
