@@ -30,6 +30,17 @@
 .detail-side .input[type="date"] { width: 156px; height: var(--control-h-sm); }
 
 .files { display: flex; flex-wrap: wrap; gap: var(--s-2); }
+/* Empty attachments: one dashed target that opens the file picker or takes a dropped file. */
+.dropzone { display: flex; align-items: center; gap: var(--s-3); width: 100%; padding: var(--s-4); border: 1px dashed var(--border-strong); border-radius: var(--r-lg); background: transparent; color: var(--text-2); font: var(--type-body-sm); text-align: left; cursor: pointer; transition: border-color var(--t-fast), background-color var(--t-fast), box-shadow var(--t-base); }
+.dropzone > span:last-child { display: grid; gap: 2px; }
+.dropzone b { font-weight: var(--fw-medium); color: var(--text); }
+.dropzone small { font: var(--type-caption); color: var(--text-3); }
+.dropzone .glyph { width: 36px; height: 36px; flex: none; display: grid; place-items: center; border-radius: var(--r-md); background: var(--surface-inset); color: var(--text-3); transition: background-color var(--t-fast), color var(--t-fast), transform var(--t-base) var(--ease-spring); }
+.dropzone:hover, .dropzone.over { border-color: var(--primary); background: var(--grad-signal-soft); }
+.dropzone:hover .glyph, .dropzone.over .glyph { background: var(--surface-card); color: var(--primary); }
+.dropzone.over { box-shadow: var(--ring); }
+.dropzone.over .glyph { transform: translateY(-2px) scale(1.06); }
+.dropzone:disabled { opacity: .6; cursor: progress; }
 .file { display: inline-flex; align-items: center; gap: var(--s-3); max-width: 100%; padding: 6px 6px 6px 8px; border: 1px solid var(--border); border-radius: var(--r-md); background: var(--surface-card); font-size: var(--fs-13); transition: border-color var(--t-fast); }
 .file:hover { border-color: color-mix(in oklab, var(--border) 45%, var(--border-strong)); }
 .file a { min-width: 0; overflow: hidden; text-overflow: ellipsis; color: var(--text); }
@@ -63,22 +74,36 @@
 .composer textarea { width: 100%; min-height: 48px; border: 0; background: none; outline: none; resize: none; font: var(--type-body); }
 .composer .bar { display: flex; align-items: center; gap: var(--s-2); }
 .composer .bar .hint { font-size: var(--fs-12); color: var(--text-3); }
-.timeline { display: grid; gap: var(--s-3); font-size: var(--fs-12); color: var(--text-3); }
-.timeline > li { position: relative; padding-left: var(--s-4); line-height: 1.45; }
-.timeline > li::before { content: ""; position: absolute; left: 0; top: 6px; width: 5px; height: 5px; border-radius: 50%; background: var(--border-strong); }
+.timeline { display: grid; gap: var(--s-4); font-size: var(--fs-12); color: var(--text-3); }
+.timeline > li { position: relative; padding-left: 20px; line-height: 1.45; }
+/* Dots joined by a thin rail; the newest entry glows in the signal colour. */
+.timeline > li::before { content: ""; position: absolute; z-index: 1; left: 0; top: 5px; width: 7px; height: 7px; border-radius: 50%; background: var(--surface-inset); box-shadow: inset 0 0 0 1.5px var(--border-strong); }
+.timeline > li:not(:last-child)::after { content: ""; position: absolute; left: 3px; top: 14px; bottom: calc(var(--s-4) * -1 + 2px); width: 1px; background: var(--border); }
 .timeline > li:first-child::before { background: var(--grad-signal); box-shadow: 0 0 0 3px var(--primary-soft); }
 .timeline b { color: var(--text-2); font-weight: var(--fw-medium); }
 .timeline time { display: block; color: var(--text-3); }
 
 /* ---------- Task board ---------- */
-.board { display: grid; grid-template-columns: repeat(5, minmax(220px, 1fr)); gap: var(--s-3); overflow-x: auto; padding-bottom: var(--s-2); }
-.board-col { min-width: 0; padding: var(--s-2); border: 1px solid var(--border); border-radius: var(--r-lg); background: var(--surface-inset); }
-.board-col-head { display: flex; align-items: center; justify-content: space-between; height: 28px; margin: 0 4px var(--s-2); }
+.board { display: grid; grid-template-columns: repeat(5, minmax(200px, 1fr)); gap: var(--s-3); overflow-x: auto; padding-bottom: var(--s-2); }
+/* Each column carries its status colour as a thin top edge. */
+.board-col { --st: var(--text-3); position: relative; overflow: hidden; min-width: 0; padding: var(--s-2); border: 1px solid var(--border); border-radius: var(--r-lg); background: var(--surface-inset); }
+.board-col::before { content: ""; position: absolute; inset: 0 0 auto; height: 2px; background: var(--st); opacity: .75; }
+.board-col[data-s="todo"] { --st: var(--neutral); }
+.board-col[data-s="progress"] { --st: var(--info); }
+.board-col[data-s="review"] { --st: var(--violet); }
+.board-col[data-s="returned"] { --st: var(--warning); }
+.board-col[data-s="done"] { --st: var(--success); }
+.board-col-head { display: flex; align-items: center; justify-content: space-between; height: 30px; margin: 2px 4px var(--s-2); }
+.board-count { min-width: 22px; height: 20px; padding: 0 6px; display: inline-grid; place-items: center; border-radius: var(--r-full); background: var(--hover); font: var(--fw-medium) var(--fs-12)/1 var(--font-sans); color: var(--text-2); }
 .board-card { display: block; margin-bottom: var(--s-2); padding: 10px 12px; border: 1px solid var(--border); border-radius: var(--r-md); background: var(--surface-card); box-shadow: var(--shadow-card), inset 0 1px 0 var(--edge); color: inherit; transition: border-color var(--t-fast), box-shadow var(--t-base), transform var(--t-base) var(--ease-out); }
 .board-card:hover { border-color: color-mix(in oklab, var(--primary) 34%, var(--border)); box-shadow: var(--shadow-md); transform: translateY(-1px); }
 .board-card .t { display: -webkit-box; margin: 4px 0 10px; overflow: hidden; -webkit-line-clamp: 2; -webkit-box-orient: vertical; color: var(--text); font-size: var(--fs-13); font-weight: var(--fw-medium); line-height: 1.4; }
-.board-card .meta { display: flex; align-items: center; gap: var(--s-3); font-size: var(--fs-12); }
-.board-card .meta .avatar { margin-left: auto; }
+.board-card .meta { display: flex; align-items: center; gap: var(--s-3); min-width: 0; font-size: var(--fs-12); white-space: nowrap; }
+.board-card .meta .due { margin-left: auto; min-width: 0; overflow: hidden; text-overflow: ellipsis; }
+.board-card-top { display: flex; align-items: center; gap: var(--s-2); min-height: 20px; }
+.board-card-top > .mono { margin-right: auto; }
+.board-card[data-s="blocked"] { border-color: color-mix(in oklab, var(--danger) 40%, var(--border)); }
+.board-card[data-overdue] { box-shadow: var(--shadow-card), inset 0 1px 0 var(--edge), inset 2px 0 0 var(--danger); }
 .board-empty { padding: var(--s-4) var(--s-2); text-align: center; font-size: var(--fs-12); color: var(--text-3); }
 
 /* ---------- Shift log ---------- */
@@ -121,7 +146,10 @@
    Left: brand, theme swatches, the form. Right: a hero panel with a slow radar sweep (decorative, aria-hidden).
    The hero uses --hero-* tokens so it stays dark and luminous in every theme. */
 .login { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1.08fr); min-height: 100dvh; background: var(--ambient), var(--surface); }
-.login-l { display: grid; grid-template-rows: auto 1fr auto; gap: var(--s-6); min-width: 0; padding: var(--s-6) clamp(var(--s-5), 5vw, var(--s-16)); }
+.login-l { position: relative; isolation: isolate; display: grid; grid-template-rows: auto 1fr auto; gap: var(--s-6); min-width: 0; padding: var(--s-6) clamp(var(--s-5), 5vw, var(--s-16)); }
+/* A soft pool of light and a faint dot grid behind the form, fading out toward the edges. */
+.login-l::before { content: ""; position: absolute; z-index: -1; inset: 0; background: radial-gradient(440px 340px at 50% 50%, var(--ambient-1), transparent 72%); pointer-events: none; }
+.login-l::after { content: ""; position: absolute; z-index: -1; inset: 0; background-image: radial-gradient(color-mix(in oklab, var(--text) 9%, transparent) 1px, transparent 1.2px); background-size: 22px 22px; -webkit-mask-image: radial-gradient(ellipse 46% 40% at 50% 50%, #000 0%, transparent 100%); mask-image: radial-gradient(ellipse 46% 40% at 50% 50%, #000 0%, transparent 100%); pointer-events: none; }
 .login-bar { display: flex; align-items: center; justify-content: space-between; gap: var(--s-4); }
 .login-bar .brand { margin: 0; }
 .login-form { align-self: center; justify-self: center; display: grid; gap: var(--s-4); width: 100%; max-width: 380px; animation: rise 420ms var(--ease-out) both; }

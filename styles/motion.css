@@ -1,0 +1,63 @@
+/* Sentinel Ops — motion layer. Entrances only: a page settles in top to bottom, KPI cards follow one
+   another, and charts grow from their baseline. Everything runs once on mount, uses only opacity and
+   transform, never delays input, and is switched off by prefers-reduced-motion (styles/base.css).
+   Fill mode is `backwards`: once an entrance ends nothing is left applied, so hover lifts still work and
+   no finished transform turns a block into the containing block of a fixed-position dialog or popover. */
+
+@keyframes enter { from { opacity: 0; transform: translateY(8px); } }
+@keyframes grow-x { from { transform: scaleX(0); } }
+@keyframes grow-y { from { transform: scaleY(0); } }
+@keyframes bar-in { from { opacity: 0; transform: scaleY(0); } }
+
+/* ---------- Page entrance: header, then each block in order ---------- */
+.content > .route { animation: none; }
+.page > :not(.scrim),
+.detail-main > *,
+.detail-side,
+.split-nav {
+  animation: enter 420ms var(--ease-out) backwards;
+}
+.page > :nth-child(2), .detail-main > :nth-child(2) { animation-delay: 40ms; }
+.page > :nth-child(3), .detail-main > :nth-child(3) { animation-delay: 80ms; }
+.page > :nth-child(4), .detail-main > :nth-child(4) { animation-delay: 120ms; }
+.page > :nth-child(5), .detail-main > :nth-child(5) { animation-delay: 160ms; }
+.page > :nth-child(n + 6), .detail-main > :nth-child(n + 6) { animation-delay: 200ms; }
+.detail-side { animation-delay: 60ms; }
+/* Stacked sections inside a page follow on. */
+.stack-lg > * { animation: enter 420ms var(--ease-out) backwards; }
+.stack-lg > :nth-child(2) { animation-delay: 60ms; }
+.stack-lg > :nth-child(3) { animation-delay: 120ms; }
+.stack-lg > :nth-child(n + 4) { animation-delay: 180ms; }
+
+/* ---------- KPI cards arrive one after another ---------- */
+.metrics > .metric { animation: enter 460ms var(--ease-out) backwards; }
+.metrics > .metric:nth-child(2) { animation-delay: 50ms; }
+.metrics > .metric:nth-child(3) { animation-delay: 100ms; }
+.metrics > .metric:nth-child(4) { animation-delay: 150ms; }
+.metrics > .metric:nth-child(5) { animation-delay: 200ms; }
+.metrics > .metric:nth-child(n + 6) { animation-delay: 250ms; }
+
+/* ---------- Charts grow from their baseline ---------- */
+.progress > span,
+.hbar .track > span,
+.dist,
+.compare-bar__track > span {
+  transform-origin: left center;
+  animation: grow-x 700ms var(--ease-out) backwards;
+  animation-delay: 120ms;
+}
+.bars > span {
+  transform-origin: center bottom;
+  animation: bar-in 600ms var(--ease-out) backwards;
+  animation-delay: 100ms;
+}
+.bars > span:nth-last-child(2) { animation-delay: 160ms; }
+.bars > span.last { animation-delay: 220ms; }
+
+/* ---------- Small moments ---------- */
+/* The active page marker slides in when you change page. */
+.nav-item.active::before { transform-origin: center; animation: grow-y 260ms var(--ease-spring) backwards; }
+/* Board cards rise into their column. */
+.board-card { animation: enter 360ms var(--ease-out) backwards; }
+/* Inline notices and empty states fade up gently. */
+.empty, .notice { animation: enter 360ms var(--ease-out) backwards; }

@@ -38,6 +38,7 @@ const PATHS = {
   arrowDown: '<path d="M10 4.5v11M5.5 11 10 15.5 14.5 11"/>',
   arrowLeft: '<path d="M15.5 10h-11M9 5.5 4.5 10 9 14.5"/>',
   arrowRight: '<path d="M4.5 10h11M11 5.5l4.5 4.5-4.5 4.5"/>',
+  swap: '<path d="M4 7h11.5M12.5 4l3 3-3 3"/><path d="M16 13H4.5M7.5 10l-3 3 3 3"/>',
   // Objects & states
   cal: '<rect x="3" y="4.5" width="14" height="12" rx="2"/><path d="M3 8.5h14M7 3v3M13 3v3"/>',
   clock: '<circle cx="10" cy="10" r="7"/><path d="M10 6v4l2.5 1.5"/>',
@@ -52,10 +53,15 @@ const PATHS = {
   blocked: '<circle cx="10" cy="10" r="7"/><path d="m5.2 14.8 9.6-9.6"/>',
   review: '<path d="M2.5 10s2.7-5 7.5-5 7.5 5 7.5 5-2.7 5-7.5 5-7.5-5-7.5-5z"/><circle cx="10" cy="10" r="2.2"/>',
   lock: '<rect x="4.5" y="9" width="11" height="8" rx="1.5"/><path d="M7 9V6.5a3 3 0 0 1 6 0V9"/>',
+  mail: '<rect x="3" y="4.5" width="14" height="11" rx="2"/><path d="m3.5 6 6.5 5 6.5-5"/>',
+  eye: '<path d="M2.5 10s2.7-5 7.5-5 7.5 5 7.5 5-2.7 5-7.5 5-7.5-5-7.5-5z"/><circle cx="10" cy="10" r="2.2"/>',
+  eyeOff: '<path d="M8.2 5.2A7.4 7.4 0 0 1 10 5c4.8 0 7.5 5 7.5 5a12 12 0 0 1-1.9 2.5M12.2 14.6A6.8 6.8 0 0 1 10 15c-4.8 0-7.5-5-7.5-5a12 12 0 0 1 2.7-3.3"/><path d="M8.4 8.4a2.2 2.2 0 0 0 3.1 3.1M3 3l14 14"/>',
+  sparkle: '<path d="M10 3c.4 3.3 2.2 5.4 5.5 6-3.3.6-5.1 2.7-5.5 6-.4-3.3-2.2-5.4-5.5-6 3.3-.6 5.1-2.7 5.5-6z"/>',
   offline: '<path d="m3 3 14 14"/><path d="M7.6 7.4A4.5 4.5 0 0 0 6 16h8.3M16.3 14.6A3.2 3.2 0 0 0 14 9.1h-.4a5 5 0 0 0-4.1-3.5"/>',
   server: '<rect x="3.5" y="3.5" width="13" height="5.5" rx="1.5"/><rect x="3.5" y="11" width="13" height="5.5" rx="1.5"/><path d="M6.5 6.25h.01M6.5 13.75h.01"/>',
   grip: '<circle cx="8" cy="6" r=".8"/><circle cx="12" cy="6" r=".8"/><circle cx="8" cy="10" r=".8"/><circle cx="12" cy="10" r=".8"/><circle cx="8" cy="14" r=".8"/><circle cx="12" cy="14" r=".8"/>',
   keyboard: '<rect x="2.5" y="5" width="15" height="10" rx="2"/><path d="M5.5 8h.01M8.5 8h.01M11.5 8h.01M14.5 8h.01M6.5 12h7"/>',
+  chat: '<path d="M4 4.5h12a1 1 0 0 1 1 1v8a1 1 0 0 1-1 1H9l-3.5 3v-3H4a1 1 0 0 1-1-1v-8a1 1 0 0 1 1-1z"/><path d="M7 8.5h6M7 11h4"/>',
   at: '<circle cx="10" cy="10" r="3"/><path d="M13 10v1.2a2 2 0 0 0 4 0V10a7 7 0 1 0-2.7 5.5"/>',
 };
 

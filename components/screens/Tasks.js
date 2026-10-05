@@ -203,17 +203,21 @@ function Board({ list }) {
       {COLUMNS.map((s) => {
         const col = list.filter((t) => t.status === s || (s === "todo" && t.status === "backlog") || (s === "progress" && t.status === "blocked"));
         return (
-          <section key={s} className="board-col" aria-label={`${STATUS[s]}: ${col.length}`}>
-            <div className="board-col-head"><Status s={s} /><span className="muted num">{col.length}</span></div>
+          <section key={s} className="board-col" data-s={s} aria-label={`${STATUS[s]}: ${col.length}`}>
+            <div className="board-col-head"><Status s={s} /><span className="board-count num">{col.length}</span></div>
             {col.length === 0 && <div className="board-empty">No tasks</div>}
             {col.map((t) => (
-              <Link key={t.id} href={`/tasks/${t.id}`} className="board-card">
-                <div className="mono muted">{t.id}{t.status === "blocked" ? " · Blocked" : t.status === "backlog" ? " · Backlog" : ""}</div>
+              <Link key={t.id} href={`/tasks/${t.id}`} className="board-card" data-s={t.status} data-overdue={isOpen(t) && t.due !== "—" && t.due < TODAY ? "" : undefined}>
+                <div className="board-card-top">
+                  <span className="mono muted">{t.id}</span>
+                  {t.status === "blocked" && <Status s="blocked" />}
+                  {t.status === "backlog" && <span className="badge">Backlog</span>}
+                  <Avatar id={t.a} size="sm" label />
+                </div>
                 <div className="t">{t.title}</div>
                 <div className="meta">
                   <Priority p={t.prio} />
-                  {t.due !== "—" && isOpen(t) && <span className={t.due < TODAY ? "overdue" : "muted"}>{dueLabel(t.due)}</span>}
-                  <Avatar id={t.a} size="sm" label />
+                  {t.due !== "—" && isOpen(t) && <span className={`due ${t.due < TODAY ? "overdue" : "muted"}`}>{dueLabel(t.due)}</span>}
                 </div>
               </Link>
             ))}

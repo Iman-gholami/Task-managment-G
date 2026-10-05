@@ -109,7 +109,10 @@ export function Login() {
   const [error, setError] = useState("");
   const [busy, setBusy] = useState(false);
   const [theme, setTheme] = useState("light");
+  const [showPw, setShowPw] = useState(false);
+  const [caps, setCaps] = useState(false);
   useEffect(() => { setTheme(currentTheme()); syncThemeColor(); }, []);
+  const checkCaps = (e) => setCaps(e.getModifierState?.("CapsLock") ?? false);
   const changeTheme = (id, origin) => { setTheme(id); applyTheme(id, origin); };
 
   const submit = async (e) => {
@@ -140,10 +143,20 @@ export function Login() {
             <p className="sec">Sign in to pick up your tasks, shifts and reports.</p>
           </div>
           <Field label="Work email" htmlFor="email">
-            <input id="email" name="email" type="email" className="input input-lg" placeholder="name@company" autoComplete="username" inputMode="email" required autoFocus aria-invalid={!!error || undefined} readOnly={busy} />
+            <div className="input-wrap">
+              <Icon name="mail" />
+              <input id="email" name="email" type="email" className="input input-lg" placeholder="name@company" autoComplete="username" inputMode="email" required autoFocus aria-invalid={!!error || undefined} readOnly={busy} />
+            </div>
           </Field>
           <Field label="Password" htmlFor="password">
-            <input id="password" name="password" className="input input-lg" type="password" autoComplete="current-password" required aria-invalid={!!error || undefined} readOnly={busy} />
+            <div className="input-wrap">
+              <Icon name="lock" />
+              <input id="password" name="password" className="input input-lg" type={showPw ? "text" : "password"} autoComplete="current-password" required aria-invalid={!!error || undefined} aria-describedby={caps ? "caps-hint" : undefined} readOnly={busy} onKeyDown={checkCaps} onKeyUp={checkCaps} onBlur={() => setCaps(false)} />
+              <button type="button" className="input-action" aria-pressed={showPw} title={showPw ? "Hide password" : "Show password"} onClick={() => setShowPw((v) => !v)}>
+                <Icon name={showPw ? "eyeOff" : "eye"} /><span className="sr-only">Show password</span>
+              </button>
+            </div>
+            {caps && <span id="caps-hint" className="field-hint caps-hint"><Icon name="alert" size="sm" />Caps Lock is on</span>}
           </Field>
           <FormAlert>{error}</FormAlert>
           <button type="submit" className="btn btn-primary btn-lg btn-block" disabled={busy}>{busy ? "Signing in…" : <>Sign in<Icon name="arrowRight" /></>}</button>

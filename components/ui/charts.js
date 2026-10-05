@@ -1,8 +1,12 @@
 "use client";
 
+import { useState } from "react";
 import { CX } from "@/lib/format";
 
 const CX_LABELS = CX.slice(1);
+// Categories take the ramp steps out of order (strong, light, strongest, mid) so neighbours always contrast.
+const CAT = [3, 1, 4, 2];
+const catColor = (i) => `var(--viz-${CAT[i % 4]})`;
 
 /**
  * Complexity mix as a 100% stacked bar (Simple → Advanced). Counts are in the tooltip and the
@@ -62,16 +66,24 @@ export function Meter({ value, max = 100, label, tone, readout }) {
   );
 }
 
-/** Donut breakdown for a small set of categories. */
+/**
+ * Donut breakdown for a small set of categories. Segments draw in on mount; hovering a segment or
+ * its legend row highlights the pair and shows that category's value in the centre.
+ */
 export function DonutBreakdown({ rows, name = "Breakdown", unit = " tasks" }) {
+  const [active, setActive] = useState(null);
   const radius = 46;
   const circumference = 2 * Math.PI * radius;
   const total = rows.reduce((sum, row) => sum + Math.max(0, Number(row.value) || 0), 0);
+  const shown = rows.filter((row) => Number(row.value) > 0).length;
+  // A small gap between segments keeps neighbours apart without a stroke in the surface colour.
+  const gap = shown > 1 ? 2.2 : 0;
   let cursor = 0;
   const summary = rows.map((row) => `${row.label} ${row.value}${unit}`).join(" · ");
+  const focus = active !== null ? rows[active] : null;
 
   return (
-    <div className="donut-chart" role="img" aria-label={`${name}: ${summary}`}>
+    <div className={`donut-chart ${active !== null ? "has-active" : ""}`} role="img" aria-label={`${name}: ${summary}`}>
       <div className="donut-chart__visual">
         <svg viewBox="0 0 120 120" aria-hidden="true">
           <circle className="donut-chart__track" cx="60" cy="60" r={radius} />
@@ -81,25 +93,30 @@ export function DonutBreakdown({ rows, name = "Breakdown", unit = " tasks" }) {
             const length = (value / total) * circumference;
             const offset = cursor;
             cursor += length;
+            const drawn = Math.max(0.5, length - gap);
             return (
               <circle
                 key={row.label}
-                className="donut-chart__segment"
+                className={`donut-chart__segment ${active === i ? "on" : ""}`}
                 cx="60"
                 cy="60"
                 r={radius}
+                onMouseEnter={() => setActive(i)}
+                onMouseLeave={() => setActive(null)}
                 style={{
-                  "--donut-color": `var(--viz-${(i % 4) + 1})`,
-                  strokeDasharray: `${length} ${circumference - length}`,
-                  strokeDashoffset: -offset,
+                  "--donut-color": catColor(i),
+                  "--c": `${circumference}`,
+                  "--i": i,
+                  strokeDasharray: `${drawn} ${circumference - drawn}`,
+                  strokeDashoffset: -(offset + gap / 2),
                 }}
               />
             );
           })}
         </svg>
         <div className="donut-chart__center">
-          <b className="num">{total}</b>
-          <span>completed</span>
+          <b className="num">{focus ? Math.max(0, Number(focus.value) || 0) : total}</b>
+          <span>{focus ? focus.label : "completed"}</span>
         </div>
       </div>
       <div className="donut-chart__legend">
@@ -107,8 +124,8 @@ export function DonutBreakdown({ rows, name = "Breakdown", unit = " tasks" }) {
           const value = Math.max(0, Number(row.value) || 0);
           const pct = total ? Math.round((value / total) * 100) : 0;
           return (
-            <div key={row.label} className="donut-chart__legend-row">
-              <i style={{ background: `var(--viz-${(i % 4) + 1})` }} aria-hidden="true" />
+            <div key={row.label} className={`donut-chart__legend-row ${active === i ? "on" : ""}`} onMouseEnter={() => setActive(i)} onMouseLeave={() => setActive(null)}>
+              <i style={{ background: catColor(i) }} aria-hidden="true" />
               <span>{row.label}</span>
               <small>{pct}%</small>
               <b className="num">{value}</b>
@@ -143,7 +160,7 @@ export function TrendLines({ series, labels, name = "Trend" }) {
         {series.map((s, si) => {
           const points = s.values.map((v, i) => `${x(i)},${y(v)}`).join(" ");
           return (
-            <g key={s.name} style={{ "--trend-color": `var(--viz-${(si % 4) + 1})` }}>
+            <g key={s.name} style={{ "--trend-color": catColor(si) }}>
               <polyline className="trend-line" points={points} />
               {s.values.map((v, i) => <circle key={i} className="trend-dot" cx={x(i)} cy={y(v)} r="4" />)}
             </g>
@@ -155,7 +172,7 @@ export function TrendLines({ series, labels, name = "Trend" }) {
       </div>
       <div className="trend-legend">
         {series.map((s, si) => (
-          <span key={s.name}><i style={{ background: `var(--viz-${(si % 4) + 1})` }} />{s.name}<b>{s.values.at(-1) ?? 0}</b></span>
+          <span key={s.name}><i style={{ background: catColor(si) }} />{s.name}<b>{s.values.at(-1) ?? 0}</b></span>
         ))}
       </div>
     </div>

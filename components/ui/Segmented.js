@@ -6,7 +6,7 @@ import Icon from "@/components/ui/Icon";
 /**
  * Segmented control. `kind="radio"` (default) for a single choice such as a period or a view;
  * `kind="tabs"` when it switches the content below (task status tabs).
- * Roving focus: Tab enters on the selected option, ←/→/Home/End move and select.
+ * Roving focus: Tab enters on the selected option, ←/→/Home/End move and select (mirrored in RTL).
  * options: [{ value, label, icon?, count?, ariaLabel? }]
  */
 export default function Segmented({ label, value, onChange, options, kind = "radio", iconOnly, className = "" }) {
@@ -16,7 +16,9 @@ export default function Segmented({ label, value, onChange, options, kind = "rad
 
   const onKeyDown = (e) => {
     const last = options.length - 1;
-    const next = { ArrowRight: index + 1, ArrowDown: index + 1, ArrowLeft: index - 1, ArrowUp: index - 1, Home: 0, End: last }[e.key];
+    // In right-to-left screens the next option is on the left.
+    const step = ref.current && getComputedStyle(ref.current).direction === "rtl" ? -1 : 1;
+    const next = { ArrowRight: index + step, ArrowDown: index + 1, ArrowLeft: index - step, ArrowUp: index - 1, Home: 0, End: last }[e.key];
     if (next === undefined) return;
     e.preventDefault();
     const i = (next + options.length) % options.length;

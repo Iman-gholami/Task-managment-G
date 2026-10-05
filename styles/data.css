@@ -3,8 +3,19 @@
 /* ---------- KPI metric cards ---------- */
 .metrics-wrap { container-type: inline-size; margin-bottom: var(--s-6); }
 .metrics { --cols: var(--n, 4); display: grid; grid-template-columns: repeat(var(--cols), minmax(0, 1fr)); gap: var(--s-3); }
-@container (max-width: 860px) { .metrics[data-n="5"], .metrics[data-n="6"] { --cols: 3; } }
-@container (max-width: 600px) { .metrics[data-n] { --cols: 2; } }
+@container (max-width: 860px) {
+  .metrics[data-n="6"] { --cols: 3; }
+  /* Five cards: a full 3 + 2 on a 6-column track, so the second row has no hole. */
+  .metrics[data-n="5"] { --cols: 6; }
+  .metrics[data-n="5"] > * { grid-column: span 2; }
+  .metrics[data-n="5"] > :nth-child(n + 4) { grid-column: span 3; }
+}
+@container (max-width: 600px) {
+  .metrics[data-n] { --cols: 2; }
+  .metrics[data-n="5"] > *, .metrics[data-n="5"] > :nth-child(n + 4) { grid-column: auto; }
+  /* An odd count ends with one full-width card instead of a gap. */
+  .metrics:is([data-n="3"], [data-n="5"], [data-n="7"]) > :last-child { grid-column: 1 / -1; }
+}
 .metric { position: relative; isolation: isolate; display: flex; flex-direction: column; gap: 8px; min-width: 0; padding: 14px var(--s-4) 12px; overflow: hidden; border: 1px solid var(--border); border-radius: var(--r-lg); background: var(--surface-card); box-shadow: var(--shadow-card), inset 0 1px 0 var(--edge); color: inherit; text-align: left; transition: border-color var(--t-fast), background-color var(--t-fast), box-shadow var(--t-base), transform var(--t-base) var(--ease-out); }
 /* A faint signal-coloured light in the corner, and a gradient edge that appears on linked cards. */
 .metric::before { content: ""; position: absolute; z-index: -1; top: -90px; right: -70px; width: 190px; height: 190px; border-radius: 50%; background: radial-gradient(closest-side, var(--ambient-1), transparent); pointer-events: none; }
@@ -12,6 +23,11 @@
 .metric-label { display: flex; align-items: center; gap: 6px; min-width: 0; font: var(--type-label); color: var(--text-2); white-space: nowrap; }
 .metric-label > span { overflow: hidden; text-overflow: ellipsis; }
 .metric-label svg.i { width: 14px; height: 14px; color: var(--text-3); }
+/* Icon tile: a soft signal tint, red on alert cards. */
+.metric-icon { width: 22px; height: 22px; flex: none; display: grid; place-items: center; border-radius: 6px; background: var(--grad-signal-soft); color: var(--primary); box-shadow: inset 0 0 0 1px color-mix(in oklab, var(--primary) 16%, transparent); }
+.metric-label .metric-icon svg.i { width: 13px; height: 13px; color: inherit; stroke-width: 1.8; }
+.metric.alert .metric-icon { background: var(--danger-soft); color: var(--danger); box-shadow: inset 0 0 0 1px color-mix(in oklab, var(--danger) 22%, transparent); }
+.metric.alert .metric-label:has(.metric-icon)::before { content: none; }
 .metric-label > svg.i:last-child { margin-left: auto; opacity: 0; transition: opacity var(--t-fast); }
 .metric.link:hover .metric-label > svg.i:last-child, .metric.link:focus-visible .metric-label > svg.i:last-child { opacity: 1; }
 .metric-hint { display: inline-grid; place-items: center; border-radius: 50%; cursor: help; }

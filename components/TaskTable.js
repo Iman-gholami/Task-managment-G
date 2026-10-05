@@ -13,7 +13,7 @@ import { isManager } from "@/lib/roles";
 import { actionLabel, allowedTransitions } from "@/lib/workflow";
 
 // Fixed widths keep columns aligned across several tables on one page (e.g. grouped by assignee).
-const WIDTH = { a: 180, team: 140, status: 132, prio: 104, cx: 124, due: 136, hours: 72, quality: 136, upd: 88 };
+const WIDTH = { a: 180, team: 140, status: 132, prio: 104, cx: 136, due: 136, hours: 72, quality: 136, upd: 80 };
 const HEAD = { title: "Task", a: "Assignee", team: "Team", status: "Status", prio: "Priority", cx: "Complexity", due: "Deadline", hours: "Hours", quality: "Quality", upd: "Updated" };
 // Columns that stay visible on phones (the rest collapse into the card layout).
 const PRIMARY = new Set(["title", "status", "prio", "due", "a"]);

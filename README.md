@@ -90,7 +90,7 @@ npm test
 | `app/api/` | REST API: auth, account, tasks (+ checklist, comments, attachments), shift log, performance, reports, members |
 | `lib/server/` | Database, auth/sessions, data access (server only) |
 | `lib/` | Roles and permissions, task workflow rules, formatting helpers, seed data |
-| `styles/` | Design tokens (four themes) and styles by layer: base, shell, components, data, screens, themes; bundled fonts |
+| `styles/` | Design tokens (four themes) and styles by layer: base, shell, components, data, screens, rtl (Persian screens), themes, motion; bundled fonts |
 | `design/` | Design system and specs for all 23 screens |
 | `tests/` | Playwright end-to-end tests |
 

@@ -5,7 +5,7 @@ Its look comes from hierarchy, layered surfaces and one signature gradient. Four
 only the colours change.
 
 > Live reference: the Next.js app in this repository (`npm run dev`). Every rule in this document is implemented there.
-> Tokens: `styles/tokens.css`. Styles by layer: `styles/base.css`, `shell.css`, `components.css`, `data.css`, `screens.css`, `themes.css`.
+> Tokens: `styles/tokens.css`. Styles by layer: `styles/base.css`, `shell.css`, `components.css`, `data.css`, `screens.css`, `rtl.css` (Persian screens), `themes.css`, `motion.css`.
 > Theme list: `lib/themes.js`. Theme switching: `components/theme.js`, `components/ThemePicker.js`.
 > React primitives: `components/ui/`. Palette and contrast checks: `node scripts/palette.mjs`.
 
@@ -19,7 +19,7 @@ only the colours change.
 | 2 | **Answer the question first** | Every page opens with what is happening and whether anything is wrong (KPIs, "Needs your attention"), then detail. |
 | 3 | **Scan before you click** | Lists show status, priority, complexity, deadline and quality inline, so opening a record is optional. |
 | 4 | **Two kinds of work, never mixed** | *Routine activity* (Shift Logs) and *Task performance* are separate everywhere: separate sections, labels and counts. |
-| 5 | **Speed beats spectacle** | Motion takes 120–220ms and only confirms an action. Common edits happen in place. The two deliberate exceptions — the theme reveal and the sign-in radar — never block input, and `prefers-reduced-motion` turns them off. |
+| 5 | **Speed beats spectacle** | Interaction feedback takes 120–220ms and only confirms an action. Common edits happen in place. Entrances (a page settling in, charts growing) run once on mount in under 0.7s and never block input. The theme reveal and the sign-in radar are the only longer effects; `prefers-reduced-motion` turns all of it off. |
 | 6 | **Respectful measurement** | Performance data describes output. Default order is alphabetical; nothing is ranked. |
 | 7 | **Never invent** | Every number, status and comparison comes from stored data. Missing data is shown as missing ("—", "n/a"), not estimated. |
 
@@ -29,7 +29,7 @@ only the colours change.
 - **Signature gradient**: the accent runs into a second stop (`--accent`) as one 135° gradient. It marks the brand mark, primary buttons, the active-page bar, checked controls, progress fills and the latest chart bar — never text that has to be read, and never large areas.
 - **Light, not decoration**: a faint ambient glow in the accent colour sits behind the app, at the top of the content sheet and in the corner of KPI cards. It is always behind opaque cards, so it never changes text contrast.
 - **Depth from layering**: in the dark themes each level is a step lighter — app background → content sheet → cards → insets → menus — with a 1px top highlight (`--edge`) on cards. In the light theme cards get a soft two-layer shadow (`--shadow-card`). Menus, toasts and the dialog scrim blur what is behind them.
-- **One typeface**: Geist (UI) with tabular numbers for all figures; Geist Mono only for IDs, ticket numbers and references. (The earlier display serif was removed: its condensed digits made "11" read as "ll".)
+- **One typeface per script**: Geist (UI) with tabular numbers for all figures; Geist Mono only for IDs, ticket numbers and references. Persian (RTL) screens use Vazirmatn through the same type tokens (see *Persian screens* below). (The earlier display serif was removed: its condensed digits made "11" read as "ll".)
 
 ---
 
@@ -75,6 +75,7 @@ Each theme is one block in `tokens.css` (`<html data-theme="…">`) that defines
 | `--success` `--warning` `--danger` `--info` `--violet` | 6.0–6.2:1 on white | 6.8–8.7:1 on card | Status text; each has a `-soft` background |
 | `--viz-1…4` | teal ramp, light → dark | teal ramp, dark → light | Complexity mix: Simple → Advanced |
 | `--viz-bar` / `--viz-bar-strong` / `--viz-track` | | | Chart bars (latest value strong), bar tracks |
+| `--shift-morning` / `--shift-evening` / `--shift-night` | #117555 / #955816 / #5D57A4 | #69CBA3 / #E6AF68 / #A4A2E8 | Shift Schedule tones (categorical, never status). Until-8pm is orange in Black Gold and night is cyan in Midnight, so neither reads as the accent. 5.7–9.6:1 on cards |
 
 ### Contrast (WCAG 2.2 AA, from `node scripts/palette.mjs`)
 | Pair | Daylight | Graphite | Black Gold | Midnight |
@@ -86,16 +87,19 @@ Each theme is one block in `tokens.css` (`<html data-theme="…">`) that defines
 | Link on card | 6.6 | 9.8 | 12.2 | 9.0 |
 | Input border (3:1 needed) | 3.6 | 3.3 | 3.6 | 3.7 |
 | Status colours on card | 6.0–6.2 | 6.8–8.7 | 6.6–9.3 | 6.6–9.2 |
+| Shift tones on card | 5.7–6.2 | 7.5–9.0 | 7.9–9.6 | 8.6–9.2 |
 
 ### Typography
 Semantic styles (`--type-*` font shorthands): display 28/600 (sign-in heading 32) · page title 24/600 · section 15/600 · card title 13/600 · body 14/400 · prose 15/1.6 (descriptions, comments) · body-sm 13 · table 13 · label 12/500 · caption 12 · overline 11/500 uppercase · KPI 28/600 tabular. Weights 400/500/600 only.
+
+**Persian screens.** The shell stays English; Shift Schedule and Shift changes are Persian and right-to-left (`dir="rtl"` on the page). `styles/rtl.css` redefines every `--type-*` token under `[dir="rtl"]` on Vazirmatn, so these screens keep the same hierarchy with no screen-specific sizes: labels and captions go up half a step (12.5px), line heights open to 1.6–1.75, and there is no uppercase or tracking. Shared components (selects, search, dialogs, panel actions) are mirrored there too. Use logical properties (`margin-inline-start`, `text-align: start`) in RTL screen styles; month navigation puts *previous* on the right.
 
 ### Spacing, radius, sizing, motion
 - **Spacing:** 4, 8, 12, 16, 20, 24, 32, 40, 48, 64 (`--s-1` … `--s-16`).
 - **Radius:** 4 (checkbox, kbd, badges) · 6 (buttons, inputs, menu items) · 8 (segmented tracks, tiles, brand mark) · 12 (cards, panels, popovers) · 14 (main sheet, dialogs) · 20 (sign-in hero).
 - **Controls:** 28 (sm) · 32 (default) · 40 (lg, sign-in). Table rows 40 (36 compact), headers 34. Touch screens raise controls to ≥40px.
 - **Layout:** sidebar 236 (56 collapsed), header 52, content max 1440 (reading pages 960).
-- **Motion:** 120 / 160 / 220ms, ease-out; a spring curve (`--ease-spring`) for check marks and toasts. Only opacity, small translations (linked cards and primary buttons lift 1–2px on hover) and the theme reveal. `prefers-reduced-motion` turns motion off.
+- **Motion:** 120 / 160 / 220ms, ease-out for feedback; a spring curve (`--ease-spring`) for check marks, toasts and the active nav marker. Entrances live in `styles/motion.css`: a page's blocks rise 8px and fade in top to bottom (40ms apart), KPI cards stagger by 50ms, bars and progress fills grow from their baseline, donut segments sweep in, board cards rise into their column. Only opacity and transform, `backwards` fill (nothing stays applied after an entrance, so hover lifts keep working and fixed dialogs are never trapped), and `prefers-reduced-motion` turns motion off.
 - **Z-index:** sticky 2 · nav 30 · scrim 40 · modal 41 · popover 50 · tooltip 55 · toast 60.
 
 ---
@@ -120,13 +124,15 @@ Status, priority and complexity each use a different shape, so none depends on c
 | **Top bar** | Sidebar toggle, linked breadcrumbs, search trigger (⌘K), notifications, theme menu. No page actions here. |
 | **Theme menu / Appearance** (`ThemePicker.js`) | Top bar: a radio menu (`menuitemradio`) with a miniature of each theme, digits 1–4. Account › Appearance: radio cards with larger previews, ←/→ move and select. Sign-in: round swatches. Previews draw each theme in its own colours from `lib/themes.js`. |
 | **Command menu** | ⌘K dialog: searches tasks by ID/title within the viewer's scope, people (managers), and pages; Create task action. Combobox + listbox semantics, ↑/↓/Enter/Esc. |
-| **PageHeader** | Title, a quiet meta line joined with "·" (date range, counts), actions on the right. One primary action per page. |
+| **PageHeader** | Optional eyebrow (manager dashboards greet the viewer by time of day), title, a quiet meta line joined with "·" (date range, counts), actions on the right. One primary action per page. |
+| **SectionHeader** | Title, meta and actions for sections outside cards; an optional icon tile (task details: Attachments, Checklist, Comments). |
 | **Panel** | Card section with header (title · meta · actions), body, optional footer (legends, notes). |
 | **Button** | Primary · Secondary · Ghost (tertiary) · Danger · Ghost-danger · Icon (`IconButton`: aria-label + tooltip, always). Sizes 28/32/40. Busy state shows a spinner and blocks repeat clicks. |
 | **Segmented** | Period pickers and view toggles (`radiogroup`), status tabs (`tablist`). Roving focus, ←/→/Home/End. Optional counts. |
-| **Field / FormAlert** | Visible label, control, hint or error (with icon), wired through `aria-describedby`/`aria-invalid`. Validation runs on submit, never before interaction; server errors appear in a `FormAlert`. |
-| **Metric / MetricGrid** | KPI card: label (+ info hint), value with unit, one line of context — a real previous-period `Delta` where the API has it. `alert` tone for values that need action (the corner light turns red). Cards can link to the filtered list; linked cards lift and show a gradient top edge on hover. Grid wraps into balanced rows. |
+| **Field / FormAlert** | Visible label, control, hint or error (with icon), wired through `aria-describedby`/`aria-invalid`. Validation runs on submit, never before interaction; server errors appear in a `FormAlert`. `.input-wrap` adds a leading icon (accent on focus) and an optional trailing `.input-action` — the sign-in password field uses it for show/hide, plus a Caps Lock hint. |
+| **Metric / MetricGrid** | KPI card: optional icon tile (signal tint; red on `alert`), label (+ info hint), value with unit, one line of context — a real previous-period `Delta` where the API has it. `alert` tone for values that need action (the corner light turns red). Cards can link to the filtered list; linked cards lift and show a gradient top edge on hover. The grid counts cards inside fragments and wraps into balanced rows: five fill 3 + 2 with no hole, an odd count ends with a full-width card on phones. |
 | **Bars** | Mini column chart with a baseline; pass `max` to share one scale across rows. Latest value emphasised; values in tooltips and `aria-label`. |
+| **DonutBreakdown** | Share of a total for up to four categories. Segments are separated by a small gap and draw in on mount; hovering a segment or its legend row highlights the pair and puts that category's value in the centre. Categories take the ramp out of order (3, 1, 4, 2) so neighbours always contrast. |
 | **Distribution / CxLegend** | 100% stacked complexity bar with counts in tooltip and `aria-label`; legend with optional totals. |
 | **Meter** | Labelled progress bar (`role="progressbar"`) with a numeric readout. |
 | **Popover** | Anchored menu or panel. Flips above the anchor near the bottom of the viewport, moves focus in, returns it to the trigger, closes on Esc/Tab/outside click/scroll. Digit shortcuts on menu items. |
@@ -146,6 +152,7 @@ Status, priority and complexity each use a different shape, so none depends on c
 - **Keyboard (task lists):** `J/K` or `↑/↓` show and move a row cursor, `Enter` opens, `S`/`P` open status/priority menus, `/` focuses search, `C` creates, `?` lists shortcuts.
 - **Inline editing:** Status and Priority cells open menus that only offer allowed workflow moves.
 - **Grouping:** group header rows on the inset surface (e.g. by assignee) with counts and overdue totals.
+- **Board view:** five status columns, each with its status colour as a 2px top edge and a count pill. Cards show ID and avatar on top, title, then priority and deadline; blocked cards get a red outline and pill, overdue cards a red left rail.
 - **Filters:** search, selects (highlighted when set), "Reset filters (n)", and a live "x of y" result count.
 - **Overflow:** wide tables scroll inside their card with edge shadows; task tables keep a minimum width so titles never collapse, and become stacked rows on phones. Report tables paginate above 100 rows and keep a sticky header inside their scroll area.
 
@@ -157,6 +164,7 @@ Status, priority and complexity each use a different shape, so none depends on c
 |---|---|
 | Progressive disclosure | Long attention lists show 6 rows then "Show all"; issue details and ticket entry open inline. |
 | Inline editing | Status, priority, hours, IOC count, checklist and tickets are edited in place and saved immediately. |
+| Drop to attach | A task with no files shows one dashed drop zone: click to browse or drop a file onto it (it lights up while a file is over it). |
 | Confirmation | Toasts confirm; dialogs only for destructive actions (remove member, delete comment, remove file). |
 | Autosave | The Shift Log shows "Autosaved / Saving… / Not saved" as a live status. |
 | Deep links | KPI cards link to the relevant list (e.g. `/tasks/team?tab=review`). |
