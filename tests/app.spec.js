@@ -150,13 +150,13 @@ test.describe("manager assigns and follows up tasks", () => {
     await expect(page).toHaveURL(/\/tasks\/assigned$/);
     await expect(page.getByText("You haven't assigned any tasks yet")).toBeVisible();
 
-    await page.locator("body").press("c");
+    await page.getByRole("button", { name: /Create task/ }).click();
     const dialog = page.getByRole("dialog", { name: "Create task" });
-    await dialog.getByPlaceholder("Task title").fill("Tune Splunk correlation rule for VPN logins");
+    await expect(dialog).toBeVisible();
+    await dialog.getByLabel("Task title").fill("Tune Splunk correlation rule for VPN logins");
     await dialog.getByRole("button", { name: /Create task/ }).click();
     await expect(dialog.getByText("Choose who this task is for.")).toBeVisible();
-    await dialog.getByRole("button", { name: "Assign to…" }).click();
-    await page.getByRole("menuitem", { name: /Sara Rahimi/ }).click();
+    await dialog.getByLabel("Assignee").selectOption(ids.sara);
     await dialog.getByRole("button", { name: /Create task/ }).click();
     await expect(dialog).toBeHidden();
 
