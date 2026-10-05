@@ -167,7 +167,7 @@ export default function TaskDetail({ id }) {
               />
               {d.attachments.length === 0 ? (canEdit ? (
                 <button type="button" className={`dropzone ${dragOver ? "over" : ""}`} disabled={uploading} onClick={() => fileRef.current.click()}
-                  onDragOver={(e) => { e.preventDefault(); setDragOver(true); }} onDragLeave={() => setDragOver(false)}
+                  onDragOver={(e) => { e.preventDefault(); setDragOver(true); }} onDragLeave={(e) => { if (!e.currentTarget.contains(e.relatedTarget)) setDragOver(false); }}
                   onDrop={(e) => { e.preventDefault(); setDragOver(false); const f = e.dataTransfer.files?.[0]; if (f) upload(f); }}>
                   <span className="glyph"><Icon name="clip" /></span>
                   <span><b>No files yet — drop one here or browse</b><small>Reports, exports or evidence, up to 20 MB each</small></span>

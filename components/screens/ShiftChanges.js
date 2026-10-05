@@ -5,6 +5,7 @@ import { useEffect, useMemo, useState } from "react";
 import { api, useApp } from "@/components/AppProvider";
 import useFetch from "@/components/useFetch";
 import Icon from "@/components/ui/Icon";
+import Segmented from "@/components/ui/Segmented";
 import { Who } from "@/components/ui/indicators";
 import { addDays } from "@/lib/format";
 import { isManager, SOC_TEAMS } from "@/lib/roles";
@@ -270,11 +271,17 @@ export default function ShiftChanges() {
           <h2>{manager ? "درخواست‌های تیم" : "درخواست‌های من"}</h2>
           <span className="meta">{faNum(requests.length)} درخواست</span>
           <div className="right">
-            <div className="seg" role="tablist" aria-label="فیلتر درخواست‌ها">
-              <button role="tab" aria-selected={filter === "open"} className={filter === "open" ? "on" : ""} onClick={() => setFilter("open")}>در انتظار <span className="count">{faNum(openCount)}</span></button>
-              <button role="tab" aria-selected={filter === "resolved"} className={filter === "resolved" ? "on" : ""} onClick={() => setFilter("resolved")}>نهایی <span className="count">{faNum(resolvedCount)}</span></button>
-              <button role="tab" aria-selected={filter === "all"} className={filter === "all" ? "on" : ""} onClick={() => setFilter("all")}>همه <span className="count">{faNum(requests.length)}</span></button>
-            </div>
+            <Segmented
+              kind="tabs"
+              label="فیلتر درخواست‌ها"
+              value={filter}
+              onChange={setFilter}
+              options={[
+                { value: "open", label: "در انتظار", count: faNum(openCount) },
+                { value: "resolved", label: "نهایی", count: faNum(resolvedCount) },
+                { value: "all", label: "همه", count: faNum(requests.length) },
+              ]}
+            />
           </div>
         </div>
 

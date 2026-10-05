@@ -6,6 +6,7 @@ import { api, useApp } from "@/components/AppProvider";
 import useFetch from "@/components/useFetch";
 import Dialog from "@/components/ui/Dialog";
 import Icon from "@/components/ui/Icon";
+import Segmented from "@/components/ui/Segmented";
 import { Who } from "@/components/ui/indicators";
 import { isManager, SOC_TEAMS } from "@/lib/roles";
 import { addDays } from "@/lib/format";
@@ -283,26 +284,18 @@ export default function ShiftSchedule() {
             {manager && <button className="btn btn-secondary icon-btn" onClick={() => openComposer(selectedDate, selectedShift)} aria-label="ثبت شیفت" data-tooltip="ثبت شیفت برای این روز"><Icon name="plus" /></button>}
           </div>
 
-          <div className={`seg ${styles.shiftTabs}`} role="tablist" aria-label="شیفت">
-            {SHIFT_KEYS.map((key) => {
-              const count = selectedRows.filter((row) => row.shiftType === key).length;
-              return (
-                <button
-                  type="button"
-                  role="tab"
-                  aria-selected={selectedShift === key}
-                  key={key}
-                  data-shift={key}
-                  className={selectedShift === key ? "on" : ""}
-                  onClick={() => setSelectedShift(key)}
-                >
-                  <i />
-                  <span>{SHIFT_META[key].short}</span>
-                  <span className="count">{faNum(count)}</span>
-                </button>
-              );
-            })}
-          </div>
+          <Segmented
+            kind="tabs"
+            label="شیفت"
+            className={styles.shiftTabs}
+            value={selectedShift}
+            onChange={setSelectedShift}
+            options={SHIFT_KEYS.map((key) => ({
+              value: key,
+              label: <><i data-shift={key} />{SHIFT_META[key].short}</>,
+              count: faNum(selectedRows.filter((row) => row.shiftType === key).length),
+            }))}
+          />
 
           <section className={styles.selectedShiftBlock} data-shift={selectedShift}>
             <div className={styles.selectedShiftHead}>
