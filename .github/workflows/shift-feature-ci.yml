@@ -19,6 +19,6 @@ jobs:
           cache: npm
       - run: npm ci
       - name: Shift scheduling unit tests
-        run: node --test tests/shifts.unit.test.mjs
+        run: npm run test:unit
       - name: Next.js production build
         run: npm run build
