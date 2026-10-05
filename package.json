@@ -7,8 +7,9 @@
     "dev": "node scripts/next.mjs dev",
     "build": "node scripts/next.mjs build",
     "start": "node scripts/next.mjs start",
-    "test": "playwright test",
-    "seed:shifts": "node scripts/seed-shifts.mjs"
+    "test": "npm run test:unit && playwright test",
+    "seed:shifts": "node scripts/seed-shifts.mjs",
+    "test:unit": "node --experimental-default-type=module --test tests/shifts.unit.test.mjs"
   },
   "engines": {
     "node": ">=22.13.0"
