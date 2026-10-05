@@ -25,7 +25,7 @@ module.exports = defineConfig({
   projects: [{ name: "chromium", use: { ...devices["Desktop Chrome"], viewport: { width: 1440, height: 900 } } }],
   webServer: {
     command: `node scripts/next.mjs start -p ${PORT}`,
-    env: { DATABASE_PATH: DB },
+    env: { DATABASE_PATH: DB, ADMIN_NAME: "E2E Administrator", ADMIN_EMAIL: "test-admin@local.invalid", ADMIN_PASSWORD: "E2E-Only-Admin-2026!" },
     url: `http://localhost:${PORT}/dashboard`,
     reuseExistingServer: false,
     timeout: 60_000,
