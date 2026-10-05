@@ -3,7 +3,7 @@
 // tests build the organisation through the UI/API exactly as a real administrator would.
 const { test, expect } = require("@playwright/test");
 
-const ADMIN = { email: "admin@local", password: "ChangeMe123!" };
+const ADMIN = { email: "test-admin@local.invalid", password: "E2E-Only-Admin-2026!" };
 const PW = "Welcome2026!";
 const U = {
   soc: { name: "Leila Nouri", email: "leila@corp.test", role: "soc_manager", team: "SOC" },
@@ -57,6 +57,21 @@ test.describe("fresh install", () => {
     await page.getByRole("button", { name: "Sign in" }).click();
     await expect(page.locator("form [role=alert]")).toHaveText("Email or password is incorrect.");
     expect((await page.request.get("/api/tasks")).status()).toBe(401);
+  });
+
+  test("login throttles repeated failed attempts", async ({ page }) => {
+    const email = "rate-limit-probe@invalid.test";
+    for (let i = 0; i < 5; i += 1) {
+      const res = await page.request.post("/api/auth/login", { data: { email, password: "wrong-password" } });
+      expect(res.status()).toBe(401);
+    }
+    const blocked = await page.request.post("/api/auth/login", { data: { email, password: "wrong-password" } });
+    expect(blocked.status()).toBe(429);
+    expect(Number(blocked.headers()["retry-after"])).toBeGreaterThan(0);
+
+    // Throttling one identifier must not lock unrelated users out.
+    const other = await page.request.post("/api/auth/login", { data: { email: "another-probe@invalid.test", password: "wrong-password" } });
+    expect(other.status()).toBe(401);
   });
 
   test("administrator adds the team from the Team page", async ({ page }) => {
