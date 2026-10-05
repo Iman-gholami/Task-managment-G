@@ -93,6 +93,9 @@
 .section { margin-bottom: var(--s-8); }
 .section-head { display: flex; align-items: center; flex-wrap: wrap; gap: var(--s-2) var(--s-3); min-height: 28px; margin-bottom: var(--s-3); }
 .section-head h2 { font: var(--type-section); color: var(--text); }
+.section-icon { width: 24px; height: 24px; flex: none; display: grid; place-items: center; border-radius: 7px; background: var(--grad-signal-soft); color: var(--primary); box-shadow: inset 0 0 0 1px color-mix(in oklab, var(--primary) 16%, transparent); }
+.section-icon svg.i { width: 13px; height: 13px; stroke-width: 1.8; }
+.section-head:has(.section-icon) { gap: var(--s-2) 10px; }
 .section-head .meta { font: var(--type-caption); color: var(--text-3); }
 .section-head .right { margin-left: auto; display: flex; align-items: center; gap: var(--s-2); }
 .stack-lg { display: grid; gap: var(--s-6); }

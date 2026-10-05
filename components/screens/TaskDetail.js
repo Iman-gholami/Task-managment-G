@@ -31,6 +31,7 @@ export default function TaskDetail({ id }) {
   const [draft, setDraft] = useState("");
   const [editing, setEditing] = useState(null);
   const [uploading, setUploading] = useState(false);
+  const [dragOver, setDragOver] = useState(false);
   const [editingDetails, setEditingDetails] = useState(null);
   const [titleError, setTitleError] = useState(false);
   const [confirm, setConfirm] = useState(null);
@@ -154,6 +155,7 @@ export default function TaskDetail({ id }) {
           <>
             <section className="detail-section" aria-label="Attachments">
               <SectionHeader
+                icon="clip"
                 title="Attachments"
                 meta={d.attachments.length || null}
                 actions={canEdit && (
@@ -163,7 +165,14 @@ export default function TaskDetail({ id }) {
                   </>
                 )}
               />
-              {d.attachments.length === 0 ? <p className="muted small">No files yet{canEdit ? " — attach reports, exports or evidence (up to 20 MB each)." : "."}</p> : (
+              {d.attachments.length === 0 ? (canEdit ? (
+                <button type="button" className={`dropzone ${dragOver ? "over" : ""}`} disabled={uploading} onClick={() => fileRef.current.click()}
+                  onDragOver={(e) => { e.preventDefault(); setDragOver(true); }} onDragLeave={() => setDragOver(false)}
+                  onDrop={(e) => { e.preventDefault(); setDragOver(false); const f = e.dataTransfer.files?.[0]; if (f) upload(f); }}>
+                  <span className="glyph"><Icon name="clip" /></span>
+                  <span><b>No files yet — drop one here or browse</b><small>Reports, exports or evidence, up to 20 MB each</small></span>
+                </button>
+              ) : <p className="muted small">No files yet.</p>) : (
                 <div className="files">
                   {d.attachments.map((a) => (
                     <span key={a.id} className="file">
@@ -182,7 +191,7 @@ export default function TaskDetail({ id }) {
             </section>
 
             <section className="detail-section" aria-label="Checklist">
-              <SectionHeader title="Checklist" meta={d.checklist.length ? `${doneCount} of ${d.checklist.length}` : null}>
+              <SectionHeader icon="checkCircle" title="Checklist" meta={d.checklist.length ? `${doneCount} of ${d.checklist.length}` : null}>
                 {d.checklist.length > 0 && <span className="progress ok" style={{ width: 88 }} role="progressbar" aria-label="Checklist progress" aria-valuenow={doneCount} aria-valuemin={0} aria-valuemax={d.checklist.length}><span style={{ width: `${(doneCount / d.checklist.length) * 100}%` }} /></span>}
               </SectionHeader>
               {d.checklist.map((c) => (
@@ -204,7 +213,7 @@ export default function TaskDetail({ id }) {
             </section>
 
             <section className="detail-section" aria-label="Comments">
-              <SectionHeader title="Comments" meta={d.comments.length || null} />
+              <SectionHeader icon="chat" title="Comments" meta={d.comments.length || null} />
               {d.comments.map((c) => (
                 <div key={c.id} className="comment">
                   <Avatar id={c.by} />

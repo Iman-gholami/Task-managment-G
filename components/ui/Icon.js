@@ -61,6 +61,7 @@ const PATHS = {
   server: '<rect x="3.5" y="3.5" width="13" height="5.5" rx="1.5"/><rect x="3.5" y="11" width="13" height="5.5" rx="1.5"/><path d="M6.5 6.25h.01M6.5 13.75h.01"/>',
   grip: '<circle cx="8" cy="6" r=".8"/><circle cx="12" cy="6" r=".8"/><circle cx="8" cy="10" r=".8"/><circle cx="12" cy="10" r=".8"/><circle cx="8" cy="14" r=".8"/><circle cx="12" cy="14" r=".8"/>',
   keyboard: '<rect x="2.5" y="5" width="15" height="10" rx="2"/><path d="M5.5 8h.01M8.5 8h.01M11.5 8h.01M14.5 8h.01M6.5 12h7"/>',
+  chat: '<path d="M4 4.5h12a1 1 0 0 1 1 1v8a1 1 0 0 1-1 1H9l-3.5 3v-3H4a1 1 0 0 1-1-1v-8a1 1 0 0 1 1-1z"/><path d="M7 8.5h6M7 11h4"/>',
   at: '<circle cx="10" cy="10" r="3"/><path d="M13 10v1.2a2 2 0 0 0 4 0V10a7 7 0 1 0-2.7 5.5"/>',
 };
 

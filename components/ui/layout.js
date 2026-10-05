@@ -43,10 +43,11 @@ export function Panel({ title, meta, actions, footer, children, className = "", 
   );
 }
 
-/** Header for a section that is not a card (task details, account). */
-export function SectionHeader({ title, meta, actions, children }) {
+/** Header for a section that is not a card (task details, account). `icon` adds a small tile before the title. */
+export function SectionHeader({ title, meta, actions, children, icon }) {
   return (
     <div className="section-head">
+      {icon && <span className="section-icon" aria-hidden="true"><Icon name={icon} size="sm" /></span>}
       <h2>{title}</h2>
       {meta !== undefined && meta !== null && <span className="meta">{meta}</span>}
       {children}
