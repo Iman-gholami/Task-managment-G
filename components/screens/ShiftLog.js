@@ -41,11 +41,11 @@ export default function ShiftLog() {
       toast(e.message, "error");
     }
   };
-  const setCompleted = async (completed) => {
+  const setCompleted = async () => {
     try {
-      await api("/api/shift", { method: "PATCH", body: { completed } });
-      dispatch({ type: "shift/complete", value: completed });
-      toast(completed ? "Shift completed" : "Shift reopened — you can edit it again");
+      await api("/api/shift", { method: "PATCH", body: { completed: true } });
+      dispatch({ type: "shift/complete", value: true });
+      toast("Shift submitted and locked");
     } catch (e) {
       toast(e.message, "error");
     }
@@ -60,14 +60,14 @@ export default function ShiftLog() {
       toast(`Finish ${plural(remaining.length, "remaining activity", "remaining activities")} before completing the shift.`, "info");
       return;
     }
-    setCompleted(true);
+    setCompleted();
   };
 
   return (
     <div className="page mid shift-page">
       <PageHeader
         title={`Shift Log — ${longDate(shiftDate)}`}
-        meta={[weekday(shiftDate), readOnly ? "Completed — reopen to make changes" : "Changes save automatically"]}
+        meta={[weekday(shiftDate), readOnly ? "Submitted — locked; ask a manager for corrections" : "Changes save automatically"]}
         actions={<Link className="btn btn-secondary" href="/shift/history"><Icon name="clock" />History</Link>}
       />
 
@@ -76,7 +76,7 @@ export default function ShiftLog() {
           <div className="ring" style={{ "--v": pct }} role="img" aria-label={`${pct}% complete`} />
           <dl className="facts">
             <div><dt><small>Analyst</small></dt><dd><Who id={me.id} /></dd></div>
-            <div><dt><small>Status</small></dt><dd>{shiftDone ? <span className="badge dot success">Completed</span> : done ? <span className="badge dot info">In progress</span> : <span className="badge dot">Not started</span>}</dd></div>
+            <div><dt><small>Status</small></dt><dd>{shiftDone ? <span className="badge dot success">Submitted & locked</span> : done ? <span className="badge dot info">In progress</span> : <span className="badge dot">Not started</span>}</dd></div>
             <div><dt><small>Completion</small></dt><dd className="num">{done} of {activities.length} · {pct}%</dd></div>
             <div><dt><small>Last change</small></dt><dd className="num" style={saved === "failed" ? { color: "var(--danger)" } : undefined} aria-live="polite">{SAVE_LABEL[saved]}</dd></div>
           </dl>
@@ -148,7 +148,7 @@ export default function ShiftLog() {
           {!shiftDone && remaining.length > 0 && `${remaining.length} remaining · next: ${remaining[0].title}`}
         </span>
         {shiftDone
-          ? <button type="button" className="btn btn-secondary" onClick={() => setCompleted(false)}>Reopen</button>
+          ? <span className="muted small">Submitted — manager correction only</span>
           : <button type="button" className="btn btn-primary" onClick={completeShift}>Complete shift</button>}
       </div>
     </div>
