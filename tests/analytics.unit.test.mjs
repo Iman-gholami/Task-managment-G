@@ -8,6 +8,7 @@ import { backlogSeries, openStats, peopleRows, stats, teamRows } from "../lib/an
 import { buildAlerts, overallStatus } from "../lib/analytics/alerts.js";
 import { buildInsights } from "../lib/analytics/insights.js";
 import { mockFacts } from "../lib/analytics/mock.js";
+import { buildActivityLeaderboard, cohortFor } from "../lib/analytics/performance.js";
 
 test("Jalali conversion matches Intl's persian calendar for every day of 2015–2035", () => {
   const fmt = new Intl.DateTimeFormat("en-u-ca-persian-nu-latn", { timeZone: "UTC", year: "numeric", month: "numeric", day: "numeric" });
@@ -192,4 +193,25 @@ test("demo data is deterministic and produces alerts and insights", () => {
   const cmp = comparisonRange(range, "prev");
   assert.ok(buildAlerts(a, { range, cmp }).length > 0);
   assert.ok(buildInsights(a, { range, cmp }).length > 0);
+});
+
+
+test("peer activity ranking is isolated by cohort and ranks visible output", () => {
+  const person = (id, level) => ({ id, name: id, role: "analyst", group: "SOC", level, shift: true, manager: false });
+  assert.equal(cohortFor(person("l1-a", "L1")).key, "SOC|L1");
+  assert.equal(cohortFor(person("l2-a", "L2")).key, "SOC|L2");
+
+  const rows = [
+    { person: person("l1-a", "L1"), cur: { units: 20, completed: 8, actsDone: 40, closureRate: 1 } },
+    { person: person("l1-b", "L1"), cur: { units: 14, completed: 9, actsDone: 30, closureRate: 0.9 } },
+    { person: person("l1-c", "L1"), cur: { units: 8, completed: 4, actsDone: 20, closureRate: 0.8 } },
+  ];
+
+  const ranked = buildActivityLeaderboard(rows);
+  assert.deepEqual(ranked.map((r) => r.person.id), ["l1-a", "l1-b", "l1-c"]);
+  assert.equal(ranked[0].rank, 1);
+  assert.equal(ranked[0].score, 100);
+  assert.equal(ranked.find((r) => r.person.id === "l1-b").ranks.completed, 1);
+  assert.equal(ranked.find((r) => r.person.id === "l1-a").ranks.units, 1);
+  assert.equal(ranked.find((r) => r.person.id === "l1-a").ranks.actsDone, 1);
 });
