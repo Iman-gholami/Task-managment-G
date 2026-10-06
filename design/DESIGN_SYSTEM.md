@@ -76,6 +76,7 @@ Each theme is one block in `tokens.css` (`<html data-theme="…">`) that defines
 | `--viz-1…4` | teal ramp, light → dark | teal ramp, dark → light | Complexity mix: Simple → Advanced |
 | `--viz-bar` / `--viz-bar-strong` / `--viz-track` | | | Chart bars (latest value strong), bar tracks |
 | `--shift-morning` / `--shift-evening` / `--shift-night` | #117555 / #955816 / #5D57A4 | #69CBA3 / #E6AF68 / #A4A2E8 | Shift Schedule tones (categorical, never status). Until-8pm is orange in Black Gold and night is cyan in Midnight, so neither reads as the accent. 5.7–9.6:1 on cards |
+| `--cat-1…4` (analytics) | #2A78D6 / #EB6834 / #1BAF7A / #EDA100 | #3987E5 / #D95926 / #199E70 / #C98500 | Categorical chart series (teams, compared items), fixed order, never cycled. Validated with the dataviz palette checks on every theme's card surface; aqua and yellow are below 3:1 on white, so analytics charts always carry labels and a table view |
 
 ### Contrast (WCAG 2.2 AA, from `node scripts/palette.mjs`)
 | Pair | Daylight | Graphite | Black Gold | Midnight |
@@ -92,7 +93,7 @@ Each theme is one block in `tokens.css` (`<html data-theme="…">`) that defines
 ### Typography
 Semantic styles (`--type-*` font shorthands): display 28/600 (sign-in heading 32) · page title 24/600 · section 15/600 · card title 13/600 · body 14/400 · prose 15/1.6 (descriptions, comments) · body-sm 13 · table 13 · label 12/500 · caption 12 · overline 11/500 uppercase · KPI 28/600 tabular. Weights 400/500/600 only.
 
-**Persian screens.** The shell stays English; Shift Schedule and Shift changes are Persian and right-to-left (`dir="rtl"` on the page). `styles/rtl.css` redefines every `--type-*` token under `[dir="rtl"]` on Vazirmatn, so these screens keep the same hierarchy with no screen-specific sizes: labels and captions go up half a step (12.5px), line heights open to 1.6–1.75, and there is no uppercase or tracking. Shared components (selects, search, dialogs, panel actions) are mirrored there too. Use logical properties (`margin-inline-start`, `text-align: start`) in RTL screen styles; month navigation puts *previous* on the right.
+**Persian screens.** The shell stays English; Shift Schedule, Shift changes and Analytics are Persian and right-to-left (`dir="rtl"` on the page). Analytics charts (ECharts) draw in a left-to-right box and wrap every label in a right-to-left embedding, so mixed Persian/Latin text stays in order; category labels sit on the right and bars grow leftwards. `styles/rtl.css` redefines every `--type-*` token under `[dir="rtl"]` on Vazirmatn, so these screens keep the same hierarchy with no screen-specific sizes: labels and captions go up half a step (12.5px), line heights open to 1.6–1.75, and there is no uppercase or tracking. Shared components (selects, search, dialogs, panel actions) are mirrored there too. Use logical properties (`margin-inline-start`, `text-align: start`) in RTL screen styles; month navigation puts *previous* on the right.
 
 ### Spacing, radius, sizing, motion
 - **Spacing:** 4, 8, 12, 16, 20, 24, 32, 40, 48, 64 (`--s-1` … `--s-16`).

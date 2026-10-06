@@ -7,6 +7,7 @@ import "@/styles/components.css";
 import "@/styles/data.css";
 import "@/styles/screens.css";
 import "@/styles/rtl.css";
+import "@/styles/analytics.css";
 import "@/styles/themes.css";
 import "@/styles/motion.css";
 import { THEME_IDS, THEME_KEY } from "@/lib/themes";

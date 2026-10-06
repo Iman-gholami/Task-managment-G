@@ -394,6 +394,108 @@ test.describe("members and accounts", () => {
   });
 });
 
+test.describe("analytics (management dashboard)", () => {
+  test("security manager sees real figures; status changes are recorded as structured history", async ({ page }) => {
+    await signIn(page, "admin");
+    const facts = await (await page.request.get("/api/analytics")).json();
+    expect(facts.scope.kind).toBe("department");
+    expect(facts.people.filter((p) => p.active).map((p) => p.id).sort()).toEqual([ids.arash, ids.mina, ids.sara, ids.soc].sort());
+    // A removed member stays in the history, flagged inactive.
+    expect(facts.people.filter((p) => !p.active)).toHaveLength(1);
+    const t1 = facts.tasks.find((t) => t.id === ids.t1);
+    expect(t1.status).toBe("done");
+    expect(t1.quality).toBe("excellent");
+    expect(t1.completed).toBe(tehranDate());
+    expect(facts.tasks.find((t) => t.id === ids.t2).returns).toHaveLength(1);
+    expect(facts.shifts.some((s) => s.a === ids.sara && s.closed)).toBeTruthy();
+
+    await page.goto("/analytics", { waitUntil: "networkidle" });
+    await expect(page.locator("h1")).toHaveText("داشبورد مدیریتی");
+    await expect(page.getByTestId("status")).toBeVisible();
+    await expect(page.getByTestId("kpi-completed")).toContainText("۱");
+    await expect(page.getByTestId("team-table")).toContainText("SOC");
+    await expect(page.locator(".sidebar")).toContainText("Analytics");
+  });
+
+  test("demo data is opt-in and clearly labelled", async ({ page }) => {
+    await signIn(page, "admin");
+    await page.goto("/analytics", { waitUntil: "networkidle" });
+    await page.getByTestId("demo-toggle").click();
+    await expect(page).toHaveURL(/demo=1/);
+    await expect(page.locator(".an-demo")).toContainText("داده نمایشی");
+    await page.getByRole("link", { name: "کارشناسان" }).click();
+    await expect(page).toHaveURL(/\/analytics\/people\?.*demo=1/);
+    await expect(page.getByTestId("people-table")).toContainText("سارا رحیمی");
+  });
+
+  test("period menu: presets and a custom Jalali range drive every view through the URL", async ({ page }) => {
+    await signIn(page, "admin");
+    await page.goto("/analytics?demo=1", { waitUntil: "networkidle" });
+    await page.getByTestId("period").click();
+    await page.getByRole("button", { name: "ماه گذشته" }).click();
+    await expect(page).toHaveURL(/p=prev-month/);
+    await page.getByTestId("period").click();
+    await page.getByRole("button", { name: "بازه دلخواه…" }).click();
+    const days = page.locator(".an-cal-day:not([disabled])");
+    await days.first().click();
+    await days.nth(2).click();
+    await page.getByRole("button", { name: "اعمال" }).click();
+    await expect(page).toHaveURL(/p=custom&from=\d{4}-\d{2}-\d{2}&to=\d{4}-\d{2}-\d{2}/);
+    await page.getByRole("link", { name: "روندها" }).click();
+    await expect(page).toHaveURL(/\/analytics\/trends\?p=custom/);
+    await expect(page.getByTestId("chart-trend")).toBeVisible();
+  });
+
+  test("Excel exports follow the screen's filters and the viewer's scope", async ({ page }) => {
+    await signIn(page, "admin");
+    for (const q of ["kind=full", "kind=full&team=soc&p=last-30", "kind=teams", `kind=person&id=${ids.sara}`, "kind=full&demo=1"]) {
+      const res = await page.request.get(`/api/analytics/export?${q}`);
+      expect(res.status(), q).toBe(200);
+      expect(res.headers()["content-type"]).toContain("spreadsheetml");
+      expect((await res.body()).subarray(0, 2).toString()).toBe("PK");
+    }
+    expect((await page.request.get("/api/analytics/export?kind=person&id=nobody")).status()).toBe(404);
+  });
+
+  test("a SOC manager's analytics cover SOC only", async ({ page }) => {
+    await signIn(page, "soc");
+    const facts = await (await page.request.get("/api/analytics")).json();
+    expect(facts.scope.kind).toBe("soc");
+    expect(facts.people.every((p) => p.group === "SOC")).toBeTruthy();
+    expect(facts.people.map((p) => p.id)).not.toContain(ids.mina);
+  });
+
+  test("analysts only see their own statistics", async ({ page }) => {
+    await signIn(page, "arash");
+    await page.goto("/analytics");
+    await expect(page).toHaveURL(new RegExp(`/analytics/people/${ids.arash}`));
+    await expect(page.locator("h1")).toHaveText("Arash Moradi");
+    await page.goto(`/analytics/people/${ids.sara}`);
+    await expect(page).toHaveURL(new RegExp(`/analytics/people/${ids.arash}`));
+    const facts = await (await page.request.get("/api/analytics")).json();
+    expect(facts.people.map((p) => p.id)).toEqual([ids.arash]);
+    expect(facts.tasks.every((t) => t.a === ids.arash)).toBeTruthy();
+    expect((await page.request.get("/api/analytics?demo=1")).status()).toBe(403);
+    expect((await page.request.get("/api/analytics/export?kind=full")).status()).toBe(403);
+    expect((await page.request.get(`/api/analytics/export?kind=person&id=${ids.arash}`)).status()).toBe(200);
+  });
+
+  test("every analytics screen renders without console errors", async ({ page }) => {
+    await signIn(page, "admin");
+    const errors = [];
+    page.on("pageerror", (e) => errors.push(e.message));
+    page.on("console", (m) => m.type() === "error" && errors.push(`${page.url()} ${m.text()}`));
+    for (const demo of ["", "demo=1"]) {
+      for (const path of ["/analytics", "/analytics/teams", "/analytics/teams?team=soc", "/analytics/people", "/analytics/compare", "/analytics/trends", "/analytics/soc", "/analytics/alerts", "/analytics/report", `/analytics/people/${demo ? "d-srh" : ids.sara}`]) {
+        await page.goto(`${path}${path.includes("?") ? "&" : "?"}${demo}`, { waitUntil: "networkidle" });
+        await expect(page.locator("h1").first()).toBeVisible();
+        await expect(page.locator(".an-body, .an .empty").first()).toBeVisible();
+      }
+    }
+    expect(errors).toEqual([]);
+  });
+});
+
 test.describe("every screen renders without console errors", () => {
   const screens = {
     sara: ["/dashboard", "/tasks/my", "/tasks/team", "/shift", "/shift/history", "/team", "/reports/employee", "/reports/tickets", "/account"],

@@ -374,5 +374,35 @@ Task Performance [Tasks]
 
 ---
 
+## 24. Analytics (Persian, RTL)  ▶ `/analytics`
+| | |
+|---|---|
+| **Purpose** | Management dashboard: tells a manager within seconds whether things are fine, then drills down to teams, SOC levels, people and records. Statistics only: no score or ranking |
+| **Primary user** | Security Manager (department), SOC Manager (SOC). Other roles get only their own page, `/analytics/people/<id>` |
+| **Hierarchy** | Status sentence (from alerts) → 6 KPI cards (like-for-like change, sparkline) → alerts and insights → work in vs out → teams → work mix |
+| **Layout** | Page head (scope, period, update time; actions: refresh, demo data, presentation mode, **Export**), section tabs, one sticky filter row, then the page body. KPI cards in rows of three (two on tablets, one on phones) |
+| **Tabs** | Overview · Teams (`?team=` drills into a team and its SOC levels) · People (table, distribution, drawer) · Compare · Trends · SOC operations · Alerts & insights · Executive report |
+| **Primary action** | **Export**: full Excel workbook, teams Excel, print/PDF, executive report |
+| **Charts** | Every chart answers a stated question, has a chart/table switch, CSV and PNG downloads, and prints with its table. Spec per chart: `design/ANALYTICS.md` |
+| **Empty** | No data yet: explains where the figures come from and offers **demo data** |
+| **Loading** | Skeleton cards on first load; on refetch the page keeps its content, dimmed |
+| **Error** | Persian error panel with **تلاش دوباره**; a failed refresh keeps the last data and says so |
+```
+┌──────────────────────────────────────────────────────────────────────────┐
+│        [خروجی] [▭] [داده نمایشی] [↻]                     داشبورد مدیریتی │
+│                                  مهر ۱۴۰۵ · مقایسه با ۱۴ روز اول شهریور │
+│ گزارش · هشدارها · SOC · روندها · مقایسه · کارشناسان · تیم‌ها · [نمای کلی] │
+│ [واحد زمانی ▾] [تیم ▾] [مقایسه با ▾] [📅 ماه جاری ۱ تا ۱۴ مهر ▾]          │
+│ ┌ وضعیت: نیازمند توجه — ۲ مورد … ───────────────────── [همه هشدارها ›] ┐│
+│ [ساعت ۸۵۰ ∿]        [حجم وزن‌دار ۲۶۲ ∿]        [تسک تکمیل‌شده ۱۱۳ ∿]    │
+│ [شیفت‌لاگ ۹۴٪]      [صف باز ۵۹ (۱۲ معوق)]      [به‌موقع ۶۶٪]            │
+│ ┌ بینش‌ها ──────────────┐ ┌ هشدارها ─────────────────────────────────┐ │
+│ ┌ ورودی و خروجی کار ── line: تکمیل‌شده / ایجادشده / دوره مقایسه ────┐ │
+│ ┌ مقایسه تیم‌ها (جدول + روند) ─────────────────────────────────────────┐ │
+└──────────────────────────────────────────────────────────────────────────┘
+```
+
+---
+
 ## States gallery  ▶ `/states`
 Reference renders of the empty states (Tasks, Shift Log, Reports), the table skeleton, the load error, and the no-access error.

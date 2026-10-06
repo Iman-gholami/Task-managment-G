@@ -8,7 +8,8 @@
 
 :root {
   /* ---- Typography ------------------------------------------------------ */
-  --font-sans: var(--font-geist), "Geist", ui-sans-serif, system-ui, sans-serif;
+  /* Persian text anywhere (tooltips, menus, analytics) falls through to Vazirmatn; Latin stays on Geist. */
+  --font-sans: var(--font-geist), "Geist", var(--font-vazirmatn), ui-sans-serif, system-ui, sans-serif;
   --font-mono: var(--font-geist-mono), "Geist Mono", ui-monospace, SFMono-Regular, monospace;
 
   --fs-11: 11px; --fs-12: 12px; --fs-13: 13px; --fs-14: 14px; --fs-15: 15px;
@@ -88,7 +89,9 @@
 /* ==========================================================================
    LIGHT
    ========================================================================== */
-:root, :root[data-theme="light"] {
+/* Also applies to any element marked data-theme="light": a light island inside a dark page
+   (chart image export and print previews read their colours from one). */
+:root, [data-theme="light"] {
   color-scheme: light;
 
   --bg: #EDF0F4;               /* app background, sidebar */

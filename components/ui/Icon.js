@@ -63,6 +63,14 @@ const PATHS = {
   keyboard: '<rect x="2.5" y="5" width="15" height="10" rx="2"/><path d="M5.5 8h.01M8.5 8h.01M11.5 8h.01M14.5 8h.01M6.5 12h7"/>',
   chat: '<path d="M4 4.5h12a1 1 0 0 1 1 1v8a1 1 0 0 1-1 1H9l-3.5 3v-3H4a1 1 0 0 1-1-1v-8a1 1 0 0 1 1-1z"/><path d="M7 8.5h6M7 11h4"/>',
   at: '<circle cx="10" cy="10" r="3"/><path d="M13 10v1.2a2 2 0 0 0 4 0V10a7 7 0 1 0-2.7 5.5"/>',
+  // Analytics
+  image: '<rect x="3" y="4" width="14" height="12" rx="2"/><circle cx="7.5" cy="8.5" r="1.3"/><path d="m3.5 14 4-4 3 3 2.5-2.5 3.5 3.5"/>',
+  print: '<path d="M6 8V3.5h8V8"/><rect x="3" y="8" width="14" height="6.5" rx="1.5"/><path d="M6 12.5h8V17H6z"/>',
+  present: '<rect x="3" y="3.5" width="14" height="10" rx="1.5"/><path d="M10 13.5V17M7 17h6"/>',
+  filter: '<path d="M3.5 5h13l-5 6v4.5l-3 1.5v-6z"/>',
+  refresh: '<path d="M15.5 8A6 6 0 0 0 4.6 6.5M4.5 12a6 6 0 0 0 10.9 1.5"/><path d="M15.5 4v4h-4M4.5 16v-4h4"/>',
+  bars: '<path d="M5 16V9M10 16V4M15 16v-5"/>',
+  activity: '<path d="M2.5 10h3l2-5 3 10 2-5h5"/>',
 };
 
 export default function Icon({ name, className = "i", size }) {
