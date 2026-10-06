@@ -174,6 +174,7 @@ test.describe("shift logs are for SOC analysts only", () => {
 
     await page.goto("/shift/manage");
     await expect(page.locator("h1")).toHaveText("Shift log corrections");
+    await page.getByLabel("Analyst").selectOption(ids.sara);
     await expect(page.getByText("Submitted & locked")).toBeVisible();
 
     await signIn(page, "sara");
