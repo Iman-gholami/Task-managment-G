@@ -41,6 +41,9 @@ export async function PATCH(request) {
   const body = await request.json().catch(() => ({}));
 
   if (isManager(user)) {
+    const hasCorrectionTarget = body.user !== undefined || body.date !== undefined;
+    if (!hasCorrectionTarget) return err(403, "Managers do not have personal shift logs. Use Log corrections to edit an analyst log.");
+
     const target = String(body.user ?? "");
     const date = String(body.date ?? "");
     if (!target || !isIsoDate(date)) return err(400, "Manager corrections require a valid analyst and date.");
