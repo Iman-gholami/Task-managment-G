@@ -3,6 +3,7 @@
 import { useCallback, useMemo } from "react";
 import AnalyticsFrame from "@/components/analytics/AnalyticsFrame";
 import { useAnalytics } from "@/components/analytics/AnalyticsContext";
+import PeerLeaderboard from "@/components/analytics/PeerLeaderboard";
 import { lineOption } from "@/components/analytics/chartOptions";
 import { AnEmpty, ChartPanel } from "@/components/analytics/ui";
 import Icon from "@/components/ui/Icon";
@@ -29,7 +30,7 @@ const fmtKind = (kind, v) => (!isNum(v) ? "—" : kind === "rate" ? fmtPct(v) : 
 
 export default function Compare() {
   return (
-    <AnalyticsFrame title="مقایسه" subtitle={`حداکثر ${faDigits(MAX_COMPARE)} مورد`}>
+    <AnalyticsFrame title="مقایسه و رتبه‌بندی" subtitle={`مقایسه دستی تا ${faDigits(MAX_COMPARE)} مورد + رتبه‌بندی هم‌سطح`}>
       <CompareBody />
     </AnalyticsFrame>
   );
@@ -147,6 +148,7 @@ function CompareBody() {
           />
         </>
       )}
+      <PeerLeaderboard />
     </>
   );
 }
