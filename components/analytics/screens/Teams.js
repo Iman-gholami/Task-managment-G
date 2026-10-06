@@ -116,7 +116,7 @@ function TeamsOverview() {
           height={70 + 46 * m.rows.length}
           actions={<Segmented label="شاخص" value={metric} onChange={setMetric} options={PC_METRICS.map(({ value, label }) => ({ value, label }))} />}
           table={{ columns: [{ key: "t", label: "تیم", value: (r) => r.fa }, { key: "v", label: def.label, kind: def.kind, value: valueOf }], rows: m.rows }}
-          fileName="سرانه-تیم‌ها"
+          fileName="team-per-capita"
         />
         <ChartPanel
           title="روند سرانه تسک‌های تکمیل‌شده"
@@ -124,7 +124,7 @@ function TeamsOverview() {
           build={trendBuild}
           height={250}
           table={{ columns: [{ key: "b", label: "بازه", value: (r) => r.label }, ...m.rows.map((r) => ({ key: r.key, label: r.fa, kind: "avg", value: (x) => x[r.key] }))], rows: m.b.map((x, i) => ({ id: x.from, label: x.label, ...Object.fromEntries(m.rows.map((r) => [r.key, r.headcount ? r.series[i].completed / r.headcount : null])) })) }}
-          fileName="روند-سرانه-تیم‌ها"
+          fileName="team-per-capita-trend"
         />
       </div>
 
@@ -135,15 +135,15 @@ function TeamsOverview() {
         height={80 + 56 * m.rows.length}
         onChartClick={(e) => e.data?.id && setPerson(e.data.id)}
         table={{ columns: [{ key: "n", label: "کارشناس", value: (r) => r.name }, { key: "t", label: "تیم", value: (r) => GROUP_BY_KEY[m.rows.find((x) => x.group === r.group)?.key]?.fa }, { key: "v", label: "تسک باز", kind: "count", value: (r) => r.value }], rows: m.load }}
-        fileName="بار-کار-باز"
+        fileName="open-work-per-person"
         empty={m.load.length ? null : <AnEmpty title="کارشناس فعالی نیست" />}
       />
 
       <div className="an-row">
         <ChartPanel title="ترکیب پیچیدگی" question="نوع کار تیم‌ها چه فرقی دارد؟" build={cxBuild} height={60 + 46 * m.rows.length}
-          table={{ columns: [{ key: "t", label: "تیم", value: (r) => r.label }, ...CX_FA.map((c, i) => ({ key: `c${i}`, label: c, kind: "count", value: (r) => r.parts[i] }))], rows: mixRows("cx") }} fileName="ترکیب-پیچیدگی-تیم‌ها" />
+          table={{ columns: [{ key: "t", label: "تیم", value: (r) => r.label }, ...CX_FA.map((c, i) => ({ key: `c${i}`, label: c, kind: "count", value: (r) => r.parts[i] }))], rows: mixRows("cx") }} fileName="team-complexity-mix" />
         <ChartPanel title="توزیع کیفیت" question="کیفیت ثبت‌شده هنگام تأیید در تیم‌ها چطور پخش شده است؟" build={qBuild} height={60 + 46 * m.rows.length}
-          table={{ columns: [{ key: "t", label: "تیم", value: (r) => r.label }, ...QUAL_KEYS.map((k, i) => ({ key: k, label: QUAL_FA[k], kind: "count", value: (r) => r.parts[i] }))], rows: mixRows("quality") }} fileName="کیفیت-تیم‌ها" />
+          table={{ columns: [{ key: "t", label: "تیم", value: (r) => r.label }, ...QUAL_KEYS.map((k, i) => ({ key: k, label: QUAL_FA[k], kind: "count", value: (r) => r.parts[i] }))], rows: mixRows("quality") }} fileName="team-quality" />
       </div>
 
       <Panel title="جدول کامل تیم‌ها" meta="همه شاخص‌ها؛ برای مرتب‌سازی روی سرستون کلیک کنید">
@@ -216,11 +216,11 @@ function TeamDetail({ team }) {
       <div className={m.levels.length ? "an-row wide-first" : "an-grid"}>
         <ChartPanel title="ورودی و خروجی کار تیم" question="صف کار این تیم رشد می‌کند یا کوچک می‌شود؟" build={trend} height={260}
           table={{ columns: [{ key: "b", label: "بازه", value: (r) => r.label }, { key: "c", label: "تکمیل‌شده", kind: "count", value: (r) => r.c }, { key: "n", label: "ایجادشده", kind: "count", value: (r) => r.n }], rows: m.b.map((x, i) => ({ id: x.from, label: x.label, c: m.bs[i].completed, n: m.bs[i].created })) }}
-          fileName={`روند-${team.fa}`} />
+          fileName={`team-flow-${team.key}`} />
         {m.levels.length > 0 && (
           <ChartPanel title="سرانه تکمیل‌شده به تفکیک سطح" question="حجم کار L1، L2 و L3 چه نسبتی دارد؟ (سطح‌ها کار متفاوتی دارند؛ برای مقایسه مستقیم نیست.)" build={levelBuild} height={200}
             table={{ columns: [{ key: "l", label: "سطح", value: (r) => r.level }, { key: "n", label: "کارشناسان", kind: "count", value: (r) => r.headcount }, { key: "c", label: "تکمیل‌شده", kind: "count", value: (r) => r.cur.completed }, { key: "pc", label: "سرانه", kind: "avg", value: (r) => r.pc.completed }, { key: "o", label: "صف باز", kind: "count", value: (r) => r.open.open }], rows: m.levels.map((l) => ({ ...l, id: l.level })) }}
-            fileName={`سطح‌ها-${team.fa}`}
+            fileName={`team-levels-${team.key}`}
             footer={m.levels.map((l) => <button key={l.level} type="button" className="btn btn-ghost btn-sm" onClick={() => setFilters({ level: l.level })}>فقط {l.level}</button>)} />
         )}
       </div>
@@ -231,7 +231,7 @@ function TeamDetail({ team }) {
 
       <ChartPanel title="حجم و ترکیب کار هر کارشناس" question="هر نفر چه مقدار و چه نوع کاری تکمیل کرده است؟" build={mixBuild} height={60 + 34 * Math.max(1, m.people.length)}
         table={{ columns: [{ key: "n", label: "کارشناس", value: (r) => r.person.name }, ...CX_FA.map((c, i) => ({ key: `c${i}`, label: c, kind: "count", value: (r) => r.cur.cx[i] }))], rows: m.people.map((r) => ({ ...r, id: r.person.id })) }}
-        fileName={`ترکیب-کار-${team.fa}`}
+        fileName={`member-work-mix-${team.key}`}
         empty={cur.completed ? null : <AnEmpty title="تسکی تکمیل نشده">در این بازه تسک تکمیل‌شده‌ای در این تیم نیست.</AnEmpty>} />
       {person && <PersonDrawer id={person} onClose={() => setPerson(null)} />}
     </>

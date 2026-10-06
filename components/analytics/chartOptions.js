@@ -240,7 +240,7 @@ export function calendarOption(t, { cells, weekLabels, dayLabels, kind = "count"
     // Square cells of a fixed size: a short period stays a compact block instead of stretching.
     grid: { top: 22, right: 64, bottom: 40, width: weekLabels.length * cell, height: dayLabels.length * cell },
     tooltip: { ...base(t).tooltip, trigger: "item", formatter: (p) => tipHtml(cells[p.dataIndex].label, [{ value: f(cells[p.dataIndex].value), color: p.color, name }]) },
-    xAxis: { type: "category", data: weekLabels, inverse: true, position: "top", ...axisCommon(t), axisLine: { show: false }, axisLabel: { ...axisCommon(t).axisLabel, interval: 0, align: "right", formatter: rtl } },
+    xAxis: { type: "category", data: weekLabels, inverse: true, position: "top", ...axisCommon(t), axisLine: { show: false }, axisLabel: { ...axisCommon(t).axisLabel, interval: 0, align: "right", hideOverlap: true, formatter: rtl } },
     yAxis: { type: "category", data: dayLabels, inverse: true, position: "right", ...axisCommon(t), axisLine: { show: false }, axisLabel: { ...axisCommon(t).axisLabel, fontSize: 11, formatter: rtl } },
     visualMap: {
       min: 0, max: Math.max(kind === "rate" ? 1 : 1, ...values), orient: "horizontal", right: 64, bottom: 0, itemWidth: 10, itemHeight: 120, calculable: false,

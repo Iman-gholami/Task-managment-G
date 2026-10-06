@@ -209,7 +209,7 @@ function OverviewBody() {
         build={flow}
         height={280}
         table={flowTable}
-        fileName="ورودی-خروجی-کار"
+        fileName="work-flow"
         testId="chart-flow"
         footer={<>
           <span>صف باز در پایان دوره: <b className="strong">{fmtInt(m.backlog.at(-1))}</b> (ابتدای دوره: {fmtInt(m.backlog[0])})</span>
@@ -235,7 +235,7 @@ function OverviewBody() {
           build={cxMix}
           height={60 + 44 * (m.teams.length + 1)}
           table={mixTable("cx", CX_FA)}
-          fileName="ترکیب-پیچیدگی"
+          fileName="complexity-mix"
           empty={cur.completed === 0 ? <AnEmpty title="تسکی تکمیل نشده">در این بازه تسک تکمیل‌شده‌ای نیست.</AnEmpty> : null}
         />
         <ChartPanel
@@ -244,7 +244,7 @@ function OverviewBody() {
           build={qualityMix}
           height={60 + 44 * (m.teams.length + 1)}
           table={mixTable("quality", QUAL_KEYS.map((k) => QUAL_FA[k]))}
-          fileName="توزیع-کیفیت"
+          fileName="quality-mix"
           empty={cur.qualityN === 0 ? <AnEmpty title="کیفیتی ثبت نشده">کیفیت هنگام تأیید تسک ثبت می‌شود.</AnEmpty> : null}
           footer={<Key color="var(--viz-4)">تیره‌تر = کیفیت بالاتر</Key>}
         />

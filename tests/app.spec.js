@@ -428,6 +428,24 @@ test.describe("analytics (management dashboard)", () => {
     await expect(page.getByTestId("people-table")).toContainText("سارا رحیمی");
   });
 
+  test("period menu: presets and a custom Jalali range drive every view through the URL", async ({ page }) => {
+    await signIn(page, "admin");
+    await page.goto("/analytics?demo=1", { waitUntil: "networkidle" });
+    await page.getByTestId("period").click();
+    await page.getByRole("button", { name: "ماه گذشته" }).click();
+    await expect(page).toHaveURL(/p=prev-month/);
+    await page.getByTestId("period").click();
+    await page.getByRole("button", { name: "بازه دلخواه…" }).click();
+    const days = page.locator(".an-cal-day:not([disabled])");
+    await days.first().click();
+    await days.nth(2).click();
+    await page.getByRole("button", { name: "اعمال" }).click();
+    await expect(page).toHaveURL(/p=custom&from=\d{4}-\d{2}-\d{2}&to=\d{4}-\d{2}-\d{2}/);
+    await page.getByRole("link", { name: "روندها" }).click();
+    await expect(page).toHaveURL(/\/analytics\/trends\?p=custom/);
+    await expect(page.getByTestId("chart-trend")).toBeVisible();
+  });
+
   test("Excel exports follow the screen's filters and the viewer's scope", async ({ page }) => {
     await signIn(page, "admin");
     for (const q of ["kind=full", "kind=full&team=soc&p=last-30", "kind=teams", `kind=person&id=${ids.sara}`, "kind=full&demo=1"]) {

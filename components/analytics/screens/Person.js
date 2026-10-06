@@ -26,6 +26,7 @@ export default function Person({ id }) {
       crumbs={a.manager ? "پروفایل کارشناس" : "آمار من"}
       subtitle={p ? [groupFa(p.group), p.level, ROLE_FA[p.role], p.active ? null : "غیرفعال"].filter(Boolean).join(" · ") : null}
       exportKind="person"
+      exportId={id}
       hideTeamFilter
     >
       <PersonBody id={id} />
@@ -111,17 +112,17 @@ function PersonBody({ id }) {
       <div className="an-row">
         <ChartPanel title="روند تسک‌های تکمیل‌شده" question="حجم کار در طول دوره چگونه تغییر کرده است؟" build={trend} height={230}
           table={{ columns: [{ key: "b", label: "بازه", value: (r) => r.label }, { key: "c", label: "تکمیل‌شده", kind: "count", value: (r) => r.c }, { key: "u", label: "حجم وزن‌دار", kind: "count", value: (r) => r.u }, { key: "h", label: "ساعت", kind: "count", value: (r) => r.h }], rows: m.b.map((x, i) => ({ id: x.from, label: x.label, c: m.bs[i].completed, u: m.bs[i].units, h: m.bs[i].hours })) }}
-          fileName={`روند-${p.name}`} />
+          fileName={`person-trend-${p.id}`} />
         <ChartPanel title="روند ساعت ثبت‌شده" question="ساعت‌ها جدا از تعداد تسک (بدون محور دوگانه)؛ ساعت دستی وارد می‌شود." build={hours} height={230}
           table={{ columns: [{ key: "b", label: "بازه", value: (r) => r.label }, { key: "h", label: "ساعت", kind: "count", value: (r) => r.h }], rows: m.b.map((x, i) => ({ id: x.from, label: x.label, h: m.bs[i].hours })) }}
-          fileName={`ساعت-${p.name}`} />
+          fileName={`person-hours-${p.id}`} />
       </div>
 
       {cur.completed > 0 && (
         <div className="an-row">
-          <ChartPanel title="ترکیب پیچیدگی" build={mix} height={110} fileName={`پیچیدگی-${p.name}`}
+          <ChartPanel title="ترکیب پیچیدگی" build={mix} height={110} fileName={`person-complexity-${p.id}`}
             table={{ columns: CX_FA.map((c, i) => ({ key: `c${i}`, label: c, kind: "count", value: (r) => r.cx[i] })), rows: [{ id: "cx", cx: cur.cx }] }} />
-          <ChartPanel title="توزیع کیفیت" build={quality} height={110} fileName={`کیفیت-${p.name}`}
+          <ChartPanel title="توزیع کیفیت" build={quality} height={110} fileName={`person-quality-${p.id}`}
             empty={cur.qualityN ? null : <AnEmpty title="کیفیتی ثبت نشده" />}
             table={{ columns: QUAL_KEYS.map((k, i) => ({ key: k, label: QUAL_FA[k], kind: "count", value: (r) => r.q[i] })), rows: [{ id: "q", q: cur.quality }] }} />
         </div>
@@ -184,14 +185,14 @@ function ShiftSection({ id, cur, prev, medians }) {
       </MetricGrid>
       <ChartPanel title="انجام روتین در هر روز" question="کدام روزها روتین کامل انجام نشده است؟ خانه خالی یعنی شیفت نداشته." build={cal} height={7 * 20 + 70}
         table={{ columns: [{ key: "d", label: "روز", value: (r) => r.label }, { key: "v", label: "انجام روتین", kind: "rate", value: (r) => r.value }], rows: m.cells.filter((c) => c.value !== null).map((c) => ({ ...c, id: c.date })) }}
-        fileName="انجام-روتین-روزانه" />
+        fileName="routine-daily" />
       <div className="an-row">
-        <ChartPanel title="IOC روزانه" build={iocBuild} height={200} fileName="IOC-روزانه"
+        <ChartPanel title="IOC روزانه" build={iocBuild} height={200} fileName="ioc-daily"
           table={{ columns: [{ key: "d", label: "روز", value: (r) => faDate(r[0]) }, { key: "v", label: "IOC", kind: "count", value: (r) => r[1] }], rows: m.iocs.filter((x, i) => m.shifts[i][1]) }} />
-        <ChartPanel title="تیکت روزانه (تعداد)" build={ticketBuild} height={200} fileName="تیکت-روزانه"
+        <ChartPanel title="تیکت روزانه (تعداد)" build={ticketBuild} height={200} fileName="tickets-daily"
           table={{ columns: [{ key: "d", label: "روز", value: (r) => faDate(r[0]) }, { key: "v", label: "تیکت", kind: "count", value: (r) => r[1] }], rows: m.tickets.filter((x, i) => m.shifts[i][1]) }} />
       </div>
-      <ChartPanel title="درصد انجام هر فعالیت روتین" question="کدام فعالیت بیشتر جا می‌ماند؟" build={acts} height={300} fileName="فعالیت‌های-روتین"
+      <ChartPanel title="درصد انجام هر فعالیت روتین" question="کدام فعالیت بیشتر جا می‌ماند؟" build={acts} height={300} fileName="routine-activities"
         table={{ columns: [{ key: "l", label: "فعالیت", value: (r) => r.label }, { key: "v", label: "درصد انجام", kind: "rate", value: (r) => r.value }, { key: "n", label: "شیفت", kind: "count", value: (r) => r.n }], rows: ACTIVITIES_FA.map((label, i) => ({ id: i, label, value: cur.activityRates[i], n: cur.activityN[i] })) }} />
     </>
   );

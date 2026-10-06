@@ -68,9 +68,11 @@ function RangeCalendar({ from, to, max, onApply, onCancel }) {
   );
 }
 
-/** Period menu: presets as rows (one click), the custom range behind a hairline at the bottom. */
-function PeriodMenu({ close }) {
-  const { filters, setFilters, today } = useAnalytics();
+/**
+ * Period menu: presets as rows (one click), the custom range behind a hairline at the bottom.
+ * It renders in the app-level popover layer (outside the analytics context), so it gets what it needs as props.
+ */
+function PeriodMenu({ close, filters, setFilters, today }) {
   const [custom, setCustom] = useState(filters.p === "custom");
   if (custom) {
     return <RangeCalendar from={filters.from} to={filters.to} max={today} onCancel={() => setCustom(false)} onApply={(from, to) => { setFilters({ p: "custom", from, to }); close(); }} />;
@@ -138,7 +140,7 @@ function MoreFilters({ onClose }) {
 /** One row of filters above everything they scope. Sticky while the page scrolls. */
 export default function FilterBar({ hideTeam = false }) {
   const { openPopover } = useApp();
-  const { filters, setFilters, range, cmp, facts, manager } = useAnalytics();
+  const { filters, setFilters, range, cmp, facts, manager, today } = useAnalytics();
   const [more, setMore] = useState(false);
   const scope = facts?.scope?.kind;
   const groups = useMemo(() => GROUPS.filter((g) => facts?.people.some((p) => p.group === g.name && !p.manager)), [facts]);
@@ -153,7 +155,7 @@ export default function FilterBar({ hideTeam = false }) {
         type="button"
         className="btn btn-secondary an-period-btn"
         aria-haspopup="dialog"
-        onClick={(e) => openPopover(e.currentTarget, { label: "بازه زمانی", width: 300, align: "end", dir: "rtl", render: (close) => <PeriodMenu close={close} /> })}
+        onClick={(e) => openPopover(e.currentTarget, { label: "بازه زمانی", width: 300, align: "end", dir: "rtl", render: (close) => <PeriodMenu close={close} filters={filters} setFilters={setFilters} today={today} /> })}
         data-testid="period"
       >
         <Icon name="cal" />

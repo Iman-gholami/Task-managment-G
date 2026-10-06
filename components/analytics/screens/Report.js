@@ -40,7 +40,7 @@ function suggestedActions(alerts) {
 
 export default function Report() {
   return (
-    <AnalyticsFrame title="گزارش مدیریتی">
+    <AnalyticsFrame title="گزارش مدیریتی" className="an-report-page">
       <ReportBody />
     </AnalyticsFrame>
   );

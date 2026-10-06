@@ -74,7 +74,7 @@ const time = (iso) => (iso ? faDigits(new Date(iso).toLocaleTimeString("en-GB", 
  * Chrome shared by every analytics page: header, actions, demo banner, tabs and the sticky filter bar.
  * Children render once facts have loaded; a refetch keeps them on screen, dimmed.
  */
-export default function AnalyticsFrame({ title, subtitle, actions, exportKind = "full", tabs = true, crumbs, children, hideTeamFilter }) {
+export default function AnalyticsFrame({ title, subtitle, actions, exportKind = "full", exportId, tabs = true, crumbs, children, hideTeamFilter, className = "" }) {
   const a = useAnalytics();
   const { openPopover } = useApp();
   const path = usePathname();
@@ -97,7 +97,7 @@ export default function AnalyticsFrame({ title, subtitle, actions, exportKind = 
       if (v === "print") setTimeout(() => window.print(), 50);
       else if (v === "report") router.push(a.href("/analytics/report"));
       else {
-        const url = v === "teams" ? a.exportUrl("teams") : a.exportUrl(exportKind, exportKind === "person" ? { id: a.params.get("id") ?? path.split("/").pop() } : {});
+        const url = v === "teams" ? a.exportUrl("teams") : a.exportUrl(exportKind, exportKind === "person" ? { id: exportId } : {});
         const link = document.createElement("a");
         link.href = url;
         link.download = "";
@@ -109,7 +109,7 @@ export default function AnalyticsFrame({ title, subtitle, actions, exportKind = 
   });
 
   return (
-    <div className="page an" dir="rtl" lang="fa" data-loading={a.loading && a.facts ? "true" : undefined}>
+    <div className={`page an ${className}`} dir="rtl" lang="fa" data-loading={a.loading && a.facts ? "true" : undefined}>
       {a.demo && (
         <div className="an-demo" role="status">
           <Icon name="info" />

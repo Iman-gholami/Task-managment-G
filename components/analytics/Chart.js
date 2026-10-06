@@ -38,15 +38,20 @@ const Chart = forwardRef(function Chart({ build, height = 260, label, onClick },
     const chart = echarts.init(node, null, { renderer: "svg" });
     inst.current = chart;
     let frame = 0;
+    const printing = window.matchMedia("print");
     const ro = new ResizeObserver(() => {
+      // In print layout the vector SVG is scaled by CSS; re-measuring there would collapse it.
+      if (printing.matches) return;
       cancelAnimationFrame(frame);
-      frame = requestAnimationFrame(() => !chart.isDisposed() && chart.resize());
+      frame = requestAnimationFrame(() => !chart.isDisposed() && !printing.matches && chart.resize());
     });
     ro.observe(node);
     const entry = {
       repaint: (t) => {
         if (chart.isDisposed()) return;
         chart.setOption({ ...buildRef.current(t), animation: false }, { notMerge: true, lazyUpdate: false });
+        // The on-screen SVG has fixed pixel dimensions; a viewBox lets the print copy scale it to the page.
+        node.querySelector("svg")?.setAttribute("viewBox", `0 0 ${chart.getWidth()} ${chart.getHeight()}`);
       },
     };
     registry.add(entry);

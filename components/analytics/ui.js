@@ -8,7 +8,11 @@ import { fmtBy } from "@/components/analytics/chartOptions";
 import Icon from "@/components/ui/Icon";
 import Segmented from "@/components/ui/Segmented";
 import useFocusTrap from "@/components/useFocusTrap";
+import { useAnalytics } from "@/components/analytics/AnalyticsContext";
+import { toJalali } from "@/lib/analytics/calendar";
 import { change, isNum } from "@/lib/analytics/format";
+
+const jalaliStamp = (iso) => { const j = toJalali(iso); return `${j.jy}-${String(j.jm).padStart(2, "0")}-${String(j.jd).padStart(2, "0")}`; };
 
 // ---- Files -------------------------------------------------------------------------
 
@@ -63,7 +67,7 @@ export function Delta({ now, before, kind = "count", label }) {
     <span className="an-delta" data-dir={c.dir}>
       {c.dir !== "flat" && <Icon name={c.dir === "up" ? "arrowUp" : "arrowDown"} />}
       <b>{c.text}</b>
-      {label && <span>{c.dir === "flat" ? "" : "نسبت به "}{label}</span>}
+      {label && <span>نسبت به {label}</span>}
     </span>
   );
 }
@@ -137,7 +141,9 @@ export function ChartPanel({ title, question, meta, build, height = 260, table, 
   const [mode, setMode] = useState("chart");
   const chart = useRef(null);
   const id = useId();
-  const name = fileName ?? title;
+  const { range } = useAnalytics();
+  // ASCII file names (some browsers drop non-Latin download names), stamped with the Jalali period.
+  const name = `analytics-${(fileName ?? "chart").replace(/[^\w.-]+/g, "-")}_${jalaliStamp(range.from)}_${jalaliStamp(range.end)}`;
   return (
     <section className={`panel an-panel ${className}`} aria-labelledby={id} data-testid={testId}>
       <div className="panel-head an-panel-head">

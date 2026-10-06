@@ -102,23 +102,23 @@ function SocBody() {
         height={90 + 30 * m.rows.length}
         onChartClick={(e) => m.rows[e.value?.[1]] && setPerson(m.rows[e.value[1]].id)}
         table={{ columns: [{ key: "n", label: "تحلیلگر", value: (r) => r.person.name }, ...ACTIVITIES_FA.map((l, i) => ({ key: `a${i}`, label: l, kind: "rate", value: (r) => r.cur.activityRates[i] }))], rows: m.rows }}
-        fileName="روتین-فعالیت-تحلیلگر"
+        fileName="routine-by-analyst"
         testId="soc-heatmap"
       />
 
       <div className="an-row">
         <ChartPanel title="درصد انجام هر فعالیت (کل SOC)" question="کدام فعالیت روتین بیشتر جا می‌ماند؟" build={acts} height={300}
           table={{ columns: [{ key: "l", label: "فعالیت", value: (r) => r.label }, { key: "v", label: "درصد انجام", kind: "rate", value: (r) => r.v }, { key: "n", label: "شیفت", kind: "count", value: (r) => r.n }], rows: ACTIVITIES_FA.map((label, i) => ({ id: i, label, v: cur.activityRates[i], n: cur.activityN[i] })) }}
-          fileName="درصد-انجام-فعالیت‌ها" />
+          fileName="activity-completion" />
         <ChartPanel title="توزیع نوع شیفت هر تحلیلگر" question="شیفت‌های شب و تا ساعت ۲۰ منصفانه تقسیم شده‌اند؟" build={types} height={70 + 30 * m.rows.length}
           table={{ columns: [{ key: "n", label: "تحلیلگر", value: (r) => r.person.name }, ...SHIFT_KEYS.map((k) => ({ key: k, label: SHIFT_FA[k], kind: "count", value: (r) => r.cur.shiftTypes[k] }))], rows: m.rows }}
-          fileName="نوع-شیفت" />
+          fileName="shift-types" />
       </div>
 
       <div className="an-row">
-        <ChartPanel title="IOC ثبت‌شده در هر روز" build={iocBuild} height={220} fileName="IOC-روزانه"
+        <ChartPanel title="IOC ثبت‌شده در هر روز" build={iocBuild} height={220} fileName="ioc-daily"
           table={{ columns: [{ key: "d", label: "روز", value: (r) => faDate(r[0]) }, { key: "v", label: "IOC", kind: "count", value: (r) => r[1] }], rows: m.iocs }} />
-        <ChartPanel title="تیکت ثبت‌شده در هر روز (تعداد)" build={ticketBuild} height={220} fileName="تیکت-روزانه"
+        <ChartPanel title="تیکت ثبت‌شده در هر روز (تعداد)" build={ticketBuild} height={220} fileName="tickets-daily"
           table={{ columns: [{ key: "d", label: "روز", value: (r) => faDate(r[0]) }, { key: "v", label: "تیکت", kind: "count", value: (r) => r[1] }], rows: m.tickets }} />
       </div>
 

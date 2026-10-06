@@ -143,7 +143,7 @@ function CompareBody() {
               </select>
             }
             table={{ columns: [{ key: "b", label: "بازه", value: (r) => r.label }, ...data.map((d, i) => ({ key: d.key, label: d.label, kind: METRICS[metric].kind, value: (r) => r.v[i] }))], rows: trend.labels.map((label, j) => ({ id: j, label, v: trend.series.map((s) => s[j]) })) }}
-            fileName="مقایسه-روند"
+            fileName="compare-trend"
           />
         </>
       )}

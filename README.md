@@ -2,9 +2,9 @@
 
 The Security Department's internal work tool: Task Management, SOC Shift Logs, and Workforce Performance.
 
-**Stack:** Next.js 16 (App Router) · React 19 · JavaScript · Node.js ≥ 22.13 · SQLite (Node's built-in `node:sqlite`, so no database server or native build is needed). The fonts (Geist) are bundled, so the app makes no external requests and works on an offline or internal network.
+**Stack:** Next.js 16 (App Router) · React 19 · JavaScript · Node.js ≥ 22.13 · SQLite (Node's built-in `node:sqlite`, so no database server or native build is needed) · ECharts (analytics charts, bundled from npm). The fonts (Geist, Vazirmatn) are bundled, so the app makes no external requests and works on an offline or internal network.
 
-**Everything is stored in the database:** sign-in with sessions, tasks with a review workflow, checklist / comments / file attachments, the daily Shift Log (SOC analysts), performance figures, all five reports with Excel export, account settings, and member management.
+**Everything is stored in the database:** sign-in with sessions, tasks with a review workflow and status history, checklist / comments / file attachments, the daily Shift Log (SOC analysts), performance figures, all five reports with Excel export, the analytics dashboard, account settings, and member management.
 
 ### Task workflow
 `Backlog → To Do → In Progress → Review → Done`, plus `Blocked`, `Returned`, `Cancelled`.
@@ -23,6 +23,18 @@ Only SOC analysts (SOC · L1/L2/L3) have a Shift Log. Managers, engineers and Th
 
 ### Performance & reports
 Figures are computed from the database for the selected period (this month, last month, quarter, or a custom range): completed tasks by completion date, hours, complexity and quality, and — for SOC analysts — shift logs, routine completion, IOC count, tickets, traffic reports and issues. Every report has **Export to Excel** (`.xlsx`). Analysts see their own data; team reports are for managers.
+
+### Analytics (management dashboard)
+A Persian, right-to-left dashboard for managers at `/analytics`, on the Jalali calendar. It is **statistics only**: counts, hours and distributions, with no score, rank or verdict on a person. Tables start in alphabetical order, and changes are shown without good/bad colouring. Tickets are counted, nothing more.
+- **Screens:** Overview (status, KPIs, alerts, insights, work in vs out, teams) · Teams (drill down to SOC levels and members) · People (table, distribution, quick-view drawer, full profile) · Compare (people, teams or periods, up to four) · Trends (any metric, by team or level, period over period, a 12-month calendar) · SOC operations · Alerts & insights · Executive report (one printable page with manager notes).
+- **Filters** (period presets or a custom Jalali range, comparison, team, level, time unit, role, priority, complexity, quality, shift type) live in the URL. They apply to every chart, table and export, and survive switching tabs.
+- **Comparisons are like for like:** the first 14 days of this month are compared with the first 14 days of the previous month, not the whole month.
+- **Exports:** a multi-sheet right-to-left Excel workbook (guide and definitions, filters, summary, teams, people, trend, raw tasks, shifts and daily ticket counts), Excel for one person or for the teams, CSV and PNG for every chart, and print or PDF (always in the light theme).
+- **Demo data:** the "داده نمایشی" button shows a fictional department for presentations and onboarding, clearly labelled. Managers only.
+- **Access:** a Security Manager sees the department and a SOC Manager sees SOC. Everyone else sees only their own figures (sidebar: **My statistics**), with anonymous team medians when at least three colleagues have activity.
+- Definitions, alert rules and design decisions: [`design/ANALYTICS.md`](design/ANALYTICS.md). Thresholds: `lib/analytics/config.js`.
+
+Status changes are stored as structured history (`task_transitions`), and tasks have a `created_at`; both are backfilled from the activity log on first start. This history makes cycle time, return counts and the age of blocked or in-review work exact.
 
 Uploaded files are stored next to the database in `data/uploads/` (max 20 MB each).
 
@@ -86,13 +98,15 @@ npm test
 |---|---|
 | `app/` | Routes (App Router). `app/(app)/…` are the screens inside the app shell; `app/login` is the sign-in page |
 | `components/screens/` | One component per screen (Dashboard, Tasks, TaskDetail, ShiftLog, Performance, Reports, Team, Admin…) |
+| `components/analytics/` | Analytics: frame, filter bar, chart wrapper and option builders, shared blocks, one component per screen (`screens/`) |
+| `lib/analytics/` | Analytics engine shared by the browser and the server: Jalali calendar, periods, filters, statistics, alerts, insights, demo data |
 | `components/` | App shell (`shell/`), shared state (`AppProvider`), UI primitives (`ui/`: dialog, popover, tooltip, metric, charts, states, fields), task table, create-task modal |
 | `app/api/` | REST API: auth, account, tasks (+ checklist, comments, attachments), shift log, performance, reports, members |
 | `lib/server/` | Database, auth/sessions, data access (server only) |
 | `lib/` | Roles and permissions, task workflow rules, formatting helpers, seed data |
-| `styles/` | Design tokens (four themes) and styles by layer: base, shell, components, data, screens, rtl (Persian screens), themes, motion; bundled fonts |
-| `design/` | Design system and specs for all 23 screens |
-| `tests/` | Playwright end-to-end tests |
+| `styles/` | Design tokens (four themes) and styles by layer: base, shell, components, data, screens, rtl (Persian screens), analytics, themes, motion; bundled fonts |
+| `design/` | Design system, specs for all screens, and the analytics design (`ANALYTICS.md`) |
+| `tests/` | Playwright end-to-end tests and Node unit tests (`*.unit.test.mjs`) |
 
 ## Routes
 
@@ -106,6 +120,8 @@ npm test
 | `/account` | Profile and password |
 | `/performance/overview` · `/performance/employees/<id>` | Performance overview · one employee |
 | `/reports/employee` · `/reports/shift` · `/reports/tickets` … | Reports |
+| `/analytics` · `/analytics/teams` · `/analytics/people` · `/analytics/compare` · `/analytics/trends` · `/analytics/soc` · `/analytics/alerts` · `/analytics/report` | Management dashboard (managers) |
+| `/analytics/people/<id>` | One person's statistics (managers; everyone else sees only their own) |
 | `/admin` | Users & roles |
 | `/login` | Sign in |
 

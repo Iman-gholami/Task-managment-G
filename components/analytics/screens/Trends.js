@@ -99,17 +99,17 @@ function TrendsBody() {
           columns: [{ key: "b", label: "بازه", value: (r) => r.label }, ...m.parts.map((p, i) => ({ key: `s${i}`, label: p.name, kind: def.kind, value: (r) => r.v[i] })), ...(m.prev ? [{ key: "p", label: cmp.label, kind: def.kind, value: (r) => r.p }] : [])],
           rows: m.b.map((x, j) => ({ id: x.from, label: x.label, v: m.series.map((s) => s[j]), p: m.prev?.[j] ?? null })),
         }}
-        fileName={`روند-${def.label}`}
+        fileName={`trend-${metric}`}
         testId="chart-trend"
       />
 
       <div className="an-row">
         <ChartPanel title="صف کار باز در طول زمان" question="کار انجام‌نشده (همه وضعیت‌های باز) در پایان هر بازه؛ از تاریخ ایجاد و بسته‌شدن تسک‌ها بازسازی شده." build={backlog} height={240}
           table={{ columns: [{ key: "b", label: "بازه", value: (r) => r.label }, { key: "v", label: "صف باز", kind: "count", value: (r) => r.v }], rows: m.b.map((x, i) => ({ id: x.from, label: x.label, v: m.backlog[i] })) }}
-          fileName="صف-باز-در-زمان" />
+          fileName="backlog-over-time" />
         <ChartPanel title={`میانگین «${def.label}» در روزهای هفته`} question="کدام روزهای هفته پرکارترند؟ (میانگین در بازه انتخاب‌شده)" build={weekday} height={240}
           table={{ columns: [{ key: "d", label: "روز", value: (r) => r.label }, { key: "v", label: "میانگین", kind: "avg", value: (r) => r.v }], rows: WEEKDAYS.map((label, i) => ({ id: i, label, v: m.weekday[i] })) }}
-          fileName="روزهای-هفته" />
+          fileName="weekday-average" />
       </div>
 
       <ChartPanel
@@ -118,7 +118,7 @@ function TrendsBody() {
         build={calendar}
         height={7 * cal.cell + 76}
         table={{ columns: [{ key: "d", label: "روز", value: (r) => r.label }, { key: "v", label: "تسک تکمیل‌شده", kind: "count", value: (r) => r.value }], rows: cal.cells.filter((c) => c.value).map((c) => ({ ...c, id: c.date })) }}
-        fileName="تقویم-روزانه"
+        fileName="daily-calendar"
         footer={<span>جمع ۱۲ ماه: {fmtNum(m.year.reduce((s, [, v]) => s + (v || 0), 0), 0)} تسک</span>}
       />
     </>

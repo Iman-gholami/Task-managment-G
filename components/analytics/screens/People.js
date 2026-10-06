@@ -103,7 +103,7 @@ function PeopleBody() {
           </select>
         }
         table={{ columns: [{ key: "n", label: "کارشناس", value: (r) => r.person.name }, { key: "t", label: "تیم", value: (r) => groupFa(r.person.group) }, { key: "v", label: def.label, kind: def.kind, value: (r) => r.cur[metric] }], rows: distRows }}
-        fileName={`توزیع-${def.label}`}
+        fileName={`distribution-${metric}`}
       />
       {person && m.rows.some((r) => r.person.id === person) && <PersonDrawer id={person} onClose={() => setParam("person", "")} />}
     </>
