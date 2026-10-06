@@ -27,7 +27,8 @@ export function navFor(me, counts = {}) {
           subs: [
             { href: "/shift/schedule", label: "Calendar" },
             { href: "/shift/changes", label: "Shift changes" },
-          ],
+            manager && { href: "/shift/manage", label: "Log corrections" },
+          ].filter(Boolean),
         },
       ].filter(Boolean),
     },
@@ -84,6 +85,7 @@ export function crumbsFor(path, peopleMap, me) {
     case "shift":
       if (b === "schedule") return [{ label: "Shift Schedule" }];
       if (b === "changes") return [{ label: "Shift Schedule", href: "/shift/schedule" }, { label: "Shift changes" }];
+      if (b === "manage") return [{ label: "Shift Schedule", href: "/shift/schedule" }, { label: "Log corrections" }];
       return [{ label: "Shift Log", href: "/shift" }, { label: b === "history" ? "History" : "Today" }];
     case "team":
       return [{ label: "Team" }];
