@@ -5,7 +5,7 @@ import { api, useApp } from "@/components/AppProvider";
 import Icon from "@/components/ui/Icon";
 import { PageHeader, Panel } from "@/components/ui/layout";
 import { EmptyState, Loading } from "@/components/ui/states";
-import { fmtDate, longDate, weekday } from "@/lib/format";
+import { longDate, weekday } from "@/lib/format";
 
 export default function ShiftLogManager() {
   const { members, shiftDate, toast } = useApp();
@@ -80,7 +80,7 @@ export default function ShiftLogManager() {
             <input className="input" type="date" value={date} onChange={(event) => setDate(event.target.value)} aria-label="Shift date" />
           </label>
           <span className="spacer" />
-          <button type="button" className="btn btn-secondary" onClick={load} disabled={loading}><Icon name="refresh" />Refresh</button>
+          <button type="button" className="btn btn-secondary" onClick={load} disabled={loading}><Icon name="clock" />Refresh</button>
         </div>
       </Panel>
 
@@ -102,7 +102,7 @@ export default function ShiftLogManager() {
                 <div><dt><small>Shift</small></dt><dd>{log.shift?.label ?? log.shiftType}</dd></div>
                 <div><dt><small>Status</small></dt><dd>{log.completedAt ? <span className="badge dot success">Submitted & locked</span> : <span className="badge dot info">Incomplete</span>}</dd></div>
                 <div><dt><small>Activities</small></dt><dd>{done} of {log.activities.length}</dd></div>
-                <div><dt><small>Last update</small></dt><dd>{log.updatedAt ? fmtDate(log.date) : "—"}</dd></div>
+                <div><dt><small>Correction policy</small></dt><dd>Manager-only after submission</dd></div>
               </dl>
             </div>
           </div>
@@ -176,47 +176,45 @@ function ManagerActivity({ activity, onPatch }) {
         </div>
       </div>
 
-      {(activity.kind === "misp" || activity.note !== undefined || note) && (
-        <div className="act-extra">
-          <div className="line" style={{ flexWrap: "wrap" }}>
-            {activity.kind === "misp" && (
-              <>
-                <label className="sec small">IOC count</label>
-                <input
-                  className="input input-sm"
-                  style={{ width: 100 }}
-                  inputMode="numeric"
-                  value={iocs}
-                  onChange={(event) => setIocs(Math.max(0, parseInt(event.target.value.replace(/\D/g, "") || "0", 10)))}
-                  onBlur={() => Number(iocs) !== Number(activity.iocs ?? 0) && onPatch({ iocs: Number(iocs) })}
-                  aria-label={`IOC count for activity ${activity.n}`}
-                />
-                <label className="toggle-label">
-                  <input type="checkbox" role="switch" className="switch" checked={!!activity.bale} onChange={(event) => onPatch({ bale: event.target.checked })} />Shared via Bale
-                </label>
-                <input
-                  className="input input-sm mono"
-                  style={{ width: 190 }}
-                  placeholder="MISP event ID"
-                  value={mispRef}
-                  onChange={(event) => setMispRef(event.target.value)}
-                  onBlur={() => mispRef !== (activity.mispRef ?? "") && onPatch({ mispRef })}
-                  aria-label={`MISP reference for activity ${activity.n}`}
-                />
-              </>
-            )}
-            <input
-              className="input input-sm"
-              style={{ minWidth: 240, flex: 1 }}
-              placeholder="Manager correction note"
-              value={note}
-              onChange={(event) => setNote(event.target.value)}
-              onBlur={() => note !== (activity.note ?? "") && onPatch({ note })}
-              aria-label={`Correction note for activity ${activity.n}`}
-            />
-          </div>
+      <div className="act-extra">
+        <div className="line" style={{ flexWrap: "wrap" }}>
+          {activity.kind === "misp" && (
+            <>
+              <label className="sec small">IOC count</label>
+              <input
+                className="input input-sm"
+                style={{ width: 100 }}
+                inputMode="numeric"
+                value={iocs}
+                onChange={(event) => setIocs(Math.max(0, parseInt(event.target.value.replace(/\D/g, "") || "0", 10)))}
+                onBlur={() => Number(iocs) !== Number(activity.iocs ?? 0) && onPatch({ iocs: Number(iocs) })}
+                aria-label={`IOC count for activity ${activity.n}`}
+              />
+              <label className="toggle-label">
+                <input type="checkbox" role="switch" className="switch" checked={!!activity.bale} onChange={(event) => onPatch({ bale: event.target.checked })} />Shared via Bale
+              </label>
+              <input
+                className="input input-sm mono"
+                style={{ width: 190 }}
+                placeholder="MISP event ID"
+                value={mispRef}
+                onChange={(event) => setMispRef(event.target.value)}
+                onBlur={() => mispRef !== (activity.mispRef ?? "") && onPatch({ mispRef })}
+                aria-label={`MISP reference for activity ${activity.n}`}
+              />
+            </>
+          )}
+          <input
+            className="input input-sm"
+            style={{ minWidth: 240, flex: 1 }}
+            placeholder="Manager correction note"
+            value={note}
+            onChange={(event) => setNote(event.target.value)}
+            onBlur={() => note !== (activity.note ?? "") && onPatch({ note })}
+            aria-label={`Correction note for activity ${activity.n}`}
+          />
         </div>
-      )}
+      </div>
     </div>
   );
 }
