@@ -4,6 +4,7 @@ import { isManager } from "@/lib/roles";
 
 const REPORT_NAMES = Object.fromEntries(REPORTS.map(([k, n]) => [k, n]));
 export const TASK_VIEWS = { my: "My tasks", assigned: "Assigned by me", team: "Team tasks" };
+const ANALYTICS_PAGES = [["", "Overview"], ["teams", "Teams"], ["people", "People"], ["compare", "Compare"], ["trends", "Trends"], ["soc", "SOC operations"], ["alerts", "Alerts & insights"], ["report", "Executive report"]];
 
 /** Sidebar groups for a user. Operational work first, then insights, then organisation. */
 export function navFor(me, counts = {}) {
@@ -34,6 +35,10 @@ export function navFor(me, counts = {}) {
       id: "insights",
       label: "Insights",
       items: [
+        // Persian management dashboard (statistics only). Non-managers get their own figures there.
+        manager
+          ? { href: "/analytics", match: "/analytics", label: "Analytics", icon: "bars" }
+          : { href: `/analytics/people/${encodeURIComponent(me.id)}`, match: "/analytics", label: "My statistics", icon: "bars" },
         manager
           ? { href: "/performance/overview", match: "/performance", label: "Performance", icon: "perf" }
           : { href: `/performance/employees/${me.id}`, match: "/performance", label: "My performance", icon: "perf" },
@@ -61,6 +66,7 @@ export function pagesFor(me) {
       else out.push({ href: it.href, label: it.label, icon: it.icon });
     }
   }
+  if (isManager(me)) ANALYTICS_PAGES.forEach(([k, label]) => k && out.push({ href: `/analytics/${k}`, label: `Analytics · ${label}`, icon: "bars" }));
   const reports = isManager(me) ? REPORTS : REPORTS.filter(([k]) => k !== "team");
   reports.forEach(([k, n]) => out.push({ href: `/reports/${k}`, label: n, icon: "sheet" }));
   out.push({ href: "/account", label: "Account & password", icon: "user" });
@@ -85,6 +91,13 @@ export function crumbsFor(path, peopleMap, me) {
       return b === "employees"
         ? [{ label: "Performance", href: isManager(me) ? "/performance/overview" : undefined }, { label: peopleMap[c]?.name ?? "Employee" }]
         : [{ label: "Performance" }, { label: "Overview" }];
+    case "analytics": {
+      if (b === "people" && c) {
+        const name = peopleMap[decodeURIComponent(c)]?.name;
+        return isManager(me) ? [{ label: "Analytics", href: "/analytics" }, { label: "People", href: "/analytics/people" }, { label: name ?? "Person" }] : [{ label: "My statistics" }];
+      }
+      return [{ label: "Analytics", href: b ? "/analytics" : undefined }, { label: ANALYTICS_PAGES.find(([k]) => k === (b ?? ""))?.[1] ?? "Overview" }];
+    }
     case "reports":
       return [{ label: "Reports", href: "/reports" }, { label: REPORT_NAMES[b] || "Reports" }];
     case "account":

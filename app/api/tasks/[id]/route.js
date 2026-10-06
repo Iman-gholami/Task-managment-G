@@ -83,7 +83,7 @@ export async function PATCH(request, { params }) {
     patch.team = assignee.team;
     events.push(`reassigned to ${assignee.name}`);
   }
-  const updated = updateTask(id, patch);
+  const updated = updateTask(id, patch, user.id);
   events.forEach((e) => addEvent(id, user.id, e));
   return Response.json({ task: updated, details: getTaskDetails(id), transitions: allowedTransitions(user, updated) });
 }

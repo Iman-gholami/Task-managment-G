@@ -10,8 +10,9 @@ import Icon from "@/components/ui/Icon";
  *   Items with `checked` (true/false) are radio items (`menuitemradio`) and show a check mark when chosen.
  * - `render(close)`: custom content (notifications, profile).
  * Placement flips above the anchor when there is no room below; focus returns to the anchor on close.
+ * `dir="rtl"` for menus opened from Persian screens (popovers render at the app root).
  */
-export default function Popover({ anchor, title, header, items, render, onPick, onClose, width, align = "start", label }) {
+export default function Popover({ anchor, title, header, items, render, onPick, onClose, width, align = "start", label, dir }) {
   const ref = useRef(null);
   const uid = useId();
   const [pos, setPos] = useState(null);
@@ -83,6 +84,7 @@ export default function Popover({ anchor, title, header, items, render, onPick, 
       ref={ref}
       className={`pop ${pos?.up ? "up" : ""}`}
       style={style}
+      dir={dir}
       role={items ? "menu" : "dialog"}
       aria-label={label ?? title}
       aria-activedescendant={items && actionable.length ? optionId(hl) : undefined}
