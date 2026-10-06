@@ -154,7 +154,33 @@ test.describe("shift logs are for SOC analysts only", () => {
     await page.reload();
     await expect(page.getByLabel("IOC count", { exact: true })).toHaveValue("12");
     await page.getByRole("button", { name: "Complete Shift" }).click();
-    await expect(page.getByRole("button", { name: "Reopen" })).toBeVisible();
+    await expect(page.getByText("Submitted — manager correction only")).toBeVisible();
+    await expect(page.getByRole("button", { name: "Reopen" })).toHaveCount(0);
+
+    // Submission is a permanent analyst-side lock, including direct API calls.
+    expect((await page.request.patch("/api/shift", { data: { completed: false } })).status()).toBe(409);
+    expect((await page.request.patch("/api/shift", { data: { n: 8, patch: { iocs: 99 } } })).status()).toBe(409);
+    expect((await page.request.post("/api/shift/tickets", { data: { no: "INC-LOCKED" } })).status()).toBe(409);
+
+    // A manager can correct the submitted log without reopening it for the analyst.
+    await signIn(page, "soc");
+    const managerView = await page.request.get(`/api/shift?user=${ids.sara}&date=${tehranDate()}`);
+    expect(managerView.status()).toBe(200);
+    const corrected = await page.request.patch("/api/shift", {
+      data: { user: ids.sara, date: tehranDate(), n: 8, patch: { iocs: 13, note: "Manager correction" } },
+    });
+    expect(corrected.status()).toBe(200);
+    expect((await corrected.json()).log.activities.find((a) => a.n === 8).iocs).toBe(13);
+
+    await page.goto("/shift/manage");
+    await expect(page.locator("h1")).toHaveText("Shift log corrections");
+    await expect(page.getByText("Submitted & locked")).toBeVisible();
+
+    await signIn(page, "sara");
+    expect((await page.request.patch("/api/shift", { data: { n: 8, patch: { iocs: 14 } } })).status()).toBe(409);
+    const locked = await (await page.request.get("/api/shift")).json();
+    expect(locked.activities.find((a) => a.n === 8).iocs).toBe(13);
+    expect(locked.completedAt).toBeTruthy();
   });
 });
 
