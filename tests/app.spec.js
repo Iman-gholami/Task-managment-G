@@ -167,10 +167,12 @@ test.describe("shift logs are for SOC analysts only", () => {
     const managerView = await page.request.get(`/api/shift?user=${ids.sara}&date=${tehranDate()}`);
     expect(managerView.status()).toBe(200);
     const corrected = await page.request.patch("/api/shift", {
-      data: { user: ids.sara, date: tehranDate(), n: 8, patch: { iocs: 13, note: "Manager correction" } },
+      data: { user: ids.sara, date: tehranDate(), n: 8, patch: { mispRef: "manager-corrected", note: "Manager correction" } },
     });
     expect(corrected.status()).toBe(200);
-    expect((await corrected.json()).log.activities.find((a) => a.n === 8).iocs).toBe(13);
+    const correctedActivity = (await corrected.json()).log.activities.find((a) => a.n === 8);
+    expect(correctedActivity.mispRef).toBe("manager-corrected");
+    expect(correctedActivity.note).toBe("Manager correction");
 
     await page.goto("/shift/manage");
     await expect(page.locator("h1")).toHaveText("Shift log corrections");
@@ -180,7 +182,8 @@ test.describe("shift logs are for SOC analysts only", () => {
     await signIn(page, "sara");
     expect((await page.request.patch("/api/shift", { data: { n: 8, patch: { iocs: 14 } } })).status()).toBe(409);
     const locked = await (await page.request.get("/api/shift")).json();
-    expect(locked.activities.find((a) => a.n === 8).iocs).toBe(13);
+    expect(locked.activities.find((a) => a.n === 8).iocs).toBe(12);
+    expect(locked.activities.find((a) => a.n === 8).mispRef).toBe("manager-corrected");
     expect(locked.completedAt).toBeTruthy();
   });
 });
