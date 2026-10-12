@@ -9,6 +9,7 @@ import { hbarOption, heatmapOption, lineOption, stackedOption } from "@/componen
 import PersonDrawer from "@/components/analytics/PersonDrawer";
 import { AnEmpty, ChartPanel, DataTable, Delta, Kpi, Sparkline } from "@/components/analytics/ui";
 import { MetricGrid } from "@/components/ui/Metric";
+import Icon from "@/components/ui/Icon";
 import { Panel } from "@/components/ui/layout";
 import Segmented from "@/components/ui/Segmented";
 import { buildAlerts } from "@/lib/analytics/alerts";
