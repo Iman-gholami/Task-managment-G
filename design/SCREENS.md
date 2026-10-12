@@ -210,7 +210,7 @@ Comments 2                                           │ Reviewer   (LN) Leila
 |---|---|
 | **Purpose** | Record the day's routine SOC activities fast and accurately |
 | **Primary user** | SOC Analyst |
-| **Hierarchy** | Title "Shift Log: Sep 28, 2026" → header facts (Analyst, Shift, Status, Completion %, Last updated) → 8 activities → Created Tickets → sticky summary bar |
+| **Hierarchy** | Title "Shift Log: Sep 28, 2026" → header facts (Analyst, Checklist · version, Status, Completion %, Last updated) → the items of the analyst's group checklist (§25; the Standard SOC routine has 8) → Created Tickets → sticky summary bar |
 | **Layout** | 1080px centered column. Each activity is a row with dividers, and extra fields expand inline, indented to the title column |
 | **Primary action** | **Complete Shift** (in the sticky summary bar) |
 | **Secondary** | Per-activity Done toggle, Report an issue, note, Add Ticket, History |
@@ -220,7 +220,8 @@ Comments 2                                           │ Reviewer   (LN) Leila
 | **Complete with gaps** | Clicking Complete scrolls to the first incomplete item and briefly tints it. If the user continues, a small confirm lists the missing items and asks for an optional reason |
 | **Empty** | Before the first action, the page shows all items unchecked and the header status reads "Not started". The Dashboard shows "No shift activity has been recorded for today." |
 | **Loading** | Header skeleton plus 8 skeleton activity rows |
-| **Error** | Autosave failures show "Not saved: retrying…" in amber in the header. Edits are kept locally until saved |
+| **No checklist** | When the group has no checklist or it is turned off: "No checklist for SOC · L2 yet"; tickets and Complete still work |
+| **Error** | A change that fails to save is undone on screen and the header reads "Not saved — try again". If a manager changed the checklist before anything was recorded, the current checklist replaces the stale one with a note |
 ```
 Shift Log — Sep 28, 2026                         [Active|Completed] History
 ◔  Analyst (SR) Sara · Shift Day 07–15 · Status [In progress] · 88% · 09:42 autosaved
@@ -252,7 +253,7 @@ Created Tickets  [Tickets Created: 2]                        [+ Add Ticket]
 |---|---|
 | **Purpose** | Browse previous daily logs; drill into any day |
 | **Primary user** | Analyst (own), SOC Manager (any analyst) |
-| **Layout** | Filter chips (Analyst, Period), then a table: Date · Status · Activities (bar + n/8) · IOCs · Tickets · Issues · Traffic report |
+| **Layout** | Filter chips (Analyst, Period), then a table: Date · Status · Checklist (name · version) · Activities (bar + done/total) · IOCs · Tickets · Issues · Traffic report |
 | **Primary action** | Open a day (row click) |
 | **Secondary** | Export |
 | **Empty** | "No shift logs in this period." |
@@ -358,7 +359,7 @@ Task Performance [Tasks]
 |---|---|
 | **Purpose** | Configure the workspace |
 | **Layout** | A 220px secondary nav: Users & Roles · Teams · Shift Templates · Activity Definitions · Notifications · Audit Log, then the content pane |
-| **Activity Definitions** | The ordered list of the 8 shift activities with a type (basic / files / monitor / report / MISP), a required flag, and extra fields. Changes apply from the next day and never rewrite history |
+| **Activity Definitions** | Implemented as Shift Log checklists (§25): ordered items with a type (basic / files / monitor / report / MISP) and the shifts they apply to, per SOC layer. Changes never rewrite history; they reach today's logs only while those are still empty |
 | **Primary action** | Depends on the section (Invite User, Add Team…) |
 
 ## 23. User / Role Management  ▶ `/admin`
@@ -403,6 +404,23 @@ Task Performance [Tasks]
 ```
 
 ---
+
+## 25. Shift Log Checklists  ▶ `/shift/checklists`
+| | |
+|---|---|
+| **Purpose** | Define what each SOC layer does every shift, and see who uses which checklist |
+| **Primary user** | SOC Manager, Security Manager (server-enforced; everyone else is redirected and the API answers 403) |
+| **Hierarchy** | Title + meta → **Groups** (one card per SOC layer) → Checklists list (280px, sticky) │ Editor → Change history |
+| **Group card** | Layer name + status badge (Active / Turned off / No checklist) with a 2px top edge in the same tone, analyst count, checklist select, on/off switch, active items per shift, "Edit “…”" |
+| **Editor** | Name, description; facts (Version, Last saved · who, Used by). Items in display order: drag handle, number, title, badges (New, Edited, Standard #n), ↑ ↓ ✕; then type select, shift chips (Morning / Until 20:00 / Night in their shift tones), Active switch, guidance |
+| **Primary action** | **Save changes** in the sticky save bar ("Unsaved: 2 added · reordered" in amber, or "All changes saved · v3"); **New checklist** in the header |
+| **Secondary** | Add item, Discard, Undo a removal, Archive (only when no group uses it) |
+| **Confirmations** | Switching a layer to another checklist, removing it, turning it off, discarding unsaved edits, archiving: each says what happens to started and past logs |
+| **Validation** | On save: every item needs a title, titles are unique, at least one shift per item; the first invalid field takes focus. A checklist in use keeps at least one active item |
+| **Unsaved changes** | Switching checklist asks to discard; sidebar links and closing the tab ask too |
+| **Empty** | No checklists: "Create one, add its items, then choose which SOC group uses it." No items: "No items yet" + Add the first item |
+| **Loading / Error** | Table skeletons; ErrorState with Try again. A save based on an older version is refused with "Load the latest version" |
+| **Phone** | One column; item controls wrap under the title; the save bar stays at the bottom with full-width buttons |
 
 ## States gallery  ▶ `/states`
 Reference renders of the empty states (Tasks, Shift Log, Reports), the table skeleton, the load error, and the no-access error.

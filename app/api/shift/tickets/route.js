@@ -6,7 +6,9 @@ export async function POST(request) {
   const [user, denied] = await requireUser();
   if (denied) return denied;
   if (!isShiftAnalyst(user)) return Response.json({ error: "Shift logs are kept by SOC analysts only." }, { status: 403 });
-  if (getShiftLog(user.id).completedAt) return Response.json({ error: "Shift is already completed." }, { status: 409 });
+  const log = getShiftLog(user.id);
+  if (!log) return Response.json({ error: "No shift is scheduled for today." }, { status: 404 });
+  if (log.completedAt) return Response.json({ error: "Shift is already completed." }, { status: 409 });
   const body = await request.json().catch(() => ({}));
   const no = String(body.no ?? "").trim();
   if (!no) return Response.json({ error: "Ticket number is required." }, { status: 400 });

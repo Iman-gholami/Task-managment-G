@@ -10,6 +10,7 @@ import Icon from "@/components/ui/Icon";
 import { FieldError } from "@/components/ui/Field";
 import { PageHeader, Panel } from "@/components/ui/layout";
 import { EmptyState, ErrorState, Loading } from "@/components/ui/states";
+import useUnsavedChanges from "@/components/useUnsavedChanges";
 import { Meter } from "@/components/ui/charts";
 import { Status, Who } from "@/components/ui/indicators";
 import { TODAY, fmtDate, fmtRange, longDate, plural, weekday } from "@/lib/format";
@@ -17,28 +18,58 @@ import { TODAY, fmtDate, fmtRange, longDate, plural, weekday } from "@/lib/forma
 const HINTS = { misp: "The IOC count feeds monthly reports", report: "Prepare and share the daily traffic report" };
 const SAVE_LABEL = { saved: "Autosaved", saving: "Saving…", failed: "Not saved — try again" };
 
-/** Today's Shift Log for a SOC analyst: routine activities, IOC count, issues and tickets. Autosaves. */
+/** Checklist line for the header: which checklist (and version) today's log was created from. */
+function checklistLabel(checklist) {
+  if (!checklist) return "None assigned";
+  return checklist.version ? `${checklist.name} · v${checklist.version}` : checklist.name;
+}
+
+/**
+ * Today's Shift Log for a SOC analyst: the checklist assigned to their group, IOC count, issues and tickets.
+ * Each change saves immediately; a change that fails is undone on screen, so what you see is what is stored.
+ */
 export default function ShiftLog() {
-  const { dispatch, toast, me, activities, tickets, shiftDone, shiftDate } = useApp();
+  const { dispatch, toast, me, activities, tickets, shiftDone, shiftDate, shiftChecklist, shiftTeam } = useApp();
   const [saved, setSaved] = useState("saved");
+  const [pending, setPending] = useState(0);
   const [issueOpen, setIssueOpen] = useState(null);
   const [flash, setFlash] = useState(null);
   const done = activities.filter((a) => a.done).length;
   const pct = activities.length ? Math.round((done / activities.length) * 100) : 0;
-  const misp = activities.find((a) => a.kind === "misp");
+  const iocs = activities.filter((a) => a.kind === "misp").reduce((sum, a) => sum + (a.iocs ?? 0), 0);
   const issues = activities.filter((a) => a.issue).length;
   const remaining = activities.filter((a) => !a.done);
   const readOnly = shiftDone;
+  const latest = useRef(activities);
+  latest.current = activities;
+  useUnsavedChanges(pending > 0, { message: "A change is still being saved. Leave anyway?" });
 
   const update = async (n, patch) => {
+    const before = activities.find((a) => a.n === n);
+    if (!before) return;
+    const previous = Object.fromEntries(Object.keys(patch).map((k) => [k, before[k]]));
     dispatch({ type: "activity/update", n, patch });
     setSaved("saving");
+    setPending((p) => p + 1);
     try {
-      await api("/api/shift", { method: "PATCH", body: { n, patch } });
+      await api("/api/shift", { method: "PATCH", body: { n, itemId: before.itemId ?? null, patch } });
       setSaved("saved");
     } catch (e) {
-      setSaved("failed");
-      toast(e.message, "error");
+      if (e.data?.stale && e.data.log) {
+        // A manager changed this group's checklist before anything was recorded: show the current one.
+        dispatch({ type: "shift/set", log: e.data.log });
+        setSaved("saved");
+        toast(e.message, "info");
+      } else {
+        // Undo only the fields nobody has changed again since, so a later edit is never overwritten.
+        const now = latest.current.find((a) => a.n === n);
+        const undo = Object.fromEntries(Object.entries(previous).filter(([k]) => now && now[k] === patch[k]));
+        if (Object.keys(undo).length) dispatch({ type: "activity/update", n, patch: undo });
+        setSaved("failed");
+        toast(e.message, "error");
+      }
+    } finally {
+      setPending((p) => p - 1);
     }
   };
   const setCompleted = async () => {
@@ -76,6 +107,7 @@ export default function ShiftLog() {
           <div className="ring" style={{ "--v": pct }} role="img" aria-label={`${pct}% complete`} />
           <dl className="facts">
             <div><dt><small>Analyst</small></dt><dd><Who id={me.id} /></dd></div>
+            <div><dt><small>Checklist</small></dt><dd dir="auto" data-testid="shift-checklist">{checklistLabel(shiftChecklist)}</dd></div>
             <div><dt><small>Status</small></dt><dd>{shiftDone ? <span className="badge dot success">Submitted & locked</span> : done ? <span className="badge dot info">In progress</span> : <span className="badge dot">Not started</span>}</dd></div>
             <div><dt><small>Completion</small></dt><dd className="num">{done} of {activities.length} · {pct}%</dd></div>
             <div><dt><small>Last change</small></dt><dd className="num" style={saved === "failed" ? { color: "var(--danger)" } : undefined} aria-live="polite">{SAVE_LABEL[saved]}</dd></div>
@@ -83,15 +115,23 @@ export default function ShiftLog() {
         </div>
       </div>
 
-      <Panel title="Routine activities" meta={`${done} of ${activities.length} done`}>
+      <Panel title="Routine activities" meta={activities.length ? `${done} of ${activities.length} done` : shiftTeam}>
+        {activities.length === 0 && (
+          <EmptyState compact icon="shift" title={shiftChecklist ? "No checklist items for this shift" : `No checklist for ${shiftTeam} yet`}>
+            {shiftChecklist
+              ? "Your group's checklist has no items for this shift type. You can still record tickets and submit the shift."
+              : "A manager hasn't assigned a Shift Log checklist to your group, or it is turned off. You can still record tickets and submit the shift."}
+          </EmptyState>
+        )}
         {activities.map((a) => {
-          const hint = a.kind === "monitor" ? (a.issue ? "Completed with an issue" : "Mark it completed when nothing unusual was found") : HINTS[a.kind];
+          const kindHint = a.kind === "monitor" ? (a.issue ? "Completed with an issue" : "Mark it completed when nothing unusual was found") : HINTS[a.kind];
+          const hint = [a.hint, kindHint].filter(Boolean).join(" · ");
           return (
             <div key={a.n} id={`act-${a.n}`} className={`act ${a.done ? "done" : ""} ${flash === a.n ? "flash" : ""}`}>
               <div className="act-row">
                 <span className="n">{a.n}</span>
                 <input type="checkbox" className="cb" checked={a.done} disabled={readOnly} onChange={() => update(a.n, { done: !a.done })} aria-label={`${a.title} done`} />
-                <div className="t">{a.title}{hint && <small>{hint}</small>}</div>
+                <div className="t" dir="auto">{a.title}{hint && <small>{hint}</small>}</div>
                 <div className="act-tools">
                   {a.kind === "monitor" && !a.issue && !readOnly && (
                     <button type="button" className="btn btn-ghost btn-sm" aria-expanded={issueOpen === a.n} onClick={() => setIssueOpen(issueOpen === a.n ? null : a.n)}><Icon name="alert" />Report an issue</button>
@@ -105,10 +145,10 @@ export default function ShiftLog() {
               {a.kind === "misp" && (
                 <div className="act-extra">
                   <div className="line">
-                    <label htmlFor="ioc" className="sec small">IOC count</label>
+                    <label htmlFor={`ioc-${a.n}`} className="sec small">IOC count</label>
                     <span className="stepper">
                       <button type="button" aria-label="Decrease IOC count" disabled={readOnly} onClick={() => update(a.n, { iocs: Math.max(0, a.iocs - 1) })}>−</button>
-                      <input id="ioc" aria-label="IOC count" inputMode="numeric" value={a.iocs} readOnly={readOnly}
+                      <input id={`ioc-${a.n}`} aria-label="IOC count" inputMode="numeric" value={a.iocs} readOnly={readOnly}
                         onChange={(e) => update(a.n, { iocs: Math.max(0, parseInt(e.target.value.replace(/\D/g, "") || "0", 10)) })}
                         onKeyDown={(e) => { if (e.key === "ArrowUp") { e.preventDefault(); update(a.n, { iocs: a.iocs + 1 }); } if (e.key === "ArrowDown") { e.preventDefault(); update(a.n, { iocs: Math.max(0, a.iocs - 1) }); } }} />
                       <button type="button" aria-label="Increase IOC count" disabled={readOnly} onClick={() => update(a.n, { iocs: a.iocs + 1 })}>+</button>
@@ -141,7 +181,7 @@ export default function ShiftLog() {
 
       <div className="summary" role="region" aria-label="Shift summary">
         <span className="s"><b>{done}/{activities.length}</b>activities</span>
-        <span className="s"><b>{misp?.iocs ?? 0}</b>IOCs added</span>
+        <span className="s"><b>{iocs}</b>IOCs added</span>
         <span className="s"><b>{tickets.length}</b>{tickets.length === 1 ? "ticket" : "tickets"}</span>
         <span className="s"><b>{issues}</b>{issues === 1 ? "issue" : "issues"}</span>
         <span className="remain" title={remaining.map((r) => r.title).join("\n")}>
@@ -265,7 +305,7 @@ export function ShiftHistory() {
         ) : (
           <div className="table-wrap">
             <table className="dt">
-              <thead><tr><th scope="col">Date</th><th scope="col">Status</th><th scope="col">Activities</th><th scope="col" className="r">IOCs</th><th scope="col" className="r">Tickets</th><th scope="col" className="r">Issues</th><th scope="col">Traffic report</th></tr></thead>
+              <thead><tr><th scope="col">Date</th><th scope="col">Status</th><th scope="col">Checklist</th><th scope="col">Activities</th><th scope="col" className="r">IOCs</th><th scope="col" className="r">Tickets</th><th scope="col" className="r">Issues</th><th scope="col">Traffic report</th></tr></thead>
               <tbody>
                 {data.logs.map((r) => {
                   const today = r.date === TODAY;
@@ -273,6 +313,7 @@ export function ShiftHistory() {
                     <tr key={r.date} className={today ? "is-link" : ""} onClick={() => today && router.push("/shift")}>
                       <td className="title">{today ? <Link href="/shift">Today</Link> : fmtDate(r.date)} <span className="muted" style={{ fontWeight: 400 }}>· {weekday(r.date)}</span></td>
                       <td>{r.completed ? <Status s="done" label="Completed" /> : today ? <Status s="progress" label="In progress" /> : <Status s="returned" label="Incomplete" />}</td>
+                      <td className="sec" dir="auto">{r.checklist ?? <span className="muted">None</span>}{r.checklistVersion ? <span className="muted"> · v{r.checklistVersion}</span> : null}</td>
                       <td><Meter value={r.done} max={r.total} label={`Activities done on ${fmtDate(r.date)}`} tone="ok" readout={`${r.done}/${r.total}`} /></td>
                       <td className="r">{r.iocs}</td>
                       <td className="r">{r.tickets || <span className="zero">0</span>}</td>

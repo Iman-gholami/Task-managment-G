@@ -21,6 +21,11 @@ The Security Department's internal work tool: Task Management, SOC Shift Logs, a
 ### Shift logs
 Only SOC analysts (SOC · L1/L2/L3) have a Shift Log. Managers, engineers and Threat Intelligence do not; managers see shift figures in **Performance** and the **SOC Shift Activity Report**.
 
+**Checklists are configurable per SOC layer** (Shift Schedule › **Log checklists**, `/shift/checklists`). SOC Managers and Security Managers create checklists, add, edit, reorder, deactivate or remove items (each with a type and the shifts it applies to), and choose which checklist each layer uses, or turn it off. Each analyst ticks their own items in their own daily log; nothing is shared between analysts or carried into the next shift.
+- Saving a checklist creates a new version. Logs that have started (or are submitted) keep the items they began with; today's logs that are still empty follow the latest version. Every version and every assignment change is kept with who and when.
+- On upgrade, the original routine becomes **Standard SOC routine** (unchanged, assigned to L1, L2 and L3, as before). Existing shift logs are not modified.
+- Details, rules and decisions: [`design/SHIFT_CHECKLISTS.md`](design/SHIFT_CHECKLISTS.md).
+
 ### Performance & reports
 Figures are computed from the database for the selected period (this month, last month, quarter, or a custom range): completed tasks by completion date, hours, complexity and quality, and — for SOC analysts — shift logs, routine completion, IOC count, tickets, traffic reports and issues. Every report has **Export to Excel** (`.xlsx`). Analysts see their own data; team reports are for managers.
 
@@ -84,7 +89,7 @@ npm run dev
 
 ## Tests
 
-End-to-end tests (Playwright) start from an empty database, build a team through the UI, and cover sign-in, member management, task assignment and review, shift logs, performance, reports and Excel export.
+End-to-end tests (Playwright) start from an empty database, build a team through the UI, and cover sign-in, member management, task assignment and review, shift logs and their checklists, performance, reports and Excel export. Unit tests (`npm run test:unit`) cover the shift and analytics logic, the checklist model, and the checklist server code (migration of an existing database, versioning, per-analyst and per-shift completion) against temporary SQLite files.
 
 ```bash
 npx playwright install chromium   # once; or set CHROMIUM_PATH=/usr/bin/chromium to use a system Chromium
@@ -103,9 +108,9 @@ npm test
 | `components/` | App shell (`shell/`), shared state (`AppProvider`), UI primitives (`ui/`: dialog, popover, tooltip, metric, charts, states, fields), task table, create-task modal |
 | `app/api/` | REST API: auth, account, tasks (+ checklist, comments, attachments), shift log, performance, reports, members |
 | `lib/server/` | Database, auth/sessions, data access (server only) |
-| `lib/` | Roles and permissions, task workflow rules, formatting helpers, seed data |
+| `lib/` | Roles and permissions, task workflow rules, Shift Log checklist model (`checklists.js`), formatting helpers |
 | `styles/` | Design tokens (four themes) and styles by layer: base, shell, components, data, screens, rtl (Persian screens), analytics, themes, motion; bundled fonts |
-| `design/` | Design system, specs for all screens, and the analytics design (`ANALYTICS.md`) |
+| `design/` | Design system, specs for all screens, the analytics design (`ANALYTICS.md`), Shift Log checklists (`SHIFT_CHECKLISTS.md`) and the Persian implementation report (`IMPLEMENTATION_REPORT.fa.md`) |
 | `tests/` | Playwright end-to-end tests and Node unit tests (`*.unit.test.mjs`) |
 
 ## Routes
@@ -117,6 +122,7 @@ npm test
 | `/tasks/assigned` · `/tasks/team` · `/tasks/my` | Task lists (with a board view) |
 | `/tasks/T-1001` | Task details |
 | `/shift` · `/shift/history` | Today's Shift Log · history (SOC analysts only) |
+| `/shift/checklists` | Shift Log checklists per SOC layer (SOC and Security Managers) |
 | `/account` | Profile and password |
 | `/performance/overview` · `/performance/employees/<id>` | Performance overview · one employee |
 | `/reports/employee` · `/reports/shift` · `/reports/tickets` … | Reports |

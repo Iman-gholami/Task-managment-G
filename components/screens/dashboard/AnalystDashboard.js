@@ -18,7 +18,7 @@ export default function AnalystDashboard() {
   const inReview = mine.filter((t) => t.status === "review").length;
   const done = activities.filter((a) => a.done).length;
   const remaining = activities.filter((a) => !a.done);
-  const iocs = activities.find((a) => a.kind === "misp")?.iocs ?? 0;
+  const iocs = activities.filter((a) => a.kind === "misp").reduce((sum, a) => sum + (a.iocs ?? 0), 0);
   const month = monthName(stats.period.from);
   const shift = me.keepsShiftLog;
   const shiftLabel = done ? (shiftDone ? "View Shift Log" : "Continue Shift Log") : "Start Shift Log";
@@ -64,7 +64,9 @@ export default function AnalystDashboard() {
             footer={<Link className="btn btn-secondary btn-block" href="/shift">{shiftLabel}</Link>}
           >
             <div className="panel-body shift-card">
-              {done === 0 && !shiftDone ? (
+              {activities.length === 0 && !shiftDone ? (
+                <p className="sec">No checklist is assigned to {me.team} for today&apos;s shift. You can still record tickets in the Shift Log.</p>
+              ) : done === 0 && !shiftDone ? (
                 <p className="sec">Nothing has been recorded for today yet. Start with the first routine activity.</p>
               ) : (
                 <>

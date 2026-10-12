@@ -5,6 +5,15 @@ import { managerCompleteShiftLog, managerUpdateShiftActivity } from "@/lib/serve
 import { isShiftAnalyst } from "@/lib/server/stats";
 import { isIsoDate } from "@/lib/shifts";
 
+/** Maps a failed write to a response. A stale client gets the current log back so it can show the latest checklist. */
+function failure(e, currentLog) {
+  if (e.stale) return Response.json({ error: e.message, stale: true, log: currentLog() }, { status: 409 });
+  return err(e.status ?? 409, e.message);
+}
+
+/** `itemId` names the checklist item the client believes it is changing (null for the built-in routine). */
+const itemIdOf = (body) => (body.itemId === undefined ? undefined : body.itemId === null ? null : Number(body.itemId));
+
 function managedAnalyst(actor, id) {
   const owner = getUser(id);
   return owner && isShiftAnalyst(owner) && canManageMember(actor, owner) ? owner : null;
@@ -59,13 +68,13 @@ export async function PATCH(request) {
     }
 
     const n = Number(body.n);
-    if (!Number.isInteger(n) || typeof body.patch !== "object") return err(400, "Invalid request.");
+    if (!Number.isInteger(n) || !body.patch || typeof body.patch !== "object") return err(400, "Invalid request.");
     if ("iocs" in body.patch && !(Number.isInteger(body.patch.iocs) && body.patch.iocs >= 0)) return err(400, "IOC count must be a whole number.");
     try {
-      const log = managerUpdateShiftActivity(target, date, n, body.patch);
+      const log = managerUpdateShiftActivity(target, date, n, body.patch, itemIdOf(body), user.id);
       return Response.json({ activities: log.activities, log });
     } catch (e) {
-      return err(409, e.message);
+      return failure(e, () => findShiftLog(target, date));
     }
   }
 
@@ -85,11 +94,11 @@ export async function PATCH(request) {
   }
 
   const n = Number(body.n);
-  if (!Number.isInteger(n) || typeof body.patch !== "object") return err(400, "Invalid request.");
+  if (!Number.isInteger(n) || !body.patch || typeof body.patch !== "object") return err(400, "Invalid request.");
   if ("iocs" in body.patch && !(Number.isInteger(body.patch.iocs) && body.patch.iocs >= 0)) return err(400, "IOC count must be a whole number.");
   try {
-    return Response.json({ activities: updateActivity(user.id, n, body.patch) });
+    return Response.json({ activities: updateActivity(user.id, n, body.patch, itemIdOf(body)) });
   } catch (e) {
-    return err(409, e.message);
+    return failure(e, () => getShiftLog(user.id));
   }
 }
