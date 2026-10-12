@@ -2,7 +2,7 @@ import { isManager, requireUser } from "@/lib/server/auth";
 import { err, viewableTask } from "@/lib/server/access";
 import { addEvent, getTaskDetails, getUser, updateTask } from "@/lib/server/repo";
 import { actionLabel, allowedTransitions, canTransition } from "@/lib/workflow";
-import { PRIO, QUAL, STATUS } from "@/lib/format";
+import { CX, PRIO, QUAL, STATUS } from "@/lib/format";
 import { canAssignTask } from "@/lib/roles";
 
 export async function GET(request, { params }) {
@@ -30,14 +30,21 @@ export async function PATCH(request, { params }) {
     if (!canTransition(user, task, body.status)) {
       return err(409, task.status === "done" ? "This task is already approved. A manager can reopen it." : `You can't move this task from ${STATUS[task.status]} to ${STATUS[body.status]}.`);
     }
-    if (task.status === "review" && body.status === "done") {
+    const approving = task.status === "review" && body.status === "done";
+    if (approving) {
       if (!(body.quality in QUAL)) return err(400, "Choose a quality rating to approve.");
       patch.quality = body.quality;
+      if ("cx" in body) {
+        if (![1, 2, 3, 4].includes(body.cx)) return err(400, "Invalid complexity.");
+        patch.cx = body.cx;
+      }
     }
     patch.status = body.status;
     const label = actionLabel(task.status, body.status);
     const PAST = { Start: "started the task", "Submit for review": "submitted it for review", Approve: "approved it", "Return for changes": "returned it for changes", Reopen: "reopened the task", Unblock: "unblocked the task", "Resume work": "resumed work", "Mark blocked": "marked it blocked", "Cancel task": "cancelled the task", Restore: "restored the task" };
-    events.push(`${PAST[label] ?? `moved it to ${STATUS[body.status]}`}${patch.quality ? ` · quality: ${QUAL[patch.quality]}` : ""}`);
+    let event = `${PAST[label] ?? `moved it to ${STATUS[body.status]}`}${patch.quality ? ` · quality: ${QUAL[patch.quality]}` : ""}`;
+    if (approving && patch.cx !== undefined && patch.cx !== task.cx) event += ` · complexity: ${CX[task.cx]} → ${CX[patch.cx]}`;
+    events.push(event);
   } else if ("quality" in body) {
     return err(400, "Quality is set when a reviewer approves the task.");
   }
