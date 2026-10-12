@@ -67,7 +67,7 @@ export function lineOption(t, { labels, series, prev, kind = "count", partial = 
     grid: { top: names.length > 1 ? 34 : 14, right: 8, bottom: 6, left: 8, containLabel: true },
     tooltip: {
       ...base(t).tooltip, trigger: "axis",
-      axisPointer: { type: bars ? "shadow" : "line", lineStyle: { color: t["border-strong"], width: 1 }, shadowStyle: { color: "rgba(127,127,127,.08)" } },
+      axisPointer: { type: bars ? "shadow" : "line", lineStyle: { color: t["border-strong"], width: 1 }, shadowStyle: { color: t["text-3"] + "14" } },
       formatter: (ps) => {
         const i = ps[0]?.dataIndex ?? 0;
         const rows = ps.map((p) => ({ value: f(p.value), color: p.color, name: p.seriesName === prev?.name && prev.labels ? `${p.seriesName} (${prev.labels[i] ?? ""})` : p.seriesName }));
@@ -151,7 +151,7 @@ export function stackedOption(t, { rows, parts, percent = true }) {
     legend: { ...legend(t, parts.map((p) => p.name)), show: true },
     grid: { top: 34, right: 8, bottom: 4, left: 8, containLabel: true },
     tooltip: {
-      ...base(t).tooltip, trigger: "axis", axisPointer: { type: "shadow", shadowStyle: { color: "rgba(127,127,127,.08)" } },
+      ...base(t).tooltip, trigger: "axis", axisPointer: { type: "shadow", shadowStyle: { color: t["text-3"] + "14" } },
       formatter: (ps) => {
         const i = ps[0]?.dataIndex ?? 0;
         return tipHtml(`${rows[i].label} · ${fmtNum(totals[i], 0)}`, ps.map((p) => ({
