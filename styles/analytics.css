@@ -6,8 +6,8 @@
    Categorical series (teams, compared items): a fixed order, never cycled. Validated with the dataviz
    palette checks against each theme's card surface (CVD and normal-vision separation pass; on the
    light surface aqua and yellow sit below 3:1, so every chart also has labels and a table view). */
-:root, [data-theme="light"] { --cat-1: #2A78D6; --cat-2: #EB6834; --cat-3: #1BAF7A; --cat-4: #EDA100; }
-:root[data-theme="dark"], :root[data-theme="gold"], :root[data-theme="midnight"] { --cat-1: #3987E5; --cat-2: #D95926; --cat-3: #199E70; --cat-4: #C98500; }
+:root, [data-theme="light"] { --cat-1: #316A94; --cat-2: #945C43; --cat-3: #34735C; --cat-4: #8F6B2B; }
+:root[data-theme="dark"], :root[data-theme="gold"], :root[data-theme="midnight"] { --cat-1: #84B6D4; --cat-2: #D59F85; --cat-3: #80BFA2; --cat-4: #D4B87D; }
 
 /* ---------- Shared components inside RTL screens ---------- */
 [dir="rtl"] .metric { text-align: right; }

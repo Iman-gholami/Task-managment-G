@@ -166,8 +166,8 @@
   margin: var(--s-3); padding: var(--s-12); overflow: hidden;
   border: 1px solid var(--hero-line); border-radius: var(--r-2xl); color: var(--hero-text);
   background:
-    radial-gradient(620px 420px at 62% 30%, color-mix(in oklab, var(--hero-signal) 18%, transparent), transparent 70%),
-    radial-gradient(520px 380px at 0% 100%, color-mix(in oklab, var(--hero-accent) 14%, transparent), transparent 70%),
+    radial-gradient(620px 420px at 62% 30%, color-mix(in oklab, var(--hero-signal) 9%, transparent), transparent 70%),
+    radial-gradient(520px 380px at 0% 100%, color-mix(in oklab, var(--hero-accent) 8%, transparent), transparent 70%),
     var(--hero-bg);
   box-shadow: 0 30px 80px -40px rgb(0 0 0 / .6), inset 0 1px 0 rgb(255 255 255 / .05);
 }
@@ -181,12 +181,12 @@
 .radar-ring.r2 { inset: 17%; border-color: color-mix(in oklab, var(--hero-signal) 30%, transparent); }
 .radar-ring.r3 { inset: 33%; border-style: dashed; border-color: color-mix(in oklab, var(--hero-signal) 34%, transparent); }
 .radar-sweep { position: absolute; inset: 0; border-radius: 50%; background: conic-gradient(from 0deg, transparent 0 290deg, color-mix(in oklab, var(--hero-signal) 42%, transparent) 360deg); animation: spin 7s linear infinite; }
-.radar-blip { position: absolute; width: 8px; height: 8px; border-radius: 50%; background: var(--hero-signal); box-shadow: 0 0 14px 2px var(--hero-signal); animation: blip 3.5s ease-in-out infinite; }
+.radar-blip { position: absolute; width: 8px; height: 8px; border-radius: 50%; background: var(--hero-signal); box-shadow: 0 0 14px 2px color-mix(in oklab, var(--hero-signal) 18%, transparent); animation: blip 3.5s ease-in-out infinite; }
 .radar-blip.b1 { top: 22%; left: 66%; }
 .radar-blip.b2 { top: 60%; left: 22%; animation-delay: -1.2s; }
-.radar-blip.b3 { top: 72%; left: 70%; animation-delay: -2.4s; background: var(--hero-accent); box-shadow: 0 0 14px 2px var(--hero-accent); }
+.radar-blip.b3 { top: 72%; left: 70%; animation-delay: -2.4s; background: var(--hero-accent); box-shadow: 0 0 14px 2px color-mix(in oklab, var(--hero-accent) 18%, transparent); }
 @keyframes blip { 0%, 100% { opacity: .2; transform: scale(.7); } 50% { opacity: 1; transform: scale(1.15); } }
-.radar-core { position: absolute; inset: 41%; display: grid; place-items: center; border-radius: 28%; background: linear-gradient(135deg, var(--hero-signal), var(--hero-accent)); color: var(--hero-bg); box-shadow: 0 0 0 10px color-mix(in oklab, var(--hero-signal) 10%, transparent), 0 0 70px -4px var(--hero-signal), inset 0 1px 0 rgb(255 255 255 / .35); }
+.radar-core { position: absolute; inset: 41%; display: grid; place-items: center; border-radius: 28%; background: linear-gradient(135deg, var(--hero-signal), var(--hero-accent)); color: var(--hero-bg); box-shadow: 0 0 0 10px color-mix(in oklab, var(--hero-signal) 10%, transparent), 0 0 70px -4px color-mix(in oklab, var(--hero-signal) 17%, transparent), inset 0 1px 0 rgb(255 255 255 / .35); }
 .radar-core svg.i { width: 46%; height: 46%; stroke-width: 1.8; }
 
 .login-chip { position: absolute; z-index: 0; display: inline-flex; align-items: center; gap: 10px; padding: 6px 14px 6px 6px; border: 1px solid color-mix(in oklab, var(--hero-text) 12%, transparent); border-radius: var(--r-full); background: color-mix(in oklab, var(--hero-bg) 58%, transparent); -webkit-backdrop-filter: blur(10px); backdrop-filter: blur(10px); color: var(--hero-text); font: var(--fw-medium) var(--fs-13)/1 var(--font-sans); white-space: nowrap; box-shadow: 0 14px 34px -16px rgb(0 0 0 / .7); animation: float 7s ease-in-out infinite; }

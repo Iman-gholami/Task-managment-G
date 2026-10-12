@@ -77,9 +77,9 @@
      One gradient (primary → accent) marks the brand, primary actions and progress fills.
      Ambient light is two soft glows behind the app; it never sits behind text that needs contrast. */
   --grad-signal: linear-gradient(135deg, var(--primary) 0%, var(--accent) 100%);
-  --grad-signal-soft: linear-gradient(135deg, color-mix(in oklab, var(--primary) 16%, transparent), color-mix(in oklab, var(--accent) 10%, transparent));
-  --glow-sm: 0 0 0 1px color-mix(in oklab, var(--primary) 30%, transparent), 0 2px 10px -2px var(--primary-glow);
-  --glow-md: 0 0 0 1px color-mix(in oklab, var(--primary) 36%, transparent), 0 8px 24px -6px var(--primary-glow);
+  --grad-signal-soft: linear-gradient(135deg, color-mix(in oklab, var(--primary) 10%, transparent), color-mix(in oklab, var(--accent) 7%, transparent));
+  --glow-sm: 0 0 0 1px color-mix(in oklab, var(--primary) 16%, transparent), 0 2px 10px -2px var(--primary-glow);
+  --glow-md: 0 0 0 1px color-mix(in oklab, var(--primary) 22%, transparent), 0 8px 24px -6px var(--primary-glow);
   --ring: 0 0 0 3px var(--primary-soft);
   --ambient:
     radial-gradient(900px 520px at 0% -10%, var(--ambient-1), transparent 70%),
@@ -94,48 +94,48 @@
 :root, [data-theme="light"] {
   color-scheme: light;
 
-  --bg: #EDF0F4;               /* app background, sidebar */
-  --surface: #F9FAFC;          /* main sheet */
+  --bg: #EEF3F3;               /* app background, sidebar */
+  --surface: #F8FBFB;          /* main sheet */
   --surface-card: #FFFFFF;     /* cards, panels, tables */
-  --surface-inset: #F3F5F8;    /* segmented tracks, table headers, side panels */
+  --surface-inset: #F1F5F5;    /* segmented tracks, table headers, side panels */
   --surface-raised: #FFFFFF;   /* menus, dialogs */
   --surface-input: #FFFFFF;
   --surface-2: var(--surface-inset);
 
-  --hover: color-mix(in oklab, #151B22 4.5%, transparent);
-  --pressed: color-mix(in oklab, #151B22 8%, transparent);
-  --nav-active: color-mix(in oklab, #151B22 6.5%, transparent);
-  --selected: color-mix(in oklab, #007B70 9%, transparent);
+  --hover: color-mix(in oklab, var(--text) 4.5%, transparent);
+  --pressed: color-mix(in oklab, var(--text) 8%, transparent);
+  --nav-active: color-mix(in oklab, var(--primary) 10%, transparent);
+  --selected: color-mix(in oklab, var(--primary) 12%, transparent);
 
-  --text: #151B22;
-  --text-2: #4C535B;
-  --text-3: #656D75;
+  --text: #172325;
+  --text-2: #4B5658;
+  --text-3: #5D6768;
   --text-on-primary: #FFFFFF;
 
-  --border: #DFE3E8;
-  --divider: #E8EBEF;
-  --border-strong: #7F8790;   /* input borders: 3.6:1 */
+  --border: #D8E0E1;
+  --divider: #E7ECED;
+  --border-strong: #768385;   /* input borders: 3.6:1 */
 
-  --primary: #007B70;         /* white label 5.2:1 */
-  --primary-hover: #00695F;
-  --primary-soft: color-mix(in oklab, #007B70 10%, transparent);
-  --primary-glow: color-mix(in oklab, #007B70 30%, transparent);
-  --accent: #006E8E;          /* gradient stop; white label 5.8:1 */
-  --link: #00695F;
-  --focus: #007B70;
-  --ambient-1: color-mix(in oklab, #007B70 9%, transparent);
-  --ambient-2: color-mix(in oklab, #006E8E 7%, transparent);
-  --sheen: rgb(255 255 255 / .22);   /* top highlight on filled controls */
-  --edge: rgb(255 255 255 / .7);     /* top highlight on cards */
+  --primary: #016A5D;         /* white label 5.2:1 */
+  --primary-hover: #075C50;
+  --primary-soft: color-mix(in oklab, var(--primary) 10%, transparent);
+  --primary-glow: color-mix(in oklab, var(--primary) 9%, transparent);
+  --accent: #1B6F62;          /* gradient stop; white label 5.8:1 */
+  --link: #075C50;
+  --focus: #016A5D;
+  --ambient-1: color-mix(in oklab, var(--primary) 3%, transparent);
+  --ambient-2: color-mix(in oklab, var(--accent) 2%, transparent);
+  --sheen: rgb(255 255 255 / .12);   /* top highlight on filled controls */
+  --edge: rgb(255 255 255 / .58);     /* top highlight on cards */
 
-  --success: #246E3A;  --warning: #8D5406;  --danger: #B33736;  --info: #296898;  --violet: #685796;  --neutral: #656D75;
-  --success-soft: color-mix(in oklab, #246E3A 10%, transparent);
-  --warning-soft: color-mix(in oklab, #8D5406 11%, transparent);
-  --danger-soft:  color-mix(in oklab, #B33736 9%, transparent);
-  --info-soft:    color-mix(in oklab, #296898 9%, transparent);
-  --violet-soft:  color-mix(in oklab, #685796 10%, transparent);
-  --neutral-soft: color-mix(in oklab, #656D75 10%, transparent);
-  --danger-solid: #B33736;
+  --success: #2C6D3E;  --warning: #7E581B;  --danger: #A7463E;  --info: #026789;  --violet: #665A8C;  --neutral: #5D6768;
+  --success-soft: color-mix(in oklab, var(--success) 11%, transparent);
+  --warning-soft: color-mix(in oklab, var(--warning) 11%, transparent);
+  --danger-soft:  color-mix(in oklab, var(--danger) 11%, transparent);
+  --info-soft:    color-mix(in oklab, var(--info) 11%, transparent);
+  --violet-soft:  color-mix(in oklab, var(--violet) 11%, transparent);
+  --neutral-soft: color-mix(in oklab, var(--neutral) 11%, transparent);
+  --danger-solid: #A7463E;
   --on-danger: #FFFFFF;
 
   --shadow-xs: 0 1px 1px rgb(21 27 34 / .04);
@@ -146,18 +146,18 @@
   --scrim: rgb(21 27 34 / .36);
 
   /* Sign-in hero panel: stays dark in the light theme so the radar glows. */
-  --hero-bg: #0B1116; --hero-text: #E8EBEF; --hero-text-2: #B9BEC4; --hero-line: #272C31;
-  --hero-signal: #4EB9AD; --hero-accent: #54BBD2;
+  --hero-bg: #112023; --hero-text: #EDF3F0; --hero-text-2: #B8CBC5; --hero-line: #2D4140;
+  --hero-signal: #79C1B3; --hero-accent: #72B7A9;
 
   /* Complexity ramp (Simple → Advanced), bars, tracks */
-  --viz-1: #92CBC3; --viz-2: #43A89D; --viz-3: #008176; --viz-4: #00554D;
-  --viz-bar: #43A89D;
-  --viz-bar-strong: #007B70;
-  --viz-track: #E8EBEF;
+  --viz-1: #66978D; --viz-2: #4D8E82; --viz-3: #27786B; --viz-4: #075449;
+  --viz-bar: #5FA194;
+  --viz-bar-strong: #016A5D;
+  --viz-track: #E7ECED;
   /* Shift Schedule tones (categorical): morning, until 8pm, night */
-  --shift-morning: #117555; --shift-evening: #955816; --shift-night: #5D57A4;
+  --shift-morning: #2B684B; --shift-evening: #825618; --shift-night: #5B5F8B;
   --surface-toggle: #FFFFFF;
-  --tooltip-bg: #151B22; --tooltip-text: #F9FAFC;
+  --tooltip-bg: #172325; --tooltip-text: #FFFFFF;
 }
 
 /* ==========================================================================
@@ -166,48 +166,48 @@
 :root[data-theme="dark"] {
   color-scheme: dark;
 
-  --bg: #080D11;
-  --surface: #0F1318;
-  --surface-card: #14191E;
-  --surface-inset: #1A1F24;
-  --surface-raised: #1C2126;
-  --surface-input: #0F1318;
+  --bg: #101617;
+  --surface: #161D1E;
+  --surface-card: #1E2627;
+  --surface-inset: #252D2E;
+  --surface-raised: #2B3335;
+  --surface-input: #161D1E;
   --surface-2: var(--surface-inset);
 
-  --hover: color-mix(in oklab, #E8EBEF 5%, transparent);
-  --pressed: color-mix(in oklab, #E8EBEF 9%, transparent);
-  --nav-active: color-mix(in oklab, #E8EBEF 8%, transparent);
-  --selected: color-mix(in oklab, #4EB9AD 12%, transparent);
+  --hover: color-mix(in oklab, var(--text) 5%, transparent);
+  --pressed: color-mix(in oklab, var(--text) 9%, transparent);
+  --nav-active: color-mix(in oklab, var(--primary) 13%, transparent);
+  --selected: color-mix(in oklab, var(--primary) 15%, transparent);
 
-  --text: #E8EBEF;
-  --text-2: #B9BEC4;
-  --text-3: #949BA1;
-  --text-on-primary: #080D11;
+  --text: #EBF1F2;
+  --text-2: #BEC6C7;
+  --text-3: #9BA5A7;
+  --text-on-primary: #101617;
 
-  --border: #272C31;
-  --divider: #1F2329;
-  --border-strong: #676C73;   /* input borders: 3.3:1 */
+  --border: #353E3F;
+  --divider: #2A3233;
+  --border-strong: #717D7F;   /* input borders: 3.3:1 */
 
-  --primary: #4EB9AD;         /* dark label 8.2:1 */
-  --primary-hover: #6FCABF;
-  --primary-soft: color-mix(in oklab, #4EB9AD 14%, transparent);
-  --primary-glow: color-mix(in oklab, #4EB9AD 32%, transparent);
-  --accent: #54BBD2;
-  --link: #7AD0C5;
-  --focus: #6FCABF;
-  --ambient-1: color-mix(in oklab, #4EB9AD 9%, transparent);
-  --ambient-2: color-mix(in oklab, #54BBD2 6%, transparent);
-  --sheen: rgb(255 255 255 / .28);
-  --edge: rgb(255 255 255 / .035);
+  --primary: #79C1B3;         /* dark label 8.2:1 */
+  --primary-hover: #8ED0C2;
+  --primary-soft: color-mix(in oklab, var(--primary) 14%, transparent);
+  --primary-glow: color-mix(in oklab, var(--primary) 11%, transparent);
+  --accent: #72B7A9;
+  --link: #98D6C9;
+  --focus: #8ED0C2;
+  --ambient-1: color-mix(in oklab, var(--primary) 4%, transparent);
+  --ambient-2: color-mix(in oklab, var(--accent) 3%, transparent);
+  --sheen: rgb(255 255 255 / .10);
+  --edge: rgb(255 255 255 / .025);
 
-  --success: #73C385;  --warning: #E4AC59;  --danger: #EB827B;  --info: #79B1E0;  --violet: #AFA0DE;  --neutral: #949BA1;
-  --success-soft: color-mix(in oklab, #73C385 13%, transparent);
-  --warning-soft: color-mix(in oklab, #E4AC59 13%, transparent);
-  --danger-soft:  color-mix(in oklab, #EB827B 13%, transparent);
-  --info-soft:    color-mix(in oklab, #79B1E0 13%, transparent);
-  --violet-soft:  color-mix(in oklab, #AFA0DE 13%, transparent);
-  --neutral-soft: color-mix(in oklab, #949BA1 13%, transparent);
-  --danger-solid: #C04442;
+  --success: #7FC48E;  --warning: #DCB46E;  --danger: #EE9089;  --info: #80C1E1;  --violet: #B4A8DC;  --neutral: #9BA5A7;
+  --success-soft: color-mix(in oklab, var(--success) 11%, transparent);
+  --warning-soft: color-mix(in oklab, var(--warning) 11%, transparent);
+  --danger-soft:  color-mix(in oklab, var(--danger) 11%, transparent);
+  --info-soft:    color-mix(in oklab, var(--info) 11%, transparent);
+  --violet-soft:  color-mix(in oklab, var(--violet) 11%, transparent);
+  --neutral-soft: color-mix(in oklab, var(--neutral) 11%, transparent);
+  --danger-solid: #B94745;
   --on-danger: #FFFFFF;
 
   --shadow-xs: none;
@@ -220,13 +220,13 @@
   --hero-bg: var(--bg); --hero-text: var(--text); --hero-text-2: var(--text-2); --hero-line: var(--border);
   --hero-signal: var(--primary); --hero-accent: var(--accent);
 
-  --viz-1: #2B5C56; --viz-2: #2A857B; --viz-3: #3FACA0; --viz-4: #84DACE;
-  --viz-bar: #2A857B;
-  --viz-bar-strong: #4EB9AD;
-  --viz-track: #1F2329;
-  --shift-morning: #69CBA3; --shift-evening: #E6AF68; --shift-night: #A4A2E8;
-  --surface-toggle: #272D34;  /* selected segment on an inset track */
-  --tooltip-bg: #E8EBEF; --tooltip-text: #0F1318;
+  --viz-1: #577D75; --viz-2: #5F958A; --viz-3: #6CADA0; --viz-4: #9ED0C5;
+  --viz-bar: #4D8379;
+  --viz-bar-strong: #79C1B3;
+  --viz-track: #2A3233;
+  --shift-morning: #83CAA4; --shift-evening: #E4B473; --shift-night: #AEAEE6;
+  --surface-toggle: #2B3335;  /* selected segment on an inset track */
+  --tooltip-bg: #EBF1F2; --tooltip-text: #101617;
 }
 
 /* ==========================================================================
@@ -235,49 +235,49 @@
 :root[data-theme="gold"] {
   color-scheme: dark;
 
-  --bg: #090807;
-  --surface: #100F0D;
-  --surface-card: #171513;
-  --surface-inset: #1E1C19;
-  --surface-raised: #211F1B;
-  --surface-input: #100F0D;
+  --bg: #171613;
+  --surface: #1F1E1B;
+  --surface-card: #262521;
+  --surface-inset: #2E2D28;
+  --surface-raised: #353430;
+  --surface-input: #1F1E1B;
   --surface-2: var(--surface-inset);
 
-  --hover: color-mix(in oklab, #F2F0E7 5%, transparent);
-  --pressed: color-mix(in oklab, #F2F0E7 9%, transparent);
-  --nav-active: color-mix(in oklab, #FBC629 10%, transparent);
-  --selected: color-mix(in oklab, #FBC629 11%, transparent);
+  --hover: color-mix(in oklab, var(--text) 5%, transparent);
+  --pressed: color-mix(in oklab, var(--text) 9%, transparent);
+  --nav-active: color-mix(in oklab, var(--primary) 13%, transparent);
+  --selected: color-mix(in oklab, var(--primary) 15%, transparent);
 
-  --text: #F2F0E7;
-  --text-2: #C7C4BA;
-  --text-3: #A29E93;
-  --text-on-primary: #090807;  /* 12.6:1 on gold, 9.1:1 on amber */
+  --text: #F1EFE6;
+  --text-2: #CBC7BD;
+  --text-3: #A8A49C;
+  --text-on-primary: #171613;  /* 12.6:1 on gold, 9.1:1 on amber */
 
-  --border: #2F2C27;
-  --divider: #25231F;
-  --border-strong: #726E66;    /* input borders: 3.6:1 */
+  --border: #41403A;
+  --divider: #353430;
+  --border-strong: #88867E;    /* input borders: 3.6:1 */
 
-  --primary: #FBC629;
-  --primary-hover: #FFD456;
-  --primary-soft: color-mix(in oklab, #FBC629 13%, transparent);
-  --primary-glow: color-mix(in oklab, #FBC629 34%, transparent);
-  --accent: #EBA002;
-  --link: #FDCE4E;
-  --focus: #FFD456;
-  --ambient-1: color-mix(in oklab, #FBC629 10%, transparent);
-  --ambient-2: color-mix(in oklab, #EBA002 7%, transparent);
-  --sheen: rgb(255 255 255 / .38);
-  --edge: rgb(255 236 180 / .04);
+  --primary: #D9B66B;
+  --primary-hover: #E6C686;
+  --primary-soft: color-mix(in oklab, var(--primary) 14%, transparent);
+  --primary-glow: color-mix(in oklab, var(--primary) 11%, transparent);
+  --accent: #C9AA68;
+  --link: #ECCD8E;
+  --focus: #E6C686;
+  --ambient-1: color-mix(in oklab, var(--primary) 4%, transparent);
+  --ambient-2: color-mix(in oklab, var(--accent) 3%, transparent);
+  --sheen: rgb(255 255 255 / .10);
+  --edge: rgb(255 255 255 / .025);
 
   /* Warning is orange here so it never reads as the gold accent. */
-  --success: #6CCD83;  --warning: #FA934E;  --danger: #FA706A;  --info: #76BDEE;  --violet: #BCA1ED;  --neutral: #A29E93;
-  --success-soft: color-mix(in oklab, #6CCD83 13%, transparent);
-  --warning-soft: color-mix(in oklab, #FA934E 14%, transparent);
-  --danger-soft:  color-mix(in oklab, #FA706A 13%, transparent);
-  --info-soft:    color-mix(in oklab, #76BDEE 13%, transparent);
-  --violet-soft:  color-mix(in oklab, #BCA1ED 13%, transparent);
-  --neutral-soft: color-mix(in oklab, #A29E93 13%, transparent);
-  --danger-solid: #C04442;
+  --success: #84CB97;  --warning: #ECA070;  --danger: #ED8C84;  --info: #83C1DF;  --violet: #C1A6E3;  --neutral: #A8A49C;
+  --success-soft: color-mix(in oklab, var(--success) 11%, transparent);
+  --warning-soft: color-mix(in oklab, var(--warning) 11%, transparent);
+  --danger-soft:  color-mix(in oklab, var(--danger) 11%, transparent);
+  --info-soft:    color-mix(in oklab, var(--info) 11%, transparent);
+  --violet-soft:  color-mix(in oklab, var(--violet) 11%, transparent);
+  --neutral-soft: color-mix(in oklab, var(--neutral) 11%, transparent);
+  --danger-solid: #B94745;
   --on-danger: #FFFFFF;
 
   --shadow-xs: none;
@@ -290,13 +290,13 @@
   --hero-bg: var(--bg); --hero-text: var(--text); --hero-text-2: var(--text-2); --hero-line: var(--border);
   --hero-signal: var(--primary); --hero-accent: var(--accent);
 
-  --viz-1: #6C5514; --viz-2: #97750D; --viz-3: #CA9E0D; --viz-4: #FFD152;
-  --viz-bar: #97750D;
-  --viz-bar-strong: #FBC629;
-  --viz-track: #25231F;
-  --shift-morning: #6BCF9D; --shift-evening: #FA934E; --shift-night: #B2A1E7;
-  --surface-toggle: #2E2B26;
-  --tooltip-bg: #F2F0E7; --tooltip-text: #100F0D;
+  --viz-1: #84724C; --viz-2: #9D8657; --viz-3: #BA9E62; --viz-4: #E6C686;
+  --viz-bar: #8A7446;
+  --viz-bar-strong: #D9B66B;
+  --viz-track: #353430;
+  --shift-morning: #86CDA7; --shift-evening: #E9A679; --shift-night: #B3ACE6;
+  --surface-toggle: #353430;
+  --tooltip-bg: #F1EFE6; --tooltip-text: #171613;
 }
 
 /* ==========================================================================
@@ -305,49 +305,49 @@
 :root[data-theme="midnight"] {
   color-scheme: dark;
 
-  --bg: #0A0B1E;
-  --surface: #101126;
-  --surface-card: #16182F;
-  --surface-inset: #1B1E36;
-  --surface-raised: #1E213C;
-  --surface-input: #101126;
+  --bg: #0C1824;
+  --surface: #131F2C;
+  --surface-card: #1B2835;
+  --surface-inset: #222F3D;
+  --surface-raised: #293745;
+  --surface-input: #131F2C;
   --surface-2: var(--surface-inset);
 
-  --hover: color-mix(in oklab, #EEF0F8 5%, transparent);
-  --pressed: color-mix(in oklab, #EEF0F8 9%, transparent);
-  --nav-active: color-mix(in oklab, #A491FE 13%, transparent);
-  --selected: color-mix(in oklab, #A491FE 14%, transparent);
+  --hover: color-mix(in oklab, var(--text) 5%, transparent);
+  --pressed: color-mix(in oklab, var(--text) 9%, transparent);
+  --nav-active: color-mix(in oklab, var(--primary) 13%, transparent);
+  --selected: color-mix(in oklab, var(--primary) 15%, transparent);
 
-  --text: #EEF0F8;
-  --text-2: #BFC3D8;
-  --text-3: #9BA0BB;
-  --text-on-primary: #0A0B1E;  /* 7.5:1 on violet, 7.9:1 on azure */
+  --text: #EAF1F8;
+  --text-2: #BEC9D4;
+  --text-3: #99A6B5;
+  --text-on-primary: #0C1824;  /* 7.5:1 on violet, 7.9:1 on azure */
 
-  --border: #2A2E49;
-  --divider: #21243D;
-  --border-strong: #6D7292;    /* input borders: 3.7:1 */
+  --border: #364453;
+  --divider: #293745;
+  --border-strong: #758596;    /* input borders: 3.7:1 */
 
-  --primary: #A491FE;
-  --primary-hover: #B6A8FF;
-  --primary-soft: color-mix(in oklab, #A491FE 15%, transparent);
-  --primary-glow: color-mix(in oklab, #A491FE 38%, transparent);
-  --accent: #5CABF2;
-  --link: #BDB0FF;
-  --focus: #B6A8FF;
-  --ambient-1: color-mix(in oklab, #A491FE 15%, transparent);
-  --ambient-2: color-mix(in oklab, #5CABF2 11%, transparent);
-  --sheen: rgb(255 255 255 / .32);
-  --edge: rgb(200 205 255 / .045);
+  --primary: #73B8DA;
+  --primary-hover: #8ECBE8;
+  --primary-soft: color-mix(in oklab, var(--primary) 14%, transparent);
+  --primary-glow: color-mix(in oklab, var(--primary) 11%, transparent);
+  --accent: #6CAFCE;
+  --link: #9BD8F6;
+  --focus: #8ECBE8;
+  --ambient-1: color-mix(in oklab, var(--primary) 4%, transparent);
+  --ambient-2: color-mix(in oklab, var(--accent) 3%, transparent);
+  --sheen: rgb(255 255 255 / .10);
+  --edge: rgb(255 255 255 / .025);
 
   /* Review is rose here so it stays distinct from the violet accent. */
-  --success: #62CD94;  --warning: #EEB154;  --danger: #F47A79;  --info: #61C1ED;  --violet: #EF8BC5;  --neutral: #9BA0BB;
-  --success-soft: color-mix(in oklab, #62CD94 13%, transparent);
-  --warning-soft: color-mix(in oklab, #EEB154 13%, transparent);
-  --danger-soft:  color-mix(in oklab, #F47A79 13%, transparent);
-  --info-soft:    color-mix(in oklab, #61C1ED 13%, transparent);
-  --violet-soft:  color-mix(in oklab, #EF8BC5 13%, transparent);
-  --neutral-soft: color-mix(in oklab, #9BA0BB 13%, transparent);
-  --danger-solid: #C04442;
+  --success: #7BCBA1;  --warning: #E1B671;  --danger: #EC918D;  --info: #84CCD4;  --violet: #D8A1BF;  --neutral: #99A6B5;
+  --success-soft: color-mix(in oklab, var(--success) 11%, transparent);
+  --warning-soft: color-mix(in oklab, var(--warning) 11%, transparent);
+  --danger-soft:  color-mix(in oklab, var(--danger) 11%, transparent);
+  --info-soft:    color-mix(in oklab, var(--info) 11%, transparent);
+  --violet-soft:  color-mix(in oklab, var(--violet) 11%, transparent);
+  --neutral-soft: color-mix(in oklab, var(--neutral) 11%, transparent);
+  --danger-solid: #B94745;
   --on-danger: #FFFFFF;
 
   --shadow-xs: none;
@@ -360,11 +360,11 @@
   --hero-bg: var(--bg); --hero-text: var(--text); --hero-text-2: var(--text-2); --hero-line: var(--border);
   --hero-signal: var(--primary); --hero-accent: var(--accent);
 
-  --viz-1: #584D8C; --viz-2: #7867C1; --viz-3: #9B89F1; --viz-4: #CCC3FF;
-  --viz-bar: #7867C1;
-  --viz-bar-strong: #A491FE;
-  --viz-track: #21243D;
-  --shift-morning: #67CFA0; --shift-evening: #EDB161; --shift-night: #5FC4DC;
-  --surface-toggle: #2C3052;
-  --tooltip-bg: #EEF0F8; --tooltip-text: #101126;
+  --viz-1: #597A8A; --viz-2: #6390A7; --viz-3: #6CA8C4; --viz-4: #9DD0E9;
+  --viz-bar: #548197;
+  --viz-bar-strong: #73B8DA;
+  --viz-track: #293745;
+  --shift-morning: #86C9A5; --shift-evening: #E2B57C; --shift-night: #80C5CD;
+  --surface-toggle: #293745;
+  --tooltip-bg: #EAF1F8; --tooltip-text: #0C1824;
 }
