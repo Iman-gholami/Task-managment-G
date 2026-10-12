@@ -218,16 +218,16 @@ test("weighted peer score favors difficulty and quality over raw task count", ()
   ];
   const ranked = buildScoreLeaderboard(rows, facts, range);
   assert.equal(ranked.find((r) => r.person.id === a.id).score, 20);
-  assert.equal(ranked.find((r) => r.person.id === b.id).score, 36);
+  assert.ok(Math.abs(ranked.find((r) => r.person.id === b.id).score - 36) < 1e-9);
   assert.equal(ranked[0].person.id, b.id);
   assert.equal(ranked[0].rank, 1);
 });
 
 test("task score uses configured quality, unrated and submitted-date late factors only", () => {
-  assert.equal(taskPoints({ cx: 2, quality: "excellent" }).score, 3.6);
+  assert.ok(Math.abs(taskPoints({ cx: 2, quality: "excellent" }).score - 3.6) < 1e-9);
   assert.equal(taskPoints({ cx: 2, quality: "good" }).score, 3);
-  assert.equal(taskPoints({ cx: 2, quality: "acceptable" }).score, 1.8);
-  assert.equal(taskPoints({ cx: 2, quality: "needs" }).score, 0.6);
+  assert.ok(Math.abs(taskPoints({ cx: 2, quality: "acceptable" }).score - 1.8) < 1e-9);
+  assert.ok(Math.abs(taskPoints({ cx: 2, quality: "needs" }).score - 0.6) < 1e-9);
   assert.equal(taskPoints({ cx: 2, quality: null }).score, 3);
 
   const onTimeSubmission = taskPoints({ cx: 4, quality: "good", due: "2026-10-05", submitted: "2026-10-05", completed: "2026-10-10", hours: 500, prio: "critical", returns: ["2026-10-06"] });
