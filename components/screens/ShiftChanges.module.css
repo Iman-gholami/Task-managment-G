@@ -54,7 +54,7 @@
   cursor: pointer;
 }
 .dateTrigger :global(svg.i) { color: var(--text-3); }
-.dateTrigger[aria-expanded="true"] { border-color: var(--primary); box-shadow: 0 0 0 3px var(--primary-soft); }
+.dateTrigger[aria-expanded="true"] { border-color: var(--primary); box-shadow: var(--ring); }
 .dateTrigger > span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .dateTrigger small {
   padding: 1px 8px;

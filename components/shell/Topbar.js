@@ -19,7 +19,7 @@ const TASK_KINDS = {
   review: { label: "Waiting for your review", icon: "review", tone: "var(--violet)" },
   overdue: { label: "Overdue", icon: "flag", tone: "var(--danger)" },
   soon: { label: "Deadline approaching", icon: "clock", tone: "var(--warning)" },
-  assigned: { label: "New task assigned", icon: "inbox", tone: "var(--info)" },
+  assigned: { label: "New task assigned", icon: "inbox", tone: "var(--text-2)" },
 };
 
 function useNotifications(shiftRequests = []) {
@@ -34,7 +34,7 @@ function useNotifications(shiftRequests = []) {
         label: "درخواست تغییر شیفت",
         detail: `${r.requesterName} درخواست جابه‌جایی شیفت داده است`,
         icon: "cal",
-        tone: "var(--primary)",
+        tone: "var(--text-2)",
         href: "/shift/changes",
       });
     } else if (manager && OPEN_SHIFT.has(r.status)) {
@@ -43,7 +43,7 @@ function useNotifications(shiftRequests = []) {
         label: r.status === "pending_target" ? "درخواست تغییر شیفت جدید" : "تغییر شیفت آماده تأیید",
         detail: `${r.requesterName} ↔ ${r.targetName}`,
         icon: "cal",
-        tone: "var(--primary)",
+        tone: "var(--text-2)",
         href: "/shift/changes",
       });
     }

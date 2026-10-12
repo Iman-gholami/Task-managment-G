@@ -7,7 +7,7 @@ import { useEffect, useState } from "react";
 const VARS = [
   "text", "text-2", "text-3", "divider", "border", "border-strong", "surface-card", "surface-raised",
   "viz-1", "viz-2", "viz-3", "viz-4", "viz-bar", "viz-bar-strong", "viz-track",
-  "primary", "accent", "success", "warning", "danger", "info",
+  "primary", "success", "warning", "danger", "info",
   "shift-morning", "shift-evening", "shift-night", "cat-1", "cat-2", "cat-3", "cat-4",
 ];
 

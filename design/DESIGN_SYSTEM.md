@@ -1,7 +1,7 @@
 # Sentinel Ops: Design System
 
 A calm, dense, data-first system for a security organization's internal work tool.
-Its look comes from hierarchy, layered surfaces and one signature gradient. Four themes share every rule;
+Its look comes from hierarchy, layered surfaces and one solid signal colour. Four themes share every rule;
 only the colours change.
 
 > Live reference: the Next.js app in this repository (`npm run dev`). Every rule in this document is implemented there.
@@ -25,10 +25,10 @@ only the colours change.
 
 ### Visual identity
 - **Ink**: cool, faintly blue-slate neutrals for ~90% of every screen. Primary text is off-white (dark) or near-black (light), never pure white/black.
-- **Signal**: one accent per theme (teal, gold or violet) for primary actions, the active navigation item, links, focus rings and data emphasis. Because nothing else uses it, anything in the accent colour is actionable or "the latest value".
-- **Signature gradient**: the accent runs into a second stop (`--accent`) as one 135° gradient. It marks the brand mark, primary buttons, the active-page bar, checked controls, progress fills and the latest chart bar — never text that has to be read, and never large areas.
-- **Light, not decoration**: a faint ambient glow in the accent colour sits behind the app, at the top of the content sheet and in the corner of KPI cards. It is always behind opaque cards, so it never changes text contrast.
-- **Depth from layering**: in the dark themes each level is a step lighter — app background → content sheet → cards → insets → menus — with a 1px top highlight (`--edge`) on cards. In the light theme cards get a soft two-layer shadow (`--shadow-card`). Menus, toasts and the dialog scrim blur what is behind them.
+- **Signal**: one solid colour per theme (deep teal, antique gold or periwinkle) for primary actions, checked controls, progress, the active navigation item, links, focus rings and the latest data value. Nothing decorative uses it: icon tiles, section icons, empty-state glyphs, hover borders and eyebrows stay in ink, so anything in the signal colour is actionable or current.
+- **No second brand hue**: nothing is drawn as a gradient between two colours, and there are no coloured glows, ambient light or gradient text. `--grad-signal` is a flat fill (kept as an image so overlays can layer on it); `--glow-*` is a crisp 1px edge plus a soft neutral or ink-tinted shadow, never a halo.
+- **Colour is for meaning**: status colours appear only on states (status, priority Critical, overdue, blocked, returned, review); shift tones are their own categorical hues (sage, copper, indigo) that never coincide with a status; file types, notification kinds that are not states, and checklist groups that are simply on stay neutral. Hover is always neutral (`--hover`, a border shift toward `--border-strong`); the signal marks selection and focus only.
+- **Depth from layering**: in the dark themes each level is a step lighter — app background → content sheet → cards → insets → menus — with a faint 1px top highlight (`--edge`) on cards. In the light theme cards get a soft two-layer shadow (`--shadow-card`). Shadows use the theme's own ink (`--shadow-ink`), never pure black on tinted surfaces. Menus, toasts and the dialog scrim blur what is behind them.
 - **One typeface per script**: Geist (UI) with tabular numbers for all figures; Geist Mono only for IDs, ticket numbers and references. Persian (RTL) screens use Vazirmatn through the same type tokens (see *Persian screens* below). (The earlier display serif was removed: its condensed digits made "11" read as "ll".)
 
 ---
@@ -40,55 +40,66 @@ Components use semantic tokens only. Hex values come from `scripts/palette.mjs` 
 ### Themes
 Each theme is one block in `tokens.css` (`<html data-theme="…">`) that defines the full set of colour tokens below; nothing else in the CSS knows which theme is active.
 
-| Id | Name | Surfaces | Signal → accent | Notes |
+| Id | Name | Surfaces | Signal | Notes |
 |---|---|---|---|---|
-| `light` | Daylight | cool white and slate | teal #007B70 → #006E8E | White labels on the gradient |
-| `dark` | Graphite | blue-slate, layered | teal #4EB9AD → #54BBD2 | |
-| `gold` | Black Gold | warm near-black | gold #FBC629 → amber #EBA002 | Warning moves to orange (#FA934E) so it never reads as the accent |
-| `midnight` | Midnight | deep navy | violet #A491FE → azure #5CABF2 | Review moves to rose (#EF8BC5) so it stays distinct from the violet accent |
+| `light` | Daylight | cool white and slate | deep teal #00756C | White labels on the signal (5.6:1) |
+| `dark` | Graphite | blue-slate, layered | teal #55B8AD | |
+| `gold` | Black Gold | warm near-black | antique gold #E4B65C | Warning is orange (#EC9660) and until-8pm rose-copper (#E5A190) so neither reads as the signal |
+| `midnight` | Midnight | deep navy | periwinkle #A2A1EE | Review is rose (#E196C0) and night cyan (#79CACF) so neither reads as the signal |
 
 - **Choosing a theme:** the palette button in the top bar (menu, digits 1–4), Account › Appearance (preview cards), the swatches on the sign-in page, or ⌘K ("theme", "gold", "midnight"…). The choice is stored per device (`localStorage["so.theme"]`); with no choice the OS preference picks Daylight or Graphite.
 - **No flash:** `app/layout.js` sets `data-theme` before first paint; `components/theme.js` also updates `<meta name="theme-color">`.
 - **Reveal:** where the browser supports view transitions, the new theme spreads in a circle from the control that picked it (560ms). With reduced motion it switches instantly.
-- **Adding a theme:** add it to `scripts/palette.mjs` and check the contrast output, add a `:root[data-theme="<id>"]` block with every colour token, and add an entry to `lib/themes.js` (name, note, swatches).
+- **Adding a theme:** add it to `scripts/palette.mjs` and make it pass (`node scripts/palette.mjs` exits 1 on any contrast or distinctness failure), add a `:root[data-theme="<id>"]` block with every colour token, and add an entry to `lib/themes.js` (name, note, swatches).
 
 ### Colour (semantic)
 | Token | Light | Dark | Use |
 |---|---|---|---|
-| `--bg` | #EDF0F4 | #080D11 | App background, sidebar |
-| `--surface` | #F9FAFC | #0F1318 | Main content sheet |
-| `--surface-card` | #FFFFFF | #14191E | Cards, panels, tables |
-| `--surface-inset` | #F3F5F8 | #1A1F24 | Segmented tracks, group rows, side panels, dialog footers |
-| `--surface-raised` | #FFFFFF | #1C2126 | Menus, dialogs, toasts |
-| `--surface-input` | #FFFFFF | #0F1318 | Form controls (inset look in dark) |
-| `--hover` / `--pressed` / `--selected` / `--nav-active` | text or primary at 4–12% alpha | same | Interaction overlays that work on any surface |
-| `--text` / `--text-2` / `--text-3` | #151B22 / #4C535B / #656D75 | #E8EBEF / #B9BEC4 / #949BA1 | Primary, secondary, muted |
-| `--border` / `--divider` / `--border-strong` | #DFE3E8 / #E8EBEF / #7F8790 | #272C31 / #1F2329 / #676C73 | Card outlines, row separators, input borders (≥3:1) |
-| `--primary` / `--primary-hover` / `--link` / `--focus` | #007B70 / #00695F / #00695F / #007B70 | #4EB9AD / #6FCABF / #7AD0C5 / #6FCABF | Primary actions, links, focus rings |
-| `--accent` | #006E8E | #54BBD2 | Second stop of the signature gradient; carries the same label colour as `--primary` |
-| `--grad-signal` / `--grad-signal-soft` | | | primary → accent at 135°; a 10–16% tint of it for icon tiles |
-| `--primary-glow` / `--glow-sm` / `--glow-md` / `--ring` | | | Coloured glow under primary buttons and the brand mark; 3px focus ring on inputs |
-| `--ambient-1` / `--ambient-2` / `--ambient` | | | Background light behind the app and in KPI card corners |
-| `--sheen` / `--edge` | | | 1px top highlight on filled controls / on cards |
+| `--bg` | #EDF0F4 | #0B0F14 | App background, sidebar |
+| `--surface` | #F9FAFC | #11161A | Main content sheet |
+| `--surface-card` | #FFFFFF | #171B20 | Cards, panels, tables (incl. sticky table headers) |
+| `--surface-inset` | #F3F5F8 | #1C2125 | Segmented tracks, group rows, side panels, dialog footers, neutral icon tiles |
+| `--surface-raised` | #FFFFFF | #21252A | Menus, dialogs, toasts |
+| `--surface-input` | #FFFFFF | #11161A | Form controls (inset look in dark) |
+| `--surface-toggle` | #FFFFFF | #2F3338 | Selected segment on an inset track |
+| `--hover` / `--pressed` / `--nav-active` | ink at 4.5–9% alpha | same | Neutral interaction overlays that work on any surface; `--nav-active` is neutral in every theme |
+| `--selected` | signal at 9% | signal at 12% | Selected rows and list items (with a signal rail) |
+| `--text` / `--text-2` / `--text-3` | #151B22 / #495158 / #5F676F | #E8EBEF / #B9BEC4 / #969CA3 | Primary, secondary, muted (muted clears 4.5:1 on every surface and under hover overlays) |
+| `--text-on-primary` | #FFFFFF | #0B0F14 | Labels, checks and the switch thumb on the signal |
+| `--border` / `--divider` / `--border-strong` | #DFE3E8 / #E8EBEF / #7F8790 | #2A2F34 / #22262B / #6B7177 | Card outlines, row separators, input borders (≥3:1) |
+| `--primary` / `--primary-hover` / `--link` / `--focus` | #00756C / #00645C / #00645C / #00756C | #55B8AD / #75C9BF / #7FCFC5 / #75C9BF | Primary actions (hover moves to `--primary-hover`), links, focus |
+| `--primary-soft` | signal at 10% | signal at 14% | Tinted chips and counts that belong to the signal (active nav count, filter chips, calendar ranges) |
+| `--grad-signal` / `--grad-signal-soft` | | | Flat signal fill / flat signal tint, kept as images so overlays can layer on them |
+| `--primary-edge` / `--primary-shadow` / `--glow-sm` / `--glow-md` | darker 1px edge, teal-ink shadow | no edge, ink shadow | Resting and raised elevation of filled signal controls (primary button, brand mark, chosen theme card) |
+| `--ring-color` / `--ring` | focus at 28% | focus at 32% | 3px focus halo on inputs, the composer, steppers, open date triggers and a file dragged over a dropzone |
+| `--primary-glow` / `--ambient-1` / `--ambient-2` | transparent | transparent | Retired effects, transparent in every theme; kept so the layers that compose them stay valid |
+| `--sheen` / `--edge` | white 10% / 70% | white 8% / 3.5% | Hairline top highlight on filled controls / on cards |
+| `--knob` | #FFFFFF | = `--text` | Switch thumb when off (on: `--text-on-primary`) |
+| `--shadow-ink` | 21 27 34 | 2 3 4 | RGB channels for one-off shadows: `rgb(var(--shadow-ink) / α)` |
+| `--select-chevron` | muted ink | muted ink | Select chevron drawn in the theme's `--text-3` |
+| `--avatar-ink` | #151B22 | same | Avatars show the stored member colour mixed 25% toward this ink, so white initials clear 4.5:1 even for colours saved before the current member palette |
 | `--shadow-card` | soft two-layer | 1px dark | Resting elevation of panels, KPI and board cards |
-| `--hero-*` | dark (stays dark) | = theme | Sign-in hero panel: background, text, line, signal, accent |
-| `--success` `--warning` `--danger` `--info` `--violet` | 6.0–6.2:1 on white | 6.8–8.7:1 on card | Status text; each has a `-soft` background |
-| `--viz-1…4` | teal ramp, light → dark | teal ramp, dark → light | Complexity mix: Simple → Advanced |
-| `--viz-bar` / `--viz-bar-strong` / `--viz-track` | | | Chart bars (latest value strong), bar tracks |
-| `--shift-morning` / `--shift-evening` / `--shift-night` | #117555 / #955816 / #5D57A4 | #69CBA3 / #E6AF68 / #A4A2E8 | Shift Schedule tones (categorical, never status). Until-8pm is orange in Black Gold and night is cyan in Midnight, so neither reads as the accent. 5.7–9.6:1 on cards |
-| `--cat-1…4` (analytics) | #2A78D6 / #EB6834 / #1BAF7A / #EDA100 | #3987E5 / #D95926 / #199E70 / #C98500 | Categorical chart series (teams, compared items), fixed order, never cycled. Validated with the dataviz palette checks on every theme's card surface; aqua and yellow are below 3:1 on white, so analytics charts always carry labels and a table view |
+| `--hero-*` | Graphite (stays dark) | = theme | Sign-in hero panel: background, text, line and the one signal hue of the radar |
+| `--success` `--warning` `--danger` `--info` `--violet` | 5.9–6.2:1 on white | 6.2–9.0:1 on card | Status text; each has a `-soft` background (10% light, 13% dark themes) on which the status text still clears 5.1:1. `--violet` is the Review hue (rose in Midnight) |
+| `--danger-solid` / `--danger-solid-hover` / `--on-danger` | #A93C39 / #932F2E / #FFFFFF | #AE4440 / #9D3C39 / #FFFFFF | Destructive buttons and the Critical priority square |
+| `--viz-1…4` | teal ramp, light → dark | ramp, dark → light | Complexity mix: Simple → Advanced (ordinal: the light end clears 2:1, steps ≥ 0.06 L apart) |
+| `--viz-bar` / `--viz-bar-strong` / `--viz-track` | #389188 / #00756C / #E8EBEF | #37867E / #55B8AD / #22262B | Chart bars at full strength (≥3:1), the latest value in the signal, bar tracks |
+| `--shift-morning` / `--shift-evening` / `--shift-night` | #5D7235 / #9B5738 / #404D89 | #ACC67E / #E79D7B / #8998D1 | Shift Schedule tones: sage, copper, indigo — categorical, never status, each at least ΔE 0.045 (OKLab) from every status colour. Until-8pm is rose-copper in Black Gold and night is cyan in Midnight, so neither reads as the signal. 5.3–9.4:1 on cards |
+| `--cat-1…4` | #2A78D6 / #EB6834 / #1BAF7A / #EDA100 | #3987E5 / #D95926 / #199E70 / #C98500 | Categorical chart series (teams, compared items), fixed order, never cycled; defined per theme in `tokens.css`. Validated with the dataviz palette checks on every theme's card surface; aqua and yellow are below 3:1 on white, so analytics charts always carry labels and a table view |
 
 ### Contrast (WCAG 2.2 AA, from `node scripts/palette.mjs`)
 | Pair | Daylight | Graphite | Black Gold | Midnight |
 |---|---|---|---|---|
-| Text on card | 17.3 | 14.8 | 16.0 | 15.3 |
-| Secondary text on card | 7.8 | 9.5 | 10.4 | 10.0 |
-| Muted text on card / on app background | 5.3 / 4.6 | 6.3 / 6.9 | 6.8 / 7.5 | 6.8 / 7.5 |
-| Label on primary / on accent (both gradient stops) | 5.2 / 5.8 | 8.2 / 8.8 | 12.6 / 9.1 | 7.5 / 7.9 |
-| Link on card | 6.6 | 9.8 | 12.2 | 9.0 |
-| Input border (3:1 needed) | 3.6 | 3.3 | 3.6 | 3.7 |
-| Status colours on card | 6.0–6.2 | 6.8–8.7 | 6.6–9.3 | 6.6–9.2 |
-| Shift tones on card | 5.7–6.2 | 7.5–9.0 | 7.9–9.6 | 8.6–9.2 |
+| Text on card | 17.3 | 14.5 | 15.3 | 14.8 |
+| Secondary text on card | 8.1 | 9.3 | 10.2 | 9.8 |
+| Muted text on card / on app background / under a sidebar hover | 5.7 / 5.0 / 4.6 | 6.2 / 6.9 / 6.3 | 6.6 / 7.3 / 6.7 | 6.7 / 7.5 / 6.8 |
+| Label on primary | 5.6 | 8.1 | 10.4 | 8.1 |
+| Link on card | 7.1 | 9.6 | 10.8 | 9.4 |
+| Input border (3:1 needed) | 3.6 | 3.5 | 3.7 | 3.7 |
+| Status colours on card / on their own tint | 5.9–6.2 / 5.2–5.4 | 6.6–8.5 / 5.4–6.7 | 6.2–8.7 / 5.2–6.8 | 6.5–9.0 / 5.4–7.0 |
+| Label on danger fill | 6.2 | 5.7 | 5.7 | 5.7 |
+| Shift tones on card | 5.3–8.0 | 6.2–9.2 | 6.3–9.4 | 7.8–9.1 |
+| Chart bars on card (3:1) / complexity ramp light end (2:1) | 3.8 / 2.1 | 4.0 / 2.4 | 4.1 / 2.6 | 3.9 / 2.5 |
 
 ### Typography
 Semantic styles (`--type-*` font shorthands): display 28/600 (sign-in heading 32) · page title 24/600 · section 15/600 · card title 13/600 · body 14/400 · prose 15/1.6 (descriptions, comments) · body-sm 13 · table 13 · label 12/500 · caption 12 · overline 11/500 uppercase · KPI 28/600 tabular. Weights 400/500/600 only.
@@ -112,7 +123,7 @@ Status, priority and complexity each use a different shape, so none depends on c
 - **Status — circle fill + label.** Backlog ◌ dashed · To Do ○ · In Progress ◐ · Review ◕ (violet) · Done ● (green). Exceptions get a soft pill: **Blocked** (red) and **Returned** (amber). Cancelled is struck through.
 - **Priority — signal bars.** Low 1 bar, Normal 2, High 3 (label in primary text). **Critical** is a red square with "!" — the only coloured priority.
 - **Complexity — diamond pips in ink.** ◆◇◇◇ Simple → ◆◆◆◆ Advanced; never teal, so it doesn't compete with actions.
-- **Quality — text first.** Excellent gets an amber ★; Needs Improvement is amber text. Set only on approval.
+- **Quality — text first.** Excellent gets a ★ in ink; Needs Improvement is amber text (the only coloured grade). Set only on approval.
 - **Badges** (20px, radius 4) carry text plus an optional dot; tones: neutral, success, warning, danger, info, violet, primary.
 
 ---
@@ -131,7 +142,7 @@ Status, priority and complexity each use a different shape, so none depends on c
 | **Button** | Primary · Secondary · Ghost (tertiary) · Danger · Ghost-danger · Icon (`IconButton`: aria-label + tooltip, always). Sizes 28/32/40. Busy state shows a spinner and blocks repeat clicks. |
 | **Segmented** | Period pickers and view toggles (`radiogroup`), status tabs (`tablist`). Roving focus, ←/→/Home/End. Optional counts. |
 | **Field / FormAlert** | Visible label, control, hint or error (with icon), wired through `aria-describedby`/`aria-invalid`. Validation runs on submit, never before interaction; server errors appear in a `FormAlert`. `.input-wrap` adds a leading icon (accent on focus) and an optional trailing `.input-action` — the sign-in password field uses it for show/hide, plus a Caps Lock hint. |
-| **Metric / MetricGrid** | KPI card: optional icon tile (signal tint; red on `alert`), label (+ info hint), value with unit, one line of context — a real previous-period `Delta` where the API has it. `alert` tone for values that need action (the corner light turns red). Cards can link to the filtered list; linked cards lift and show a gradient top edge on hover. The grid counts cards inside fragments and wraps into balanced rows: five fill 3 + 2 with no hole, an odd count ends with a full-width card on phones. |
+| **Metric / MetricGrid** | KPI card: optional icon tile (neutral ink; red on `alert`), label (+ info hint), value with unit, one line of context — a real previous-period `Delta` where the API has it. `alert` tone for values that need action (red border, value and icon tile). Cards can link to the filtered list; linked cards lift and show a signal top edge on hover. The grid counts cards inside fragments and wraps into balanced rows: five fill 3 + 2 with no hole, an odd count ends with a full-width card on phones. |
 | **Bars** | Mini column chart with a baseline; pass `max` to share one scale across rows. Latest value emphasised; values in tooltips and `aria-label`. |
 | **DonutBreakdown** | Share of a total for up to four categories. Segments are separated by a small gap and draw in on mount; hovering a segment or its legend row highlights the pair and puts that category's value in the centre. Categories take the ramp out of order (3, 1, 4, 2) so neighbours always contrast. |
 | **Distribution / CxLegend** | 100% stacked complexity bar with counts in tooltip and `aria-label`; legend with optional totals. |

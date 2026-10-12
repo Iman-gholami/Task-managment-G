@@ -42,7 +42,7 @@ export function Avatar({ id, size, label }) {
   const p = usePerson(id);
   const a11y = label ? { role: "img", "aria-label": p.name, "data-tooltip": p.name } : { "aria-hidden": true };
   return (
-    <span className={`avatar ${size ?? ""}`} style={{ background: p.color }} {...a11y}>
+    <span className={`avatar ${size ?? ""}`} style={{ "--av": p.color }} {...a11y}>
       {initials(p.name)}
     </span>
   );

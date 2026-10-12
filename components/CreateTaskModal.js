@@ -201,14 +201,14 @@ function CreateTaskDialog({ onClose }) {
           right: 18px;
           width: 42px;
           height: 42px;
-          border: 1px solid color-mix(in oklab, var(--primary) 72%, var(--border-strong));
+          border: 1px solid var(--border);
           border-radius: 12px;
           background: var(--surface-card);
           color: var(--text-2);
-          box-shadow: 0 0 0 2px var(--primary-soft);
+          box-shadow: 0 0 0 2px transparent;
         }
         .create-task-v2 .modal-close:hover {
-          background: var(--primary-soft);
+          background: var(--hover);
           color: var(--text);
         }
         .create-task-v2__head {

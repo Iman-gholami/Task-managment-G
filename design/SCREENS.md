@@ -22,7 +22,7 @@ Shared conventions (states, tokens, components) are in `DESIGN_SYSTEM.md`.
 │            │                                                               │
 │ (SR) Sara  │                                                               │
 └────────────┴──────────────────────────────────────────────────────────────┘
- bg (--bg + ambient light)   surface sheet (--surface), inset 8px, radius 14 — see DESIGN_SYSTEM.md
+ bg (--bg)         surface sheet (--surface), inset 8px, radius 14 — see DESIGN_SYSTEM.md
  🎨 = theme menu (Daylight · Graphite · Black Gold · Midnight)
 ```
 

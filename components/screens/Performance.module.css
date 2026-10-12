@@ -293,7 +293,7 @@
   min-width: 2px;
   height: 100%;
   border-radius: inherit;
-  background: linear-gradient(90deg, var(--viz-bar), var(--viz-bar-strong));
+  background: var(--viz-bar);
   transition: width var(--t-slow) var(--ease-out);
 }
 

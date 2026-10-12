@@ -18,10 +18,10 @@
 .tp-card { flex: 1; display: grid; align-content: start; gap: 3.5cqw; padding: 5cqw; border-radius: 3.5cqw; background: var(--sw-surface); box-shadow: inset 0 0 0 1px var(--sw-line); }
 .tp-card i { display: block; width: 72%; height: 3.5cqw; border-radius: 2cqw; background: var(--sw-text); opacity: .75; }
 .tp-card i + i { width: 46%; opacity: .32; }
-.tp-btn { align-self: flex-end; width: 34%; height: 9cqw; border-radius: 3cqw; background: linear-gradient(135deg, var(--sw-primary), var(--sw-accent)); box-shadow: 0 0 6cqw -1cqw var(--sw-primary); }
+.tp-btn { align-self: flex-end; width: 34%; height: 9cqw; border-radius: 3cqw; background: var(--sw-primary); }
 
-/* ---------- Round swatch: theme background ringed by its gradient ---------- */
-.theme-dot { position: relative; display: block; width: 20px; height: 20px; flex: none; border-radius: 50%; background: conic-gradient(from 200deg, var(--sw-primary), var(--sw-accent), var(--sw-primary)); }
+/* ---------- Round swatch: theme background ringed by its signal ---------- */
+.theme-dot { position: relative; display: block; width: 20px; height: 20px; flex: none; border-radius: 50%; background: var(--sw-primary); }
 .theme-dot::after { content: ""; position: absolute; inset: 4.5px; border-radius: 50%; background: var(--sw-bg); box-shadow: 0 0 0 1px color-mix(in oklab, var(--sw-text) 14%, transparent); }
 
 /* ---------- Top bar theme menu ---------- */
@@ -39,14 +39,14 @@
   text-align: left; cursor: pointer;
   transition: border-color var(--t-base), box-shadow var(--t-base), transform var(--t-base) var(--ease-out);
 }
-.theme-card:hover { border-color: color-mix(in oklab, var(--primary) 40%, var(--border)); box-shadow: var(--shadow-md); transform: translateY(-2px); }
+.theme-card:hover { border-color: color-mix(in oklab, var(--border) 45%, var(--border-strong)); box-shadow: var(--shadow-md); transform: translateY(-2px); }
 .theme-card[aria-checked="true"] { border-color: var(--primary); box-shadow: var(--glow-sm); }
 .theme-card-meta { display: grid; gap: 2px; padding: 0 4px; min-width: 0; }
 .theme-card-meta b { font-size: var(--fs-13); font-weight: var(--fw-medium); }
 .theme-card-meta small { font-size: var(--fs-12); color: var(--text-3); }
 .theme-card-check {
   position: absolute; top: 14px; right: 14px; width: 22px; height: 22px; display: grid; place-items: center;
-  border-radius: 50%; background: var(--grad-signal); color: var(--text-on-primary); box-shadow: 0 2px 8px -2px rgb(0 0 0 / .4);
+  border-radius: 50%; background: var(--grad-signal); color: var(--text-on-primary); box-shadow: 0 2px 8px -2px rgb(var(--shadow-ink) / .4);
   opacity: 0; transform: scale(.5); transition: opacity var(--t-base), transform var(--t-slow) var(--ease-spring);
 }
 .theme-card-check svg.i { stroke-width: 2.4; }

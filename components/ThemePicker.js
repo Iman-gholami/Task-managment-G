@@ -12,7 +12,6 @@ const vars = (t) => ({
   "--sw-line": t.swatch.line,
   "--sw-text": t.swatch.text,
   "--sw-primary": t.swatch.primary,
-  "--sw-accent": t.swatch.accent,
 });
 
 /** Miniature of a theme: app background, sidebar, a card with text lines and a primary button. Decorative. */
@@ -28,7 +27,7 @@ export function ThemePreview({ theme, size = "md" }) {
   );
 }
 
-/** Round chip: the theme's background ringed by its signature gradient. Decorative. */
+/** Round chip: the theme's background ringed by its signal colour. Decorative. */
 export function ThemeDot({ theme }) {
   return <span className="theme-dot" style={vars(theme)} aria-hidden="true" />;
 }

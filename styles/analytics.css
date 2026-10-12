@@ -2,12 +2,7 @@
    design system. Layout uses logical properties so it mirrors correctly; print and presentation
    modes are at the end. */
 
-/* ---------- Chart tokens ----------
-   Categorical series (teams, compared items): a fixed order, never cycled. Validated with the dataviz
-   palette checks against each theme's card surface (CVD and normal-vision separation pass; on the
-   light surface aqua and yellow sit below 3:1, so every chart also has labels and a table view). */
-:root, [data-theme="light"] { --cat-1: #2A78D6; --cat-2: #EB6834; --cat-3: #1BAF7A; --cat-4: #EDA100; }
-:root[data-theme="dark"], :root[data-theme="gold"], :root[data-theme="midnight"] { --cat-1: #3987E5; --cat-2: #D95926; --cat-3: #199E70; --cat-4: #C98500; }
+/* Chart colours (--cat-1…4, --viz-*) are theme tokens in styles/tokens.css. */
 
 /* ---------- Shared components inside RTL screens ---------- */
 [dir="rtl"] .metric { text-align: right; }
@@ -16,7 +11,7 @@
 [dir="rtl"] .dt thead th, [dir="rtl"] .dt tbody th, [dir="rtl"] .dt td { text-align: right; }
 [dir="rtl"] .dt th:first-child, [dir="rtl"] .dt td:first-child { padding-left: var(--s-3); padding-right: var(--s-4); }
 [dir="rtl"] .dt th:last-child, [dir="rtl"] .dt td:last-child { padding-right: var(--s-3); padding-left: var(--s-4); }
-[dir="rtl"] .dt tbody tr.is-link:hover td:first-child { box-shadow: inset -2px 0 0 color-mix(in oklab, var(--primary) 70%, transparent); }
+[dir="rtl"] .dt tbody tr.is-link:hover td:first-child { box-shadow: inset -2px 0 0 var(--border-strong); }
 .pop[dir="rtl"] .mi { text-align: right; }
 .pop[dir="rtl"] .mi .hint, .pop[dir="rtl"] .mi .mi-check { margin-left: 0; margin-right: auto; }
 .pop[dir="rtl"] .mi kbd { margin-left: 0; margin-right: auto; }

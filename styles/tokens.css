@@ -73,69 +73,82 @@
   --t-slow: 220ms;
   --ease-spring: cubic-bezier(.34, 1.4, .64, 1);
 
-  /* ---- Signature effects (built from each theme's colours) ----------------
-     One gradient (primary → accent) marks the brand, primary actions and progress fills.
-     Ambient light is two soft glows behind the app; it never sits behind text that needs contrast. */
-  --grad-signal: linear-gradient(135deg, var(--primary) 0%, var(--accent) 100%);
-  --grad-signal-soft: linear-gradient(135deg, color-mix(in oklab, var(--primary) 16%, transparent), color-mix(in oklab, var(--accent) 10%, transparent));
-  --glow-sm: 0 0 0 1px color-mix(in oklab, var(--primary) 30%, transparent), 0 2px 10px -2px var(--primary-glow);
-  --glow-md: 0 0 0 1px color-mix(in oklab, var(--primary) 36%, transparent), 0 8px 24px -6px var(--primary-glow);
-  --ring: 0 0 0 3px var(--primary-soft);
+  /* ---- Signal & elevation (built from each theme's colours) ---------------
+     The signal is one solid colour per theme: no gradients, coloured glows or ambient light.
+     --grad-signal and --grad-signal-soft stay images (a flat fill) so components can layer overlays on them.
+     --glow-* is the resting / raised elevation of filled signal controls: a crisp 1px edge and a soft shadow.
+     --ambient is kept for the surfaces that compose it, but every theme sets its lights to transparent. */
+  --grad-signal: linear-gradient(135deg, var(--primary) 0%, var(--primary) 100%);
+  --grad-signal-soft: linear-gradient(135deg, var(--primary-soft), var(--primary-soft));
+  --glow-sm: 0 0 0 1px var(--primary-edge), 0 2px 10px -2px var(--primary-shadow);
+  --glow-md: 0 0 0 1px var(--primary-edge), 0 8px 24px -6px var(--primary-shadow);
+  --ring: 0 0 0 3px var(--ring-color);
   --ambient:
     radial-gradient(900px 520px at 0% -10%, var(--ambient-1), transparent 70%),
     radial-gradient(760px 480px at 100% 110%, var(--ambient-2), transparent 70%);
+  /* Member colours are stored per person; avatars deepen them 25% toward ink so white initials always read (≥ 4.5:1, also for
+     colours saved before this palette). */
+  --avatar-ink: #151B22;
 }
 
 /* ==========================================================================
    LIGHT
    ========================================================================== */
 /* Also applies to any element marked data-theme="light": a light island inside a dark page
-   (chart image export and print previews read their colours from one). */
+   (chart image export and print previews read their colours from one). Overlays and tints are written
+   against the block's own tokens, so each theme only states its base colours. */
 :root, [data-theme="light"] {
   color-scheme: light;
 
   --bg: #EDF0F4;               /* app background, sidebar */
   --surface: #F9FAFC;          /* main sheet */
   --surface-card: #FFFFFF;     /* cards, panels, tables */
-  --surface-inset: #F3F5F8;    /* segmented tracks, table headers, side panels */
+  --surface-inset: #F3F5F8;    /* segmented tracks, group rows, side panels */
   --surface-raised: #FFFFFF;   /* menus, dialogs */
   --surface-input: #FFFFFF;
-  --surface-2: var(--surface-inset);
+  --surface-toggle: #FFFFFF;   /* selected segment on an inset track */
 
-  --hover: color-mix(in oklab, #151B22 4.5%, transparent);
-  --pressed: color-mix(in oklab, #151B22 8%, transparent);
-  --nav-active: color-mix(in oklab, #151B22 6.5%, transparent);
-  --selected: color-mix(in oklab, #007B70 9%, transparent);
+  --hover: color-mix(in oklab, var(--text) 4.5%, transparent);
+  --pressed: color-mix(in oklab, var(--text) 8%, transparent);
+  --nav-active: color-mix(in oklab, var(--text) 6.5%, transparent);
+  --selected: color-mix(in oklab, var(--primary) 9%, transparent);
 
   --text: #151B22;
-  --text-2: #4C535B;
-  --text-3: #656D75;
+  --text-2: #495158;
+  --text-3: #5F676F;           /* 5.0:1 on the app background, 4.6:1 under a hover overlay */
   --text-on-primary: #FFFFFF;
 
   --border: #DFE3E8;
   --divider: #E8EBEF;
-  --border-strong: #7F8790;   /* input borders: 3.6:1 */
+  --border-strong: #7F8790;    /* input borders: 3.6:1 */
 
-  --primary: #007B70;         /* white label 5.2:1 */
-  --primary-hover: #00695F;
-  --primary-soft: color-mix(in oklab, #007B70 10%, transparent);
-  --primary-glow: color-mix(in oklab, #007B70 30%, transparent);
-  --accent: #006E8E;          /* gradient stop; white label 5.8:1 */
-  --link: #00695F;
-  --focus: #007B70;
-  --ambient-1: color-mix(in oklab, #007B70 9%, transparent);
-  --ambient-2: color-mix(in oklab, #006E8E 7%, transparent);
-  --sheen: rgb(255 255 255 / .22);   /* top highlight on filled controls */
+  --primary: #00756C;          /* white label 5.6:1 */
+  --primary-hover: #00645C;    /* white label 7.1:1 */
+  --primary-soft: color-mix(in oklab, var(--primary) 10%, transparent);
+  --primary-edge: color-mix(in oklab, var(--primary) 78%, var(--text));   /* 1px edge on filled signal controls */
+  --primary-shadow: rgb(0 62 56 / .2);                                     /* soft shadow under them */
+  --primary-glow: transparent;
+  --link: var(--primary-hover);
+  --focus: var(--primary);
+  --ring-color: color-mix(in oklab, var(--focus) 28%, transparent);
+  --ambient-1: transparent;
+  --ambient-2: transparent;
+  --sheen: rgb(255 255 255 / .1);    /* hairline top highlight on filled controls */
   --edge: rgb(255 255 255 / .7);     /* top highlight on cards */
+  --knob: #FFFFFF;                   /* switch thumb; on a checked switch it takes --text-on-primary */
+  --shadow-ink: 21 27 34;            /* rgb channels for one-off shadows: rgb(var(--shadow-ink) / α) */
+  /* Select chevron, drawn in the theme's muted ink. */
+  --select-chevron: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 20 20' fill='none' stroke='%235F676F' stroke-width='1.7' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m6 8 4 4 4-4'/%3E%3C/svg%3E");
 
-  --success: #246E3A;  --warning: #8D5406;  --danger: #B33736;  --info: #296898;  --violet: #685796;  --neutral: #656D75;
-  --success-soft: color-mix(in oklab, #246E3A 10%, transparent);
-  --warning-soft: color-mix(in oklab, #8D5406 11%, transparent);
-  --danger-soft:  color-mix(in oklab, #B33736 9%, transparent);
-  --info-soft:    color-mix(in oklab, #296898 9%, transparent);
-  --violet-soft:  color-mix(in oklab, #685796 10%, transparent);
-  --neutral-soft: color-mix(in oklab, #656D75 10%, transparent);
-  --danger-solid: #B33736;
+  --success: #286E3C;  --warning: #8B5511;  --danger: #A93C39;  --info: #2E6896;  --violet: #675891;  --neutral: var(--text-3);
+  --success-soft: color-mix(in oklab, var(--success) 10%, transparent);
+  --warning-soft: color-mix(in oklab, var(--warning) 10%, transparent);
+  --danger-soft:  color-mix(in oklab, var(--danger) 10%, transparent);
+  --info-soft:    color-mix(in oklab, var(--info) 10%, transparent);
+  --violet-soft:  color-mix(in oklab, var(--violet) 10%, transparent);
+  --neutral-soft: color-mix(in oklab, var(--neutral) 10%, transparent);
+  --danger-solid: #A93C39;           /* white label 6.2:1 */
+  --danger-solid-hover: #932F2E;
   --on-danger: #FFFFFF;
 
   --shadow-xs: 0 1px 1px rgb(21 27 34 / .04);
@@ -145,69 +158,78 @@
   --shadow-card: 0 1px 2px rgb(21 27 34 / .04), 0 6px 20px -12px rgb(21 27 34 / .12);
   --scrim: rgb(21 27 34 / .36);
 
-  /* Sign-in hero panel: stays dark in the light theme so the radar glows. */
-  --hero-bg: #0B1116; --hero-text: #E8EBEF; --hero-text-2: #B9BEC4; --hero-line: #272C31;
-  --hero-signal: #4EB9AD; --hero-accent: #54BBD2;
+  /* Sign-in hero panel: stays dark (the Graphite palette) in the light theme. */
+  --hero-bg: #0B0F14; --hero-text: #E8EBEF; --hero-text-2: #B9BEC4; --hero-line: #2A2F34;
+  --hero-signal: #55B8AD;
 
   /* Complexity ramp (Simple → Advanced), bars, tracks */
-  --viz-1: #92CBC3; --viz-2: #43A89D; --viz-3: #008176; --viz-4: #00554D;
-  --viz-bar: #43A89D;
-  --viz-bar-strong: #007B70;
+  --viz-1: #87BEB6; --viz-2: #4A9C93; --viz-3: #057D74; --viz-4: #00544E;
+  --viz-bar: #389188;          /* 3.8:1 on cards */
+  --viz-bar-strong: #00756C;
   --viz-track: #E8EBEF;
-  /* Shift Schedule tones (categorical): morning, until 8pm, night */
-  --shift-morning: #117555; --shift-evening: #955816; --shift-night: #5D57A4;
-  --surface-toggle: #FFFFFF;
+  /* Categorical chart series (analytics: teams, compared items): a fixed order, never cycled. Validated with the
+     dataviz palette checks against each theme's card surface (CVD and normal-vision separation pass; on the light
+     surface aqua and yellow sit below 3:1, so every chart also has labels and a table view). */
+  --cat-1: #2A78D6; --cat-2: #EB6834; --cat-3: #1BAF7A; --cat-4: #EDA100;
+  /* Shift Schedule tones (categorical, never status): morning, until 8pm, night */
+  --shift-morning: #5D7235; --shift-evening: #9B5738; --shift-night: #404D89;
   --tooltip-bg: #151B22; --tooltip-text: #F9FAFC;
 }
 
 /* ==========================================================================
-   DARK — layered surfaces: bg < sheet < card < inset < raised
+   GRAPHITE (dark) — layered blue-slate surfaces: bg < sheet < card < inset < raised
    ========================================================================== */
 :root[data-theme="dark"] {
   color-scheme: dark;
 
-  --bg: #080D11;
-  --surface: #0F1318;
-  --surface-card: #14191E;
-  --surface-inset: #1A1F24;
-  --surface-raised: #1C2126;
-  --surface-input: #0F1318;
-  --surface-2: var(--surface-inset);
+  --bg: #0B0F14;
+  --surface: #11161A;
+  --surface-card: #171B20;
+  --surface-inset: #1C2125;
+  --surface-raised: #21252A;
+  --surface-input: #11161A;
+  --surface-toggle: #2F3338;
 
-  --hover: color-mix(in oklab, #E8EBEF 5%, transparent);
-  --pressed: color-mix(in oklab, #E8EBEF 9%, transparent);
-  --nav-active: color-mix(in oklab, #E8EBEF 8%, transparent);
-  --selected: color-mix(in oklab, #4EB9AD 12%, transparent);
+  --hover: color-mix(in oklab, var(--text) 5%, transparent);
+  --pressed: color-mix(in oklab, var(--text) 9%, transparent);
+  --nav-active: color-mix(in oklab, var(--text) 8%, transparent);
+  --selected: color-mix(in oklab, var(--primary) 12%, transparent);
 
   --text: #E8EBEF;
   --text-2: #B9BEC4;
-  --text-3: #949BA1;
-  --text-on-primary: #080D11;
+  --text-3: #969CA3;
+  --text-on-primary: #0B0F14;
 
-  --border: #272C31;
-  --divider: #1F2329;
-  --border-strong: #676C73;   /* input borders: 3.3:1 */
+  --border: #2A2F34;
+  --divider: #22262B;
+  --border-strong: #6B7177;    /* input borders: 3.5:1 */
 
-  --primary: #4EB9AD;         /* dark label 8.2:1 */
-  --primary-hover: #6FCABF;
-  --primary-soft: color-mix(in oklab, #4EB9AD 14%, transparent);
-  --primary-glow: color-mix(in oklab, #4EB9AD 32%, transparent);
-  --accent: #54BBD2;
-  --link: #7AD0C5;
-  --focus: #6FCABF;
-  --ambient-1: color-mix(in oklab, #4EB9AD 9%, transparent);
-  --ambient-2: color-mix(in oklab, #54BBD2 6%, transparent);
-  --sheen: rgb(255 255 255 / .28);
+  --primary: #55B8AD;          /* dark label 8.1:1 */
+  --primary-hover: #75C9BF;
+  --primary-soft: color-mix(in oklab, var(--primary) 14%, transparent);
+  --primary-edge: transparent;
+  --primary-shadow: rgb(var(--shadow-ink) / .5);
+  --primary-glow: transparent;
+  --link: #7FCFC5;
+  --focus: var(--primary-hover);
+  --ring-color: color-mix(in oklab, var(--focus) 32%, transparent);
+  --ambient-1: transparent;
+  --ambient-2: transparent;
+  --sheen: rgb(255 255 255 / .08);
   --edge: rgb(255 255 255 / .035);
+  --knob: var(--text);
+  --shadow-ink: 2 3 4;
+  --select-chevron: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 20 20' fill='none' stroke='%23969CA3' stroke-width='1.7' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m6 8 4 4 4-4'/%3E%3C/svg%3E");
 
-  --success: #73C385;  --warning: #E4AC59;  --danger: #EB827B;  --info: #79B1E0;  --violet: #AFA0DE;  --neutral: #949BA1;
-  --success-soft: color-mix(in oklab, #73C385 13%, transparent);
-  --warning-soft: color-mix(in oklab, #E4AC59 13%, transparent);
-  --danger-soft:  color-mix(in oklab, #EB827B 13%, transparent);
-  --info-soft:    color-mix(in oklab, #79B1E0 13%, transparent);
-  --violet-soft:  color-mix(in oklab, #AFA0DE 13%, transparent);
-  --neutral-soft: color-mix(in oklab, #949BA1 13%, transparent);
-  --danger-solid: #C04442;
+  --success: #79C289;  --warning: #E1AD61;  --danger: #E8847C;  --info: #7DB1DD;  --violet: #AEA1D9;  --neutral: var(--text-3);
+  --success-soft: color-mix(in oklab, var(--success) 13%, transparent);
+  --warning-soft: color-mix(in oklab, var(--warning) 13%, transparent);
+  --danger-soft:  color-mix(in oklab, var(--danger) 13%, transparent);
+  --info-soft:    color-mix(in oklab, var(--info) 13%, transparent);
+  --violet-soft:  color-mix(in oklab, var(--violet) 13%, transparent);
+  --neutral-soft: color-mix(in oklab, var(--neutral) 13%, transparent);
+  --danger-solid: #AE4440;           /* white label 5.7:1 */
+  --danger-solid-hover: #9D3C39;
   --on-danger: #FFFFFF;
 
   --shadow-xs: none;
@@ -218,66 +240,72 @@
   --scrim: rgb(3 5 8 / .62);
 
   --hero-bg: var(--bg); --hero-text: var(--text); --hero-text-2: var(--text-2); --hero-line: var(--border);
-  --hero-signal: var(--primary); --hero-accent: var(--accent);
+  --hero-signal: var(--primary);
 
-  --viz-1: #2B5C56; --viz-2: #2A857B; --viz-3: #3FACA0; --viz-4: #84DACE;
-  --viz-bar: #2A857B;
-  --viz-bar-strong: #4EB9AD;
-  --viz-track: #1F2329;
-  --shift-morning: #69CBA3; --shift-evening: #E6AF68; --shift-night: #A4A2E8;
-  --surface-toggle: #272D34;  /* selected segment on an inset track */
-  --tooltip-bg: #E8EBEF; --tooltip-text: #0F1318;
+  --viz-1: #325E59; --viz-2: #37867E; --viz-3: #47ABA1; --viz-4: #89D9CF;
+  --viz-bar: #37867E;
+  --viz-bar-strong: #55B8AD;
+  --viz-track: #22262B;
+  --cat-1: #3987E5; --cat-2: #D95926; --cat-3: #199E70; --cat-4: #C98500;
+  --shift-morning: #ACC67E; --shift-evening: #E79D7B; --shift-night: #8998D1;
+  --tooltip-bg: #E8EBEF; --tooltip-text: #11161A;
 }
 
 /* ==========================================================================
-   BLACK GOLD — near-black warm surfaces, one bright gold signal
+   BLACK GOLD — near-black warm surfaces, one antique-gold signal
    ========================================================================== */
 :root[data-theme="gold"] {
   color-scheme: dark;
 
-  --bg: #090807;
-  --surface: #100F0D;
-  --surface-card: #171513;
-  --surface-inset: #1E1C19;
-  --surface-raised: #211F1B;
-  --surface-input: #100F0D;
-  --surface-2: var(--surface-inset);
+  --bg: #0D0C0A;
+  --surface: #141210;
+  --surface-card: #1A1816;
+  --surface-inset: #211E1B;
+  --surface-raised: #25221F;
+  --surface-input: #141210;
+  --surface-toggle: #37342F;
 
-  --hover: color-mix(in oklab, #F2F0E7 5%, transparent);
-  --pressed: color-mix(in oklab, #F2F0E7 9%, transparent);
-  --nav-active: color-mix(in oklab, #FBC629 10%, transparent);
-  --selected: color-mix(in oklab, #FBC629 11%, transparent);
+  --hover: color-mix(in oklab, var(--text) 5%, transparent);
+  --pressed: color-mix(in oklab, var(--text) 9%, transparent);
+  --nav-active: color-mix(in oklab, var(--text) 8%, transparent);
+  --selected: color-mix(in oklab, var(--primary) 12%, transparent);
 
-  --text: #F2F0E7;
-  --text-2: #C7C4BA;
-  --text-3: #A29E93;
-  --text-on-primary: #090807;  /* 12.6:1 on gold, 9.1:1 on amber */
+  --text: #F1EEE7;
+  --text-2: #C7C4BC;
+  --text-3: #A29E95;
+  --text-on-primary: #0D0C0A;  /* 10.9:1 on gold */
 
-  --border: #2F2C27;
-  --divider: #25231F;
-  --border-strong: #726E66;    /* input borders: 3.6:1 */
+  --border: #312F2A;
+  --divider: #282622;
+  --border-strong: #767169;    /* input borders: 3.7:1 */
 
-  --primary: #FBC629;
-  --primary-hover: #FFD456;
-  --primary-soft: color-mix(in oklab, #FBC629 13%, transparent);
-  --primary-glow: color-mix(in oklab, #FBC629 34%, transparent);
-  --accent: #EBA002;
-  --link: #FDCE4E;
-  --focus: #FFD456;
-  --ambient-1: color-mix(in oklab, #FBC629 10%, transparent);
-  --ambient-2: color-mix(in oklab, #EBA002 7%, transparent);
-  --sheen: rgb(255 255 255 / .38);
+  --primary: #E4B65C;
+  --primary-hover: #F2C777;
+  --primary-soft: color-mix(in oklab, var(--primary) 14%, transparent);
+  --primary-edge: transparent;
+  --primary-shadow: rgb(var(--shadow-ink) / .55);
+  --primary-glow: transparent;
+  --link: #EBC57D;
+  --focus: var(--primary-hover);
+  --ring-color: color-mix(in oklab, var(--focus) 32%, transparent);
+  --ambient-1: transparent;
+  --ambient-2: transparent;
+  --sheen: rgb(255 255 255 / .08);
   --edge: rgb(255 236 180 / .04);
+  --knob: var(--text);
+  --shadow-ink: 3 2 1;
+  --select-chevron: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 20 20' fill='none' stroke='%23A29E95' stroke-width='1.7' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m6 8 4 4 4-4'/%3E%3C/svg%3E");
 
-  /* Warning is orange here so it never reads as the gold accent. */
-  --success: #6CCD83;  --warning: #FA934E;  --danger: #FA706A;  --info: #76BDEE;  --violet: #BCA1ED;  --neutral: #A29E93;
-  --success-soft: color-mix(in oklab, #6CCD83 13%, transparent);
-  --warning-soft: color-mix(in oklab, #FA934E 14%, transparent);
-  --danger-soft:  color-mix(in oklab, #FA706A 13%, transparent);
-  --info-soft:    color-mix(in oklab, #76BDEE 13%, transparent);
-  --violet-soft:  color-mix(in oklab, #BCA1ED 13%, transparent);
-  --neutral-soft: color-mix(in oklab, #A29E93 13%, transparent);
-  --danger-solid: #C04442;
+  /* Warning is orange here so it never reads as the gold signal. */
+  --success: #79C68A;  --warning: #EC9660;  --danger: #E97871;  --info: #7EB9E2;  --violet: #B6A1DF;  --neutral: var(--text-3);
+  --success-soft: color-mix(in oklab, var(--success) 13%, transparent);
+  --warning-soft: color-mix(in oklab, var(--warning) 13%, transparent);
+  --danger-soft:  color-mix(in oklab, var(--danger) 13%, transparent);
+  --info-soft:    color-mix(in oklab, var(--info) 13%, transparent);
+  --violet-soft:  color-mix(in oklab, var(--violet) 13%, transparent);
+  --neutral-soft: color-mix(in oklab, var(--neutral) 13%, transparent);
+  --danger-solid: #AE4440;
+  --danger-solid-hover: #9D3C39;
   --on-danger: #FFFFFF;
 
   --shadow-xs: none;
@@ -288,83 +316,91 @@
   --scrim: rgb(4 3 2 / .66);
 
   --hero-bg: var(--bg); --hero-text: var(--text); --hero-text-2: var(--text-2); --hero-line: var(--border);
-  --hero-signal: var(--primary); --hero-accent: var(--accent);
+  --hero-signal: var(--primary);
 
-  --viz-1: #6C5514; --viz-2: #97750D; --viz-3: #CA9E0D; --viz-4: #FFD152;
-  --viz-bar: #97750D;
-  --viz-bar-strong: #FBC629;
-  --viz-track: #25231F;
-  --shift-morning: #6BCF9D; --shift-evening: #FA934E; --shift-night: #B2A1E7;
-  --surface-toggle: #2E2B26;
-  --tooltip-bg: #F2F0E7; --tooltip-text: #100F0D;
+  --viz-1: #6E5729; --viz-2: #957534; --viz-3: #BD9443; --viz-4: #EDC478;
+  --viz-bar: #957534;
+  --viz-bar-strong: #E4B65C;
+  --viz-track: #282622;
+  --cat-1: #3987E5; --cat-2: #D95926; --cat-3: #199E70; --cat-4: #C98500;
+  /* Until 8pm is rose-copper here so it never reads as the orange warning. */
+  --shift-morning: #ACC67E; --shift-evening: #E5A190; --shift-night: #8998D1;
+  --tooltip-bg: #F1EEE7; --tooltip-text: #141210;
 }
 
 /* ==========================================================================
-   MIDNIGHT — deep navy surfaces with a violet → azure signal
+   MIDNIGHT — deep navy surfaces, one periwinkle signal
    ========================================================================== */
 :root[data-theme="midnight"] {
   color-scheme: dark;
 
-  --bg: #0A0B1E;
-  --surface: #101126;
-  --surface-card: #16182F;
-  --surface-inset: #1B1E36;
-  --surface-raised: #1E213C;
-  --surface-input: #101126;
-  --surface-2: var(--surface-inset);
+  --bg: #080E1E;
+  --surface: #0D1426;
+  --surface-card: #121B2E;
+  --surface-inset: #182035;
+  --surface-raised: #1B253B;
+  --surface-input: #0D1426;
+  --surface-toggle: #2B364F;
 
-  --hover: color-mix(in oklab, #EEF0F8 5%, transparent);
-  --pressed: color-mix(in oklab, #EEF0F8 9%, transparent);
-  --nav-active: color-mix(in oklab, #A491FE 13%, transparent);
-  --selected: color-mix(in oklab, #A491FE 14%, transparent);
+  --hover: color-mix(in oklab, var(--text) 5%, transparent);
+  --pressed: color-mix(in oklab, var(--text) 9%, transparent);
+  --nav-active: color-mix(in oklab, var(--text) 8%, transparent);
+  --selected: color-mix(in oklab, var(--primary) 12%, transparent);
 
-  --text: #EEF0F8;
-  --text-2: #BFC3D8;
-  --text-3: #9BA0BB;
-  --text-on-primary: #0A0B1E;  /* 7.5:1 on violet, 7.9:1 on azure */
+  --text: #EBEEF5;
+  --text-2: #BDC4D4;
+  --text-3: #98A2B6;
+  --text-on-primary: #080E1E;  /* 8.1:1 on periwinkle */
 
-  --border: #2A2E49;
-  --divider: #21243D;
-  --border-strong: #6D7292;    /* input borders: 3.7:1 */
+  --border: #273147;
+  --divider: #1E273B;
+  --border-strong: #69748D;    /* input borders: 3.7:1 */
 
-  --primary: #A491FE;
-  --primary-hover: #B6A8FF;
-  --primary-soft: color-mix(in oklab, #A491FE 15%, transparent);
-  --primary-glow: color-mix(in oklab, #A491FE 38%, transparent);
-  --accent: #5CABF2;
-  --link: #BDB0FF;
-  --focus: #B6A8FF;
-  --ambient-1: color-mix(in oklab, #A491FE 15%, transparent);
-  --ambient-2: color-mix(in oklab, #5CABF2 11%, transparent);
-  --sheen: rgb(255 255 255 / .32);
-  --edge: rgb(200 205 255 / .045);
+  --primary: #A2A1EE;
+  --primary-hover: #B3B3F7;
+  --primary-soft: color-mix(in oklab, var(--primary) 14%, transparent);
+  --primary-edge: transparent;
+  --primary-shadow: rgb(var(--shadow-ink) / .55);
+  --primary-glow: transparent;
+  --link: #B9BAF8;
+  --focus: var(--primary-hover);
+  --ring-color: color-mix(in oklab, var(--focus) 32%, transparent);
+  --ambient-1: transparent;
+  --ambient-2: transparent;
+  --sheen: rgb(255 255 255 / .08);
+  --edge: rgb(200 212 255 / .04);
+  --knob: var(--text);
+  --shadow-ink: 1 3 12;
+  --select-chevron: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 20 20' fill='none' stroke='%2398A2B6' stroke-width='1.7' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m6 8 4 4 4-4'/%3E%3C/svg%3E");
 
-  /* Review is rose here so it stays distinct from the violet accent. */
-  --success: #62CD94;  --warning: #EEB154;  --danger: #F47A79;  --info: #61C1ED;  --violet: #EF8BC5;  --neutral: #9BA0BB;
-  --success-soft: color-mix(in oklab, #62CD94 13%, transparent);
-  --warning-soft: color-mix(in oklab, #EEB154 13%, transparent);
-  --danger-soft:  color-mix(in oklab, #F47A79 13%, transparent);
-  --info-soft:    color-mix(in oklab, #61C1ED 13%, transparent);
-  --violet-soft:  color-mix(in oklab, #EF8BC5 13%, transparent);
-  --neutral-soft: color-mix(in oklab, #9BA0BB 13%, transparent);
-  --danger-solid: #C04442;
+  /* Review is rose here so it stays distinct from the periwinkle signal. */
+  --success: #73CA99;  --warning: #E7B369;  --danger: #E88381;  --info: #76BFE4;  --violet: #E196C0;  --neutral: var(--text-3);
+  --success-soft: color-mix(in oklab, var(--success) 13%, transparent);
+  --warning-soft: color-mix(in oklab, var(--warning) 13%, transparent);
+  --danger-soft:  color-mix(in oklab, var(--danger) 13%, transparent);
+  --info-soft:    color-mix(in oklab, var(--info) 13%, transparent);
+  --violet-soft:  color-mix(in oklab, var(--violet) 13%, transparent);
+  --neutral-soft: color-mix(in oklab, var(--neutral) 13%, transparent);
+  --danger-solid: #AE4440;
+  --danger-solid-hover: #9D3C39;
   --on-danger: #FFFFFF;
 
   --shadow-xs: none;
-  --shadow-sm: 0 1px 2px rgb(2 3 12 / .45);
-  --shadow-md: 0 8px 24px -8px rgb(2 3 12 / .7), 0 0 0 1px rgb(200 205 255 / .03);
-  --shadow-lg: 0 24px 56px -16px rgb(2 3 12 / .8);
+  --shadow-sm: 0 1px 2px rgb(1 3 12 / .45);
+  --shadow-md: 0 8px 24px -8px rgb(1 3 12 / .7), 0 0 0 1px rgb(200 212 255 / .03);
+  --shadow-lg: 0 24px 56px -16px rgb(1 3 12 / .8);
   --shadow-card: 0 1px 2px rgb(0 0 0 / .25);
-  --scrim: rgb(3 4 14 / .64);
+  --scrim: rgb(2 4 14 / .64);
 
   --hero-bg: var(--bg); --hero-text: var(--text); --hero-text-2: var(--text-2); --hero-line: var(--border);
-  --hero-signal: var(--primary); --hero-accent: var(--accent);
+  --hero-signal: var(--primary);
 
-  --viz-1: #584D8C; --viz-2: #7867C1; --viz-3: #9B89F1; --viz-4: #CCC3FF;
-  --viz-bar: #7867C1;
-  --viz-bar-strong: #A491FE;
-  --viz-track: #21243D;
-  --shift-morning: #67CFA0; --shift-evening: #EDB161; --shift-night: #5FC4DC;
-  --surface-toggle: #2C3052;
-  --tooltip-bg: #EEF0F8; --tooltip-text: #101126;
+  --viz-1: #565584; --viz-2: #7372B2; --viz-3: #9695E0; --viz-4: #C7C8FE;
+  --viz-bar: #7372B2;
+  --viz-bar-strong: #A2A1EE;
+  --viz-track: #1E273B;
+  --cat-1: #3987E5; --cat-2: #D95926; --cat-3: #199E70; --cat-4: #C98500;
+  /* Night is cyan here so it stays distinct from the periwinkle signal. */
+  --shift-morning: #ACC67E; --shift-evening: #E79D7B; --shift-night: #79CACF;
+  --tooltip-bg: #EBEEF5; --tooltip-text: #0D1426;
 }
