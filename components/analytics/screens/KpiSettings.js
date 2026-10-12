@@ -105,7 +105,7 @@ function KpiSettingsBody() {
       <Panel
         title={`تعریف KPI · ${groupFa(scope)}`}
         meta={`نسخه فعال v${draft.version} · ذخیره تغییرات نسخه جدید می‌سازد`}
-        actions={<button type="button" className="btn btn-primary" onClick={save} disabled={busy}><Icon name="save" />ذخیره به‌عنوان نسخه جدید</button>}
+        actions={<button type="button" className="btn btn-primary" onClick={save} disabled={busy}><Icon name="check" />ذخیره به‌عنوان نسخه جدید</button>}
       >
         <div className="an-kpi-settings-grid">
           <label>نام مجموعه KPI<input className="input" value={draft.name} onChange={(e) => set("name", e.target.value)} /></label>
@@ -173,7 +173,7 @@ function KpiItems({ title, total, items, category, setItem, removeItem, addItem 
                   </select>
                 </td>
                 <td><input className="input" value={x.hint ?? ""} onChange={(e) => setItem(index, "hint", e.target.value)} /></td>
-                <td><button type="button" className="btn btn-ghost icon-btn btn-sm danger" aria-label="حذف شاخص" onClick={() => removeItem(index)}><Icon name="trash" /></button></td>
+                <td><button type="button" className="btn btn-ghost icon-btn btn-sm danger" aria-label="حذف شاخص" onClick={() => removeItem(index)}><Icon name="x" /></button></td>
               </tr>
             ))}
           </tbody>
