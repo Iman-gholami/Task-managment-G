@@ -30,7 +30,7 @@ const fmtKind = (kind, v) => (!isNum(v) ? "—" : kind === "rate" ? fmtPct(v) : 
 
 export default function Compare() {
   return (
-    <AnalyticsFrame title="مقایسه و رتبه‌بندی" subtitle={`مقایسه دستی تا ${faDigits(MAX_COMPARE)} مورد + رتبه‌بندی هم‌سطح`}>
+    <AnalyticsFrame title="مقایسه و رتبه‌بندی" subtitle={`مقایسه دستی تا ${faDigits(MAX_COMPARE)} مورد + امتیاز وزن‌دار کارشناسان هم‌سطح`}>
       <CompareBody />
     </AnalyticsFrame>
   );
