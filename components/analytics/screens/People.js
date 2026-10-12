@@ -10,6 +10,7 @@ import Icon from "@/components/ui/Icon";
 import { Panel } from "@/components/ui/layout";
 import { faDigits } from "@/lib/analytics/calendar";
 import { median } from "@/lib/analytics/format";
+import { previewKpi } from "@/lib/analytics/kpi-preview";
 import { ROLE_FA, groupFa } from "@/lib/analytics/labels";
 import { METRICS, bucketStats, groupsIn, peopleRows } from "@/lib/analytics/metrics";
 import { buckets } from "@/lib/analytics/periods";
@@ -18,7 +19,7 @@ const DIST_METRICS = ["completed", "units", "hours", "hoursPerTask", "onTimeRate
 
 export default function People() {
   return (
-    <AnalyticsFrame title="کارشناسان" subtitle="آماری، بدون امتیاز و رتبه">
+    <AnalyticsFrame title="کارشناسان" subtitle="آمار عملیاتی و امتیاز آزمایشی KPI (غیررسمی)">
       <PeopleBody />
     </AnalyticsFrame>
   );
@@ -47,6 +48,7 @@ function PeopleBody() {
 
   const columns = [
     { key: "name", label: "کارشناس", value: (r) => r.person.name, render: (r) => <span className="an-person">{r.person.name}<small>{[groupFa(r.person.group), r.person.level, ROLE_FA[r.person.role], r.person.active ? null : "غیرفعال"].filter(Boolean).join(" · ")}</small></span> },
+    { key: "kpi", label: "ارزیابی آزمایشی", kind: "avg", title: "امتیاز غیررسمی از ۱۰۰؛ بر اساس چهار شاخص موجود، با هدف آزمایشی ۱۰ تسک در دوره. شاخص‌های فاقد داده حذف می‌شوند.", value: (r) => previewKpi(r.cur).score },
     { key: "c", label: "تکمیل‌شده", kind: "count", value: (r) => r.cur.completed },
     { key: "d", label: "تغییر", value: (r) => (r.prev ? r.cur.completed - r.prev.completed : null), render: (r) => (r.prev ? <Delta now={r.cur.completed} before={r.prev.completed} /> : "—") },
     { key: "u", label: "حجم وزن‌دار", kind: "count", value: (r) => r.cur.units },
