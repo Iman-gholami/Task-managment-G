@@ -20,6 +20,7 @@ export const TABS = [
   ["/analytics/trends", "روندها", "perf"],
   ["/analytics/soc", "عملیات SOC", "activity"],
   ["/analytics/alerts", "هشدارها و بینش‌ها", "alert"],
+  ["/analytics/kpi", "ارزیابی KPI (آزمایشی)", "bars"],
   ["/analytics/report", "گزارش مدیریتی", "report"],
 ];
 
