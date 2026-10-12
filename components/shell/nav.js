@@ -4,7 +4,7 @@ import { canManageChecklists, isManager } from "@/lib/roles";
 
 const REPORT_NAMES = Object.fromEntries(REPORTS.map(([k, n]) => [k, n]));
 export const TASK_VIEWS = { my: "My tasks", assigned: "Assigned by me", team: "Team tasks" };
-const ANALYTICS_PAGES = [["", "Overview"], ["teams", "Teams"], ["people", "People"], ["compare", "Compare"], ["trends", "Trends"], ["soc", "SOC operations"], ["alerts", "Alerts & insights"], ["report", "Executive report"]];
+const ANALYTICS_PAGES = [["", "Overview"], ["teams", "Teams"], ["people", "People"], ["compare", "Compare"], ["trends", "Trends"], ["soc", "SOC operations"], ["alerts", "Alerts & insights"], ["kpi", "KPI evaluation"], ["kpi/settings", "KPI settings"], ["report", "Executive report"]];
 
 /** Sidebar groups for a user. Operational work first, then insights, then organisation. */
 export function navFor(me, counts = {}) {
@@ -100,6 +100,7 @@ export function crumbsFor(path, peopleMap, me) {
         const name = peopleMap[decodeURIComponent(c)]?.name;
         return isManager(me) ? [{ label: "Analytics", href: "/analytics" }, { label: "People", href: "/analytics/people" }, { label: name ?? "Person" }] : [{ label: "My statistics" }];
       }
+      if (b === "kpi" && c === "settings") return [{ label: "Analytics", href: "/analytics" }, { label: "KPI evaluation", href: "/analytics/kpi" }, { label: "KPI settings" }];
       return [{ label: "Analytics", href: b ? "/analytics" : undefined }, { label: ANALYTICS_PAGES.find(([k]) => k === (b ?? ""))?.[1] ?? "Overview" }];
     }
     case "reports":
