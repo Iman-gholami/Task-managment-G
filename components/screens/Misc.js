@@ -23,6 +23,7 @@ const PERMISSIONS = [
   ["Approve or return tasks in review", NO, NO, "Yes, except their own", "Yes, except their own"],
   ["Reopen approved tasks", NO, NO, "Yes", "Yes"],
   ["Keep a Shift Log", "SOC · L1–L3 only", NO, NO, NO],
+  ["Define Shift Log checklists and assign them to SOC groups", NO, NO, "Yes", "Yes"],
   ["View performance", "Their own", "Their own", "Everyone", "Everyone"],
   ["Reports and Excel export", "Own data (no team report)", "Own data (no team report)", "All reports", "All reports"],
   ["Add, edit and remove members", NO, NO, "SOC analysts", "Everyone except Security Managers"],

@@ -1,6 +1,6 @@
 // Navigation model for the app shell: sidebar groups, breadcrumbs and command-menu pages.
 import { REPORTS } from "@/lib/reports";
-import { isManager } from "@/lib/roles";
+import { canManageChecklists, isManager } from "@/lib/roles";
 
 const REPORT_NAMES = Object.fromEntries(REPORTS.map(([k, n]) => [k, n]));
 export const TASK_VIEWS = { my: "My tasks", assigned: "Assigned by me", team: "Team tasks" };
@@ -28,6 +28,7 @@ export function navFor(me, counts = {}) {
             { href: "/shift/schedule", label: "Calendar" },
             { href: "/shift/changes", label: "Shift changes" },
             manager && { href: "/shift/manage", label: "Log corrections" },
+            canManageChecklists(me) && { href: "/shift/checklists", label: "Log checklists" },
           ].filter(Boolean),
         },
       ].filter(Boolean),
@@ -86,6 +87,7 @@ export function crumbsFor(path, peopleMap, me) {
       if (b === "schedule") return [{ label: "Shift Schedule" }];
       if (b === "changes") return [{ label: "Shift Schedule", href: "/shift/schedule" }, { label: "Shift changes" }];
       if (b === "manage") return [{ label: "Shift Schedule", href: "/shift/schedule" }, { label: "Log corrections" }];
+      if (b === "checklists") return [{ label: "Shift Schedule", href: "/shift/schedule" }, { label: "Log checklists" }];
       return [{ label: "Shift Log", href: "/shift" }, { label: b === "history" ? "History" : "Today" }];
     case "team":
       return [{ label: "Team" }];

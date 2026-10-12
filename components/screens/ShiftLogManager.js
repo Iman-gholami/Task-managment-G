@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { api, useApp } from "@/components/AppProvider";
 import Icon from "@/components/ui/Icon";
 import { PageHeader, Panel } from "@/components/ui/layout";
@@ -15,41 +15,51 @@ export default function ShiftLogManager() {
   const [log, setLog] = useState(null);
   const [loading, setLoading] = useState(false);
   const [missing, setMissing] = useState(false);
+  // The selection a response belongs to. Answers for an earlier selection are dropped, so the screen never shows
+  // one analyst's log while the selection (and therefore any correction) points at another.
+  const selection = useRef("");
+  selection.current = `${userId}|${date}`;
+  const requests = useRef(0);
 
   const load = useCallback(async () => {
     if (!userId || !date) return;
+    const request = ++requests.current;
     setLoading(true);
     setMissing(false);
+    setLog(null);
     try {
       const data = await api(`/api/shift?user=${encodeURIComponent(userId)}&date=${encodeURIComponent(date)}`);
-      setLog(data);
+      if (request === requests.current) setLog(data);
     } catch (error) {
-      setLog(null);
+      if (request !== requests.current) return;
       if (error.status === 404) setMissing(true);
       else toast(error.message, "error");
     } finally {
-      setLoading(false);
+      if (request === requests.current) setLoading(false);
     }
   }, [userId, date, toast]);
 
   useEffect(() => { load(); }, [load]);
 
-  const patchActivity = async (n, patch) => {
+  const patchActivity = async (activity, patch) => {
+    const target = selection.current;
     try {
-      const result = await api("/api/shift", { method: "PATCH", body: { user: userId, date, n, patch } });
-      setLog(result.log);
+      const result = await api("/api/shift", { method: "PATCH", body: { user: userId, date, n: activity.n, itemId: activity.itemId ?? null, patch } });
+      if (selection.current === target) setLog(result.log);
       toast("Shift log corrected");
       return true;
     } catch (error) {
-      toast(error.message, "error");
+      if (error.data?.stale && error.data.log && selection.current === target) setLog(error.data.log);
+      toast(error.message, error.data?.stale ? "info" : "error");
       return false;
     }
   };
 
   const complete = async () => {
+    const target = selection.current;
     try {
       const result = await api("/api/shift", { method: "PATCH", body: { user: userId, date, completed: true } });
-      setLog(result);
+      if (selection.current === target) setLog(result);
       toast("Shift log marked completed");
     } catch (error) {
       toast(error.message, "error");
@@ -100,6 +110,7 @@ export default function ShiftLogManager() {
                 <div><dt><small>Analyst</small></dt><dd>{person?.name ?? userId}</dd></div>
                 <div><dt><small>Date</small></dt><dd>{longDate(log.date)} · {weekday(log.date)}</dd></div>
                 <div><dt><small>Shift</small></dt><dd>{log.shift?.label ?? log.shiftType}</dd></div>
+                <div><dt><small>Checklist</small></dt><dd dir="auto">{log.checklist ? `${log.checklist.name}${log.checklist.version ? ` · v${log.checklist.version}` : ""}` : "None assigned"}</dd></div>
                 <div><dt><small>Status</small></dt><dd>{log.completedAt ? <span className="badge dot success">Submitted & locked</span> : <span className="badge dot info">Incomplete</span>}</dd></div>
                 <div><dt><small>Activities</small></dt><dd>{done} of {log.activities.length}</dd></div>
                 <div><dt><small>Correction policy</small></dt><dd>Manager-only after submission</dd></div>
@@ -112,7 +123,7 @@ export default function ShiftLogManager() {
             meta={log.completedAt ? "Manager corrections do not unlock this log for the analyst" : "You may correct the log and complete it when all activities are done"}
           >
             {log.activities.map((activity) => (
-              <ManagerActivity key={activity.n} activity={activity} onPatch={(patch) => patchActivity(activity.n, patch)} />
+              <ManagerActivity key={`${activity.n}-${activity.itemId ?? "built-in"}`} activity={activity} onPatch={(patch) => patchActivity(activity, patch)} />
             ))}
           </Panel>
 
@@ -165,9 +176,11 @@ function ManagerActivity({ activity, onPatch }) {
           onChange={() => onPatch({ done: !activity.done })}
           aria-label={`${activity.title} done`}
         />
-        <div className="t">
+        <div className="t" dir="auto">
           {activity.title}
+          {activity.hint && <small>{activity.hint}</small>}
           {activity.issue && <small>Issue: {activity.issue.summary}</small>}
+          {activity.correctedAt && <small>Corrected by a manager</small>}
         </div>
         <div className="act-tools">
           <button type="button" className={`toggle-done ${activity.done ? "on" : ""}`} onClick={() => onPatch({ done: !activity.done })}>

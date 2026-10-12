@@ -25,6 +25,8 @@ function reducer(state, action) {
       return { ...state, tickets: action.tickets };
     case "shift/complete":
       return { ...state, shiftDone: action.value };
+    case "shift/set":
+      return { ...state, activities: action.log.activities, tickets: action.log.tickets, shiftDone: !!action.log.completedAt, shiftChecklist: action.log.checklist ?? null, shiftTeam: action.log.team ?? state.shiftTeam };
     case "users/add":
       return { ...state, users: [...state.users, action.user].sort((a, b) => a.name.localeCompare(b.name)) };
     case "users/update":
@@ -49,12 +51,16 @@ function writePref(key, value) {
   } catch {}
 }
 
-/** Error from the app's API. `kind` is "network" when the server couldn't be reached; `status` is the HTTP status otherwise. */
+/**
+ * Error from the app's API. `kind` is "network" when the server couldn't be reached; `status` is the HTTP status otherwise.
+ * `data` is the response body (e.g. per-field `errors`, or the current shift log after a `stale` write).
+ */
 export class ApiError extends Error {
-  constructor(message, { status = 0, kind = "http" } = {}) {
+  constructor(message, { status = 0, kind = "http", data = null } = {}) {
     super(message);
     this.status = status;
     this.kind = kind;
+    this.data = data;
   }
 }
 
@@ -71,7 +77,7 @@ export async function api(url, { method = "GET", body } = {}) {
   if (res.status === 401 && !url.startsWith("/api/auth/")) window.location.href = "/login";
   if (!res.ok) {
     const fallback = res.status >= 500 ? "The server couldn't complete the request. Try again in a moment." : "Something went wrong. Try again.";
-    throw new ApiError(json.error || fallback, { status: res.status });
+    throw new ApiError(json.error || fallback, { status: res.status, data: json });
   }
   return json;
 }
@@ -87,6 +93,8 @@ export default function AppProvider({ children, initial }) {
     tickets: initial.shift.tickets,
     shiftDone: !!initial.shift.completedAt,
     shiftDate: initial.shift.date,
+    shiftChecklist: initial.shift.checklist ?? null,
+    shiftTeam: initial.shift.team ?? initial.me.team,
     stats: initial.stats,
   });
   const role = dashboardFor(initial.me);
