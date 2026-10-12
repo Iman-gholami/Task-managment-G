@@ -367,7 +367,7 @@ html.an-present .an-status b { font-size: var(--fs-18); }
 .an-kpi-groups{margin-block:14px}
 .an-kpi-group{display:flex;flex-direction:column;gap:5px;min-height:126px}
 .an-kpi-group strong{font-size:1.8rem;line-height:1.1;font-variant-numeric:tabular-nums}
-.an-kpi-progress{height:7px;background:var(--surface-3);border-radius:999px;overflow:hidden;margin-top:auto}
+.an-kpi-progress{height:7px;background:var(--surface-inset);border-radius:999px;overflow:hidden;margin-top:auto}
 .an-kpi-progress i{display:block;height:100%;border-radius:inherit;background:var(--accent);transition:width .2s ease}
 .an-kpi-score{display:inline-flex;align-items:baseline;gap:7px;white-space:nowrap}
 .an-kpi-score b{font-variant-numeric:tabular-nums;font-size:1.02rem}
@@ -376,12 +376,12 @@ html.an-present .an-status b { font-size: var(--fs-18); }
 .an-kpi-score[data-grade="improve"] b,.an-kpi-score[data-grade="weak"] b{color:var(--danger)}
 .an-kpi-editor{display:grid;gap:14px}
 .an-kpi-summary{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px}
-.an-kpi-summary>div{border:1px solid var(--line);background:var(--surface-2);border-radius:var(--radius-md);padding:12px;display:flex;flex-direction:column;gap:4px}
-.an-kpi-summary>div.primary{background:var(--accent-soft);border-color:var(--accent-line)}
+.an-kpi-summary>div{border:1px solid var(--border);background:var(--surface-2);border-radius:var(--r-md);padding:12px;display:flex;flex-direction:column;gap:4px}
+.an-kpi-summary>div.primary{background:var(--primary-soft);border-color:color-mix(in oklab, var(--primary) 30%, var(--border))}
 .an-kpi-summary span{font-size:.78rem;color:var(--text-3)}
 .an-kpi-summary b{font-size:1.25rem}
 .an-kpi-editor>h3{font-size:1rem;margin:4px 0 -4px}
-.an-kpi-item{border:1px solid var(--line);border-radius:var(--radius-md);padding:12px;background:var(--surface-1)}
+.an-kpi-item{border:1px solid var(--border);border-radius:var(--r-md);padding:12px;background:var(--surface-card)}
 .an-kpi-item-head{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
 .an-kpi-item-head>div:first-child{flex:1;min-width:240px}
 .an-kpi-item-head small{display:block;color:var(--text-3);font-weight:400;margin-top:2px}
@@ -391,20 +391,20 @@ html.an-present .an-status b { font-size: var(--fs-18); }
 .an-kpi-readonly{display:flex;align-items:center;background:var(--surface-2);color:var(--text-2);min-height:38px}
 .an-kpi-summary-form{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}
 .an-kpi-summary-form .textarea{min-height:86px}
-.an-kpi-actions{display:flex;align-items:center;justify-content:flex-end;gap:8px;flex-wrap:wrap;border-top:1px solid var(--line);padding-top:12px}
+.an-kpi-actions{display:flex;align-items:center;justify-content:flex-end;gap:8px;flex-wrap:wrap;border-top:1px solid var(--border);padding-top:12px}
 .an-kpi-actions>.muted{margin-inline-end:auto}
 .an-kpi-scope-tabs{display:flex;gap:7px;flex-wrap:wrap;margin-bottom:12px}
 .an-kpi-settings-grid{display:grid;grid-template-columns:1fr 1fr 1fr 1.4fr;gap:12px;margin-bottom:20px}
 .an-kpi-settings-grid small{color:var(--text-3)}
 .an-kpi-cx{display:grid;grid-template-columns:repeat(4,1fr);gap:6px}
-.an-kpi-settings-section{border-top:1px solid var(--line);padding-top:16px;margin-top:16px}
+.an-kpi-settings-section{border-top:1px solid var(--border);padding-top:16px;margin-top:16px}
 .an-kpi-settings-head{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:8px}
 .an-kpi-settings-head h3{margin:0;font-size:1rem}
 .an-kpi-settings-table td:nth-child(2){width:90px}
 .an-kpi-settings-table td:nth-child(3){width:180px}
 .an-kpi-settings-table td:last-child{width:48px}
 .an-kpi-versions{display:grid;gap:8px}
-.an-kpi-versions>div{display:grid;grid-template-columns:70px 1fr auto;gap:12px;align-items:center;border-bottom:1px solid var(--line);padding:8px 2px}
+.an-kpi-versions>div{display:grid;grid-template-columns:70px 1fr auto;gap:12px;align-items:center;border-bottom:1px solid var(--border);padding:8px 2px}
 .an-kpi-versions>div:last-child{border-bottom:0}
 .an-kpi-versions small{color:var(--text-3);direction:ltr}
 @media(max-width:1100px){
