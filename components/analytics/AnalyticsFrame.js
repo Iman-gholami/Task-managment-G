@@ -20,6 +20,8 @@ export const TABS = [
   ["/analytics/trends", "روندها", "perf"],
   ["/analytics/soc", "عملیات SOC", "activity"],
   ["/analytics/alerts", "هشدارها و بینش‌ها", "alert"],
+  ["/analytics/kpi", "ارزیابی KPI", "perf"],
+  ["/analytics/kpi/settings", "تنظیمات KPI", "admin"],
   ["/analytics/report", "گزارش مدیریتی", "report"],
 ];
 
@@ -147,7 +149,7 @@ export default function AnalyticsFrame({ title, subtitle, actions, exportKind = 
       {tabs && a.manager && (
         <nav className="an-tabs an-no-print" aria-label="بخش‌های داشبورد">
           {visibleTabs.map(([href, label, icon]) => {
-            const on = href === "/analytics" ? path === href : path.startsWith(href);
+            const on = href === "/analytics" || href === "/analytics/kpi" ? path === href : path.startsWith(href);
             return (
               <Link key={href} href={a.href(href)} className={on ? "on" : ""} aria-current={on ? "page" : undefined}>
                 <Icon name={icon} />{label}
