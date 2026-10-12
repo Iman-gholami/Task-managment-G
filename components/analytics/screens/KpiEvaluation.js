@@ -22,7 +22,7 @@ export default function KpiEvaluation() {
     <AnalyticsFrame
       title="ارزیابی KPI"
       subtitle="امتیازدهی روی داده‌های واقعی Analytics + ارزیابی مدیر"
-      actions={<Link className="btn btn-ghost" href={a.href("/analytics/kpi/settings")}><Icon name="settings" />تنظیمات KPI</Link>}
+      actions={<Link className="btn btn-ghost" href={a.href("/analytics/kpi/settings")}><Icon name="admin" />تنظیمات KPI</Link>}
     >
       <KpiEvaluationBody />
     </AnalyticsFrame>
