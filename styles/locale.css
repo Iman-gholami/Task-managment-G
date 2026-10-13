@@ -1,0 +1,36 @@
+/* Locale-specific typography.
+   Direction and mirroring stay in rtl.css; this layer only selects the language type system.
+   Root <html lang> is resolved on the server, so the correct font is present on first paint. */
+
+:root[lang="fa"] {
+  --font-sans: var(--font-vazirmatn), Tahoma, Arial, sans-serif;
+  --type-display:    var(--fw-semibold) var(--fs-28)/1.35 var(--font-sans);
+  --type-page-title: var(--fw-semibold) var(--fs-24)/1.45 var(--font-sans);
+  --type-section:    var(--fw-semibold) var(--fs-15)/1.6 var(--font-sans);
+  --type-card-title: var(--fw-semibold) 13.5px/1.6 var(--font-sans);
+  --type-body:       var(--fw-regular) var(--fs-14)/1.75 var(--font-sans);
+  --type-prose:      var(--fw-regular) var(--fs-15)/1.8 var(--font-sans);
+  --type-body-sm:    var(--fw-regular) var(--fs-13)/1.7 var(--font-sans);
+  --type-table:      var(--fw-regular) var(--fs-13)/1.6 var(--font-sans);
+  --type-label:      var(--fw-medium) 12.5px/1.6 var(--font-sans);
+  --type-caption:    var(--fw-regular) 12.5px/1.65 var(--font-sans);
+  --type-kpi:        var(--fw-semibold) var(--fs-28)/1.2 var(--font-sans);
+  --type-overline:   var(--fw-medium) 11.5px/1.5 var(--font-sans);
+  --tracking-title: 0;
+  --tracking-ui: 0;
+  --tracking-caps: 0;
+}
+
+:root[lang="fa"] body,
+:root[lang="fa"] :is(button, input, select, textarea) {
+  letter-spacing: 0;
+}
+
+:root[lang="fa"] :is(.eyebrow, .nav-label, .side-h) {
+  text-transform: none;
+  letter-spacing: 0;
+}
+
+:root[lang="en"] {
+  --font-sans: var(--font-geist), "Geist", var(--font-vazirmatn), ui-sans-serif, system-ui, sans-serif;
+}
