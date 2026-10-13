@@ -15,6 +15,15 @@ const ids = {};
 
 test.describe.configure({ mode: "serial" });
 
+/**
+ * These specs were written against the English screens (and the Persian analytics screens). The app now defaults to
+ * Persian, so each block pins the language its screens used before with the language cookie.
+ */
+async function pinLocale(context, baseURL, locale) {
+  await context.addCookies([{ name: "so_lang", value: locale, url: baseURL }]);
+}
+test.beforeEach(async ({ context, baseURL }) => pinLocale(context, baseURL, "en"));
+
 async function signIn(page, who) {
   const creds = who === "admin" ? ADMIN : { email: U[who].email, password: PW };
   const res = await page.request.post("/api/auth/login", { data: creds });
@@ -425,6 +434,8 @@ test.describe("members and accounts", () => {
 });
 
 test.describe("analytics (management dashboard)", () => {
+  test.beforeEach(async ({ context, baseURL }) => pinLocale(context, baseURL, "fa"));
+
   test("security manager sees real figures; status changes are recorded as structured history", async ({ page }) => {
     await signIn(page, "admin");
     const facts = await (await page.request.get("/api/analytics")).json();
@@ -575,6 +586,7 @@ test.describe("themes", () => {
     await expect.poll(theme).toBe("dark");
 
     await page.context().clearCookies();
+    await pinLocale(page.context(), new URL(page.url()).origin, "en");
     await page.goto("/login");
     expect(await theme()).toBe("dark");
     await page.getByRole("radio", { name: "Black Gold" }).click();

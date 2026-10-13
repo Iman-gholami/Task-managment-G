@@ -17,6 +17,10 @@ const L2 = "Layer 2 technical routine";
 const L2_ITEMS = ["Review escalated incidents", "Investigate unresolved alerts", "Verify ongoing incident investigations", "Complete technical shift handover"];
 
 test.describe.configure({ mode: "serial" });
+// Written against the English screens; the app now defaults to Persian, so pin the language cookie.
+test.beforeEach(async ({ context, baseURL }) => {
+  await context.addCookies([{ name: "so_lang", value: "en", url: baseURL }]);
+});
 
 async function signIn(page, who) {
   const creds = who === "admin" ? ADMIN : { email: P[who].email, password: PW };
