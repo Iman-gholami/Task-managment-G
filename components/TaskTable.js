@@ -8,7 +8,7 @@ import Icon from "@/components/ui/Icon";
 import { Complexity, Due, Priority, Quality, Status, Who } from "@/components/ui/indicators";
 import { EmptyState } from "@/components/ui/states";
 import { prioItems } from "@/components/ui/menus";
-import { PRIO, QUAL, STATUS } from "@/lib/format";
+import { CX, PRIO, QUAL, STATUS } from "@/lib/format";
 import { isManager } from "@/lib/roles";
 import { actionLabel, allowedTransitions } from "@/lib/workflow";
 
@@ -19,6 +19,13 @@ const HEAD = { title: "Task", a: "Assignee", team: "Team", status: "Status", pri
 const PRIMARY = new Set(["title", "status", "prio", "due", "a"]);
 
 export const qualityItems = () => Object.entries(QUAL).map(([v, l], i) => ({ value: v, label: <Quality q={v} />, kbd: String(i + 1) }));
+const approvalComplexityItems = (task) => [1, 2, 3, 4].map((cx) => ({
+  value: cx,
+  label: <Complexity c={cx} />,
+  hint: cx === task.cx ? "current" : undefined,
+  checked: cx === task.cx,
+  kbd: String(cx),
+}));
 
 /**
  * Workflow-aware status/priority editing shared by the table, details and keyboard shortcuts.
@@ -33,8 +40,18 @@ export function useTaskActions() {
         title: "Approve with quality",
         force: true,
         items: qualityItems(),
-        onPick: async (quality) => {
-          if (await updateTask(task, { status: "done", quality })) toast(`${task.id} approved · ${QUAL[quality]}`);
+        onPick: (quality) => {
+          openPopover(anchor, {
+            title: "Confirm complexity",
+            force: true,
+            header: task.createdBy === task.a
+              ? <div className="muted small" style={{ padding: "0 12px 8px" }}>Created by the assignee — check the complexity</div>
+              : null,
+            items: approvalComplexityItems(task),
+            onPick: async (cx) => {
+              if (await updateTask(task, { status: "done", quality, cx })) toast(`${task.id} approved · ${QUAL[quality]} · ${CX[cx]}`);
+            },
+          });
         },
       });
     }

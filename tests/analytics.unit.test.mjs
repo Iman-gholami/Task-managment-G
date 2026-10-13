@@ -8,7 +8,7 @@ import { backlogSeries, openStats, peopleRows, stats, teamRows } from "../lib/an
 import { buildAlerts, overallStatus } from "../lib/analytics/alerts.js";
 import { buildInsights } from "../lib/analytics/insights.js";
 import { mockFacts } from "../lib/analytics/mock.js";
-import { buildActivityLeaderboard, cohortFor } from "../lib/analytics/performance.js";
+import { buildScoreLeaderboard, cohortFor, scoreLeaderboard, taskPoints } from "../lib/analytics/performance.js";
 
 test("Jalali conversion matches Intl's persian calendar for every day of 2015–2035", () => {
   const fmt = new Intl.DateTimeFormat("en-u-ca-persian-nu-latn", { timeZone: "UTC", year: "numeric", month: "numeric", day: "numeric" });
@@ -114,6 +114,7 @@ function fixture() {
       { a: "b", date: "2026-10-06", type: "night", log: false, closed: false, done: 0, total: 0, acts: Array(8).fill(null), iocs: 0, report: false, issues: 0 },
     ],
     tickets: [{ a: "a", date: "2026-10-04", n: 3 }, { a: "a", date: "2026-10-05", n: 1 }],
+    reviews: [],
   };
 }
 
@@ -196,22 +197,79 @@ test("demo data is deterministic and produces alerts and insights", () => {
 });
 
 
-test("peer activity ranking is isolated by cohort and ranks visible output", () => {
-  const person = (id, level) => ({ id, name: id, role: "analyst", group: "SOC", level, shift: true, manager: false });
-  assert.equal(cohortFor(person("l1-a", "L1")).key, "SOC|L1");
-  assert.equal(cohortFor(person("l2-a", "L2")).key, "SOC|L2");
-
-  const rows = [
-    { person: person("l1-a", "L1"), cur: { units: 20, completed: 8, actsDone: 40, closureRate: 1 } },
-    { person: person("l1-b", "L1"), cur: { units: 14, completed: 9, actsDone: 30, closureRate: 0.9 } },
-    { person: person("l1-c", "L1"), cur: { units: 8, completed: 4, actsDone: 20, closureRate: 0.8 } },
+test("weighted peer score favors difficulty and quality over raw task count", () => {
+  const range = { from: "2026-10-01", to: "2026-10-31", end: "2026-10-31" };
+  const person = (id) => ({ id, name: id, role: "engineer", group: "Design & Automation", level: null, shift: false, manager: false, active: true });
+  const done = (id, a, cx, quality, extra = {}) => ({
+    id, title: id, a, status: "done", prio: "normal", cx, due: null, hours: 1, quality,
+    created: "2026-10-01", started: "2026-10-02", submitted: "2026-10-03", completed: "2026-10-04",
+    cycle: 2, returns: [], blockedSince: null, reviewSince: null, closed: "2026-10-04", ...extra,
+  });
+  const a = person("twenty-simple");
+  const b = person("five-complex");
+  const tasks = [
+    ...Array.from({ length: 20 }, (_, i) => done(`a-${i}`, a.id, 1, "good", { hours: 99, prio: "critical", returns: ["2026-10-03"] })),
+    ...Array.from({ length: 5 }, (_, i) => done(`b-${i}`, b.id, 3, "excellent", { hours: 0.5, prio: "low", returns: [] })),
   ];
-
-  const ranked = buildActivityLeaderboard(rows);
-  assert.deepEqual(ranked.map((r) => r.person.id), ["l1-a", "l1-b", "l1-c"]);
+  const facts = { today: "2026-10-31", people: [a, b], tasks, shifts: [], tickets: [], reviews: [] };
+  const rows = [
+    { person: a, cur: { completed: 20, units: 20, hours: 1980 } },
+    { person: b, cur: { completed: 5, units: 15, hours: 2.5 } },
+  ];
+  const ranked = buildScoreLeaderboard(rows, facts, range);
+  assert.equal(ranked.find((r) => r.person.id === a.id).score, 20);
+  assert.ok(Math.abs(ranked.find((r) => r.person.id === b.id).score - 36) < 1e-9);
+  assert.equal(ranked[0].person.id, b.id);
   assert.equal(ranked[0].rank, 1);
-  assert.ok(ranked[0].score <= 100 && ranked[0].score > ranked[1].score);
-  assert.equal(ranked.find((r) => r.person.id === "l1-b").ranks.completed, 1);
-  assert.equal(ranked.find((r) => r.person.id === "l1-a").ranks.units, 1);
-  assert.equal(ranked.find((r) => r.person.id === "l1-a").ranks.actsDone, 1);
 });
+
+test("task score uses configured quality, unrated and submitted-date late factors only", () => {
+  assert.ok(Math.abs(taskPoints({ cx: 2, quality: "excellent" }).score - 3.6) < 1e-9);
+  assert.equal(taskPoints({ cx: 2, quality: "good" }).score, 3);
+  assert.ok(Math.abs(taskPoints({ cx: 2, quality: "acceptable" }).score - 1.8) < 1e-9);
+  assert.ok(Math.abs(taskPoints({ cx: 2, quality: "needs" }).score - 0.6) < 1e-9);
+  assert.equal(taskPoints({ cx: 2, quality: null }).score, 3);
+
+  const onTimeSubmission = taskPoints({ cx: 4, quality: "good", due: "2026-10-05", submitted: "2026-10-05", completed: "2026-10-10", hours: 500, prio: "critical", returns: ["2026-10-06"] });
+  assert.equal(onTimeSubmission.late, false, "late manager approval must not penalize the analyst");
+  assert.equal(onTimeSubmission.score, 10);
+
+  const lateSubmission = taskPoints({ cx: 4, quality: "good", due: "2026-10-05", submitted: "2026-10-06", completed: "2026-10-06" });
+  assert.equal(lateSubmission.late, true);
+  assert.equal(lateSubmission.score, 9);
+  assert.equal(lateSubmission.penalty, 1);
+
+  const noDeadline = taskPoints({ cx: 4, quality: "good", due: null, submitted: "2026-10-30", completed: "2026-10-30" });
+  assert.equal(noDeadline.late, false);
+  assert.equal(noDeadline.score, 10);
+
+  const noisy = taskPoints({ cx: 3, quality: "good", hours: 999, prio: "critical", returns: ["a", "b"], createdBy: "manager" });
+  const plain = taskPoints({ cx: 3, quality: "good", hours: 0, prio: "low", returns: [], createdBy: "self" });
+  assert.deepEqual(noisy, plain, "hours, priority, returns and creator do not affect score");
+});
+
+test("monthly shift review score uses overlap, stays within cohort and ties share rank", () => {
+  const range = { from: "2026-09-23", to: "2026-10-22", end: "2026-10-22" };
+  const person = (id, level) => ({ id, name: id, role: "analyst", group: "SOC", level, shift: true, manager: false, active: true });
+  const l1a = person("l1-a", "L1"), l1b = person("l1-b", "L1"), l2 = person("l2-a", "L2");
+  assert.equal(cohortFor(l1a).key, "SOC|L1");
+  assert.equal(cohortFor(l2).key, "SOC|L2");
+  const rows = [l1a, l1b].map((p) => ({ person: p, cur: { completed: 0, units: 0, hours: 0 } }));
+  const facts = {
+    today: "2026-10-22", people: [l1a, l1b, l2], tasks: [], shifts: [], tickets: [],
+    reviews: [
+      { a: l1a.id, month: "1405-07", from: "2026-09-23", to: "2026-10-22", rating: "good" },
+      { a: l1a.id, month: "1405-06", from: "2026-08-23", to: "2026-09-22", rating: "excellent" },
+      { a: l1b.id, month: "1405-07", from: "2026-09-23", to: "2026-10-22", rating: "good" },
+      { a: l2.id, month: "1405-07", from: "2026-09-23", to: "2026-10-22", rating: "excellent" },
+    ],
+  };
+  const ranked = buildScoreLeaderboard(rows, facts, range);
+  assert.deepEqual(ranked.map((r) => [r.person.id, r.score, r.rank]), [["l1-a", 3, 1], ["l1-b", 3, 1]]);
+  assert.equal(ranked[0].scoredReviews.length, 1, "non-overlapping month is ignored");
+
+  const board = scoreLeaderboard(facts, range, "SOC|L1");
+  assert.ok(board.rows.every((r) => r.person.level === "L1"), "L2 is isolated from the L1 cohort");
+  assert.equal(board.rows[0].leaderRatio, 1);
+});
+
