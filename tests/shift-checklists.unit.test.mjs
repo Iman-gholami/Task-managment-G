@@ -1,6 +1,6 @@
 // Server-level tests for configurable Shift Log checklists: migration of an existing database, checklist
 // versioning, group assignment, and per-analyst / per-shift completion. They run the real server modules
-// against temporary SQLite files (see tests/support/server-modules.mjs for how they load outside Next.js).
+// against temporary SQLite files (see scripts/support/server-modules.mjs for how they load outside Next.js).
 import test from "node:test";
 import assert from "node:assert/strict";
 import fs from "node:fs";

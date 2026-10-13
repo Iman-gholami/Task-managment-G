@@ -9,7 +9,8 @@
     "start": "node scripts/next.mjs start",
     "test": "npm run test:unit && playwright test",
     "seed:shifts": "node scripts/seed-shifts.mjs",
-    "test:unit": "node --disable-warning=ExperimentalWarning --conditions=react-server --import ./tests/support/server-modules.mjs --test tests/shifts.unit.test.mjs tests/analytics.unit.test.mjs tests/checklists.unit.test.mjs tests/shift-checklists.unit.test.mjs"
+    "seed:demo": "node --disable-warning=ExperimentalWarning --conditions=react-server --import ./scripts/support/server-modules.mjs scripts/seed-demo.mjs",
+    "test:unit": "node --disable-warning=ExperimentalWarning --conditions=react-server --import ./scripts/support/server-modules.mjs --test \"tests/*.unit.test.mjs\""
   },
   "engines": {
     "node": ">=22.13.0"
