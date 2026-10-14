@@ -40,7 +40,7 @@ test("a manager sets all three shifts with one save, including a Design engineer
   await dialog.getByRole("radio", { name: /شیفت صبح/ }).click();
   await expect(dialog.locator("label").filter({ hasText: "Rosta L1 Roster" }).locator("input[type=checkbox]")).toBeChecked();
 
-  await dialog.getByRole("button", { name: "ذخیره همه شیفت‌ها" }).click();
+  await dialog.getByRole("button", { name: "ذخیره برنامه روز" }).click();
   await expect(dialog).toHaveCount(0);
 
   const date = tehranDate();
@@ -62,4 +62,30 @@ test("a manager sets all three shifts with one save, including a Design engineer
   expect(log.activities).toHaveLength(8);
   await page.goto("/shift");
   await expect(page.getByText(/Shift Log —/)).toBeVisible();
+
+  // Re-open the same date and replace work assignments with off/leave,
+  // while retaining the unrelated night shift.
+  await page.request.post("/api/auth/login", { data: ADMIN });
+  await page.goto("/shift/schedule");
+  await page.getByRole("button", { name: "ثبت شیفت", exact: true }).first().click();
+  const edit = page.getByRole("dialog", { name: "ثبت شیفت" });
+  await edit.getByRole("radio", { name: /تعطیل شیفت/ }).click();
+  await edit.locator("label").filter({ hasText: "Rosta L1 Roster" }).locator("input[type=checkbox]").check();
+  await edit.getByRole("radio", { name: /مرخصی/ }).click();
+  await edit.locator("label").filter({ hasText: "Rosta Design Engineer" }).locator("input[type=checkbox]").check();
+  await edit.getByRole("button", { name: "ذخیره برنامه روز" }).click();
+  await expect(edit).toHaveCount(0);
+
+  const after = (await (await page.request.get(`/api/shift/schedule?from=${date}&to=${date}`)).json()).schedules;
+  expect(after.find((row) => row.userId === ids["l1@shift-roster.test"])?.shiftType).toBe("off");
+  expect(after.find((row) => row.userId === ids["design@shift-roster.test"])?.shiftType).toBe("leave");
+  expect(after.find((row) => row.userId === ids["l2@shift-roster.test"])?.shiftType).toBe("night");
+
+  await page.request.post("/api/auth/login", {
+    data: { email: "design@shift-roster.test", password: USER_PASSWORD },
+  });
+  expect((await page.request.get("/api/shift")).status()).toBe(404);
+  await page.goto("/shift");
+  await expect(page.getByText(/مرخصی/)).toBeVisible();
+
 });
