@@ -314,17 +314,17 @@ export function ShiftHistory() {
               <thead><tr><th scope="col">Date</th><th scope="col">Status</th><th scope="col">Checklist</th><th scope="col">Activities</th><th scope="col" className="r">IOCs</th><th scope="col" className="r">Tickets</th><th scope="col" className="r">Issues</th><th scope="col">Traffic report</th></tr></thead>
               <tbody>
                 {data.logs.map((r) => {
-                  const today = r.date === TODAY;
+                  const today = r.date === TODAY && !r.absence;
                   return (
                     <tr key={r.date} className={today ? "is-link" : ""} onClick={() => today && router.push("/shift")}>
                       <td className="title">{today ? <Link href="/shift">Today</Link> : fmtDate(r.date)} <span className="muted" style={{ fontWeight: 400 }}>· {weekday(r.date)}</span></td>
-                      <td>{r.completed ? <Status s="done" label="Completed" /> : today ? <Status s="progress" label="In progress" /> : <Status s="returned" label="Incomplete" />}</td>
+                      <td>{r.absence ? <span className="badge">{r.shiftType === "off" ? "تعطیل شیفت" : "مرخصی"}</span> : r.completed ? <Status s="done" label="Completed" /> : today ? <Status s="progress" label="In progress" /> : <Status s="returned" label="Incomplete" />}</td>
                       <td className="sec" dir="auto">{r.checklist ?? <span className="muted">None</span>}{r.checklistVersion ? <span className="muted"> · v{r.checklistVersion}</span> : null}</td>
-                      <td><Meter value={r.done} max={r.total} label={`Activities done on ${fmtDate(r.date)}`} tone="ok" readout={`${r.done}/${r.total}`} /></td>
+                      <td>{r.absence ? <span className="muted">—</span> : <Meter value={r.done} max={r.total} label={`Activities done on ${fmtDate(r.date)}`} tone="ok" readout={`${r.done}/${r.total}`} />}</td>
                       <td className="r">{r.iocs}</td>
                       <td className="r">{r.tickets || <span className="zero">0</span>}</td>
                       <td className="r">{r.issues || <span className="zero">0</span>}</td>
-                      <td>{r.report ? <span className="sec">Done</span> : <span className="muted">Not done</span>}</td>
+                      <td>{r.absence ? <span className="muted">—</span> : r.report ? <span className="sec">Done</span> : <span className="muted">Not done</span>}</td>
                     </tr>
                   );
                 })}
