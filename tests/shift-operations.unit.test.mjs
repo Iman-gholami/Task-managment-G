@@ -22,7 +22,7 @@ const { hashPassword } = await import("@/lib/server/password");
 const { isShiftAnalyst, routineStats } = await import("@/lib/server/stats");
 const { isShiftEligible, shiftChecklistTeam, canManageShift } = await import("../lib/roles.js");
 
-test("design engineer can work a Layer 3 SOC shift and all three shifts save atomically", () => {
+test("design engineer can work shifts, days off and leave atomically", async () => {
   const admin = repo.listUsers().find((user) => user.role === "security_manager");
   assert.ok(admin);
   const member = (name, role, team) => repo.createMember({
@@ -74,4 +74,46 @@ test("design engineer can work a Layer 3 SOC shift and all three shifts save ato
   assert.equal(repo.getShiftSchedule(l1.id, date).shiftType, "evening", "other assignment not partially saved");
   assert.equal(repo.getShiftSchedule(l2.id, date).shiftType, "night", "deletion not partially applied");
   assert.equal(repo.getShiftLog(design.id, date).activities[0].done, true, "recorded log retained");
+
+  // Off-duty and leave are explicit calendar entries, never counted as worked shifts.
+  const future = new Date(Date.parse(date + "T00:00:00Z") + 864e5).toISOString().slice(0, 10);
+  const planned = replaceDayShiftAssignments(future, {
+    morning: [], evening: [l1.id], night: [],
+    off: [l2.id], leave: [design.id],
+  }, admin.id);
+  assert.equal(planned.length, 3);
+  assert.equal(repo.getDayStatus(l2.id, future), "off");
+  assert.equal(repo.getDayStatus(design.id, future), "leave");
+  assert.equal(repo.getShiftSchedule(design.id, future), null);
+  assert.equal(repo.getShiftLog(design.id, future), null);
+  const { scheduleStats } = await import("../lib/shifts.js");
+  const totals = scheduleStats(planned);
+  assert.equal(totals.total, 1, "only worked shifts count as shifts");
+  assert.equal(totals.off, 1);
+  assert.equal(totals.leave, 1);
+  assert.equal(totals.hours, 12.5, "absence contributes no shift hours");
+
+  // A worker can move from an absence to a shift (or between absence kinds).
+  const revised = replaceDayShiftAssignments(future, {
+    morning: [design.id], evening: [], night: [],
+    off: [], leave: [l1.id, l2.id],
+  }, admin.id);
+  assert.equal(revised.length, 3);
+  assert.equal(repo.getDayStatus(design.id, future), null);
+  assert.equal(repo.getShiftSchedule(design.id, future).shiftType, "morning");
+  assert.equal(repo.getDayStatus(l1.id, future), "leave");
+  assert.equal(repo.getDayStatus(l2.id, future), "leave");
+
+  // A committed work log cannot silently turn into a day off or leave.
+  assert.throws(() => replaceDayShiftAssignments(date, {
+    morning: [], evening: [], night: [], off: [design.id], leave: [],
+  }, admin.id), /already has activity/);
+  assert.equal(repo.getShiftSchedule(design.id, date).shiftType, "night");
+  assert.equal(repo.getDayStatus(design.id, date), null);
+
+  const offStats = routineStats(design.id, { from: future, to: future });
+  assert.equal(offStats.offDays, 0);
+  assert.equal(offStats.leaveDays, 0, "engineer was moved from leave to work");
+  assert.equal(routineStats(l2.id, { from: future, to: future }).leaveDays, 1);
+
 });
