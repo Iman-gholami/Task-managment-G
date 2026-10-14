@@ -1,7 +1,7 @@
 import { isManager, requireUser } from "@/lib/server/auth";
 import { err } from "@/lib/server/access";
 import { listShiftSchedules, removeShiftSchedule, scheduleStatsByUser, setShiftSchedule } from "@/lib/server/repo";
-import { replaceShiftAssignments } from "@/lib/server/shift-batch";
+import { replaceDayShiftAssignments, replaceShiftAssignments } from "@/lib/server/shift-batch";
 import { isIsoDate, monthBounds } from "@/lib/shifts";
 import { isShiftAnalyst } from "@/lib/server/stats";
 
@@ -53,7 +53,7 @@ export async function POST(request) {
   }
 }
 
-/** Replace everyone assigned to one shift/date in a single transaction. */
+/** Replace all shifts for a day atomically; legacy clients may replace one shift. */
 export async function PUT(request) {
   const [user, denied] = await requireUser();
   if (denied) return denied;
@@ -61,12 +61,14 @@ export async function PUT(request) {
 
   const body = await request.json().catch(() => ({}));
   try {
-    const assignments = replaceShiftAssignments(
-      String(body.date || ""),
-      String(body.shiftType || ""),
-      Array.isArray(body.userIds) ? body.userIds.map(String) : [],
-      user.id
-    );
+    const assignments = body.assignments !== undefined
+      ? replaceDayShiftAssignments(String(body.date || ""), body.assignments, user.id)
+      : replaceShiftAssignments(
+          String(body.date || ""),
+          String(body.shiftType || ""),
+          Array.isArray(body.userIds) ? body.userIds.map(String) : [],
+          user.id
+        );
     return Response.json({ assignments });
   } catch (e) {
     return err(409, e.message);
