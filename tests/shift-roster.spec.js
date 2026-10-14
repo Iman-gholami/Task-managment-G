@@ -86,6 +86,6 @@ test("a manager sets all three shifts with one save, including a Design engineer
   });
   expect((await page.request.get("/api/shift")).status()).toBe(404);
   await page.goto("/shift");
-  await expect(page.getByText(/مرخصی/)).toBeVisible();
+  await expect(page.getByRole("heading", { name: /امروز برای شما.*مرخصی/ })).toBeVisible();
 
 });
