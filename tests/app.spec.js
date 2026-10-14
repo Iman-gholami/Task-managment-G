@@ -350,7 +350,7 @@ test.describe("performance", () => {
     await page.goto("/team");
     await page.locator("tr", { hasText: "Mina Sadeghi" }).locator("td.title").click();
     await expect(page.locator("h1")).toHaveText("Mina Sadeghi");
-    await expect(page.getByText("Routine Activity")).toHaveCount(0); // not a shift analyst
+    await expect(page.getByText("Routine Activity")).toHaveCount(1); // Design engineers may cover SOC shifts
   });
 
   test("analysts only see their own performance", async ({ page }) => {
