@@ -54,7 +54,7 @@ test("design engineer can work shifts, days off and leave atomically", async () 
 
   assert.throws(() => replaceDayShiftAssignments(date, {
     morning: [design.id], evening: [design.id], night: [],
-  }, admin.id), /multiple shifts/);
+  }, admin.id), /more than one work shift or absence/);
   assert.equal(repo.getShiftSchedule(design.id, date).shiftType, "evening");
 
   const updated = replaceDayShiftAssignments(date, {
