@@ -121,7 +121,7 @@ function MonthlyShiftReviews({ analytics, analysts }) {
 
 export default function Soc() {
   return (
-    <AnalyticsFrame title="عملیات شیفت SOC" subtitle="فقط تحلیلگران SOC (L1 تا L3)">
+    <AnalyticsFrame title="عملیات شیفت SOC" subtitle="شیفت‌های عملیاتی SOC شامل کارشناسان طراحی و خودکارسازی">
       <SocBody />
     </AnalyticsFrame>
   );
@@ -165,7 +165,7 @@ function SocBody() {
   const ticketBuild = useCallback(daily("tickets", "تیکت"), [m]); // eslint-disable-line react-hooks/exhaustive-deps
   const acts = useCallback((t) => hbarOption(t, { rows: ACTIVITIES_FA.map((label, i) => ({ label, value: cur.activityRates[i], note: `${faDigits(cur.activityN[i])} شیفت` })).filter((r) => r.value !== null), kind: "rate", max: 1, labelWidth: 260 }), [cur]);
 
-  if (!m.ids.length) return <Panel><AnEmpty icon="shift" title="تحلیلگر SOC در این دامنه نیست">شیفت‌لاگ فقط برای تحلیلگران SOC (L1 تا L3) ثبت می‌شود.</AnEmpty></Panel>;
+  if (!m.ids.length) return <Panel><AnEmpty icon="shift" title="تحلیلگر SOC در این دامنه نیست">شیفت‌لاگ برای نیروی برنامه‌ریزی‌شده SOC ثبت می‌شود؛ مرخصی و تعطیل شیفت نیاز به شیفت‌لاگ ندارند.</AnEmpty></Panel>;
 
   const typeCounts = SHIFT_KEYS.map((k) => cur.shiftTypes[k]);
   const columns = [
