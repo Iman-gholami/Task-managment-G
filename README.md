@@ -139,3 +139,9 @@ Shortcuts: `⌘K` / `Ctrl+K` searches tasks, people and pages, `C` creates a tas
 
 ### Themes
 Four themes: **Daylight** (light, teal), **Graphite** (dark slate, teal), **Black Gold** (black and gold) and **Midnight** (navy, violet and azure). Switch from the palette button in the top bar, **Account › Appearance**, the swatches on the sign-in page, or `⌘K` → "theme". The choice is remembered per device; without one, the OS light/dark setting decides. Colours and contrast checks are in `scripts/palette.mjs` and `design/DESIGN_SYSTEM.md`.
+
+## Shift off-duty and leave planning
+
+The Persian shift calendar includes two non-working day statuses: **تعطیل شیفت** (`off`) and **مرخصی** (`leave`). A manager can plan these alongside morning, extended (until 20:00) and night shifts in the same single-save editor; a person can have only one status per date. A day off or leave contributes **zero worked shift hours**, never opens a Shift Log, and is excluded from missed-log/closure-rate denominators. Off/leave dates remain visible in the calendar, individual history, SOC report summaries, analytics filters, individual/team metrics and raw Excel shift exports.
+
+Absences use a new `shift_day_statuses` SQLite table created automatically on first start; existing `shift_schedules` and `shift_logs` rows are preserved. Do not delete the bind-mounted production data when upgrading. Shifts with recorded activity cannot be converted to absences.

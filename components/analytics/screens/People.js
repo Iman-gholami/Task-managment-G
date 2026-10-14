@@ -59,6 +59,8 @@ function PeopleBody() {
     { key: "od", label: "معوق", kind: "count", value: (r) => r.open.overdue },
     ...(m.shift ? [
       { key: "s", label: "شیفت", kind: "count", value: (r) => (r.person.shift ? r.cur.shifts : null) },
+      { key: "off", label: "تعطیل شیفت", kind: "count", value: (r) => (r.person.shift ? r.cur.offDays : null) },
+      { key: "leave", label: "مرخصی", kind: "count", value: (r) => (r.person.shift ? r.cur.leaveDays : null) },
       { key: "cl", label: "بسته‌شدن لاگ", kind: "rate", value: (r) => (r.person.shift ? r.cur.closureRate : null) },
       { key: "rn", label: "روتین", kind: "rate", value: (r) => (r.person.shift ? r.cur.routineRate : null) },
       { key: "io", label: "IOC", kind: "count", value: (r) => (r.person.shift ? r.cur.iocs : null) },

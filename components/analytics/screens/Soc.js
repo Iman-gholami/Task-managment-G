@@ -121,7 +121,7 @@ function MonthlyShiftReviews({ analytics, analysts }) {
 
 export default function Soc() {
   return (
-    <AnalyticsFrame title="عملیات شیفت SOC" subtitle="فقط تحلیلگران SOC (L1 تا L3)">
+    <AnalyticsFrame title="عملیات شیفت SOC" subtitle="شیفت‌های عملیاتی SOC شامل کارشناسان طراحی و خودکارسازی">
       <SocBody />
     </AnalyticsFrame>
   );
@@ -165,12 +165,14 @@ function SocBody() {
   const ticketBuild = useCallback(daily("tickets", "تیکت"), [m]); // eslint-disable-line react-hooks/exhaustive-deps
   const acts = useCallback((t) => hbarOption(t, { rows: ACTIVITIES_FA.map((label, i) => ({ label, value: cur.activityRates[i], note: `${faDigits(cur.activityN[i])} شیفت` })).filter((r) => r.value !== null), kind: "rate", max: 1, labelWidth: 260 }), [cur]);
 
-  if (!m.ids.length) return <Panel><AnEmpty icon="shift" title="تحلیلگر SOC در این دامنه نیست">شیفت‌لاگ فقط برای تحلیلگران SOC (L1 تا L3) ثبت می‌شود.</AnEmpty></Panel>;
+  if (!m.ids.length) return <Panel><AnEmpty icon="shift" title="تحلیلگر SOC در این دامنه نیست">شیفت‌لاگ برای نیروی برنامه‌ریزی‌شده SOC ثبت می‌شود؛ مرخصی و تعطیل شیفت نیاز به شیفت‌لاگ ندارند.</AnEmpty></Panel>;
 
   const typeCounts = SHIFT_KEYS.map((k) => cur.shiftTypes[k]);
   const columns = [
     { key: "n", label: "تحلیلگر", value: (r) => r.person.name, render: (r) => <span className="an-person">{r.person.name}<small>{r.person.level}</small></span> },
     { key: "s", label: "شیفت", kind: "count", value: (r) => r.cur.shifts },
+    { key: "off", label: "تعطیل شیفت", kind: "count", value: (r) => r.cur.offDays },
+    { key: "leave", label: "مرخصی", kind: "count", value: (r) => r.cur.leaveDays },
     ...SHIFT_KEYS.map((k) => ({ key: k, label: SHIFT_FA[k], kind: "count", value: (r) => r.cur.shiftTypes[k] })),
     { key: "h", label: "ساعت شیفت", kind: "count", value: (r) => r.cur.shiftHours },
     { key: "c", label: "بسته‌شدن لاگ", kind: "rate", value: (r) => r.cur.closureRate },
@@ -186,6 +188,8 @@ function SocBody() {
     <>
       <MetricGrid label="شاخص‌های شیفت SOC">
         <Kpi label="شیفت‌ها" icon="cal" value={fmtInt(cur.shifts)} foot={SHIFT_KEYS.map((k, i) => `${SHIFT_FA[k]} ${faDigits(typeCounts[i])}`).join(" · ")} delta={prev && <Delta now={cur.shifts} before={prev.shifts} label={short} />} />
+        <Kpi label="تعطیل شیفت" icon="cal" value={fmtInt(cur.offDays)} foot="بدون شیفت‌لاگ؛ جزو شیفت کاری نیست" />
+        <Kpi label="مرخصی" icon="cal" value={fmtInt(cur.leaveDays)} foot="بدون شیفت‌لاگ؛ جزو شیفت کاری نیست" />
         <Kpi label="بسته‌شدن شیفت‌لاگ" icon="shift" value={fmtPct(cur.closureRate)} tone={cur.missed ? "alert" : undefined} delta={prev && cur.closureRate !== null && <Delta now={cur.closureRate} before={prev.closureRate} kind="rate" label={short} />} foot={cur.missed ? `${faDigits(cur.missed)} شیفت‌لاگ جامانده` : "بدون شیفت‌لاگ جامانده"} />
         <Kpi label="انجام روتین" icon="checkCircle" value={fmtPct(cur.routineRate)} delta={prev && cur.routineRate !== null && <Delta now={cur.routineRate} before={prev.routineRate} kind="rate" label={short} />} spark={<Sparkline values={m.series.map((x) => x.routineRate)} />} />
         <Kpi label="IOC ثبت‌شده" icon="shield" value={fmtInt(cur.iocs)} delta={prev && <Delta now={cur.iocs} before={prev.iocs} label={short} />} foot={`${fmtNum(cur.iocPerShift)} به ازای هر شیفت‌لاگ`} spark={<Sparkline values={m.series.map((x) => x.iocs)} />} />
