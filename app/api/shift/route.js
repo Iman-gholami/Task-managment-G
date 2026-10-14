@@ -1,4 +1,5 @@
-import { canManageMember, isManager, requireUser } from "@/lib/server/auth";
+import { isManager, requireUser } from "@/lib/server/auth";
+import { canManageShift } from "@/lib/roles";
 import { err } from "@/lib/server/access";
 import { findShiftLog, getShiftLog, getUser, setShiftCompleted, updateActivity } from "@/lib/server/repo";
 import { managerCompleteShiftLog, managerUpdateShiftActivity } from "@/lib/server/shift-log-admin";
@@ -16,7 +17,7 @@ const itemIdOf = (body) => (body.itemId === undefined ? undefined : body.itemId 
 
 function managedAnalyst(actor, id) {
   const owner = getUser(id);
-  return owner && isShiftAnalyst(owner) && canManageMember(actor, owner) ? owner : null;
+  return owner && canManageShift(actor, owner) ? owner : null;
 }
 
 /** GET ?user=<id>&date=<yyyy-mm-dd>: own log, or (managers) a managed analyst's log, read-only. */
