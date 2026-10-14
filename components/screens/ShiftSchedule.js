@@ -8,7 +8,7 @@ import Dialog from "@/components/ui/Dialog";
 import Icon from "@/components/ui/Icon";
 import Segmented from "@/components/ui/Segmented";
 import { Who } from "@/components/ui/indicators";
-import { isManager, SOC_TEAMS } from "@/lib/roles";
+import { isManager, isShiftEligible, shiftChecklistTeam } from "@/lib/roles";
 import { addDays } from "@/lib/format";
 import { scheduleStats, tehranDate } from "@/lib/shifts";
 import styles from "./ShiftSchedule.module.css";
@@ -75,7 +75,7 @@ export default function ShiftSchedule() {
   const { me, members, toast } = useApp();
   const manager = isManager(me);
   const analysts = useMemo(
-    () => members.filter((m) => m.active !== false && m.role === "analyst" && SOC_TEAMS.includes(m.team)),
+    () => members.filter((m) => isShiftEligible(m)),
     [members]
   );
 
@@ -84,7 +84,7 @@ export default function ShiftSchedule() {
   const [selectedUser, setSelectedUser] = useState("");
   const [selectedShift, setSelectedShift] = useState("morning");
   const [editor, setEditor] = useState(null);
-  const [draftIds, setDraftIds] = useState([]);
+  const [draftByShift, setDraftByShift] = useState({ morning: [], evening: [], night: [] });
   const [query, setQuery] = useState("");
   const [saving, setSaving] = useState(false);
 
@@ -102,6 +102,7 @@ export default function ShiftSchedule() {
   const selectedShiftRows = selectedRows.filter((row) => row.shiftType === selectedShift);
   const cells = useMemo(() => Array.from({ length: daysBetween(range.start, range.end) + 1 }, (_, i) => addDays(range.start, i)), [range.start, range.end]);
   const selectedPerson = analysts.find((a) => a.id === selectedUser);
+  const draftIds = editor ? (draftByShift[editor.shiftType] ?? []) : [];
   const visibleAnalysts = useMemo(() => {
     const q = query.trim().toLowerCase();
     return analysts.filter((a) => !q || `${a.name} ${a.team}`.toLowerCase().includes(q));
@@ -112,7 +113,10 @@ export default function ShiftSchedule() {
     setSelectedDate(date);
     setSelectedShift(shiftType);
     setEditor({ date, shiftType });
-    setDraftIds((byDate[date] ?? []).filter((row) => row.shiftType === shiftType).map((row) => row.userId));
+    const day = byDate[date] ?? [];
+    setDraftByShift(Object.fromEntries(SHIFT_KEYS.map((key) => [
+      key, day.filter((row) => row.shiftType === key).map((row) => row.userId),
+    ])));
     setQuery("");
   };
 
@@ -122,19 +126,31 @@ export default function ShiftSchedule() {
     if (!editor) return;
     setEditor({ ...editor, shiftType });
     setSelectedShift(shiftType);
-    setDraftIds((byDate[editor.date] ?? []).filter((row) => row.shiftType === shiftType).map((row) => row.userId));
+    // Keep unsaved selections on the other two shift tabs.
   };
 
   const toggleDraft = (userId) => {
-    setDraftIds((ids) => ids.includes(userId) ? ids.filter((id) => id !== userId) : [...ids, userId]);
+    if (!editor) return;
+    setDraftByShift((current) => {
+      const chosen = editor.shiftType;
+      const wasSelected = current[chosen].includes(userId);
+      return Object.fromEntries(SHIFT_KEYS.map((key) => [
+        key,
+        key === chosen
+          ? wasSelected
+            ? current[key].filter((id) => id !== userId)
+            : [...current[key], userId]
+          : current[key].filter((id) => id !== userId),
+      ]));
+    });
   };
 
   const save = async () => {
     if (!editor || saving) return;
     setSaving(true);
     try {
-      await api("/api/shift/schedule", { method: "PUT", body: { date: editor.date, shiftType: editor.shiftType, userIds: draftIds } });
-      toast("برنامه شیفت ذخیره شد");
+      await api("/api/shift/schedule", { method: "PUT", body: { date: editor.date, assignments: draftByShift } });
+      toast("شیفت‌های صبح، تا ۸ و شب با هم ذخیره شدند");
       setSelectedDate(editor.date);
       setSelectedShift(editor.shiftType);
       closeComposer();
@@ -346,7 +362,7 @@ export default function ShiftSchedule() {
         <Dialog
           label="ثبت شیفت"
           title={`ثبت شیفت · ${formatDate(editor.date)}`}
-          description="نیروهای این شیفت را انتخاب کنید. اگر فردی همان روز شیفت دیگری داشته باشد، به شیفت جدید منتقل می‌شود."
+          description="نیروهای هر سه شیفت را انتخاب کنید؛ انتخاب‌ها با تغییر تب باقی می‌مانند و در پایان همه با یک ذخیره ثبت می‌شوند. هر نفر در هر روز فقط یک شیفت دارد."
           onClose={closeComposer}
           width={640}
           className={styles.composer}
@@ -366,22 +382,22 @@ export default function ShiftSchedule() {
               {visibleAnalysts.length === 0 && <div className={styles.emptyPeople}>کارشناسی با این نام پیدا نشد.</div>}
               {visibleAnalysts.map((person) => {
                 const checked = draftIds.includes(person.id);
-                const current = (byDate[editor.date] ?? []).find((row) => row.userId === person.id);
+                const currentShift = SHIFT_KEYS.find((key) => draftByShift[key].includes(person.id));
                 return (
                   <label className={`${styles.memberRow} ${checked ? styles.memberRowChecked : ""}`} key={person.id}>
                     <input className="cb" type="checkbox" checked={checked} onChange={() => toggleDraft(person.id)} />
                     <Who id={person.id} />
-                    <span className={styles.memberTeam}>{person.team}</span>
-                    {current && <span className={styles.currentShift} data-shift={current.shiftType}>{SHIFT_META[current.shiftType].short}</span>}
+                    <span className={styles.memberTeam}>{person.team === "Design & Automation" ? "طراحی و خودکارسازی · شیفت لایه ۳" : shiftChecklistTeam(person)}</span>
+                    {currentShift && <span className={styles.currentShift} data-shift={currentShift}>{SHIFT_META[currentShift].short}</span>}
                   </label>
                 );
               })}
             </div>
           </div>
           <div className="modal-foot">
-            <span className={`lead ${styles.selectedCount}`}><b>{faNum(draftIds.length)}</b> نفر انتخاب شده</span>
+            <span className={`lead ${styles.selectedCount}`}>صبح: {faNum(draftByShift.morning.length)} · تا ۸: {faNum(draftByShift.evening.length)} · شب: {faNum(draftByShift.night.length)}</span>
             <button className="btn btn-ghost" onClick={closeComposer}>انصراف</button>
-            <button className="btn btn-primary" aria-busy={saving || undefined} disabled={saving} onClick={save}>ذخیره برنامه</button>
+            <button className="btn btn-primary" aria-busy={saving || undefined} disabled={saving} onClick={save}>ذخیره همه شیفت‌ها</button>
           </div>
         </Dialog>
       )}

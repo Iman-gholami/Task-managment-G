@@ -1,7 +1,7 @@
 "use client";
 
 import { createContext, useCallback, useContext, useEffect, useMemo, useReducer, useRef, useState } from "react";
-import { SOC_TEAMS, dashboardFor } from "@/lib/roles";
+import { isShiftEligible, dashboardFor } from "@/lib/roles";
 import { isOpen } from "@/lib/format";
 import Icon from "@/components/ui/Icon";
 import Popover from "@/components/ui/Popover";
@@ -160,7 +160,7 @@ export default function AppProvider({ children, initial }) {
   /** Active members enriched with live workload and today's shift status. */
   const members = useMemo(() => data.users.filter((u) => u.active).map((u) => {
     const open = data.tasks.filter((t) => t.a === u.id && isOpen(t)).length;
-    const isShiftAnalyst = u.role === "analyst" && SOC_TEAMS.includes(u.team);
+    const isShiftAnalyst = isShiftEligible(u);
     const shift = u.id === data.me.id ? (data.shiftDone ? "completed" : initial.shiftStatus[u.id]) : initial.shiftStatus[u.id];
     return { ...u, open, load: Math.min(100, Math.round((open / 6) * 100)), shift: isShiftAnalyst ? shift ?? "missing" : null };
   }), [data.users, data.tasks, data.me.id, data.shiftDone, initial.shiftStatus]);

@@ -19,7 +19,9 @@ The Security Department's internal work tool: Task Management, SOC Shift Logs, a
 - **My Tasks**: work assigned to you.
 
 ### Shift logs
-Only SOC analysts (SOC · L1/L2/L3) have a Shift Log. Managers, engineers and Threat Intelligence do not; managers see shift figures in **Performance** and the **SOC Shift Activity Report**.
+Staff scheduled for SOC shifts can complete a Shift Log on the assigned day: SOC L1/L2/L3 analysts and engineers, plus Design & Automation analysts/engineers. Design & Automation members retain their organisational team and task permissions, but use the **SOC · L3 operational checklist** for shift logs. Staff without a scheduled shift cannot submit a Shift Log; managers view and correct logs through their management screens.
+
+The shift calendar lets managers select staff in all three daily shift tabs (morning, until 20:00, night) and save the day once. Each person can hold only one shift per date; changing or removing a shift after its log has started is rejected transactionally.
 
 **Checklists are configurable per SOC layer** (Shift Schedule › **Log checklists**, `/shift/checklists`). SOC Managers and Security Managers create checklists, add, edit, reorder, deactivate or remove items (each with a type and the shifts it applies to), and choose which checklist each layer uses, or turn it off. Each analyst ticks their own items in their own daily log; nothing is shared between analysts or carried into the next shift.
 - Saving a checklist creates a new version. Logs that have started (or are submitted) keep the items they began with; today's logs that are still empty follow the latest version. Every version and every assignment change is kept with who and when.

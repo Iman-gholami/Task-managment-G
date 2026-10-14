@@ -8,7 +8,7 @@ import Icon from "@/components/ui/Icon";
 import Segmented from "@/components/ui/Segmented";
 import { Who } from "@/components/ui/indicators";
 import { addDays } from "@/lib/format";
-import { isManager, SOC_TEAMS } from "@/lib/roles";
+import { isManager, isShiftEligible } from "@/lib/roles";
 import { SHIFT_TYPES, tehranDate } from "@/lib/shifts";
 import styles from "./ShiftChanges.module.css";
 
@@ -88,7 +88,7 @@ export default function ShiftChanges() {
   const { me, members, toast } = useApp();
   const manager = isManager(me);
   const analysts = useMemo(
-    () => members.filter((m) => m.active !== false && m.role === "analyst" && SOC_TEAMS.includes(m.team)),
+    () => members.filter((m) => isShiftEligible(m)),
     [members]
   );
   const targets = analysts.filter((a) => a.id !== me.id);

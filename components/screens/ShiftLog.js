@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import useFetch from "@/components/useFetch";
 import PeriodSelector from "@/components/PeriodSelector";
@@ -28,8 +28,14 @@ function checklistLabel(checklist) {
  * Today's Shift Log for a SOC analyst: the checklist assigned to their group, IOC count, issues and tickets.
  * Each change saves immediately; a change that fails is undone on screen, so what you see is what is stored.
  */
-export default function ShiftLog() {
+export default function ShiftLog({ initialLog }) {
   const { dispatch, toast, me, activities, tickets, shiftDone, shiftDate, shiftChecklist, shiftTeam } = useApp();
+  // The app layout can stay mounted while a manager adds today's shift.
+  // Sync the current server-rendered log when this page opens.
+  useEffect(() => {
+    if (initialLog) dispatch({ type: "shift/set", log: initialLog });
+  }, [dispatch, initialLog]);
+
   const [saved, setSaved] = useState("saved");
   const [pending, setPending] = useState(0);
   const [issueOpen, setIssueOpen] = useState(null);

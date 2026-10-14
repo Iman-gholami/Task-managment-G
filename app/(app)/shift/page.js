@@ -2,7 +2,7 @@ import Link from "next/link";
 import { redirect } from "next/navigation";
 import ShiftLog from "@/components/screens/ShiftLog";
 import { getCurrentUser } from "@/lib/server/auth";
-import { getShiftSchedule } from "@/lib/server/repo";
+import { getShiftLog, getShiftSchedule } from "@/lib/server/repo";
 import { isShiftAnalyst } from "@/lib/server/stats";
 
 export const metadata = { title: "Shift Log" };
@@ -24,5 +24,5 @@ export default async function Page() {
       </div>
     );
   }
-  return <ShiftLog />;
+  return <ShiftLog initialLog={getShiftLog(user.id)} />;
 }
