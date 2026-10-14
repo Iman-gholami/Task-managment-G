@@ -9,7 +9,7 @@ import Segmented from "@/components/ui/Segmented";
 import { Who } from "@/components/ui/indicators";
 import { addDays } from "@/lib/format";
 import { isManager, isShiftEligible } from "@/lib/roles";
-import { SHIFT_TYPES, tehranDate } from "@/lib/shifts";
+import { SHIFT_TYPES, isShiftType, tehranDate } from "@/lib/shifts";
 import styles from "./ShiftChanges.module.css";
 
 const OPEN = new Set(["pending_target", "pending_manager"]);
@@ -108,11 +108,11 @@ export default function ShiftChanges() {
   const schedules = scheduleData?.schedules ?? [];
 
   const ownSchedules = useMemo(
-    () => schedules.filter((row) => row.userId === me.id && row.date >= TODAY).sort((a, b) => a.date.localeCompare(b.date)),
+    () => schedules.filter((row) => row.userId === me.id && isShiftType(row.shiftType) && row.date >= TODAY).sort((a, b) => a.date.localeCompare(b.date)),
     [schedules, me.id]
   );
   const targetSchedules = useMemo(
-    () => schedules.filter((row) => row.userId === form.targetId && row.date >= TODAY).sort((a, b) => a.date.localeCompare(b.date)),
+    () => schedules.filter((row) => row.userId === form.targetId && isShiftType(row.shiftType) && row.date >= TODAY).sort((a, b) => a.date.localeCompare(b.date)),
     [schedules, form.targetId]
   );
 
