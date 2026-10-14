@@ -41,6 +41,8 @@ test("monthly stats count hours, weekdays, and shift types", () => {
     morning: 1,
     evening: 1,
     night: 1,
+    off: 0,
+    leave: 0,
   });
 });
 
