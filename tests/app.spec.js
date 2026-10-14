@@ -98,7 +98,7 @@ test.describe("fresh install", () => {
   });
 });
 
-test.describe("shift logs are for SOC analysts only", () => {
+test.describe("shift logs for rostered staff", () => {
   test("SOC manager has shift scheduling but no personal shift log", async ({ page }) => {
     await signIn(page, "soc");
     await page.goto("/dashboard", { waitUntil: "networkidle" });
@@ -113,7 +113,7 @@ test.describe("shift logs are for SOC analysts only", () => {
     expect((await page.request.patch("/api/shift", { data: { n: 1, patch: { done: true } } })).status()).toBe(403);
   });
 
-  test("security manager has scheduling; engineers have no shift features", async ({ page }) => {
+  test("security manager has scheduling; Design engineers see shift tools", async ({ page }) => {
     await signIn(page, "admin");
     await page.goto("/dashboard", { waitUntil: "networkidle" });
     await expect(page.locator(".sidebar")).toContainText("Shift Schedule");
@@ -122,9 +122,10 @@ test.describe("shift logs are for SOC analysts only", () => {
 
     await signIn(page, "mina");
     await page.goto("/dashboard", { waitUntil: "networkidle" });
-    await expect(page.locator(".sidebar")).not.toContainText("Shift Schedule");
-    await expect(page.locator(".sidebar")).not.toContainText("Shift Log");
-    expect((await page.request.post("/api/shift/tickets", { data: { no: "X-1" } })).status()).toBe(403);
+    await expect(page.locator(".sidebar")).toContainText("Shift Schedule");
+    await expect(page.locator(".sidebar")).toContainText("Shift Log");
+    // A Design engineer can be scheduled, but must not record tickets without today's assignment.
+    expect((await page.request.post("/api/shift/tickets", { data: { no: "X-1" } })).status()).toBe(404);
   });
 
   test("analyst fills today's log: activities, IOC count, issue, tickets, complete", async ({ page }) => {
