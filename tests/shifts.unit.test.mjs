@@ -52,3 +52,30 @@ test("month bounds and date validation reject malformed dates", () => {
   assert.equal(isIsoDate("2026-09-30"), true);
   assert.equal(isIsoDate("2026-02-30"), false);
 });
+
+test("leave and off days appear in analytics without adding worked hours or missed logs", async () => {
+  const { stats } = await import("../lib/analytics/metrics.js");
+  const { applyFilters, parseFilters } = await import("../lib/analytics/filters.js");
+  const make = (date, type, closed = false) => ({
+    a: "tester", date, type, log: false, closed, done: 0, total: 0,
+    acts: Array(8).fill(null), iocs: 0, report: false, issues: 0,
+  });
+  const facts = {
+    today: "2026-10-15", people: [{ id: "tester", shift: true }], tasks: [], tickets: [],
+    shifts: [make("2026-10-11", "morning"), make("2026-10-12", "off"), make("2026-10-13", "leave")],
+  };
+  const period = { from: "2026-10-01", to: "2026-10-15" };
+  const result = stats(facts, ["tester"], period);
+  assert.equal(result.shifts, 1);
+  assert.equal(result.shiftHours, 7.75);
+  assert.equal(result.offDays, 1);
+  assert.equal(result.leaveDays, 1);
+  assert.equal(result.missed, 1, "only a real uncompleted shift counts as missed");
+  for (const kind of ["off", "leave"]) {
+    const filtered = applyFilters(facts, parseFilters({ shift: kind }));
+    const totals = stats(filtered, ["tester"], period);
+    assert.equal(totals.shifts, 0);
+    assert.equal(totals.missed, 0);
+    assert.equal(totals[kind === "off" ? "offDays" : "leaveDays"], 1);
+  }
+});
