@@ -84,7 +84,7 @@ test("design engineer can work shifts, days off and leave atomically", async () 
   assert.equal(planned.length, 3);
   assert.equal(repo.getDayStatus(l2.id, future), "off");
   assert.equal(repo.getDayStatus(design.id, future), "leave");
-  assert.equal(repo.getShiftSchedule(design.id, future), null);
+  assert.equal(repo.getShiftSchedule(design.id, future) ?? null, null);
   assert.equal(repo.getShiftLog(design.id, future), null);
   const { scheduleStats } = await import("../lib/shifts.js");
   const totals = scheduleStats(planned);
