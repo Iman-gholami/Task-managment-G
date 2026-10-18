@@ -82,6 +82,31 @@ test("a manager sets all three shifts with one save, including a Design engineer
   expect(after.find((row) => row.userId === ids["l1@shift-roster.test"])?.shiftType).toBe("off");
   expect(after.find((row) => row.userId === ids["design@shift-roster.test"])?.shiftType).toBe("leave");
   expect(after.find((row) => row.userId === ids["l2@shift-roster.test"])?.shiftType).toBe("night");
+  // Morning candidates put occupied night, off and leave users below available users.
+  await page.goto("/shift/schedule");
+  await page.getByRole("button", { name: "ثبت شیفت", exact: true }).first().click();
+  const picker = page.getByRole("dialog", { name: "ثبت شیفت" });
+  const statuses = await picker.locator("label[data-status]").evaluateAll(
+    (rows) => rows.map((row) => row.dataset.status)
+  );
+  expect(statuses.slice(-3)).toEqual(["night", "off", "leave"]);
+
+  // Bulk select applies to search results, without stealing another assignment.
+  await picker.getByRole("searchbox", { name: "جستجوی کارشناس" }).fill("Rosta Free Analyst");
+  await picker.getByRole("button", { name: /انتخاب همه/ }).click();
+  await picker.getByRole("searchbox", { name: "جستجوی کارشناس" }).fill("");
+  await expect(picker.locator('label[data-status="available"]').filter({ hasText: "Rosta Spare Analyst" }).locator("input")).not.toBeChecked();
+  await picker.getByRole("button", { name: /انتخاب همه/ }).click();
+  await picker.getByRole("button", { name: "ذخیره برنامه روز" }).click();
+  await expect(picker).toHaveCount(0);
+  const bulkSaved = (await (await page.request.get("/api/shift/schedule?from=" + date + "&to=" + date)).json()).schedules;
+  for (const email of ["free@shift-roster.test", "spare@shift-roster.test"]) {
+    expect(bulkSaved.find((row) => row.userId === ids[email])?.shiftType).toBe("morning");
+  }
+  expect(bulkSaved.find((row) => row.userId === ids["l2@shift-roster.test"])?.shiftType).toBe("night");
+  expect(bulkSaved.find((row) => row.userId === ids["l1@shift-roster.test"])?.shiftType).toBe("off");
+  expect(bulkSaved.find((row) => row.userId === ids["design@shift-roster.test"])?.shiftType).toBe("leave");
+
 
   await page.request.post("/api/auth/login", {
     data: { email: "design@shift-roster.test", password: USER_PASSWORD },
