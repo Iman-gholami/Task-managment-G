@@ -20,6 +20,8 @@ test("a manager sets all three shifts with one save, including a Design engineer
     { name: "Rosta L1 Roster", email: "l1@shift-roster.test", role: "analyst", team: "SOC · L1" },
     { name: "Rosta L2 Roster", email: "l2@shift-roster.test", role: "analyst", team: "SOC · L2" },
     { name: "Rosta Design Engineer", email: "design@shift-roster.test", role: "engineer", team: "Design & Automation" },
+    { name: "Rosta Free Analyst", email: "free@shift-roster.test", role: "analyst", team: "SOC · L1" },
+    { name: "Rosta Spare Analyst", email: "spare@shift-roster.test", role: "analyst", team: "SOC · L1" },
   ];
   const ids = {};
   for (const person of people) {
