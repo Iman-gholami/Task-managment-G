@@ -218,7 +218,8 @@ test.describe("manager assigns and follows up tasks", () => {
     await dialog.getByLabel("Task title").fill("Tune Splunk correlation rule for VPN logins");
     await dialog.getByRole("button", { name: /Create task/ }).click();
     await expect(dialog.getByText("Choose who this task is for.")).toBeVisible();
-    await dialog.getByLabel("Assignee").selectOption(ids.sara);
+    await dialog.getByLabel("Assignee").fill("Sara");
+    await dialog.getByRole("option", { name: /Sara Rahimi/ }).click();
     await dialog.getByRole("button", { name: /Create task/ }).click();
     await expect(dialog).toBeHidden();
 
