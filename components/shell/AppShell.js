@@ -9,6 +9,7 @@ import Icon from "@/components/ui/Icon";
 import Sidebar from "@/components/shell/Sidebar";
 import Topbar from "@/components/shell/Topbar";
 import CommandMenu from "@/components/shell/CommandMenu";
+import SessionMonitor from "@/components/SessionMonitor";
 import { crumbsFor, navFor } from "@/components/shell/nav";
 import { isOpen } from "@/lib/format";
 
@@ -93,6 +94,7 @@ export default function AppShell({ children }) {
 
   return (
     <div className={`app ${collapsed ? "collapsed" : ""} ${navOpen ? "nav-open" : ""}`}>
+      <SessionMonitor />
       <a href="#main" className="btn btn-primary sr-only skip-link">Skip to content</a>
       <div className="nav-scrim" onClick={() => setNavOpen(false)} aria-hidden="true" />
       <Sidebar groups={groups} path={path} collapsed={collapsed && !drawer} inert={drawer && !navOpen} onProfile={openProfile} />

@@ -74,6 +74,22 @@ test.describe("fresh install", () => {
     expect(other.status()).toBe(401);
   });
 
+  test("authenticated activity heartbeat works and logout revokes the session", async ({ page }) => {
+    await signIn(page, "admin");
+    const activity = await page.request.post("/api/auth/activity");
+    expect(activity.status()).toBe(200);
+    expect(await activity.json()).toEqual({ ok: true });
+    const cookies = await page.context().cookies();
+    const session = cookies.find((cookie) => cookie.name === "so_session");
+    expect(session).toBeDefined();
+    expect(session.httpOnly).toBe(true);
+    expect(session.expires * 1000 - Date.now()).toBeGreaterThan(11 * 60 * 60 * 1000);
+    expect(session.expires * 1000 - Date.now()).toBeLessThanOrEqual(12 * 60 * 60 * 1000);
+    expect((await page.request.post("/api/auth/logout")).status()).toBe(200);
+    expect((await page.request.post("/api/auth/activity")).status()).toBe(401);
+    expect((await page.request.get("/api/tasks")).status()).toBe(401);
+  });
+
   test("administrator adds the team from the Team page", async ({ page }) => {
     await signIn(page, "admin");
     await page.goto("/team");
