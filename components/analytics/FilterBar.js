@@ -7,7 +7,7 @@ import { Drawer } from "@/components/analytics/ui";
 import Icon from "@/components/ui/Icon";
 import { WEEKDAYS_SHORT, addDays, faDate, faDigits, faRange, fromJalali, jalaliMonthLength, toJalali, weekdayIndex } from "@/lib/analytics/calendar";
 import { ADVANCED_FILTERS, activeDataFilters } from "@/lib/analytics/filters";
-import { CX_FA, GROUPS, LEVELS, PRIO_FA, PRIO_KEYS, QUAL_FA, QUAL_KEYS, ROLE_FA, SHIFT_FA, SHIFT_KEYS } from "@/lib/analytics/labels";
+import { CX_FA, GROUPS, LEVELS, PRIO_FA, PRIO_KEYS, QUAL_FA, QUAL_KEYS, ROLE_FA, SHIFT_FA, ROSTER_KEYS } from "@/lib/analytics/labels";
 import { COMPARISONS, GRANULARITIES, PRESETS, PRESET_LABEL, monthTitle } from "@/lib/analytics/periods";
 
 /** Month grid on the Jalali calendar for choosing a custom range. Saturday first; days after `max` are disabled. */
@@ -99,7 +99,7 @@ const ADV_OPTIONS = {
   prio: PRIO_KEYS.map((k) => [k, PRIO_FA[k]]),
   cx: CX_FA.map((c, i) => [String(i + 1), c]),
   q: QUAL_KEYS.map((k) => [k, QUAL_FA[k]]),
-  shift: SHIFT_KEYS.map((k) => [k, SHIFT_FA[k]]),
+  shift: ROSTER_KEYS.map((k) => [k, SHIFT_FA[k]]),
 };
 const ADV_NOTE = { prio: "فقط تسک‌ها", cx: "فقط تسک‌ها", q: "فقط تسک‌های تأییدشده", shift: "فقط داده SOC" };
 const optionLabel = (k, v) => ADV_OPTIONS[k].find(([x]) => x === v)?.[1] ?? v;

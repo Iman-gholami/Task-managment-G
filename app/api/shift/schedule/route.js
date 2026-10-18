@@ -1,8 +1,8 @@
 import { isManager, requireUser } from "@/lib/server/auth";
 import { err } from "@/lib/server/access";
-import { listShiftSchedules, removeShiftSchedule, scheduleStatsByUser, setShiftSchedule } from "@/lib/server/repo";
+import { getDayStatus, listShiftSchedules, removeDayStatus, removeShiftSchedule, scheduleStatsByUser, setDayStatus, setShiftSchedule } from "@/lib/server/repo";
 import { replaceDayShiftAssignments, replaceShiftAssignments } from "@/lib/server/shift-batch";
-import { isIsoDate, monthBounds } from "@/lib/shifts";
+import { isDayStatus, isIsoDate, monthBounds } from "@/lib/shifts";
 import { isShiftAnalyst } from "@/lib/server/stats";
 
 function canView(user) {
@@ -46,7 +46,12 @@ export async function POST(request) {
 
   const body = await request.json().catch(() => ({}));
   try {
-    const schedule = setShiftSchedule(String(body.userId || ""), String(body.date || ""), String(body.shiftType || ""), user.id);
+    const userId = String(body.userId || "");
+    const date = String(body.date || "");
+    const shiftType = String(body.shiftType || "");
+    const schedule = isDayStatus(shiftType)
+      ? (setDayStatus(userId, date, shiftType, user.id), { userId, date, shiftType })
+      : setShiftSchedule(userId, date, shiftType, user.id);
     return Response.json({ schedule }, { status: 201 });
   } catch (e) {
     return err(409, e.message);
@@ -82,7 +87,10 @@ export async function DELETE(request) {
 
   const body = await request.json().catch(() => ({}));
   try {
-    removeShiftSchedule(String(body.userId || ""), String(body.date || ""));
+    const userId = String(body.userId || "");
+    const date = String(body.date || "");
+    if (getDayStatus(userId, date)) removeDayStatus(userId, date);
+    else removeShiftSchedule(userId, date);
     return Response.json({ ok: true });
   } catch (e) {
     return err(409, e.message);

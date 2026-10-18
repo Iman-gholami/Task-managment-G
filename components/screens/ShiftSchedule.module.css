@@ -15,6 +15,8 @@
 .page [data-shift="morning"] { --tone: var(--shift-morning); }
 .page [data-shift="evening"] { --tone: var(--shift-evening); }
 .page [data-shift="night"] { --tone: var(--shift-night); }
+.page [data-shift="off"] { --tone: var(--neutral); }
+.page [data-shift="leave"] { --tone: var(--violet); }
 
 /* ---------- Calendar ---------- */
 .calendarCard {
@@ -346,7 +348,7 @@
 .analystPrimary span { font: var(--type-caption); color: var(--text-3); }
 .analystMiniGrid {
   display: grid;
-  grid-template-columns: repeat(5, minmax(0, 1fr));
+  grid-template-columns: repeat(4, minmax(0, 1fr));
   gap: 6px;
 }
 .miniStat {
@@ -370,6 +372,8 @@
 .miniStat[data-tone="morning"] { --tone: var(--shift-morning); }
 .miniStat[data-tone="evening"] { --tone: var(--shift-evening); }
 .miniStat[data-tone="night"] { --tone: var(--shift-night); }
+.miniStat[data-tone="off"] { --tone: var(--neutral); }
+.miniStat[data-tone="leave"] { --tone: var(--violet); }
 .miniStat:not([data-tone="default"]) { background: color-mix(in oklab, var(--tone) 10%, transparent); }
 .miniStat:not([data-tone="default"]) b { color: var(--tone); }
 

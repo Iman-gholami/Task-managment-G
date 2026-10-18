@@ -15,7 +15,7 @@ import { ACTIVITIES_FA, CX_FA, GROUP_BY_NAME, QUAL_FA, QUAL_KEYS, ROLE_FA, SHIFT
 import { METRICS, dailySeries } from "@/lib/analytics/metrics";
 
 const COMPARE_KEYS = ["completed", "units", "hours", "hoursPerTask", "onTimeRate", "cycleMedian", "returnShare", "highQualityShare", "created"];
-const SOC_KEYS = ["shifts", "closureRate", "routineRate", "iocs", "iocPerShift", "tickets", "ticketsPerShift"];
+const SOC_KEYS = ["shifts", "offDays", "leaveDays", "closureRate", "routineRate", "iocs", "iocPerShift", "tickets", "ticketsPerShift"];
 
 export default function Person({ id }) {
   const a = useAnalytics();
@@ -176,6 +176,8 @@ function ShiftSection({ id, cur, prev, medians }) {
     <>
       <div className="an-section-title"><h2>شیفت و روتین SOC</h2><span>{`${faDigits(cur.shifts)} شیفت · ${SHIFT_KEYS.map((k, i) => `${SHIFT_FA[k]} ${faDigits(types[i])}`).join("، ")}`}</span></div>
       <MetricGrid label="شاخص‌های شیفت">
+        <Kpi label="تعطیل شیفت" icon="cal" value={fmtInt(cur.offDays)} />
+        <Kpi label="مرخصی" icon="cal" value={fmtInt(cur.leaveDays)} />
         <Kpi label="بسته‌شدن شیفت‌لاگ" icon="shift" value={fmtPct(cur.closureRate)} tone={cur.missed ? "alert" : undefined} delta={prev && cur.closureRate !== null && <Delta now={cur.closureRate} before={prev.closureRate} kind="rate" label={a.cmp?.short} />} foot={cur.missed ? `${faDigits(cur.missed)} شیفت‌لاگ جامانده` : "همه شیفت‌لاگ‌ها کامل شده"} />
         <Kpi label="انجام روتین" icon="checkCircle" value={fmtPct(cur.routineRate)} delta={prev && cur.routineRate !== null && <Delta now={cur.routineRate} before={prev.routineRate} kind="rate" label={a.cmp?.short} />} foot={medians && isNum(medians.routineRate) ? `میانه تیم: ${fmtPct(medians.routineRate)}` : null} />
         <Kpi label="IOC ثبت‌شده" icon="shield" value={fmtInt(cur.iocs)} foot={`${fmtNum(cur.iocPerShift)} به ازای هر شیفت‌لاگ`} />

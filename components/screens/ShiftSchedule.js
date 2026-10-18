@@ -10,14 +10,16 @@ import Segmented from "@/components/ui/Segmented";
 import { Who } from "@/components/ui/indicators";
 import { isManager, isShiftEligible, shiftChecklistTeam } from "@/lib/roles";
 import { addDays } from "@/lib/format";
-import { scheduleStats, tehranDate } from "@/lib/shifts";
+import { ROSTER_KEYS, scheduleStats, tehranDate } from "@/lib/shifts";
 import styles from "./ShiftSchedule.module.css";
 
-const SHIFT_KEYS = ["morning", "evening", "night"];
+const SHIFT_KEYS = ROSTER_KEYS;
 const SHIFT_META = {
   morning: { label: "شیفت صبح", short: "صبح", time: "۰۷:۳۰ تا ۱۵:۱۵" },
   evening: { label: "شیفت تا ۸ شب", short: "تا ۸", time: "۰۷:۳۰ تا ۲۰:۰۰" },
   night: { label: "شیفت شب", short: "شب", time: "۲۰:۰۰ تا ۰۸:۰۰" },
+  off: { label: "تعطیل شیفت", short: "تعطیل", time: "روز استراحت · بدون شیفت‌لاگ" },
+  leave: { label: "مرخصی", short: "مرخصی", time: "مرخصی روزانه · بدون شیفت‌لاگ" },
 };
 const WEEKDAYS = ["شنبه", "یکشنبه", "دوشنبه", "سه‌شنبه", "چهارشنبه", "پنجشنبه", "جمعه"];
 const TODAY = tehranDate();
@@ -84,7 +86,7 @@ export default function ShiftSchedule() {
   const [selectedUser, setSelectedUser] = useState("");
   const [selectedShift, setSelectedShift] = useState("morning");
   const [editor, setEditor] = useState(null);
-  const [draftByShift, setDraftByShift] = useState({ morning: [], evening: [], night: [] });
+  const [draftByShift, setDraftByShift] = useState(() => Object.fromEntries(SHIFT_KEYS.map((key) => [key, []])));
   const [query, setQuery] = useState("");
   const [saving, setSaving] = useState(false);
 
@@ -150,7 +152,7 @@ export default function ShiftSchedule() {
     setSaving(true);
     try {
       await api("/api/shift/schedule", { method: "PUT", body: { date: editor.date, assignments: draftByShift } });
-      toast("شیفت‌های صبح، تا ۸ و شب با هم ذخیره شدند");
+      toast("برنامه کاری، تعطیل و مرخصی روز ذخیره شد");
       setSelectedDate(editor.date);
       setSelectedShift(editor.shiftType);
       closeComposer();
@@ -195,7 +197,7 @@ export default function ShiftSchedule() {
             <h1>مدیریت شیفت نیروها</h1>
             <div className="page-meta">
               <span>{PERSIAN_MONTH.format(dateObj(monthStart))}</span>
-              <span>{faNum(monthSchedules.length)} شیفت ثبت‌شده</span>
+              <span>{faNum(stats.total)} شیفت کاری · {faNum(stats.off)} تعطیل · {faNum(stats.leave)} مرخصی</span>
               <span>{faNum(analysts.length)} کارشناس</span>
             </div>
           </div>
@@ -349,6 +351,8 @@ export default function ShiftSchedule() {
               <MiniStat label="صبح" value={stats.morning} tone="morning" />
               <MiniStat label="تا ۸" value={stats.evening} tone="evening" />
               <MiniStat label="شب" value={stats.night} tone="night" />
+              <MiniStat label="تعطیل شیفت" value={stats.off} tone="off" />
+              <MiniStat label="مرخصی" value={stats.leave} tone="leave" />
               <MiniStat label="پنجشنبه" value={stats.thursdays} />
               <MiniStat label="جمعه" value={stats.fridays} />
             </div>
@@ -362,7 +366,7 @@ export default function ShiftSchedule() {
         <Dialog
           label="ثبت شیفت"
           title={`ثبت شیفت · ${formatDate(editor.date)}`}
-          description="نیروهای هر سه شیفت را انتخاب کنید؛ انتخاب‌ها با تغییر تب باقی می‌مانند و در پایان همه با یک ذخیره ثبت می‌شوند. هر نفر در هر روز فقط یک شیفت دارد."
+          description="شیفت‌های کاری، تعطیل شیفت و مرخصی را در همین پنجره ثبت کنید. انتخاب‌ها هنگام تغییر تب باقی می‌مانند. هر نفر در هر روز فقط یک وضعیت می‌تواند داشته باشد؛ برای تعطیل یا مرخصی شیفت‌لاگ ایجاد نمی‌شود."
           onClose={closeComposer}
           width={640}
           className={styles.composer}
@@ -395,9 +399,9 @@ export default function ShiftSchedule() {
             </div>
           </div>
           <div className="modal-foot">
-            <span className={`lead ${styles.selectedCount}`}>صبح: {faNum(draftByShift.morning.length)} · تا ۸: {faNum(draftByShift.evening.length)} · شب: {faNum(draftByShift.night.length)}</span>
+            <span className={`lead ${styles.selectedCount}`}>صبح: {faNum(draftByShift.morning.length)} · تا ۸: {faNum(draftByShift.evening.length)} · شب: {faNum(draftByShift.night.length)} · تعطیل: {faNum(draftByShift.off.length)} · مرخصی: {faNum(draftByShift.leave.length)}</span>
             <button className="btn btn-ghost" onClick={closeComposer}>انصراف</button>
-            <button className="btn btn-primary" aria-busy={saving || undefined} disabled={saving} onClick={save}>ذخیره همه شیفت‌ها</button>
+            <button className="btn btn-primary" aria-busy={saving || undefined} disabled={saving} onClick={save}>ذخیره برنامه روز</button>
           </div>
         </Dialog>
       )}
