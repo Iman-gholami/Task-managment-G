@@ -9,6 +9,7 @@ const envDevOrigins = (process.env.ALLOWED_DEV_ORIGINS || "")
 const allowedDevOrigins = [...new Set([...defaultDevOrigins, ...envDevOrigins])];
 
 const nextConfig = {
+  output: "standalone",
   reactStrictMode: true,
   poweredByHeader: false,
   allowedDevOrigins,
