@@ -1,4 +1,5 @@
 import localFont from "next/font/local";
+import Script from "next/script";
 import { Vazirmatn } from "next/font/google";
 import "@/styles/tokens.css";
 import "@/styles/base.css";
@@ -44,7 +45,7 @@ export default function RootLayout({ children }) {
   return (
     <html lang="en" className={`${geist.variable} ${geistMono.variable} ${vazirmatn.variable}`} suppressHydrationWarning>
       <head>
-        <script dangerouslySetInnerHTML={{ __html: themeScript }} />
+        <Script id="theme-init" strategy="beforeInteractive" dangerouslySetInnerHTML={{ __html: themeScript }} />
       </head>
       <body>
         {children}
