@@ -13,6 +13,12 @@ version="$1"
 for cmd in git docker tar sha256sum mktemp; do
   command -v "$cmd" >/dev/null || { echo "Missing $cmd" >&2; exit 1; }
 done
+docker_cmd=(docker)
+if ! docker info >/dev/null 2>&1; then
+  command -v sudo >/dev/null || { echo "Docker requires root privileges and sudo is unavailable" >&2; exit 1; }
+  echo "Docker daemon requires elevated access; using sudo for Docker commands only."
+  docker_cmd=(sudo docker)
+fi
 root="$(git -C "$(dirname "${BASH_SOURCE[0]}")" rev-parse --show-toplevel)"
 out_dir="${DIST_DIR:-$root/dist}"
 platform="${BUILD_PLATFORM:-linux/amd64}"
@@ -37,11 +43,11 @@ git -C "$root" archive --format=tar "$revision" | tar -xf - -C "$tmp/source"
 test -f "$tmp/source/Dockerfile" || { echo "No Dockerfile at $ref" >&2; exit 1; }
 
 echo "Building $image ($platform)..."
-docker build --pull --platform "$platform" --build-arg "GIT_REV=$revision" \
+"\${docker_cmd[@]}" build --pull --platform "$platform" --build-arg "GIT_REV=$revision" \
   --tag "$image" "$tmp/source"
 
 echo "Exporting image and checksum..."
-docker save --output "$tmp/$filename" "$image"
+"\${docker_cmd[@]}" save "$image" > "$tmp/$filename"
 mv "$tmp/$filename" "$out_dir/$filename"
 (cd "$out_dir" && sha256sum "$filename" > "$filename.sha256")
 # The installer only needs to be copied to the offline server once.
