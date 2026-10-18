@@ -17,6 +17,10 @@ jobs:
         with:
           node-version: 22.13.0
           cache: npm
+      - name: Validate offline packaging and installer
+        run: |
+          bash -n scripts/build-offline.sh
+          python3 -m unittest discover -s tests -p 'offline-update.test.py' -v
       - run: npm ci
       - name: Shift scheduling unit tests
         run: npm run test:unit
@@ -26,3 +30,27 @@ jobs:
         run: npx playwright install --with-deps chromium
       - name: Playwright E2E
         run: npx playwright test
+
+  docker-image-smoke:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Build production Docker image
+        run: docker build --build-arg GIT_REV="$GITHUB_SHA" -t sentinel-ops:ci .
+      - name: Test running image and SQLite volume
+        run: |
+          set -euo pipefail
+          mkdir -p "$RUNNER_TEMP/sentinel-ops-data"
+          docker run -d --name sentinel-ops-ci -p 127.0.0.1:3131:3000 \
+            -v "$RUNNER_TEMP/sentinel-ops-data:/app/data" \
+            -e ADMIN_EMAIL=admin@ci.internal \
+            -e ADMIN_PASSWORD=ci-test-password-123 sentinel-ops:ci
+          trap 'docker logs sentinel-ops-ci || true; docker rm -f sentinel-ops-ci || true' EXIT
+          for i in $(seq 1 40); do
+            if curl --fail --silent --show-error http://127.0.0.1:3131/api/health | grep -q '"status":"ok"'; then
+              test -f "$RUNNER_TEMP/sentinel-ops-data/sentinel.db"
+              exit 0
+            fi
+            sleep 3
+          done
+          exit 1
