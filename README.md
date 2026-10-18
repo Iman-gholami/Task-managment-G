@@ -4,7 +4,9 @@ The Security Department's internal work tool: Task Management, SOC Shift Logs, a
 
 **Stack:** Next.js 16 (App Router) · React 19 · JavaScript · Node.js ≥ 22.13 · SQLite (Node's built-in `node:sqlite`, so no database server or native build is needed) · ECharts (analytics charts, bundled from npm). The fonts (Geist, Vazirmatn) are bundled, so the app makes no external requests and works on an offline or internal network.
 
-**Session security:** each sign-in expires after **12 hours** regardless of activity, or **30 minutes without interaction**, whichever happens first. Visible app tabs report genuine user activity at most once per minute; background polling never renews idle sessions. The server enforces both limits. Upgrading from the former 7-day session format signs everyone out once; existing users and tasks are unaffected.\n\n**Everything is stored in the database:** sign-in with sessions, tasks with a review workflow and status history, checklist / comments / file attachments, the daily Shift Log (SOC analysts), performance figures, all five reports with Excel export, the analytics dashboard, account settings, and member management.
+**Session security:** each sign-in expires after **12 hours** regardless of activity, or **30 minutes without interaction**, whichever happens first. Visible app tabs report genuine user activity at most once per minute; background polling never renews idle sessions. The server enforces both limits. Upgrading from the former 7-day session format signs everyone out once; existing users and tasks are unaffected.
+
+**Everything is stored in the database:** sign-in with sessions, tasks with a review workflow and status history, checklist / comments / file attachments, the daily Shift Log (SOC analysts), performance figures, all five reports with Excel export, the analytics dashboard, account settings, and member management.
 
 ### Task workflow
 `Backlog → To Do → In Progress → Review → Done`, plus `Blocked`, `Returned`, `Cancelled`.
