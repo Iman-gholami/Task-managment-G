@@ -20,7 +20,7 @@ jobs:
       - name: Validate offline packaging and installer
         run: |
           bash -n scripts/build-offline.sh
-          python3 -m unittest discover -s tests -p 'offline-update.test.py' -v
+          python3 tests/offline-update.test.py -v
       - run: npm ci
       - name: Shift scheduling unit tests
         run: npm run test:unit
