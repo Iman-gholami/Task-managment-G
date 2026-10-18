@@ -5,6 +5,7 @@ import { useApp } from "@/components/AppProvider";
 import Icon from "@/components/ui/Icon";
 import Dialog from "@/components/ui/Dialog";
 import { Field } from "@/components/ui/Field";
+import AssigneePicker from "@/components/ui/AssigneePicker";
 import { CX, PRIO, TODAY } from "@/lib/format";
 import { canAssignTask, isManager } from "@/lib/roles";
 
@@ -110,18 +111,14 @@ function CreateTaskDialog({ onClose }) {
               htmlFor="task-assignee"
               error={error === "assignee" ? "Choose who this task is for." : undefined}
             >
-              <select
+              <AssigneePicker
                 id="task-assignee"
-                className="input"
                 value={form.a}
+                people={people}
                 disabled={!manager}
-                onChange={(e) => { set({ a: e.target.value }); setError(null); }}
-              >
-                {manager && <option value="">Select assignee</option>}
-                {people.map((person) => (
-                  <option key={person.id} value={person.id}>{person.name} · {person.team}</option>
-                ))}
-              </select>
+                onSelect={(id) => { set({ a: id }); setError(null); }}
+                onClear={() => { set({ a: "" }); setError(null); }}
+              />
             </Field>
 
             <Field label="Priority" htmlFor="task-priority">

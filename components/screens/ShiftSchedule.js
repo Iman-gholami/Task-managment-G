@@ -11,6 +11,7 @@ import { Who } from "@/components/ui/indicators";
 import { isManager, isShiftEligible, shiftChecklistTeam } from "@/lib/roles";
 import { addDays } from "@/lib/format";
 import { ROSTER_KEYS, scheduleStats, tehranDate } from "@/lib/shifts";
+import { availableRosterCandidates, bulkRosterSelection, draftAssignment, rosterCandidates } from "@/lib/roster-editor";
 import styles from "./ShiftSchedule.module.css";
 
 const SHIFT_KEYS = ROSTER_KEYS;
@@ -105,10 +106,13 @@ export default function ShiftSchedule() {
   const cells = useMemo(() => Array.from({ length: daysBetween(range.start, range.end) + 1 }, (_, i) => addDays(range.start, i)), [range.start, range.end]);
   const selectedPerson = analysts.find((a) => a.id === selectedUser);
   const draftIds = editor ? (draftByShift[editor.shiftType] ?? []) : [];
-  const visibleAnalysts = useMemo(() => {
-    const q = query.trim().toLowerCase();
-    return analysts.filter((a) => !q || `${a.name} ${a.team}`.toLowerCase().includes(q));
-  }, [analysts, query]);
+  const visibleAnalysts = useMemo(
+    () => editor ? rosterCandidates(analysts, draftByShift, editor.shiftType, query) : [],
+    [analysts, draftByShift, editor, query]
+  );
+  const availableAnalysts = editor ? availableRosterCandidates(visibleAnalysts, draftByShift, editor.shiftType) : [];
+  const selectableIds = new Set(availableAnalysts.map((person) => person.id));
+  const unselectedCount = availableAnalysts.filter((person) => !draftIds.includes(person.id)).length;
 
   const openComposer = (date = selectedDate, shiftType = selectedShift) => {
     if (!manager) return;
@@ -145,6 +149,16 @@ export default function ShiftSchedule() {
           : current[key].filter((id) => id !== userId),
       ]));
     });
+  };
+
+  const changeBulk = (select) => {
+    if (!editor || saving) return;
+    setDraftByShift((current) => bulkRosterSelection(
+      current,
+      editor.shiftType,
+      availableRosterCandidates(visibleAnalysts, current, editor.shiftType),
+      select
+    ));
   };
 
   const save = async () => {
@@ -382,13 +396,21 @@ export default function ShiftSchedule() {
 
             <div className={`search ${styles.searchBox}`}><Icon name="search" /><input className="input" type="search" value={query} onChange={(e) => setQuery(e.target.value)} placeholder="جستجوی کارشناس..." aria-label="جستجوی کارشناس" /></div>
 
+            <div className={styles.bulkToolbar}>
+              <span>مرتب‌سازی: انتخاب‌شده و آزاد، سپس سایر شیفت‌ها، شب، تعطیل، مرخصی</span>
+              <div className={styles.bulkActions}>
+                <button type="button" className="btn btn-secondary btn-sm" disabled={saving || unselectedCount === 0} onClick={() => changeBulk(true)}>انتخاب همه ({faNum(unselectedCount)})</button>
+                <button type="button" className="btn btn-ghost btn-sm" disabled={saving || !availableAnalysts.some((person) => draftIds.includes(person.id))} onClick={() => changeBulk(false)}>لغو انتخاب‌های فهرست</button>
+              </div>
+              <small>فقط افراد آزادِ همین فهرست انتخاب می‌شوند؛ وضعیت بقیه تغییر نمی‌کند.</small>
+            </div>
             <div className={styles.memberList}>
               {visibleAnalysts.length === 0 && <div className={styles.emptyPeople}>کارشناسی با این نام پیدا نشد.</div>}
               {visibleAnalysts.map((person) => {
                 const checked = draftIds.includes(person.id);
-                const currentShift = SHIFT_KEYS.find((key) => draftByShift[key].includes(person.id));
+                const currentShift = draftAssignment(draftByShift, person.id);
                 return (
-                  <label className={`${styles.memberRow} ${checked ? styles.memberRowChecked : ""}`} key={person.id}>
+                  <label className={`${styles.memberRow} ${checked ? styles.memberRowChecked : ""}`} key={person.id} data-status={currentShift ?? "available"} data-bulk-eligible={selectableIds.has(person.id) ? "true" : "false"}>
                     <input className="cb" type="checkbox" checked={checked} onChange={() => toggleDraft(person.id)} />
                     <Who id={person.id} />
                     <span className={styles.memberTeam}>{person.team === "Design & Automation" ? "طراحی و خودکارسازی · شیفت لایه ۳" : shiftChecklistTeam(person)}</span>
