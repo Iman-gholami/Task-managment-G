@@ -561,9 +561,10 @@ test.describe("themes", () => {
         scriptWarnings.push(message.text());
       }
     });
-    await page.goto("/login", { waitUntil: "networkidle" });
+    await page.goto("/login");
     await signIn(page, "admin");
-    await page.goto("/dashboard", { waitUntil: "networkidle" });
+    await page.goto("/dashboard");
+    await expect(page.locator(".sidebar")).toBeVisible();
     expect(scriptWarnings).toEqual([]);
   });
 
