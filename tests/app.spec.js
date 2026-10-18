@@ -117,7 +117,7 @@ test.describe("fresh install", () => {
 test.describe("shift logs for rostered staff", () => {
   test("SOC manager has shift scheduling but no personal shift log", async ({ page }) => {
     await signIn(page, "soc");
-    await page.goto("/dashboard", { waitUntil: "networkidle" });
+    await page.goto("/dashboard", { waitUntil: "domcontentloaded" });
     await expect(page.locator("h1")).toHaveText("SOC overview");
     await expect(page.locator(".sidebar")).toContainText("Shift Schedule");
     await expect(page.locator(".sidebar")).not.toContainText("Shift Log");
@@ -131,13 +131,13 @@ test.describe("shift logs for rostered staff", () => {
 
   test("security manager has scheduling; Design engineers see shift tools", async ({ page }) => {
     await signIn(page, "admin");
-    await page.goto("/dashboard", { waitUntil: "networkidle" });
+    await page.goto("/dashboard", { waitUntil: "domcontentloaded" });
     await expect(page.locator(".sidebar")).toContainText("Shift Schedule");
     await expect(page.locator(".sidebar")).not.toContainText("Shift Log");
     expect((await page.request.post("/api/shift/tickets", { data: { no: "X-1" } })).status()).toBe(403);
 
     await signIn(page, "mina");
-    await page.goto("/dashboard", { waitUntil: "networkidle" });
+    await page.goto("/dashboard", { waitUntil: "domcontentloaded" });
     await expect(page.locator(".sidebar")).toContainText("Shift Schedule");
     await expect(page.locator(".sidebar")).toContainText("Shift Log");
     // A Design engineer can be scheduled, but must not record tickets without today's assignment.
@@ -208,7 +208,7 @@ test.describe("shift logs for rostered staff", () => {
 test.describe("manager assigns and follows up tasks", () => {
   test("create tasks for people and find them under Assigned by Me, grouped by assignee", async ({ page }) => {
     await signIn(page, "soc");
-    await page.goto("/tasks", { waitUntil: "networkidle" });
+    await page.goto("/tasks", { waitUntil: "domcontentloaded" });
     await expect(page).toHaveURL(/\/tasks\/assigned$/);
     await expect(page.getByText("You haven't assigned any tasks yet")).toBeVisible();
 
@@ -240,7 +240,7 @@ test.describe("manager assigns and follows up tasks", () => {
 
   test("analysts see their assigned tasks and a notification", async ({ page }) => {
     await signIn(page, "sara");
-    await page.goto("/tasks/my", { waitUntil: "networkidle" });
+    await page.goto("/tasks/my", { waitUntil: "domcontentloaded" });
     await expect(page.locator("tbody tr")).toHaveCount(2);
     await page.getByRole("button", { name: "Notifications" }).click();
     await expect(page.locator(".pop")).toContainText("New task assigned");
@@ -460,7 +460,7 @@ test.describe("analytics (management dashboard)", () => {
     expect(facts.tasks.find((t) => t.id === ids.t2).returns).toHaveLength(1);
     expect(facts.shifts.some((s) => s.a === ids.sara && s.closed)).toBeTruthy();
 
-    await page.goto("/analytics", { waitUntil: "networkidle" });
+    await page.goto("/analytics", { waitUntil: "domcontentloaded" });
     await expect(page.locator("h1")).toHaveText("داشبورد مدیریتی");
     await expect(page.getByTestId("status")).toBeVisible();
     await expect(page.getByTestId("kpi-completed")).toContainText("۱");
@@ -470,7 +470,7 @@ test.describe("analytics (management dashboard)", () => {
 
   test("demo data is opt-in and clearly labelled", async ({ page }) => {
     await signIn(page, "admin");
-    await page.goto("/analytics", { waitUntil: "networkidle" });
+    await page.goto("/analytics", { waitUntil: "domcontentloaded" });
     await page.getByTestId("demo-toggle").click();
     await expect(page).toHaveURL(/demo=1/);
     await expect(page.locator(".an-demo")).toContainText("داده نمایشی");
@@ -481,7 +481,7 @@ test.describe("analytics (management dashboard)", () => {
 
   test("period menu: presets and a custom Jalali range drive every view through the URL", async ({ page }) => {
     await signIn(page, "admin");
-    await page.goto("/analytics?demo=1", { waitUntil: "networkidle" });
+    await page.goto("/analytics?demo=1", { waitUntil: "domcontentloaded" });
     await page.getByTestId("period").click();
     await page.getByRole("button", { name: "ماه گذشته" }).click();
     await expect(page).toHaveURL(/p=prev-month/);
@@ -538,7 +538,7 @@ test.describe("analytics (management dashboard)", () => {
     page.on("console", (m) => m.type() === "error" && errors.push(`${page.url()} ${m.text()}`));
     for (const demo of ["", "demo=1"]) {
       for (const path of ["/analytics", "/analytics/teams", "/analytics/teams?team=soc", "/analytics/people", "/analytics/compare", "/analytics/trends", "/analytics/soc", "/analytics/alerts", "/analytics/report", `/analytics/people/${demo ? "d-srh" : ids.sara}`]) {
-        await page.goto(`${path}${path.includes("?") ? "&" : "?"}${demo}`, { waitUntil: "networkidle" });
+        await page.goto(`${path}${path.includes("?") ? "&" : "?"}${demo}`, { waitUntil: "domcontentloaded" });
         await expect(page.locator("h1").first()).toBeVisible();
         await expect(page.locator(".an-body, .an .empty").first()).toBeVisible();
       }
@@ -561,7 +561,7 @@ test.describe("every screen renders without console errors", () => {
       page.on("pageerror", (e) => errors.push(e.message));
       page.on("console", (m) => m.type() === "error" && errors.push(`${page.url()} ${m.text()}`));
       for (const path of paths) {
-        await page.goto(path, { waitUntil: "networkidle" });
+        await page.goto(path, { waitUntil: "domcontentloaded" });
         await expect(page.locator("h1").first()).toBeVisible();
       }
       expect(errors).toEqual([]);
