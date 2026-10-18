@@ -554,6 +554,19 @@ test.describe("every screen renders without console errors", () => {
 });
 
 test.describe("themes", () => {
+  test("React does not warn about script tags while rendering the page", async ({ page }) => {
+    const scriptWarnings = [];
+    page.on("console", (message) => {
+      if (message.text().includes("Encountered a script tag while rendering React component")) {
+        scriptWarnings.push(message.text());
+      }
+    });
+    await page.goto("/login", { waitUntil: "networkidle" });
+    await signIn(page, "admin");
+    await page.goto("/dashboard", { waitUntil: "networkidle" });
+    expect(scriptWarnings).toEqual([]);
+  });
+
   test("theme menu, Appearance and sign-in swatches switch and remember the theme", async ({ page }) => {
     await signIn(page, "admin");
     await page.goto("/dashboard");
