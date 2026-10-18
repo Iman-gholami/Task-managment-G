@@ -43,11 +43,11 @@ git -C "$root" archive --format=tar "$revision" | tar -xf - -C "$tmp/source"
 test -f "$tmp/source/Dockerfile" || { echo "No Dockerfile at $ref" >&2; exit 1; }
 
 echo "Building $image ($platform)..."
-"\${docker_cmd[@]}" build --pull --platform "$platform" --build-arg "GIT_REV=$revision" \
+"${docker_cmd[@]}" build --pull --platform "$platform" --build-arg "GIT_REV=$revision" \
   --tag "$image" "$tmp/source"
 
 echo "Exporting image and checksum..."
-"\${docker_cmd[@]}" save "$image" > "$tmp/$filename"
+"${docker_cmd[@]}" save "$image" > "$tmp/$filename"
 mv "$tmp/$filename" "$out_dir/$filename"
 (cd "$out_dir" && sha256sum "$filename" > "$filename.sha256")
 # The installer only needs to be copied to the offline server once.
