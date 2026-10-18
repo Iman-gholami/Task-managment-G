@@ -421,6 +421,19 @@
   box-shadow: 0 0 0 3px color-mix(in oklab, var(--tone) 16%, transparent);
 }
 .searchBox { width: 100%; }
+.bulkToolbar {
+  display: grid;
+  gap: 8px;
+  padding: 8px 10px;
+  border: 1px solid var(--border);
+  border-radius: var(--r-md);
+  background: var(--surface-inset);
+  font: var(--type-caption);
+  color: var(--text-2);
+}
+.bulkActions { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+.bulkToolbar small { font: var(--type-caption); color: var(--text-3); }
+
 .memberList {
   max-height: 320px;
   overflow: auto;
