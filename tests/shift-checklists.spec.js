@@ -309,7 +309,7 @@ test("checklist screens work on a phone", async ({ page }) => {
   });
 
   await signIn(page, "manager");
-  await page.goto("/shift/checklists", { waitUntil: "networkidle" });
+  await page.goto("/shift/checklists", { waitUntil: "domcontentloaded" });
   await page.locator(".cl-list").getByRole("button", { name: new RegExp(L2) }).click();
   await expect(page.getByLabel("Item 1 title")).toBeVisible();
   expect(await noSideScroll()).toBeTruthy();
@@ -318,7 +318,7 @@ test("checklist screens work on a phone", async ({ page }) => {
   await page.getByRole("button", { name: "Discard", exact: true }).click();
 
   await signIn(page, "roya");
-  await page.goto("/shift", { waitUntil: "networkidle" });
+  await page.goto("/shift", { waitUntil: "domcontentloaded" });
   expect(await noSideScroll()).toBeTruthy();
   await Promise.all([savedToggle(page), page.locator("#act-1 .toggle-done").click()]);
   await expect(page.locator("#act-1 .cb")).toBeChecked();
@@ -332,7 +332,7 @@ test("checklist screens render without console errors", async ({ page }) => {
   for (const [who, paths] of [["manager", ["/shift/checklists"]], ["admin", ["/shift/checklists", "/admin"]], ["kian", ["/shift", "/shift/history", "/dashboard"]]]) {
     await signIn(page, who);
     for (const path of paths) {
-      await page.goto(path, { waitUntil: "networkidle" });
+      await page.goto(path, { waitUntil: "domcontentloaded" });
       await expect(page.locator("h1").first()).toBeVisible();
     }
   }
