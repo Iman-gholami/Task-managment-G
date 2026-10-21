@@ -1,7 +1,7 @@
 import { isManager, requireUser } from "@/lib/server/auth";
 import { err } from "@/lib/server/access";
-import { getDayStatus, listShiftSchedules, removeDayStatus, removeShiftSchedule, scheduleStatsByUser, setDayStatus, setShiftSchedule } from "@/lib/server/repo";
-import { replaceDayShiftAssignments, replaceShiftAssignments } from "@/lib/server/shift-batch";
+import { getDayStatus, listCenterHolidays, listShiftSchedules, removeDayStatus, removeShiftSchedule, scheduleStatsByUser, setDayStatus, setShiftSchedule } from "@/lib/server/repo";
+import { replaceDayShiftAssignments, replaceShiftAssignments, updateCenterHoliday } from "@/lib/server/shift-batch";
 import { isDayStatus, isIsoDate, monthBounds } from "@/lib/shifts";
 import { isShiftAnalyst } from "@/lib/server/stats";
 
@@ -36,7 +36,7 @@ export async function GET(request) {
   }
 
   const schedules = listShiftSchedules(bounds.from, bounds.to);
-  return Response.json({ month, ...bounds, schedules, statsByUser: scheduleStatsByUser(schedules) });
+  return Response.json({ month, ...bounds, schedules, centerHolidays: listCenterHolidays(bounds.from, bounds.to), statsByUser: scheduleStatsByUser(schedules) });
 }
 
 export async function POST(request) {
@@ -94,5 +94,19 @@ export async function DELETE(request) {
     return Response.json({ ok: true });
   } catch (e) {
     return err(409, e.message);
+  }
+}
+
+/** Manager-only organization-wide holiday; never conflated with individual leave. */
+export async function PATCH(request) {
+  const [user, denied] = await requireUser();
+  if (denied) return denied;
+  if (!isManager(user)) return err(403, "Only managers can change center holidays.");
+  const body = await request.json().catch(() => ({}));
+  try {
+    const holiday = updateCenterHoliday(body.date, body.closed, body.note ?? "", user.id);
+    return Response.json({ holiday, ok: true });
+  } catch (error) {
+    return err(409, error.message);
   }
 }

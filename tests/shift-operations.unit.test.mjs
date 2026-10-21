@@ -116,4 +116,32 @@ test("design engineer can work shifts, days off and leave atomically", async () 
   assert.equal(offStats.leaveDays, 0, "engineer was moved from leave to work");
   assert.equal(routineStats(l2.id, { from: future, to: future }).leaveDays, 1);
 
+  // A center closure is a distinct date-wide record: not personal time off.
+  const { updateCenterHoliday } = await import("@/lib/server/shift-batch");
+  const holidayDate = new Date(Date.parse(future + "T00:00:00Z") + 864e5).toISOString().slice(0, 10);
+  replaceDayShiftAssignments(holidayDate, {
+    morning: [l1.id], evening: [], night: [], off: [l2.id], leave: [],
+  }, admin.id);
+  const holiday = updateCenterHoliday(holidayDate, true, "تعطیلی رسمی مرکز", admin.id);
+  assert.equal(holiday.note, "تعطیلی رسمی مرکز");
+  assert.equal(repo.getShiftSchedule(l1.id, holidayDate) ?? null, null, "scheduled work is removed on closure");
+  assert.equal(repo.getDayStatus(l2.id, holidayDate), "off", "personal day statuses are retained");
+  assert.deepEqual(repo.listCenterHolidays(holidayDate, holidayDate).map((h) => h.date), [holidayDate]);
+  assert.throws(() => replaceDayShiftAssignments(holidayDate, {
+    morning: [l1.id], evening: [], night: [], off: [l2.id], leave: [],
+  }, admin.id), /Center is closed/);
+  assert.throws(() => repo.setShiftSchedule(l1.id, holidayDate, "morning", admin.id), /Center is closed/);
+  assert.equal(updateCenterHoliday(holidayDate, false, "", admin.id), null);
+  assert.equal(repo.getDayStatus(l2.id, holidayDate), "off");
+  assert.equal(repo.getShiftSchedule(l1.id, holidayDate) ?? null, null, "reopening does not restore old shifts");
+  replaceDayShiftAssignments(holidayDate, {
+    morning: [l1.id], evening: [], night: [], off: [l2.id], leave: [],
+  }, admin.id);
+
+  // Existing activity must not be deleted to declare a holiday.
+  assert.throws(() => updateCenterHoliday(date, true, "", admin.id), /already has activity/);
+  assert.equal(repo.getCenterHoliday(date), null);
+  assert.equal(repo.getShiftSchedule(design.id, date).shiftType, "night", "holiday write was rolled back");
+
+
 });

@@ -45,6 +45,12 @@ test("a manager sets all three shifts with one save, including a Design engineer
   await dialog.getByRole("button", { name: "ذخیره برنامه روز" }).click();
   await expect(dialog).toHaveCount(0);
 
+  // The day overview shows all three working shifts without cycling through tabs.
+  const overview = page.locator('aside[aria-label="نمای کلی روز"]');
+  await expect(overview.locator('section[aria-label="شیفت صبح"]')).toContainText("Rosta L1 Roster");
+  await expect(overview.locator('section[aria-label="شیفت شب"]')).toContainText("Rosta L2 Roster");
+  await expect(overview.locator('section[aria-label="شیفت تا ۸ شب"]')).toContainText("Rosta Design Engineer");
+
   const date = tehranDate();
   const result = await page.request.get(`/api/shift/schedule?from=${date}&to=${date}`);
   expect(result.ok()).toBeTruthy();
@@ -114,5 +120,67 @@ test("a manager sets all three shifts with one save, including a Design engineer
   expect((await page.request.get("/api/shift")).status()).toBe(404);
   await page.goto("/shift");
   await expect(page.getByRole("heading", { name: /امروز برای شما.*مرخصی/ })).toBeVisible();
+
+  // A started Shift Log must block a whole-center closure without data loss.
+  await page.request.post("/api/auth/login", { data: ADMIN });
+  await page.goto("/shift/schedule");
+  await page.getByRole("button", { name: "ثبت تعطیلی مرکز" }).click();
+  const blockedDialog = page.getByRole("dialog", { name: "تعطیلی مرکز" });
+  const blockedResponse = page.waitForResponse((response) =>
+    response.url().includes("/api/shift/schedule") && response.request().method() === "PATCH"
+  );
+  await blockedDialog.getByRole("button", { name: "تأیید تعطیلی مرکز" }).click();
+  const blocked = await blockedResponse;
+  expect(blocked.status()).toBe(409);
+  expect((await blocked.json()).error).toMatch(/already has activity/);
+  await blockedDialog.getByRole("button", { name: "انصراف" }).click();
+  expect((await (await page.request.get("/api/shift/schedule?from=" + date + "&to=" + date)).json()).centerHolidays).toEqual([]);
+
+  // Choose an unstarted date with planned work and personal time off.
+  const nextDate = new Date(Date.parse(date + "T00:00:00Z") + 864e5).toISOString().slice(0, 10);
+  const nextDateLabel = new Intl.DateTimeFormat("fa-IR-u-ca-persian", {
+    weekday: "long", year: "numeric", month: "long", day: "numeric", timeZone: "UTC",
+  }).format(new Date(nextDate + "T00:00:00Z")).replace(",", "،");
+  const planning = await page.request.put("/api/shift/schedule", {
+    data: { date: nextDate, assignments: {
+      morning: [ids["free@shift-roster.test"]], evening: [], night: [],
+      off: [ids["l1@shift-roster.test"]], leave: [],
+    } },
+  });
+  expect(planning.status()).toBe(200);
+  await page.reload();
+  await page.getByRole("button", { name: nextDateLabel, exact: true }).click();
+  await page.getByRole("button", { name: "ثبت تعطیلی مرکز" }).click();
+  const holidayDialog = page.getByRole("dialog", { name: "تعطیلی مرکز" });
+  await holidayDialog.getByLabel("علت تعطیلی (اختیاری)").fill("تعطیلی سراسری مرکز");
+  await expect(holidayDialog).toContainText("شیفت کاری ثبت‌شده");
+  const closureResponse = page.waitForResponse((response) =>
+    response.url().includes("/api/shift/schedule") && response.request().method() === "PATCH"
+  );
+  await holidayDialog.getByRole("button", { name: "تأیید تعطیلی مرکز" }).click();
+  const closureResult = await closureResponse;
+  expect(closureResult.status(), JSON.stringify(await closureResult.json())).toBe(200);
+  await expect(holidayDialog).toHaveCount(0);
+  await expect(page.locator('aside[aria-label="نمای کلی روز"]')).toContainText("تعطیلی سراسری مرکز");
+  await expect(page.getByRole("button", { name: "ثبت شیفت", exact: true }).first()).toBeDisabled();
+
+  const closed = await page.request.get("/api/shift/schedule?from=" + nextDate + "&to=" + nextDate);
+  const closedData = await closed.json();
+  expect(closedData.centerHolidays).toEqual([expect.objectContaining({ date: nextDate, note: "تعطیلی سراسری مرکز" })]);
+  expect(closedData.schedules.every((row) => row.shiftType === "off" || row.shiftType === "leave")).toBe(true);
+  expect(closedData.schedules.find((row) => row.userId === ids["l1@shift-roster.test"])?.shiftType).toBe("off");
+  expect((await page.request.post("/api/shift/schedule", {
+    data: { userId: ids["free@shift-roster.test"], date: nextDate, shiftType: "morning" }
+  })).status()).toBe(409);
+
+  await page.getByRole("button", { name: "برداشتن تعطیلی مرکز" }).click();
+  await page.getByRole("dialog", { name: "تعطیلی مرکز" }).getByRole("button", { name: "برداشتن تعطیلی" }).click();
+  await expect(page.locator('aside[aria-label="نمای کلی روز"]')).not.toContainText("تعطیلی سراسری مرکز");
+  const reopened = await page.request.get("/api/shift/schedule?from=" + nextDate + "&to=" + nextDate);
+  const reopenedData = await reopened.json();
+  expect(reopenedData.centerHolidays).toEqual([]);
+  expect(reopenedData.schedules.find((row) => row.userId === ids["l1@shift-roster.test"])?.shiftType).toBe("off");
+  expect(reopenedData.schedules.find((row) => row.userId === ids["free@shift-roster.test"])).toBeUndefined();
+
 
 });
