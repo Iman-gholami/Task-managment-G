@@ -105,7 +105,6 @@ export default function ShiftSchedule() {
   );
   const selectedRows = byDate[selectedDate] ?? [];
   const selectedHoliday = holidayByDate[selectedDate] ?? null;
-  const workingRows = selectedRows.filter((row) => ["morning", "evening", "night"].includes(row.shiftType));
   const cells = useMemo(() => Array.from({ length: daysBetween(range.start, range.end) + 1 }, (_, i) => addDays(range.start, i)), [range.start, range.end]);
   const selectedPerson = analysts.find((a) => a.id === selectedUser);
   const draftIds = editor ? (draftByShift[editor.shiftType] ?? []) : [];
