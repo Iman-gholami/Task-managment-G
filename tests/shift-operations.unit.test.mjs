@@ -124,7 +124,7 @@ test("design engineer can work shifts, days off and leave atomically", async () 
   }, admin.id);
   const holiday = updateCenterHoliday(holidayDate, true, "تعطیلی رسمی مرکز", admin.id);
   assert.equal(holiday.note, "تعطیلی رسمی مرکز");
-  assert.equal(repo.getShiftSchedule(l1.id, holidayDate), null, "scheduled work is removed on closure");
+  assert.equal(repo.getShiftSchedule(l1.id, holidayDate) ?? null, null, "scheduled work is removed on closure");
   assert.equal(repo.getDayStatus(l2.id, holidayDate), "off", "personal day statuses are retained");
   assert.deepEqual(repo.listCenterHolidays(holidayDate, holidayDate).map((h) => h.date), [holidayDate]);
   assert.throws(() => replaceDayShiftAssignments(holidayDate, {
@@ -133,7 +133,7 @@ test("design engineer can work shifts, days off and leave atomically", async () 
   assert.throws(() => repo.setShiftSchedule(l1.id, holidayDate, "morning", admin.id), /Center is closed/);
   assert.equal(updateCenterHoliday(holidayDate, false, "", admin.id), null);
   assert.equal(repo.getDayStatus(l2.id, holidayDate), "off");
-  assert.equal(repo.getShiftSchedule(l1.id, holidayDate), null, "reopening does not restore old shifts");
+  assert.equal(repo.getShiftSchedule(l1.id, holidayDate) ?? null, null, "reopening does not restore old shifts");
   replaceDayShiftAssignments(holidayDate, {
     morning: [l1.id], evening: [], night: [], off: [l2.id], leave: [],
   }, admin.id);
