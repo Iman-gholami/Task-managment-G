@@ -129,7 +129,12 @@ test("a manager sets all three shifts with one save, including a Design engineer
   const holidayDialog = page.getByRole("dialog", { name: "تعطیلی مرکز" });
   await holidayDialog.getByLabel("علت تعطیلی (اختیاری)").fill("تعطیلی سراسری مرکز");
   await expect(holidayDialog).toContainText("شیفت کاری ثبت‌شده");
+  const closureResponse = page.waitForResponse((response) =>
+    response.url().includes("/api/shift/schedule") && response.request().method() === "PATCH"
+  );
   await holidayDialog.getByRole("button", { name: "تأیید تعطیلی مرکز" }).click();
+  const closureResult = await closureResponse;
+  expect(closureResult.status(), JSON.stringify(await closureResult.json())).toBe(200);
   await expect(holidayDialog).toHaveCount(0);
   await expect(page.locator('aside[aria-label="نمای کلی روز"]')).toContainText("تعطیلی سراسری مرکز");
   await expect(page.getByRole("button", { name: "ثبت شیفت", exact: true }).first()).toBeDisabled();
