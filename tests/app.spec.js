@@ -489,6 +489,11 @@ test.describe("analytics (management dashboard)", () => {
     await page.getByTestId("period").click();
     await page.getByRole("button", { name: "بازه دلخواه…" }).click();
     const days = page.locator(".an-cal-day:not([disabled])");
+    // On the first or second day of a Jalali month, the current calendar
+    // does not yet offer three dates. Use the previous month in that case.
+    if (await days.count() < 3) {
+      await page.locator(".an-cal").getByRole("button", { name: "ماه قبل" }).click();
+    }
     await days.first().click();
     await days.nth(2).click();
     await page.getByRole("button", { name: "اعمال" }).click();
