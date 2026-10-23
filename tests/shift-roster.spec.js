@@ -1,5 +1,6 @@
 // @ts-check
 const { test, expect } = require("@playwright/test");
+const ExcelJS = require("exceljs");
 
 const ADMIN = { email: "test-admin@local.invalid", password: "E2E-Only-Admin-2026!" };
 const USER_PASSWORD = "Shift-Roster-2026!";
@@ -121,66 +122,63 @@ test("a manager sets all three shifts with one save, including a Design engineer
   await page.goto("/shift");
   await expect(page.getByRole("heading", { name: /امروز برای شما.*مرخصی/ })).toBeVisible();
 
-  // A started Shift Log must block a whole-center closure without data loss.
+
+  // The center may be closed but staff can be on duty; marked red in the calendar.
   await page.request.post("/api/auth/login", { data: ADMIN });
   await page.goto("/shift/schedule");
   await page.getByRole("button", { name: "ثبت تعطیلی مرکز" }).click();
-  const blockedDialog = page.getByRole("dialog", { name: "تعطیلی مرکز" });
-  const blockedResponse = page.waitForResponse((response) =>
-    response.url().includes("/api/shift/schedule") && response.request().method() === "PATCH"
-  );
-  await blockedDialog.getByRole("button", { name: "تأیید تعطیلی مرکز" }).click();
-  const blocked = await blockedResponse;
-  expect(blocked.status()).toBe(409);
-  expect((await blocked.json()).error).toMatch(/already has activity/);
-  await blockedDialog.getByRole("button", { name: "انصراف" }).click();
-  expect((await (await page.request.get("/api/shift/schedule?from=" + date + "&to=" + date)).json()).centerHolidays).toEqual([]);
-
-  // Choose an unstarted date with planned work and personal time off.
-  const nextDate = new Date(Date.parse(date + "T00:00:00Z") + 864e5).toISOString().slice(0, 10);
-  const nextDateLabel = new Intl.DateTimeFormat("fa-IR-u-ca-persian", {
-    weekday: "long", year: "numeric", month: "long", day: "numeric", timeZone: "UTC",
-  }).format(new Date(nextDate + "T00:00:00Z")).replace(",", "،");
-  const planning = await page.request.put("/api/shift/schedule", {
-    data: { date: nextDate, assignments: {
-      morning: [ids["free@shift-roster.test"]], evening: [], night: [],
-      off: [ids["l1@shift-roster.test"]], leave: [],
-    } },
-  });
-  expect(planning.status()).toBe(200);
-  await page.reload();
-  await page.getByRole("button", { name: nextDateLabel, exact: true }).click();
-  await page.getByRole("button", { name: "ثبت تعطیلی مرکز" }).click();
   const holidayDialog = page.getByRole("dialog", { name: "تعطیلی مرکز" });
-  await holidayDialog.getByLabel("علت تعطیلی (اختیاری)").fill("تعطیلی سراسری مرکز");
-  await expect(holidayDialog).toContainText("شیفت کاری ثبت‌شده");
-  const closureResponse = page.waitForResponse((response) =>
-    response.url().includes("/api/shift/schedule") && response.request().method() === "PATCH"
-  );
+  await holidayDialog.getByLabel("علت تعطیلی (اختیاری)").fill("تعطیلی مرکز با کشیک");
   await holidayDialog.getByRole("button", { name: "تأیید تعطیلی مرکز" }).click();
-  const closureResult = await closureResponse;
-  expect(closureResult.status(), JSON.stringify(await closureResult.json())).toBe(200);
   await expect(holidayDialog).toHaveCount(0);
-  await expect(page.locator('aside[aria-label="نمای کلی روز"]')).toContainText("تعطیلی سراسری مرکز");
-  await expect(page.getByRole("button", { name: "ثبت شیفت", exact: true }).first()).toBeDisabled();
-
-  const closed = await page.request.get("/api/shift/schedule?from=" + nextDate + "&to=" + nextDate);
-  const closedData = await closed.json();
-  expect(closedData.centerHolidays).toEqual([expect.objectContaining({ date: nextDate, note: "تعطیلی سراسری مرکز" })]);
-  expect(closedData.schedules.every((row) => row.shiftType === "off" || row.shiftType === "leave")).toBe(true);
-  expect(closedData.schedules.find((row) => row.userId === ids["l1@shift-roster.test"])?.shiftType).toBe("off");
-  expect((await page.request.post("/api/shift/schedule", {
-    data: { userId: ids["free@shift-roster.test"], date: nextDate, shiftType: "morning" }
-  })).status()).toBe(409);
-
+  const panel = page.locator('aside[aria-label="نمای کلی روز"]');
+  await expect(panel).toContainText("تعطیلی مرکز با کشیک");
+  await expect(panel.locator('section[aria-label="شیفت شب"]')).toContainText("Rosta L2 Roster");
+  await expect(page.getByRole("button", { name: "ثبت شیفت", exact: true }).first()).toBeEnabled();
+  const data = await page.request.get("/api/shift/schedule?from=" + date + "&to=" + date);
+  expect((await data.json()).centerHolidays).toEqual([expect.objectContaining({ date, note: "تعطیلی مرکز با کشیک" })]);
   await page.getByRole("button", { name: "برداشتن تعطیلی مرکز" }).click();
   await page.getByRole("dialog", { name: "تعطیلی مرکز" }).getByRole("button", { name: "برداشتن تعطیلی" }).click();
-  await expect(page.locator('aside[aria-label="نمای کلی روز"]')).not.toContainText("تعطیلی سراسری مرکز");
-  const reopened = await page.request.get("/api/shift/schedule?from=" + nextDate + "&to=" + nextDate);
-  const reopenedData = await reopened.json();
-  expect(reopenedData.centerHolidays).toEqual([]);
-  expect(reopenedData.schedules.find((row) => row.userId === ids["l1@shift-roster.test"])?.shiftType).toBe("off");
-  expect(reopenedData.schedules.find((row) => row.userId === ids["free@shift-roster.test"])).toBeUndefined();
+  await expect(panel).not.toContainText("تعطیلی مرکز با کشیک");
+  // Upload two Excel files; the preview must flag one conflicting row and
+  // preserve that date while applying the other two days atomically.
+  const serial = (iso) => (Date.parse(iso + "T00:00:00Z") - Date.UTC(1899, 11, 30)) / 864e5;
+  const plus = (n) => new Date(Date.parse(date + "T00:00:00Z") + n * 864e5).toISOString().slice(0, 10);
+  const firstDate = plus(3), badDate = plus(4), secondDate = plus(5);
+  const makeFile = async (rows) => {
+    const book = new ExcelJS.Workbook();
+    const sheet = book.addWorksheet("برنامه شیفت");
+    sheet.addRow(["تاریخ", "روز", "حضور تا ساعت 20", "حضور عادی", "تعطیل شیفت", "مرخصی", "توضیحات"]);
+    for (const row of rows) sheet.addRow(row);
+    return Buffer.from(await book.xlsx.writeBuffer());
+  };
+  const files = [
+    { name: "roster-01.xlsx", mimeType: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+      buffer: await makeFile([
+        [serial(firstDate), serial(firstDate), "Rosta Free Analyst", "Rosta L2 Roster", "Rosta L1 Roster", "Rosta Design Engineer", "تعطیلی مرکز"],
+        [serial(badDate), serial(badDate), "Rosta Spare Analyst", "Rosta Spare Analyst", "", "", ""],
+      ]) },
+    { name: "roster-02.xlsx", mimeType: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+      buffer: await makeFile([
+        [serial(secondDate), serial(secondDate), "", "Rosta Spare Analyst", "", "", ""],
+      ]) },
+  ];
+  await page.getByRole("button", { name: "ورود از اکسل" }).click();
+  const importDialog = page.getByRole("dialog", { name: "ورود شیفت از اکسل" });
+  await importDialog.locator('input[type="file"]').setInputFiles(files);
+  await importDialog.getByRole("button", { name: "بررسی و پیش‌نمایش" }).click();
+  await expect(importDialog).toContainText("روز شناسایی شد");
+  await importDialog.getByRole("button", { name: /ثبت.*روز در تقویم/ }).click();
+  await expect(importDialog).toHaveCount(0);
+  const fetchDay = async (targetDate) => (await (await page.request.get(
+    "/api/shift/schedule?from=" + targetDate + "&to=" + targetDate
+  )).json());
+  const imported = await fetchDay(firstDate);
+  expect(imported.centerHolidays[0].date).toBe(firstDate);
+  expect(imported.schedules.find((r) => r.userId === ids["free@shift-roster.test"]).shiftType).toBe("evening");
+  expect(imported.schedules.find((r) => r.userId === ids["l2@shift-roster.test"]).shiftType).toBe("morning");
+  expect((await fetchDay(badDate)).schedules).toHaveLength(0);
+  expect((await fetchDay(secondDate)).schedules.find((r) => r.userId === ids["spare@shift-roster.test"]).shiftType).toBe("morning");
 
 
 });

@@ -1,0 +1,29 @@
+.dialog { overflow: hidden; }
+.body { display: grid; gap: 12px; max-height: 70vh; overflow-y: auto; }
+.uploadArea { display: flex; flex-direction: column; gap: 9px; border: 1px solid var(--border); padding: 12px; border-radius: var(--r-md); background: var(--surface-inset); font: var(--type-body-sm); }
+.uploadArea span { color: var(--text-3); font: var(--type-caption); }
+.uploadArea button { align-self: flex-start; }
+.error { color: var(--danger); background: var(--danger-soft); padding: 9px 12px; border-radius: var(--r-sm); font: var(--type-body-sm); margin: 0; line-height: 1.7; }
+.warning { color: var(--text-2); font: var(--type-body-sm); line-height: 1.8; margin: 0; }
+.summary { display: flex; gap: 8px; flex-wrap: wrap; font: var(--type-body-sm); }
+.summary > * { padding: 5px 9px; border: 1px solid var(--border); background: var(--surface-inset); border-radius: var(--r-md); }
+.warningDetails { font: var(--type-caption); color: var(--text-2); }
+.warningDetails summary { cursor: pointer; }
+.warningDetails ul { max-height: 115px; overflow-y: auto; padding-inline-start: 24px; line-height: 1.9; }
+.mappingHead { display: flex; align-items: baseline; gap: 10px; flex-wrap: wrap; }
+.mappingHead b { font: var(--type-label); }
+.mappingHead small { font: var(--type-caption); color: var(--text-3); }
+.peopleGrid { display: grid; grid-template-columns: repeat(2,minmax(0,1fr)); gap: 8px; }
+.personMap { display: grid; gap: 5px; min-width: 0; font: var(--type-body-sm); }
+.personMap select { min-width: 0; width: 100%; }
+.days { display: grid; border: 1px solid var(--border); border-radius: var(--r-md); max-height: 240px; overflow-y: auto; }
+.dayRow { display: flex; align-items: center; flex-wrap: wrap; gap: 8px; padding: 9px; border-bottom: 1px solid var(--divider); font: var(--type-caption); }
+.dayRow:last-child { border-bottom: none; }
+.dayRow[data-issue="true"] { background: var(--danger-soft); }
+.dayRow .date { font-weight: var(--fw-semibold); min-width: 100px; }
+.dayCount { color: var(--text-3); flex: 1; }
+.holiday { color: var(--danger); font: var(--type-caption); }
+.issue { width: 100%; padding-inline-start: 30px; color: var(--danger); }
+.foot { display: flex; justify-content: flex-end; align-items: center; flex-wrap: wrap; gap: 10px; padding: 14px 18px; border-top: 1px solid var(--divider); }
+.foot > span { margin-inline-end: auto; color: var(--text-2); font: var(--type-caption); }
+@media(max-width:640px) { .peopleGrid { grid-template-columns: 1fr; } }

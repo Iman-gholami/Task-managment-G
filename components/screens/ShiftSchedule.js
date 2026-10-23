@@ -12,6 +12,7 @@ import { addDays } from "@/lib/format";
 import { ROSTER_KEYS, scheduleStats, tehranDate } from "@/lib/shifts";
 import { availableRosterCandidates, bulkRosterSelection, draftAssignment, rosterCandidates } from "@/lib/roster-editor";
 import styles from "./ShiftSchedule.module.css";
+import ShiftExcelImport from "./ShiftExcelImport";
 
 const SHIFT_KEYS = ROSTER_KEYS;
 const SHIFT_META = {
@@ -90,6 +91,7 @@ export default function ShiftSchedule() {
   const [query, setQuery] = useState("");
   const [saving, setSaving] = useState(false);
   const [holidayEditor, setHolidayEditor] = useState(null);
+  const [excelEditor, setExcelEditor] = useState(false);
 
   const range = useMemo(() => calendarRange(monthStart), [monthStart]);
   const { data, loading, error, reload } = useFetch(`/api/shift/schedule?from=${range.start}&to=${range.end}`);
@@ -117,7 +119,7 @@ export default function ShiftSchedule() {
   const unselectedCount = availableAnalysts.filter((person) => !draftIds.includes(person.id)).length;
 
   const openComposer = (date = selectedDate, shiftType = selectedShift) => {
-    if (!manager || holidayByDate[date]) return;
+    if (!manager) return;
     setSelectedDate(date);
     setSelectedShift(shiftType);
     setEditor({ date, shiftType });
@@ -144,7 +146,7 @@ export default function ShiftSchedule() {
         method: "PATCH",
         body: { date: holidayEditor.date, closed: closing, note: holidayEditor.note },
       });
-      toast(closing ? "تعطیلی مرکز ثبت شد" : "تعطیلی مرکز برداشته شد؛ شیفت‌ها باید مجدداً ثبت شوند");
+      toast(closing ? "تعطیلی مرکز ثبت شد؛ شیفت‌ها بدون تغییر باقی ماندند" : "علامت تعطیلی مرکز برداشته شد");
       setSelectedDate(holidayEditor.date);
       setHolidayEditor(null);
       reload();
@@ -245,7 +247,8 @@ export default function ShiftSchedule() {
         </div>
         <div className="page-actions">
           <Link className="btn btn-secondary" href="/shift/changes"><Icon name="swap" /> تغییر شیفت</Link>
-          {manager && <button className="btn btn-primary" disabled={!!holidayByDate[selectedDate]} onClick={() => openComposer()}><Icon name="plus" /> ثبت شیفت</button>}
+          {manager && <button className="btn btn-secondary" onClick={() => setExcelEditor(true)}><Icon name="plus" /> ورود از اکسل</button>}
+          {manager && <button className="btn btn-primary" onClick={() => openComposer()}><Icon name="plus" /> ثبت شیفت</button>}
         </div>
       </header>
 
@@ -283,6 +286,7 @@ export default function ShiftSchedule() {
                   role="button"
                   tabIndex={0}
                   aria-pressed={date === selectedDate}
+                  data-center-holiday={holidayByDate[date] ? "true" : undefined}
                   className={`${styles.day} ${!currentMonth ? styles.outside : ""} ${date === selectedDate ? styles.selectedDay : ""} ${date === TODAY ? styles.today : ""} ${isFriday ? styles.friday : ""}`}
                   onClick={() => setSelectedDate(date)}
                   onDoubleClick={() => openComposer(date, selectedShift)}
@@ -345,21 +349,21 @@ export default function ShiftSchedule() {
               <span className="eyebrow">{selectedDate === TODAY ? "برنامه امروز" : "برنامه روز انتخاب‌شده"}</span>
               <h2>{formatDate(selectedDate)}</h2>
             </div>
-            {manager && !selectedHoliday && (
+            {manager && (
               <button type="button" className="btn btn-primary btn-sm" onClick={() => openComposer(selectedDate, "morning")}>
                 <Icon name="plus" /> چیدن شیفت
               </button>
             )}
           </div>
 
-          {selectedHoliday ? (
+          {selectedHoliday && (
             <div className={styles.holidayNotice} role="status">
               <b><Icon name="info" size="sm" /> تعطیلی مرکز</b>
               {selectedHoliday.note && <p>{selectedHoliday.note}</p>}
-              <span>برای این روز شیفت کاری ثبت نمی‌شود.</span>
+              <span>شیفت نیروهای کشیک نیز برای همین روز نمایش داده می‌شود.</span>
             </div>
-          ) : (
-            <div className={styles.dayOverview} aria-label="خلاصه شیفت‌های روز">
+          )}
+          <div className={styles.dayOverview} aria-label="خلاصه شیفت‌های روز">
               {["morning", "evening", "night"].map((type) => {
                 const rows = selectedRows.filter((row) => row.shiftType === type);
                 return (
@@ -380,7 +384,7 @@ export default function ShiftSchedule() {
                 );
               })}
             </div>
-          )}
+
 
           <details className={styles.extraDetails}>
             <summary>تعطیلی نیروها و مرخصی <span>{faNum(selectedRows.filter((r) => r.shiftType === "off").length + selectedRows.filter((r) => r.shiftType === "leave").length)} نفر</span></summary>
@@ -433,11 +437,21 @@ export default function ShiftSchedule() {
         </aside>
       </div>
 
+      {excelEditor && (
+        <ShiftExcelImport onClose={() => setExcelEditor(false)} onImported={(date, result) => {
+          setExcelEditor(false);
+          setMonthStart(firstOfJalaliMonth(date));
+          setSelectedDate(date);
+          reload();
+          toast(`${faNum(result.importedDays)} روز و ${faNum(result.importedEntries)} وضعیت از اکسل ثبت شد`);
+        }} />
+      )}
+
       {holidayEditor && (
         <Dialog
           label="تعطیلی مرکز"
           title={`تعطیلی مرکز · ${formatDate(holidayEditor.date)}`}
-          description={holidayEditor.closed ? "با برداشتن تعطیلی، شیفت‌های حذف‌شده به‌صورت خودکار برنمی‌گردند." : "تعطیلی مرکز مربوط به کل این روز است، نه تعطیلی شخصی نیروها."}
+          description="این علامت وضعیت تعطیلی مرکز را نشان می‌دهد؛ حتی در این روز هم می‌توان برای نیروهای کشیک شیفت ثبت کرد."
           onClose={() => setHolidayEditor(null)}
           width={500}
         >
@@ -446,7 +460,7 @@ export default function ShiftSchedule() {
               <>
                 <label className={styles.holidayNoteLabel} htmlFor="holiday-reason">علت تعطیلی (اختیاری)</label>
                 <input id="holiday-reason" className="input" maxLength={240} value={holidayEditor.note} onChange={(e) => setHolidayEditor((v) => ({ ...v, note: e.target.value }))} placeholder="مثلاً تعطیلی اعلام‌شده از طرف مرکز" />
-                <p className={styles.holidayWarning}>با تأیید، {faNum((byDate[holidayEditor.date] ?? []).filter((r) => ["morning", "evening", "night"].includes(r.shiftType)).length)} شیفت کاری ثبت‌شده برای این روز حذف می‌شود. شیفت‌لاگ‌های شروع‌شده قابل حذف نیستند و در این حالت ثبت تعطیلی رد می‌شود. تعطیلی و مرخصی شخصی افراد بدون تغییر باقی می‌ماند.</p>
+                <p className={styles.holidayWarning}>این تاریخ در تقویم قرمز می‌شود؛ شیفت‌ها، مرخصی‌ها و گزارش‌های قبلی بدون تغییر باقی می‌مانند.</p>
               </>
             )}
           </div>

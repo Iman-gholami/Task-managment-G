@@ -22,7 +22,14 @@ jobs:
         run: npm run test:unit
       - name: Next.js production build
         run: npm run build
-      - name: Install Playwright Chromium
-        run: npx playwright install --with-deps chromium
+      - name: Use system Chrome or install Playwright Chromium
+        run: |
+          if [ -x /usr/bin/google-chrome ]; then
+            echo "CHROMIUM_PATH=/usr/bin/google-chrome" >> "$GITHUB_ENV"
+          elif [ -x /usr/bin/chromium ]; then
+            echo "CHROMIUM_PATH=/usr/bin/chromium" >> "$GITHUB_ENV"
+          else
+            npx playwright install --with-deps chromium
+          fi
       - name: Playwright E2E
         run: npx playwright test
