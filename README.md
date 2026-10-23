@@ -2,7 +2,7 @@
 
 The Security Department's internal work tool: Task Management, SOC Shift Logs, and Workforce Performance.
 
-**Stack:** Next.js 16 (App Router) · React 19 · JavaScript · Node.js ≥ 22.13 · SQLite (Node's built-in `node:sqlite`, so no database server or native build is needed) · ECharts (analytics charts, bundled from npm). The fonts (Geist, Vazirmatn) are bundled, so the app makes no external requests and works on an offline or internal network.
+**Offline Docker updates:** [One-time setup and automatic build/install](docs/OFFLINE_UPDATES.md). The online builder produces a checksum-verified package; the offline updater preserves the existing SQLite bind mount, backs up data, verifies health, and can revert the application image.\n\n**Stack:** Next.js 16 (App Router) · React 19 · JavaScript · Node.js ≥ 22.13 · SQLite (Node's built-in `node:sqlite`, so no database server or native build is needed) · ECharts (analytics charts, bundled from npm). The fonts (Geist, Vazirmatn) are bundled, so the app makes no external requests and works on an offline or internal network.
 
 **Session security:** each sign-in expires after **12 hours** regardless of activity, or **30 minutes without interaction**, whichever happens first. Visible app tabs report genuine user activity at most once per minute; background polling never renews idle sessions. The server enforces both limits. Upgrading from the former 7-day session format signs everyone out once; existing users and tasks are unaffected.
 
