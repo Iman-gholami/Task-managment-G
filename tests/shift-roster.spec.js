@@ -1,5 +1,6 @@
 // @ts-check
 const { test, expect } = require("@playwright/test");
+const ExcelJS = require("exceljs");
 
 const ADMIN = { email: "test-admin@local.invalid", password: "E2E-Only-Admin-2026!" };
 const USER_PASSWORD = "Shift-Roster-2026!";
@@ -139,5 +140,45 @@ test("a manager sets all three shifts with one save, including a Design engineer
   await page.getByRole("button", { name: "برداشتن تعطیلی مرکز" }).click();
   await page.getByRole("dialog", { name: "تعطیلی مرکز" }).getByRole("button", { name: "برداشتن تعطیلی" }).click();
   await expect(panel).not.toContainText("تعطیلی مرکز با کشیک");
+  // Upload two Excel files; the preview must flag one conflicting row and
+  // preserve that date while applying the other two days atomically.
+  const serial = (iso) => (Date.parse(iso + "T00:00:00Z") - Date.UTC(1899, 11, 30)) / 864e5;
+  const plus = (n) => new Date(Date.parse(date + "T00:00:00Z") + n * 864e5).toISOString().slice(0, 10);
+  const firstDate = plus(3), badDate = plus(4), secondDate = plus(5);
+  const makeFile = async (rows) => {
+    const book = new ExcelJS.Workbook();
+    const sheet = book.addWorksheet("برنامه شیفت");
+    sheet.addRow(["تاریخ", "روز", "حضور تا ساعت 20", "حضور عادی", "تعطیل شیفت", "مرخصی", "توضیحات"]);
+    for (const row of rows) sheet.addRow(row);
+    return Buffer.from(await book.xlsx.writeBuffer());
+  };
+  const files = [
+    { name: "roster-01.xlsx", mimeType: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+      buffer: await makeFile([
+        [serial(firstDate), serial(firstDate), "Rosta Free Analyst", "Rosta L2 Roster", "Rosta L1 Roster", "Rosta Design Engineer", "تعطیلی مرکز"],
+        [serial(badDate), serial(badDate), "Rosta Spare Analyst", "Rosta Spare Analyst", "", "", ""],
+      ]) },
+    { name: "roster-02.xlsx", mimeType: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+      buffer: await makeFile([
+        [serial(secondDate), serial(secondDate), "", "Rosta Spare Analyst", "", "", ""],
+      ]) },
+  ];
+  await page.getByRole("button", { name: "ورود از اکسل" }).click();
+  const importDialog = page.getByRole("dialog", { name: "ورود شیفت از اکسل" });
+  await importDialog.locator('input[type="file"]').setInputFiles(files);
+  await importDialog.getByRole("button", { name: "بررسی و پیش‌نمایش" }).click();
+  await expect(importDialog).toContainText("روز شناسایی شد");
+  await importDialog.getByRole("button", { name: /ثبت.*روز در تقویم/ }).click();
+  await expect(importDialog).toHaveCount(0);
+  const fetchDay = async (targetDate) => (await (await page.request.get(
+    "/api/shift/schedule?from=" + targetDate + "&to=" + targetDate
+  )).json());
+  const imported = await fetchDay(firstDate);
+  expect(imported.centerHolidays[0].date).toBe(firstDate);
+  expect(imported.schedules.find((r) => r.userId === ids["free@shift-roster.test"]).shiftType).toBe("evening");
+  expect(imported.schedules.find((r) => r.userId === ids["l2@shift-roster.test"]).shiftType).toBe("morning");
+  expect((await fetchDay(badDate)).schedules).toHaveLength(0);
+  expect((await fetchDay(secondDate)).schedules.find((r) => r.userId === ids["spare@shift-roster.test"]).shiftType).toBe("morning");
+
 
 });
