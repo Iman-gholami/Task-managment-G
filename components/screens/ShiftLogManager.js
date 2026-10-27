@@ -16,6 +16,13 @@ export default function ShiftLogManager({ initialSelection = {} }) {
     analysts.some((person) => person.id === initialSelection.user) ? initialSelection.user : analysts[0]?.id ?? "");
   const [date, setDate] = useState(() =>
     /^\\d{4}-\\d{2}-\\d{2}$/.test(initialSelection.date ?? "") ? initialSelection.date : shiftDate);
+  useEffect(() => {
+    // Next.js may retain this page instance while changing only its query.
+    if (initialSelection.user && analysts.some((person) => person.id === initialSelection.user))
+      setUserId(initialSelection.user);
+    if (/^\\d{4}-\\d{2}-\\d{2}$/.test(initialSelection.date ?? ""))
+      setDate(initialSelection.date);
+  }, [initialSelection.user, initialSelection.date, analysts]);
   const [log, setLog] = useState(null);
   const [missedDays, setMissedDays] = useState([]);
   const [selectedMissed, setSelectedMissed] = useState([]);
