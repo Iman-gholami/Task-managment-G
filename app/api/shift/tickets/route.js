@@ -6,6 +6,7 @@ export async function POST(request) {
   const [user, denied] = await requireUser();
   if (denied) return denied;
   if (!isShiftAnalyst(user)) return Response.json({ error: "Shift logs are kept by SOC analysts only." }, { status: 403 });
+  if (user.team === "SOC · L2") return Response.json({ error: "Layer 2 uses analyzed tickets only." }, { status: 403 });
   const log = getShiftLog(user.id);
   if (!log) return Response.json({ error: "No shift is scheduled for today." }, { status: 404 });
   if (log.completedAt) return Response.json({ error: "Shift is already completed." }, { status: 409 });
