@@ -111,22 +111,22 @@ export default function ShiftLogManager() {
                 <div><dt><small>Analyst</small></dt><dd>{person?.name ?? userId}</dd></div>
                 <div><dt><small>Date</small></dt><dd>{longDate(log.date)} · {weekday(log.date)}</dd></div>
                 <div><dt><small>Shift</small></dt><dd>{log.shift?.label ?? log.shiftType}</dd></div>
-                <div><dt><small>Checklist</small></dt><dd dir="auto">{log.checklist ? `${log.checklist.name}${log.checklist.version ? ` · v${log.checklist.version}` : ""}` : "None assigned"}</dd></div>
+                {person?.team !== "SOC · L2" && <div><dt><small>Checklist</small></dt><dd dir="auto">{log.checklist ? `${log.checklist.name}${log.checklist.version ? ` · v${log.checklist.version}` : ""}` : "None assigned"}</dd></div>}
                 <div><dt><small>Status</small></dt><dd>{log.completedAt ? <span className="badge dot success">Submitted & locked</span> : <span className="badge dot info">Incomplete</span>}</dd></div>
-                <div><dt><small>Activities</small></dt><dd>{done} of {log.activities.length}</dd></div>
+                {person?.team !== "SOC · L2" && <div><dt><small>Activities</small></dt><dd>{done} of {log.activities.length}</dd></div>}
                 <div><dt><small>Correction policy</small></dt><dd>Manager-only after submission</dd></div>
               </dl>
             </div>
           </div>
 
-          <Panel
+          {person?.team !== "SOC · L2" && <Panel
             title="Routine activities"
             meta={log.completedAt ? "Manager corrections do not unlock this log for the analyst" : "You may correct the log and complete it when all activities are done"}
           >
             {log.activities.map((activity) => (
               <ManagerActivity key={`${activity.n}-${activity.itemId ?? "built-in"}`} activity={activity} onPatch={(patch) => patchActivity(activity, patch)} />
             ))}
-          </Panel>
+          </Panel>}
 
           {person?.team === "SOC · L2" && (
             <L2AnalyzedTickets key={`${userId}:${date}`} initialItems={log.analyzedTickets ?? []}
@@ -135,7 +135,7 @@ export default function ShiftLogManager() {
             />
           )}
 
-          <Panel title="Created tickets" meta={`${log.tickets.length} ticket${log.tickets.length === 1 ? "" : "s"}`}>
+          {person?.team !== "SOC · L2" && <Panel title="Created tickets" meta={`${log.tickets.length} ticket${log.tickets.length === 1 ? "" : "s"}`}>
             {!log.tickets.length ? <p className="panel-body muted small">No tickets were recorded in this shift log.</p> : (
               <div role="table" aria-label="Tickets">
                 <div className="ticket head" role="row"><span role="columnheader">Ticket number</span><span role="columnheader">Related reference</span><span role="columnheader">Description</span></div>
@@ -148,12 +148,12 @@ export default function ShiftLogManager() {
                 ))}
               </div>
             )}
-          </Panel>
+          </Panel>}
 
           {!log.completedAt && (
             <div className="summary">
               <span className="remain">Completion is permanent. After submission, only managers can correct fields.</span>
-              <button type="button" className="btn btn-primary" onClick={complete} disabled={!allDone}>Mark completed</button>
+              <button type="button" className="btn btn-primary" onClick={complete} disabled={person?.team !== "SOC · L2" && !allDone}>Mark completed</button>
             </div>
           )}
         </div>

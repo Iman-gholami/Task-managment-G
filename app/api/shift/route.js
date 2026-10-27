@@ -68,6 +68,7 @@ export async function PATCH(request) {
       }
     }
 
+    if (getUser(target)?.team === "SOC · L2") return err(403, "Layer 2 shift logs accept ticket analysis only.");
     const n = Number(body.n);
     if (!Number.isInteger(n) || !body.patch || typeof body.patch !== "object") return err(400, "Invalid request.");
     if ("iocs" in body.patch && !(Number.isInteger(body.patch.iocs) && body.patch.iocs >= 0)) return err(400, "IOC count must be a whole number.");
@@ -86,7 +87,7 @@ export async function PATCH(request) {
   if ("completed" in body) {
     if (!body.completed) return err(409, "Submitted shift logs are locked. Ask a manager to make any correction.");
     if (log.completedAt) return err(409, "Shift is already completed.");
-    if (log.activities.some((a) => !a.done)) return err(400, "Complete all activities first.");
+    if (user.team !== "SOC · L2" && log.activities.some((a) => !a.done)) return err(400, "Complete all activities first.");
     try {
       return Response.json(setShiftCompleted(user.id, true));
     } catch (e) {
@@ -94,6 +95,7 @@ export async function PATCH(request) {
     }
   }
 
+  if (user.team === "SOC · L2") return err(403, "Layer 2 shift logs accept ticket analysis only.");
   const n = Number(body.n);
   if (!Number.isInteger(n) || !body.patch || typeof body.patch !== "object") return err(400, "Invalid request.");
   if ("iocs" in body.patch && !(Number.isInteger(body.patch.iocs) && body.patch.iocs >= 0)) return err(400, "IOC count must be a whole number.");

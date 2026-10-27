@@ -29,7 +29,65 @@ function checklistLabel(checklist) {
  * Today's Shift Log for a SOC analyst: the checklist assigned to their group, IOC count, issues and tickets.
  * Each change saves immediately; a change that fails is undone on screen, so what you see is what is stored.
  */
+/**
+ * L2 work is exclusively reviewed tickets on rostered shift days. Keep it in a
+ * separate component: typing doesn't touch the global activities context.
+ */
 export default function ShiftLog({ initialLog }) {
+  const { me } = useApp();
+  return me.team === "SOC · L2"
+    ? <Layer2ShiftLog initialLog={initialLog} />
+    : <RoutineShiftLog initialLog={initialLog} />;
+}
+
+function Layer2ShiftLog({ initialLog }) {
+  const { me, shiftDone, dispatch, toast } = useApp();
+  const [tickets, setTickets] = useState(initialLog?.analyzedTickets ?? []);
+  const [submitting, setSubmitting] = useState(false);
+  // initialLog is the server snapshot of THIS scheduled day; no checklists or
+  // created-ticket widgets are mounted for L2.
+  const completed = shiftDone || !!initialLog?.completedAt;
+  const submit = async () => {
+    if (submitting || completed) return;
+    setSubmitting(true);
+    try {
+      await api("/api/shift", { method: "PATCH", body: { completed: true } });
+      dispatch({ type: "shift/complete", value: true });
+      toast("Shift submitted");
+    } catch (error) { toast(error.message, "error"); }
+    finally { setSubmitting(false); }
+  };
+
+  return (
+    <div className="page mid shift-page">
+      <PageHeader title={`Shift Log — ${longDate(initialLog.date)}`}
+        meta={[weekday(initialLog.date), `SOC · L2 · ${initialLog.shift?.label ?? initialLog.shiftType}`,
+          completed ? "Submitted — read only" : "Tickets are saved as you add them"]}
+        actions={<Link className="btn btn-secondary" href="/shift/history"><Icon name="clock" />History</Link>} />
+      <div className="panel" style={{ marginBottom: "var(--s-4)" }}>
+        <div className="shift-head">
+          <dl className="facts">
+            <div><dt><small>Analyst</small></dt><dd><Who id={me.id} /></dd></div>
+            <div><dt><small>Shift</small></dt><dd>{initialLog.shift?.label ?? initialLog.shiftType}</dd></div>
+            <div><dt><small>Date</small></dt><dd>{longDate(initialLog.date)}</dd></div>
+            <div><dt><small>Status</small></dt><dd><span className={`badge dot ${completed ? "success" : "info"}`}>{completed ? "Submitted" : "In progress"}</span></dd></div>
+          </dl>
+        </div>
+      </div>
+      <L2AnalyzedTickets initialItems={tickets} readOnly={completed} onChange={setTickets} />
+      <div className="summary" role="region" aria-label="L2 shift summary">
+        <span className="s"><b>{tickets.length}</b>tickets analyzed</span>
+        <span className="remain">Only rostered shift days have an editable L2 log.</span>
+        {completed ? <span className="muted small">Submitted — manager correction only</span> :
+          <button type="button" className="btn btn-primary" onClick={submit} disabled={submitting}>
+            {submitting ? "Submitting…" : "Complete shift"}
+          </button>}
+      </div>
+    </div>
+  );
+}
+
+function RoutineShiftLog({ initialLog }) {
   const { dispatch, toast, me, activities, tickets, shiftDone, shiftDate, shiftChecklist, shiftTeam } = useApp();
   // The app layout can stay mounted while a manager adds today's shift.
   // Sync the current server-rendered log when this page opens.
@@ -38,8 +96,6 @@ export default function ShiftLog({ initialLog }) {
   }, [dispatch, initialLog]);
 
   const [saved, setSaved] = useState("saved");
-  const [analyzedTickets, setAnalyzedTickets] = useState(initialLog?.analyzedTickets ?? []);
-  useEffect(() => { if (initialLog) setAnalyzedTickets(initialLog.analyzedTickets ?? []); }, [initialLog]);
   const [pending, setPending] = useState(0);
   const [issueOpen, setIssueOpen] = useState(null);
   const [flash, setFlash] = useState(null);
@@ -125,11 +181,6 @@ export default function ShiftLog({ initialLog }) {
         </div>
       </div>
 
-      {me.team === "SOC · L2" && (
-        <L2AnalyzedTickets initialItems={analyzedTickets} readOnly={readOnly}
-          onChange={(items) => setAnalyzedTickets(items)} />
-      )}
-
       <Panel title="Routine activities" meta={activities.length ? `${done} of ${activities.length} done` : shiftTeam}>
         {activities.length === 0 && (
           <EmptyState compact icon="shift" title={shiftChecklist ? "No checklist items for this shift" : `No checklist for ${shiftTeam} yet`}>
@@ -200,7 +251,6 @@ export default function ShiftLog({ initialLog }) {
         <span className="s"><b>{done}/{activities.length}</b>activities</span>
         <span className="s"><b>{iocs}</b>IOCs added</span>
         <span className="s"><b>{tickets.length}</b>{tickets.length === 1 ? "ticket" : "tickets"}</span>
-        {me.team === "SOC · L2" && <span className="s"><b>{analyzedTickets.length}</b>tickets analyzed</span>}
         <span className="s"><b>{issues}</b>{issues === 1 ? "issue" : "issues"}</span>
         <span className="remain" title={remaining.map((r) => r.title).join("\n")}>
           {!shiftDone && remaining.length > 0 && `${remaining.length} remaining · next: ${remaining[0].title}`}
