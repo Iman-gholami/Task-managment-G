@@ -6,6 +6,6 @@ import { canViewManagementAnalytics } from "@/lib/roles";
 export const metadata = { title: "Performance Overview" };
 
 export default async function Page() {
-  if (!isManager(await getCurrentUser())) redirect("/performance/employees");
+  if (!canViewManagementAnalytics(await getCurrentUser())) redirect("/performance/employees");
   return <PerformanceOverview />;
 }
