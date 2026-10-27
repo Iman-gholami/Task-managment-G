@@ -165,8 +165,9 @@ Status, priority and complexity each use a different shape, so none depends on c
 |---|---|
 | Progressive disclosure | Long attention lists show 6 rows then "Show all"; issue details and ticket entry open inline. |
 | Inline editing | Status, priority, hours, IOC count, checklist and tickets are edited in place and saved immediately. |
+| Task handoff | The task workspace groups the brief, assignment and selected files, then presents a final review before creation. Selected files and the task appear to the assignee together; if no files are selected, the review says so. |
 | Drop to attach | A task with no files shows one dashed drop zone: click to browse or drop a file onto it (it lights up while a file is over it). |
-| Confirmation | Toasts confirm; dialogs only for destructive actions (remove member, delete comment, remove file). |
+| Confirmation | Toasts confirm; dialogs confirm destructive actions (remove member, delete task, delete comment, remove file). The task draft asks before discarding unsaved details. |
 | Autosave | The Shift Log shows "Autosaved / Saving… / Not saved" as a live status. |
 | Deep links | KPI cards link to the relevant list (e.g. `/tasks/team?tab=review`). |
 

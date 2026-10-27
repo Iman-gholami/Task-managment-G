@@ -4,12 +4,15 @@ import { useEffect, useRef, useState } from "react";
 import { useApp } from "@/components/AppProvider";
 import Icon from "@/components/ui/Icon";
 import Dialog from "@/components/ui/Dialog";
-import { Field } from "@/components/ui/Field";
+import { Field, FormAlert } from "@/components/ui/Field";
 import AssigneePicker from "@/components/ui/AssigneePicker";
 import { CX, PRIO, TODAY } from "@/lib/format";
 import { canAssignTask, isManager } from "@/lib/roles";
+import { MAX_UPLOAD, MAX_TASK_FILES, MAX_TASK_UPLOAD_TOTAL } from "@/lib/task-upload";
+import styles from "./CreateTaskModal.module.css";
 
 const blank = { title: "", description: "", prio: "normal", cx: 2, start: TODAY, due: "", reviewRequired: true };
+const size = (n) => n >= 1048576 ? `${(n / 1048576).toFixed(1)} MB` : `${Math.max(1, Math.round(n / 1024))} KB`;
 
 export default function CreateTaskModal() {
   const { createOpen, setCreateOpen } = useApp();
@@ -22,333 +25,188 @@ function CreateTaskDialog({ onClose }) {
   const manager = isManager(me);
   const [busy, setBusy] = useState(false);
   const [form, setForm] = useState({ ...blank, a: manager ? "" : me.id });
-  const [error, setError] = useState(null); // "title" | "assignee" | null
+  const [files, setFiles] = useState([]);
+  const [error, setError] = useState(null);
+  const [fileError, setFileError] = useState("");
+  const [submitError, setSubmitError] = useState("");
+  const [dragOver, setDragOver] = useState(false);
+  const [confirmDiscard, setConfirmDiscard] = useState(false);
+  const [preview, setPreview] = useState(false);
   const titleRef = useRef(null);
+  const fileRef = useRef(null);
+  const fileSequence = useRef(0);
+  const keepRef = useRef(null);
+  const previewRef = useRef(null);
   const set = (patch) => setForm((f) => ({ ...f, ...patch }));
+  const dirty = !!(form.title.trim() || form.description.trim() || form.due || form.start !== TODAY ||
+    form.prio !== blank.prio || form.cx !== blank.cx || !form.reviewRequired || (manager && form.a) || files.length);
 
   useEffect(() => { titleRef.current?.focus(); }, []);
+  useEffect(() => { if (confirmDiscard) keepRef.current?.focus(); }, [confirmDiscard]);
+  useEffect(() => { if (preview) previewRef.current?.focus(); }, [preview]);
+  useEffect(() => {
+    if (!dirty) return;
+    const warn = (event) => { event.preventDefault(); event.returnValue = ""; };
+    window.addEventListener("beforeunload", warn);
+    return () => window.removeEventListener("beforeunload", warn);
+  }, [dirty]);
 
-  const submit = async () => {
-    if (!form.title.trim()) {
-      setError("title");
-      titleRef.current?.focus();
+  const requestClose = () => {
+    if (busy) return;
+    if (dirty) setConfirmDiscard(true);
+    else onClose();
+  };
+
+  const addFiles = (incoming) => {
+    const next = Array.from(incoming || []);
+    if (!next.length) return;
+    if (files.length + next.length > MAX_TASK_FILES) {
+      setFileError(`Add up to ${MAX_TASK_FILES} files when creating a task.`);
       return;
     }
-    if (!form.a) return setError("assignee");
-    if (busy) return;
+    if (next.some((file) => !file.size || file.size > MAX_UPLOAD)) {
+      setFileError("Each file must be non-empty and no larger than 20 MB.");
+      return;
+    }
+    if ([...files.map((item) => item.file), ...next].reduce((sum, file) => sum + file.size, 0) > MAX_TASK_UPLOAD_TOTAL) {
+      setFileError("Selected files must be 40 MB or less in total.");
+      return;
+    }
+    setFileError("");
+    setFiles((current) => [...current, ...next.map((file) => ({ key: ++fileSequence.current, file }))]);
+  };
 
+  const validate = () => {
+    if (!form.title.trim()) { setError("title"); titleRef.current?.focus(); return; }
+    if (!form.a) { setError("assignee"); document.getElementById("task-assignee")?.focus(); return false; }
+    return !fileError;
+  };
+
+  const submit = async () => {
+    if (busy) return;
+    if (!preview) { if (validate()) setPreview(true); return; }
     setBusy(true);
+    setSubmitError("");
     try {
-      const task = await addTask({
-        title: form.title.trim(),
-        description: form.description.trim(),
-        a: form.a,
-        prio: form.prio,
-        cx: form.cx,
-        reviewRequired: me.role === "soc_manager" && form.a === me.id ? form.reviewRequired : true,
-        start: form.start,
-        due: form.due,
-      });
-      toast(`${task.id} created and assigned to ${peopleMap[form.a].name}`);
+      const payload = {
+        title: form.title.trim(), description: form.description.trim(), a: form.a,
+        prio: form.prio, cx: form.cx, reviewRequired: manager ? form.reviewRequired : true,
+        start: form.start, due: form.due,
+      };
+      const body = new FormData();
+      body.append("task", JSON.stringify(payload));
+      files.forEach(({ file }) => body.append("files", file));
+      const task = await addTask(body);
+      toast(`${task.id} created and assigned to ${peopleMap[form.a]?.name ?? "the assignee"}`);
       onClose();
     } catch (e) {
-      toast(e.message, "error");
-    } finally {
-      setBusy(false);
-    }
+      setSubmitError(e.message || "The task could not be created. Try again.");
+    } finally { setBusy(false); }
   };
 
   const people = users.filter((u) => u.active !== false && canAssignTask(me, u));
-  const dirty = form.title.trim() || form.description.trim() || form.due || form.start !== TODAY;
 
   return (
-    <>
-      <Dialog
-        label="Create task"
-        onClose={onClose}
-        width={680}
-        className="create-task-v2"
-        dismissible={!dirty}
-        onKeyDown={(e) => { if (e.key === "Enter" && (e.metaKey || e.ctrlKey)) submit(); }}
-      >
-        <div className="create-task-v2__head">
-          <div>
-            <div className="create-task-v2__eyebrow">Task management</div>
-            <h2>Create a task</h2>
-          </div>
-        </div>
+    <Dialog label="Create task" onClose={requestClose} width={940} className={styles.dialog} dismissible={!dirty && !busy}
+      onKeyDown={(e) => { if (e.key === "Enter" && (e.metaKey || e.ctrlKey) && !e.nativeEvent.isComposing) { e.preventDefault(); submit(); } }}>
+      <form noValidate onSubmit={(e) => { e.preventDefault(); submit(); }}>
+        <header className={styles.header}>
+          <span className={styles.headerIcon}><Icon name="tasks" /></span>
+          <div><span className={styles.eyebrow}>Task workspace</span><h2>{preview ? "Confirm task details" : "Create a task"}</h2><p>{preview ? "Check the details before assigning this task." : "Give the assignee everything they need before work begins."}</p></div>
+        </header>
 
-        <div className="create-task-v2__body">
-          <Field
-            label="Task title"
-            htmlFor="task-title"
-            error={error === "title" ? "Add a title to create the task." : undefined}
-          >
-            <input
-              id="task-title"
-              ref={titleRef}
-              className="input input-lg"
-              placeholder="What needs to be done?"
-              value={form.title}
-              onChange={(e) => { set({ title: e.target.value }); setError(null); }}
-              maxLength={200}
-              autoComplete="off"
-            />
-          </Field>
-
-          <Field label="Description" htmlFor="task-description">
-            <textarea
-              id="task-description"
-              className="textarea create-task-v2__description"
-              placeholder="Give your team the context they need..."
-              value={form.description}
-              onChange={(e) => set({ description: e.target.value })}
-            />
-          </Field>
-
-          <div className="create-task-v2__grid">
-            <Field
-              label="Assignee"
-              htmlFor="task-assignee"
-              error={error === "assignee" ? "Choose who this task is for." : undefined}
-            >
-              <AssigneePicker
-                id="task-assignee"
-                value={form.a}
-                people={people}
-                disabled={!manager}
-                onSelect={(id) => { set({ a: id, reviewRequired: true }); setError(null); }}
-                onClear={() => { set({ a: "" }); setError(null); }}
-              />
+        {!preview && <fieldset className={styles.layout} disabled={busy} aria-label="Task details and settings">
+          <div className={styles.main}>
+            <div className={styles.sectionTitle}><strong>Task details</strong><span>What needs to be done?</span></div>
+            <Field label="Task title" htmlFor="task-title" error={error === "title" ? "Add a title to create the task." : undefined}>
+              <input id="task-title" ref={titleRef} className="input input-lg" dir="auto" placeholder="Give this task a clear title" value={form.title}
+                onChange={(e) => { set({ title: e.target.value }); setError(null); }} maxLength={200} autoComplete="off" />
+            </Field>
+            <Field label="Description" htmlFor="task-description">
+              <textarea id="task-description" className={`textarea ${styles.description}`} dir="auto" placeholder="Add context, the expected outcome, and anything the assignee should know."
+                value={form.description} onChange={(e) => set({ description: e.target.value })} />
             </Field>
 
-            <Field label="Priority" htmlFor="task-priority">
-              <select id="task-priority" className="input" value={form.prio} onChange={(e) => set({ prio: e.target.value })}>
-                {Object.entries(PRIO).map(([value, label]) => <option key={value} value={value}>{label}</option>)}
-              </select>
-            </Field>
-
-            <Field label="Complexity" htmlFor="task-complexity">
-              <select id="task-complexity" className="input" value={form.cx} onChange={(e) => set({ cx: Number(e.target.value) })}>
-                {CX.slice(1).map((label, index) => <option key={label} value={index + 1}>{label}</option>)}
-              </select>
-            </Field>
-
-            <Field label="Start date" htmlFor="task-start" hint="Defaults to today. Choose another date if this task is planned to start later.">
-              <input
-                id="task-start"
-                className="input"
-                type="date"
-                value={form.start}
-                onChange={(e) => {
-                  const start = e.target.value;
-                  set({ start, ...(form.due && start && form.due < start ? { due: "" } : {}) });
-                }}
-              />
-            </Field>
-
-            <Field label="Deadline" htmlFor="task-deadline">
-              <input
-                id="task-deadline"
-                className="input"
-                type="date"
-                min={form.start || TODAY}
-                value={form.due}
-                onChange={(e) => set({ due: e.target.value })}
-              />
-            </Field>
-
-            <div className="create-task-v2__review">
-              <label>
-                <input type="checkbox" className="cb" checked={form.a === me.id && me.role === "soc_manager" ? form.reviewRequired : true}
-                  disabled={me.role !== "soc_manager" || form.a !== me.id}
-                  onChange={(e) => set({ reviewRequired: e.target.checked })} aria-label="Manager review required" />
-                <span>
-                  <b>Manager review required</b>
-                  <small>{me.role === "soc_manager" && form.a === me.id
-                    ? "Optional for your own tasks. Uncheck to complete directly without a reviewer."
-                    : "Analyst tasks must pass manager review before completion."}</small>
-                </span>
-              </label>
+            <div className={styles.attachments}>
+              <div className={styles.sectionTitle}><strong>Attachments</strong><span>{files.length ? `${files.length} selected` : "Optional"}</span></div>
+              <input ref={fileRef} type="file" multiple hidden aria-label="Files for new task" onChange={(e) => { addFiles(e.target.files); e.target.value = ""; }} />
+              <button type="button" className={`${styles.dropzone} ${dragOver ? styles.over : ""}`} onClick={() => fileRef.current?.click()}
+                onDragOver={(e) => { e.preventDefault(); setDragOver(true); }} onDragLeave={(e) => { if (!e.currentTarget.contains(e.relatedTarget)) setDragOver(false); }}
+                onDrop={(e) => { e.preventDefault(); setDragOver(false); addFiles(e.dataTransfer.files); }}>
+                <span className={styles.fileIcon}><Icon name="clip" /></span>
+                <span><b>Choose files or drop them here</b><small>Up to {MAX_TASK_FILES} files · 20 MB each · 40 MB total</small></span>
+              </button>
+              {fileError && <p className={styles.fileError} role="alert">{fileError} <button type="button" className="btn btn-ghost btn-sm" onClick={() => setFileError("")}>Dismiss</button></p>}
+              {files.length > 0 && <ul className={styles.fileList} aria-label="Selected files">
+                {files.map(({ key, file }) => <li key={key}><Icon name="sheet" /><span><b>{file.name}</b><small>{size(file.size)}</small></span>
+                  <button type="button" className="btn btn-ghost icon-btn btn-sm" aria-label={`Remove ${file.name}`} onClick={() => { setFiles((current) => current.filter((item) => item.key !== key)); setFileError(""); }}><Icon name="x" /></button></li>)}
+              </ul>}
             </div>
           </div>
 
-          <details className="create-task-v2__details">
-            <summary>
-              <span>Additional details</span>
-              <small>Checklist &amp; references</small>
-            </summary>
-            <div>
-              Checklist items, file attachments, references and comments can be added on the task page after the task is created.
+          <aside className={styles.settings} aria-label="Task settings">
+            <div className={styles.sectionTitle}><strong>Assignment</strong><span>Who and when</span></div>
+            <Field label="Assignee" htmlFor="task-assignee" error={error === "assignee" ? "Choose who this task is for." : undefined}>
+              <AssigneePicker id="task-assignee" value={form.a} people={people} disabled={!manager}
+                onSelect={(id) => { set({ a: id }); setError(null); }} onClear={() => { set({ a: "" }); setError(null); }} />
+            </Field>
+            <div className={styles.settingsGrid}>
+              <Field label="Priority" htmlFor="task-priority"><select id="task-priority" className="input" value={form.prio} onChange={(e) => set({ prio: e.target.value })}>{Object.entries(PRIO).map(([value, label]) => <option key={value} value={value}>{label}</option>)}</select></Field>
+              <Field label="Complexity" htmlFor="task-complexity"><select id="task-complexity" className="input" value={form.cx} onChange={(e) => set({ cx: Number(e.target.value) })}>{CX.slice(1).map((label, i) => <option key={label} value={i + 1}>{label}</option>)}</select></Field>
+              <Field label="Start date" htmlFor="task-start"><input id="task-start" className="input" type="date" value={form.start} onChange={(e) => { const start = e.target.value; set({ start, ...(form.due && start && form.due < start ? { due: "" } : {}) }); }} /></Field>
+              <Field label="Deadline" htmlFor="task-deadline"><input id="task-deadline" className="input" type="date" min={form.start || TODAY} value={form.due} onChange={(e) => set({ due: e.target.value })} /></Field>
             </div>
-          </details>
-        </div>
+            <label className={styles.review}>
+              <input type="checkbox" className="cb" checked={manager ? form.reviewRequired : true} disabled={!manager}
+                onChange={(e) => set({ reviewRequired: e.target.checked })} aria-label="Manager review required" />
+              <span><b>Manager review required</b><small>{manager ? "Turn off to let the assignee complete the task without review." : "A manager will review this task before completion."}</small></span>
+            </label>
+          </aside>
+        </fieldset>}
 
-        <div className="create-task-v2__foot">
-          <button type="button" className="btn btn-secondary" onClick={onClose}>Cancel</button>
-          <button type="button" className="btn btn-primary btn-lg" onClick={submit} disabled={busy} aria-busy={busy}>
-            Create task <Icon name="arrowRight" />
-          </button>
-        </div>
-      </Dialog>
+        {preview && <section className={styles.preview} aria-label="Task preview">
+          <div className={styles.previewHeading} tabIndex={-1} ref={previewRef}>
+            <span className={styles.headerIcon}><Icon name="review" /></span>
+            <span><strong>Ready to assign?</strong><small>The task and its files will become visible after you create it.</small></span>
+          </div>
+          <div className={styles.previewGrid}>
+            <div className={styles.previewBrief}>
+              <span className={styles.eyebrow}>Task</span>
+              <h3 dir="auto">{form.title.trim()}</h3>
+              <p dir="auto">{form.description.trim() || "No description added."}</p>
+            </div>
+            <dl className={styles.previewFacts}>
+              <div><dt>Assignee</dt><dd dir="auto">{peopleMap[form.a]?.name ?? "—"}</dd></div>
+              <div><dt>Priority</dt><dd>{PRIO[form.prio]}</dd></div>
+              <div><dt>Complexity</dt><dd>{CX[form.cx]}</dd></div>
+              <div><dt>Start date</dt><dd>{form.start || "Not set"}</dd></div>
+              <div><dt>Deadline</dt><dd>{form.due || "Not set"}</dd></div>
+              <div><dt>Manager review</dt><dd>{form.reviewRequired ? "Required" : "Not required"}</dd></div>
+            </dl>
+          </div>
+          <div className={styles.previewAttachments}>
+            <div className={styles.sectionTitle}><strong>Attachments</strong><span>{files.length} selected</span></div>
+            {files.length ? <ul className={styles.previewFiles}>{files.map(({ key, file }) => <li key={key}><Icon name="clip" /><span>{file.name}</span><small>{size(file.size)}</small></li>)}</ul>
+              : <p className={styles.noFiles}><Icon name="info" />No files selected. Go back if you need to add any.</p>}
+          </div>
+        </section>}
 
-      <style>{`
-        .create-task-v2 {
-          overflow: hidden;
-          border-color: var(--border-strong);
-          background: var(--surface-raised);
-        }
-        .create-task-v2 .modal-close {
-          top: 16px;
-          right: 18px;
-          width: 42px;
-          height: 42px;
-          border: 1px solid color-mix(in oklab, var(--primary) 72%, var(--border-strong));
-          border-radius: 12px;
-          background: var(--surface-card);
-          color: var(--text-2);
-          box-shadow: 0 0 0 2px var(--primary-soft);
-        }
-        .create-task-v2 .modal-close:hover {
-          background: var(--primary-soft);
-          color: var(--text);
-        }
-        .create-task-v2__head {
-          min-height: 82px;
-          display: flex;
-          align-items: center;
-          padding: 14px 78px 14px 22px;
-          border-bottom: 1px solid var(--divider);
-        }
-        .create-task-v2__eyebrow {
-          margin-bottom: 7px;
-          color: var(--text-3);
-          font: var(--type-overline);
-          letter-spacing: var(--tracking-caps);
-          text-transform: uppercase;
-        }
-        .create-task-v2__head h2 {
-          margin: 0;
-          color: var(--text);
-          font: var(--fw-semibold) var(--fs-22)/1.2 var(--font-sans);
-          letter-spacing: var(--tracking-title);
-        }
-        .create-task-v2__body {
-          display: grid;
-          gap: 18px;
-          padding: 22px;
-        }
-        .create-task-v2__description {
-          min-height: 86px;
-        }
-        .create-task-v2__grid {
-          display: grid;
-          grid-template-columns: repeat(2, minmax(0, 1fr));
-          gap: 16px 18px;
-          align-items: start;
-        }
-        .create-task-v2__grid .input,
-        .create-task-v2__body > .field .input,
-        .create-task-v2__body > .field .textarea {
-          border-color: var(--border-strong);
-          background: var(--surface-input);
-        }
-        .create-task-v2__grid .input {
-          height: 38px;
-        }
-        .create-task-v2__review {
-          min-height: 62px;
-          display: flex;
-          align-items: center;
-        }
-        .create-task-v2__review label {
-          display: flex;
-          align-items: flex-start;
-          gap: 10px;
-          cursor: pointer;
-          color: var(--text-2);
-        }
-        .create-task-v2__review .cb {
-          margin-top: 2px;
-          opacity: 1;
-        }
-        .create-task-v2__review b {
-          display: block;
-          margin-bottom: 3px;
-          color: var(--text-2);
-          font-size: var(--fs-13);
-          font-weight: var(--fw-medium);
-        }
-        .create-task-v2__review small {
-          display: block;
-          color: var(--text-3);
-          font-size: var(--fs-12);
-          line-height: 1.4;
-        }
-        .create-task-v2__details {
-          border-top: 1px solid var(--divider);
-          padding-top: 14px;
-        }
-        .create-task-v2__details summary {
-          display: flex;
-          align-items: center;
-          gap: 18px;
-          min-height: 28px;
-          color: var(--text-2);
-          cursor: pointer;
-          user-select: none;
-          list-style: none;
-        }
-        .create-task-v2__details summary::-webkit-details-marker { display: none; }
-        .create-task-v2__details summary::before {
-          content: "›";
-          display: inline-block;
-          color: var(--text-3);
-          transform: rotate(0deg);
-          transition: transform var(--t-fast);
-        }
-        .create-task-v2__details[open] summary::before { transform: rotate(90deg); }
-        .create-task-v2__details summary span {
-          font-size: var(--fs-13);
-        }
-        .create-task-v2__details summary small {
-          color: var(--text-3);
-          font-size: var(--fs-12);
-        }
-        .create-task-v2__details > div {
-          margin: 10px 0 0 20px;
-          padding: 10px 12px;
-          border: 1px solid var(--border);
-          border-radius: var(--r-md);
-          background: var(--surface-inset);
-          color: var(--text-3);
-          font-size: var(--fs-12);
-          line-height: 1.55;
-        }
-        .create-task-v2__foot {
-          display: flex;
-          justify-content: flex-end;
-          align-items: center;
-          gap: 10px;
-          padding: 16px 22px;
-          border-top: 1px solid var(--divider);
-          background: var(--surface-inset);
-        }
-        .create-task-v2__foot .btn-primary {
-          min-width: 122px;
-        }
-        .create-task-v2__foot .btn-primary svg {
-          width: 15px;
-          height: 15px;
-        }
-        @media (max-width: 639px) {
-          .create-task-v2__head { padding-left: 18px; }
-          .create-task-v2__body { padding: 18px; }
-          .create-task-v2__grid { grid-template-columns: 1fr; }
-          .create-task-v2__foot { padding: 14px 18px; }
-          .create-task-v2__foot .btn { flex: initial; }
-        }
-      `}</style>
-    </>
+        {submitError && <div className={styles.formError}><FormAlert>{submitError}</FormAlert></div>}
+        {confirmDiscard ? (
+          <div className={styles.discard} role="alert">
+            <span><b>Discard this task?</b><small>Your unsaved details and selected files will be removed.</small></span>
+            <button ref={keepRef} type="button" className="btn btn-secondary" onClick={() => setConfirmDiscard(false)}>Keep editing</button>
+            <button type="button" className="btn btn-danger" onClick={onClose}>Discard</button>
+          </div>
+        ) : (
+          <footer className={styles.footer}>
+            <span><Icon name="info" />{preview ? "The assignee can start after creation." : "Files are attached before the task is assigned."}</span>
+            {preview ? <button type="button" className="btn btn-secondary" onClick={() => { setPreview(false); setSubmitError(""); }} disabled={busy}>Back to editing</button>
+              : <button type="button" className="btn btn-secondary" onClick={requestClose} disabled={busy}>Cancel</button>}
+            <button type="submit" className="btn btn-primary" disabled={busy || !!fileError} aria-busy={busy}>{preview ? "Create task" : "Review details"}</button>
+          </footer>
+        )}
+      </form>
+    </Dialog>
   );
 }

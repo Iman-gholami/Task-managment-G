@@ -17,6 +17,8 @@ function reducer(state, action) {
       return { ...state, tasks: state.tasks.map((t) => (t.id === action.id ? { ...t, ...action.patch } : t)) };
     case "task/add":
       return { ...state, tasks: [action.task, ...state.tasks] };
+    case "task/remove":
+      return { ...state, tasks: state.tasks.filter((t) => t.id !== action.id) };
     case "activity/update":
       return { ...state, activities: state.activities.map((a) => (a.n === action.n ? { ...a, ...action.patch } : a)) };
     case "activities/set":
@@ -143,6 +145,11 @@ export default function AppProvider({ children, initial }) {
     return task;
   }, []);
 
+  const deleteTask = useCallback(async (id) => {
+    await api(`/api/tasks/${encodeURIComponent(id)}`, { method: "DELETE" });
+    dispatch({ type: "task/remove", id });
+  }, []);
+
   /** Optimistic task update; reverts and reports on failure. */
   const updateTask = useCallback(async (task, patch) => {
     dispatch({ type: "task/update", id: task.id, patch: { ...patch, upd: "now" } });
@@ -168,8 +175,8 @@ export default function AppProvider({ children, initial }) {
   const peopleMap = useMemo(() => Object.fromEntries(data.users.map((u) => [u.id, u])), [data.users]);
 
   const value = useMemo(
-    () => ({ ...data, dispatch, role, peopleMap, members, theme, setTheme, collapsed, setCollapsed, toast, openPopover, closePopover, createOpen, setCreateOpen, addTask, updateTask }),
-    [data, role, peopleMap, members, theme, setTheme, collapsed, setCollapsed, toast, openPopover, closePopover, createOpen, addTask, updateTask]
+    () => ({ ...data, dispatch, role, peopleMap, members, theme, setTheme, collapsed, setCollapsed, toast, openPopover, closePopover, createOpen, setCreateOpen, addTask, updateTask, deleteTask }),
+    [data, role, peopleMap, members, theme, setTheme, collapsed, setCollapsed, toast, openPopover, closePopover, createOpen, addTask, updateTask, deleteTask]
   );
 
   // React's special `key` prop must be passed directly, never through a spread object.

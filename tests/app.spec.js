@@ -219,11 +219,13 @@ test.describe("manager assigns and follows up tasks", () => {
     const dialog = page.getByRole("dialog", { name: "Create task" });
     await expect(dialog).toBeVisible();
     await dialog.getByLabel("Task title").fill("Tune Splunk correlation rule for VPN logins");
-    await dialog.getByRole("button", { name: /Create task/ }).click();
+    await dialog.getByRole("button", { name: "Review details" }).click();
     await expect(dialog.getByText("Choose who this task is for.")).toBeVisible();
-    await dialog.getByLabel("Assignee").fill("Sara");
+    await dialog.getByRole("combobox", { name: "Assignee", exact: true }).fill("Sara");
     await dialog.getByRole("option", { name: /Sara Rahimi/ }).click();
-    await dialog.getByRole("button", { name: /Create task/ }).click();
+    await dialog.getByRole("button", { name: "Review details" }).click();
+    await expect(dialog.getByText("No files selected. Go back if you need to add any.")).toBeVisible();
+    await dialog.getByRole("button", { name: "Create task", exact: true }).click();
     await expect(dialog).toBeHidden();
 
     ids.t1 = "T-1001";

@@ -1,0 +1,73 @@
+.dialog { overflow: hidden; }
+.dialog :global(.modal-close) { top: 18px; right: 18px; }
+.header { display: flex; align-items: center; gap: var(--s-3); padding: var(--s-5) 64px var(--s-5) var(--s-6); border-bottom: 1px solid var(--divider); }
+.headerIcon { width: 42px; height: 42px; display: grid; place-items: center; flex: none; border-radius: var(--r-md); background: var(--grad-signal-soft); color: var(--primary); }
+.headerIcon svg { width: 20px; height: 20px; }
+.eyebrow { display: block; margin-bottom: 2px; color: var(--text-3); font: var(--type-overline); letter-spacing: var(--tracking-caps); text-transform: uppercase; }
+.header h2 { margin: 0; color: var(--text); font: var(--fw-semibold) var(--fs-20)/1.25 var(--font-sans); letter-spacing: var(--tracking-title); }
+.header p { margin: 3px 0 0; color: var(--text-2); font: var(--type-body-sm); }
+.layout { display: grid; grid-template-columns: minmax(0, 1.4fr) minmax(280px, 1fr); min-width: 0; margin: 0; padding: 0; border: 0; }
+.main, .settings { display: grid; align-content: start; gap: var(--s-4); min-width: 0; padding: var(--s-5) var(--s-6); }
+.settings { border-left: 1px solid var(--divider); background: var(--surface-inset); }
+.sectionTitle { display: flex; align-items: baseline; justify-content: space-between; gap: var(--s-2); }
+.sectionTitle strong { color: var(--text); font: var(--type-section); }
+.sectionTitle > span { color: var(--text-3); font: var(--type-caption); }
+.description { min-height: 110px; resize: none; }
+.settingsGrid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: var(--s-3); }
+.review { display: flex; align-items: flex-start; gap: var(--s-3); padding: var(--s-3); border: 1px solid var(--border); border-radius: var(--r-md); background: var(--surface-card); cursor: pointer; }
+.review input { margin-top: 2px; }
+.review b, .review small { display: block; }
+.review b { color: var(--text); font: var(--type-card-title); }
+.review small { margin-top: 3px; color: var(--text-2); font: var(--type-caption); }
+.attachments { display: grid; gap: var(--s-2); }
+.dropzone { display: flex; align-items: center; gap: var(--s-3); width: 100%; min-height: 66px; padding: var(--s-3); border: 1px dashed var(--border-strong); border-radius: var(--r-md); background: var(--surface-card); color: var(--text); text-align: left; cursor: pointer; }
+.dropzone:hover, .dropzone.over { border-color: var(--primary); background: var(--grad-signal-soft); }
+.dropzone:focus-visible { outline: 2px solid var(--focus); outline-offset: 2px; }
+.dropzone span:last-child { display: grid; min-width: 0; gap: 3px; }
+.dropzone b { font: var(--type-card-title); }
+.dropzone small { color: var(--text-2); font: var(--type-caption); }
+.fileIcon { display: grid; place-items: center; width: 34px; height: 34px; flex: none; border-radius: var(--r-md); background: var(--surface-inset); color: var(--link); }
+.fileList { display: grid; max-height: 155px; overflow-y: auto; margin: 0; padding: 0; list-style: none; border: 1px solid var(--divider); border-radius: var(--r-md); }
+.fileList li { display: flex; align-items: center; gap: var(--s-2); min-width: 0; padding: var(--s-2) var(--s-3); }
+.fileList li + li { border-top: 1px solid var(--divider); }
+.fileList li > svg { flex: none; color: var(--text-3); }
+.fileList li > span { display: grid; min-width: 0; flex: 1; }
+.fileList b { overflow-wrap: anywhere; font: var(--type-body-sm); color: var(--text); }
+.fileList small { color: var(--text-3); font: var(--type-caption); }
+.fileError { color: var(--danger); font: var(--type-body-sm); }
+.formError { padding: 0 var(--s-6) var(--s-3); }
+.preview { display: grid; gap: var(--s-4); padding: var(--s-5) var(--s-6); }
+.previewHeading { display: flex; align-items: center; gap: var(--s-3); }
+.previewHeading > span:last-child { display: grid; gap: 3px; }
+.previewHeading strong { color: var(--text); font: var(--type-section); }
+.previewHeading small { color: var(--text-2); font: var(--type-body-sm); }
+.previewGrid { display: grid; grid-template-columns: minmax(0, 1fr) minmax(240px, .7fr); gap: var(--s-3); }
+.previewBrief, .previewFacts, .previewAttachments { min-width: 0; padding: var(--s-4); border: 1px solid var(--border); border-radius: var(--r-md); background: var(--surface-inset); }
+.previewBrief h3 { margin: var(--s-2) 0; overflow-wrap: anywhere; color: var(--text); font: var(--type-section); }
+.previewBrief p { color: var(--text-2); font: var(--type-body-sm); white-space: pre-wrap; overflow-wrap: anywhere; }
+.previewFacts { display: grid; gap: var(--s-2); }
+.previewFacts > div { display: flex; justify-content: space-between; align-items: start; gap: var(--s-3); font: var(--type-body-sm); }
+.previewFacts dt { color: var(--text-3); }
+.previewFacts dd { color: var(--text); text-align: right; overflow-wrap: anywhere; }
+.previewFiles { display: grid; max-height: 130px; overflow-y: auto; margin: var(--s-2) 0 0; padding: 0; list-style: none; }
+.previewFiles li { display: flex; align-items: center; gap: var(--s-2); padding: var(--s-2) 0; font: var(--type-body-sm); }
+.previewFiles li + li { border-top: 1px solid var(--divider); }
+.previewFiles li span { flex: 1; min-width: 0; overflow-wrap: anywhere; }
+.previewFiles li small { color: var(--text-3); font: var(--type-caption); }
+.previewFiles svg { color: var(--link); flex: none; }
+.noFiles { display: flex; align-items: center; gap: var(--s-2); margin: var(--s-3) 0 0; color: var(--warning); font: var(--type-body-sm); }
+.footer, .discard { display: flex; align-items: center; gap: var(--s-2); padding: var(--s-4) var(--s-6); border-top: 1px solid var(--divider); background: var(--surface-card); }
+.footer > span { display: flex; align-items: center; gap: 6px; flex: 1; color: var(--text-2); font: var(--type-caption); }
+.footer > span svg { flex: none; color: var(--info); }
+.footer button[type="submit"] { min-width: 110px; }
+.discard { background: var(--warning-soft); }
+.discard > span { display: grid; gap: 3px; flex: 1; }
+.discard b { color: var(--text); font: var(--type-card-title); }
+.discard small { color: var(--text-2); font: var(--type-caption); }
+@media (max-width: 760px) {
+  .layout { grid-template-columns: minmax(0, 1fr); }
+  .previewGrid { grid-template-columns: minmax(0, 1fr); }
+  .settings { border-left: 0; border-top: 1px solid var(--divider); }
+  .footer, .discard { flex-wrap: wrap; }
+  .footer > span, .discard > span { flex-basis: 100%; }
+}
