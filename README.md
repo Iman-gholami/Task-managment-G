@@ -149,3 +149,14 @@ Four themes: **Daylight** (light, teal), **Graphite** (dark slate, teal), **Blac
 The Persian shift calendar includes two non-working day statuses: **تعطیل شیفت** (`off`) and **مرخصی** (`leave`). A manager can plan these alongside morning, extended (until 20:00) and night shifts in the same single-save editor; a person can have only one status per date. A day off or leave contributes **zero worked shift hours**, never opens a Shift Log, and is excluded from missed-log/closure-rate denominators. Off/leave dates remain visible in the calendar, individual history, SOC report summaries, analytics filters, individual/team metrics and raw Excel shift exports.
 
 Absences use a new `shift_day_statuses` SQLite table created automatically on first start; existing `shift_schedules` and `shift_logs` rows are preserved. Do not delete the bind-mounted production data when upgrading. Shifts with recorded activity cannot be converted to absences.
+
+
+### SOC Layer 2 ticket analysis
+
+The SOC · L2 Shift Log has a dedicated **Analyzed tickets** activity (separate from tickets *created*).
+Enter a ticket number, select **False Positive** or **True Positive**, and save; the next number can be entered immediately.
+Counts and verdict subtotals update automatically. Duplicates within the same analyst/shift date are rejected.
+Analysts may edit and delete entries until they submit the shift; after submission, only a SOC or Security Manager
+may correct them via Shift Log corrections. Entries are kept in an additive SQLite table
+`l2_analyzed_tickets`, included in monthly SOC Shift Activity and Employee reports, with ticket-level
+details in the **L2 Ticket Analysis** Excel sheet. Existing shift checklists and previously created tickets remain unchanged.
