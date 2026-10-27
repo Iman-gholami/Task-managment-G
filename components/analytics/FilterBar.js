@@ -3,6 +3,7 @@
 import { useMemo, useState } from "react";
 import { useApp } from "@/components/AppProvider";
 import { useAnalytics } from "@/components/analytics/AnalyticsContext";
+import { IRAN_PROVINCES } from "@/lib/roles";
 import { Drawer } from "@/components/analytics/ui";
 import Icon from "@/components/ui/Icon";
 import { WEEKDAYS_SHORT, addDays, faDate, faDigits, faRange, fromJalali, jalaliMonthLength, toJalali, weekdayIndex } from "@/lib/analytics/calendar";
@@ -180,6 +181,16 @@ export default function FilterBar({ hideTeam = false }) {
           </select>
         </label>
       )}
+      {manager && (
+        <label className="an-select">
+          <span>استان</span>
+          <select className={`input ${filters.province ? "is-set" : ""}`} value={filters.province}
+            onChange={(e) => setFilters({ province: e.target.value })} aria-label="استان">
+            <option value="">همه استان‌ها</option>
+            {IRAN_PROVINCES.map((province) => <option key={province} value={province}>{province}</option>)}
+          </select>
+        </label>
+      )}
       {showLevel && (
         <label className="an-select">
           <span>سطح</span>
@@ -208,7 +219,7 @@ export default function FilterBar({ hideTeam = false }) {
         </span>
       ))}
       {active > 0 && (
-        <button type="button" className="btn btn-ghost btn-sm" onClick={() => setFilters({ team: "", level: "", role: "", prio: "", cx: "", q: "", shift: "" })}>
+        <button type="button" className="btn btn-ghost btn-sm" onClick={() => setFilters({ team: "", level: "", province: "", role: "", prio: "", cx: "", q: "", shift: "" })}>
           <Icon name="x" />پاک کردن فیلترها ({faDigits(active)})
         </button>
       )}

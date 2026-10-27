@@ -24,7 +24,7 @@ export default function Person({ id }) {
     <AnalyticsFrame
       title={p?.name ?? (a.facts ? "کارشناس" : "…")}
       crumbs={a.manager ? "پروفایل کارشناس" : "آمار من"}
-      subtitle={p ? [groupFa(p.group), p.level, ROLE_FA[p.role], p.active ? null : "غیرفعال"].filter(Boolean).join(" · ") : null}
+      subtitle={p ? [p.province || "استان تعیین‌نشده", groupFa(p.group), p.level, ROLE_FA[p.role], p.active ? null : "غیرفعال"].filter(Boolean).join(" · ") : null}
       exportKind="person"
       exportId={id}
       hideTeamFilter
