@@ -233,7 +233,14 @@ function BufferedShiftInput({ value, onCommit, numeric = false, readOnly, ...pro
     <input {...props} readOnly={readOnly} value={draft}
       onChange={(event) => setDraft(event.target.value)}
       onBlur={commit}
-      onKeyDown={(event) => { if (event.key === "Enter") { event.preventDefault(); event.currentTarget.blur(); } }} />
+      onKeyDown={(event) => {
+        if (readOnly) return;
+        if (numeric && (event.key === "ArrowUp" || event.key === "ArrowDown")) {
+          event.preventDefault();
+          setDraft((current) => String(Math.max(0, (parseInt(current, 10) || 0) + (event.key === "ArrowUp" ? 1 : -1))));
+        }
+        if (event.key === "Enter") { event.preventDefault(); event.currentTarget.blur(); }
+      }} />
   );
 }
 

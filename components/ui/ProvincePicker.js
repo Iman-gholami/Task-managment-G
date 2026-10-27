@@ -30,7 +30,6 @@ export default function ProvincePicker({ id, value = "", onChange, placeholder =
   }, [open]);
 
   const keys = (event) => {
-    if (event.key === "Escape" && open) { event.preventDefault(); event.stopPropagation(); close(); }
     if (event.key === "ArrowDown" || event.key === "ArrowUp") {
       event.preventDefault();
       if (!open) { setQuery(""); setActive(0); setOpen(true); }
@@ -57,6 +56,15 @@ export default function ProvincePicker({ id, value = "", onChange, placeholder =
           autoComplete="off" spellCheck={false}
           onFocus={() => { setQuery(""); setActive(0); setOpen(true); }}
           onChange={(event) => { setQuery(event.target.value); setActive(0); setOpen(true); }}
+          // The Dialog traps Escape using a native listener. Capture it before that listener
+          // so the first Escape only dismisses this combobox, not the entire member form.
+          onKeyDownCapture={(event) => {
+            if (event.key === "Escape" && open) {
+              event.preventDefault();
+              event.stopPropagation();
+              close();
+            }
+          }}
           onKeyDown={keys}
         />
         {value && !open ? (
