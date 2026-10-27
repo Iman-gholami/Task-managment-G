@@ -39,7 +39,7 @@ test("setup: a SOC manager, two Layer 3 analysts, a Layer 1 analyst and an engin
     expect(res.status(), key).toBe(201);
     ids[key] = (await res.json()).user.id;
   }
-  // Everyone is on an extended shift today; L3 and L1 use configurable routines.
+  // The initial extended shifts share SOC cover; later L3 normal shifts test configurable engineering tasks.
   for (const key of ["kian", "roya", "dariush"]) {
     const res = await page.request.post("/api/shift/schedule", { data: { userId: ids[key], date: tehranDate(), shiftType: "evening" } });
     expect(res.status(), key).toBe(201);
@@ -84,6 +84,13 @@ test("before any configuration every SOC layer keeps the standard routine", asyn
 
 test("SOC manager builds a Layer 3 checklist in the editor and assigns it to SOC · L3", async ({ page }) => {
   await signIn(page, "manager");
+  // Daytime L3 work is technical; their extended/night shifts are shared SOC cover.
+  for (const who of ["kian", "roya"]) {
+    const changed = await page.request.post("/api/shift/schedule", {
+      data: { userId: ids[who], date: tehranDate(), shiftType: "morning" },
+    });
+    expect(changed.status()).toBe(201);
+  }
   await page.goto("/shift/checklists");
   await expect(page.locator("h1")).toHaveText("Shift Log checklists");
   await expect(page.locator(".sidebar")).toContainText("Log checklists");

@@ -140,11 +140,12 @@ test("managers give Layer 3 its own checklist; each group sees its own and compl
   const a2 = member("Ava Second", "SOC · L1");
   const b1 = member("Bita First", "SOC · L3");
   const b2 = member("Babak Second", "SOC · L3");
-  for (const u of [a1, a2, b1, b2]) repo.setShiftSchedule(u.id, today, "evening", manager.id);
-  repo.setShiftSchedule(b1.id, tomorrow, "evening", manager.id);
+  for (const u of [a1, a2]) repo.setShiftSchedule(u.id, today, "evening", manager.id);
+  for (const u of [b1, b2]) repo.setShiftSchedule(u.id, today, "morning", manager.id);
+  repo.setShiftSchedule(b1.id, tomorrow, "morning", manager.id);
 
   // Before anything is configured, Layer 3 keeps the routine it used before (no regression).
-  assert.equal(repo.getShiftLog(b2.id).checklist.name, "Standard SOC routine");
+  assert.equal(repo.getShiftLog(b2.id).checklist.name, "Layer 3 · Engineering daily work");
 
   const l2 = checklists.createChecklist({ name: "Layer 3 technical routine", items: L2_ITEMS }, manager.id);
   assert.equal(l2.version, 1);
@@ -232,36 +233,36 @@ test("turning a group's checklist off, reassigning and archiving", () => {
   useDatabase("assign.db");
   const today = repo.today();
   const boss = repo.listUsers().find((u) => u.role === "security_manager");
-  const analyst = repo.createMember({ name: "Lena Three", email: "lena@corp.test", role: "analyst", team: "SOC · L3", passwordHash: hashPassword("x") });
+  const analyst = repo.createMember({ name: "Lena One", email: "lena@corp.test", role: "analyst", team: "SOC · L1", passwordHash: hashPassword("x") });
   repo.setShiftSchedule(analyst.id, today, "night", boss.id);
   const [standard] = checklists.listChecklists();
 
-  checklists.setAssignment("SOC · L3", { enabled: false }, boss.id);
+  checklists.setAssignment("SOC · L1", { enabled: false }, boss.id);
   const off = repo.getShiftLog(analyst.id);
   assert.equal(off.checklist, null);
   assert.deepEqual(off.activities, []);
   assert.deepEqual(checklists.listEvents(standard.id).map((e) => e.action).slice(0, 1), ["disabled"]);
 
-  checklists.setAssignment("SOC · L3", { enabled: true }, boss.id);
+  checklists.setAssignment("SOC · L1", { enabled: true }, boss.id);
   assert.equal(repo.getShiftLog(analyst.id).activities.length, 5, "turning it back on applies to logs not yet started");
 
   const empty = checklists.createChecklist({ name: "Empty draft" }, boss.id);
-  assert.throws(() => checklists.setAssignment("SOC · L3", { checklistId: empty.id }, boss.id), /no active items/);
+  assert.throws(() => checklists.setAssignment("SOC · L1", { checklistId: empty.id }, boss.id), /no active items/);
   assert.throws(() => checklists.setAssignment("Threat Intelligence", { checklistId: standard.id }, boss.id), (e) => e.status === 400);
 
-  const copy = checklists.createChecklist({ name: "L3 routine", copyFrom: standard.id }, boss.id);
+  const copy = checklists.createChecklist({ name: "L1 routine", copyFrom: standard.id }, boss.id);
   assert.equal(copy.items.length, 8);
   assert.ok(copy.items.every((it) => it.legacyN === undefined), "copies are not counted as standard activities");
-  assert.throws(() => checklists.createChecklist({ name: "l3 ROUTINE" }, boss.id), /already has this name/);
-  checklists.setAssignment("SOC · L3", { checklistId: copy.id }, boss.id);
-  assert.equal(checklists.listAssignments().find((g) => g.team === "SOC · L3").checklistName, "L3 routine");
-  assert.ok(checklists.listEvents(standard.id).some((e) => e.action === "unassigned" && e.team === "SOC · L3"));
+  assert.throws(() => checklists.createChecklist({ name: "l1 ROUTINE" }, boss.id), /already has this name/);
+  checklists.setAssignment("SOC · L1", { checklistId: copy.id }, boss.id);
+  assert.equal(checklists.listAssignments().find((g) => g.team === "SOC · L1").checklistName, "L1 routine");
+  assert.ok(checklists.listEvents(standard.id).some((e) => e.action === "unassigned" && e.team === "SOC · L1"));
 
   assert.throws(() => checklists.archiveChecklist(copy.id, boss.id), /still uses this checklist/);
   checklists.archiveChecklist(empty.id, boss.id);
-  assert.deepEqual(checklists.listChecklists().map((c) => c.name), ["L3 routine", "Standard SOC routine"]);
+  assert.deepEqual(checklists.listChecklists().map((c) => c.name), ["L1 routine", "Standard SOC routine"]);
 
-  checklists.setAssignment("SOC · L3", { checklistId: null }, boss.id);
-  assert.equal(checklists.listAssignments().find((g) => g.team === "SOC · L3").checklistId, null);
+  checklists.setAssignment("SOC · L1", { checklistId: null }, boss.id);
+  assert.equal(checklists.listAssignments().find((g) => g.team === "SOC · L1").checklistId, null);
   assert.equal(repo.getShiftLog(analyst.id).checklist, null);
 });
