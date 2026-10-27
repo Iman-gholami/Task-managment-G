@@ -385,6 +385,7 @@ function Tickets({ readOnly, list: tickets }) {
 export function ShiftHistory() {
   const { me } = useApp();
   const router = useRouter();
+  const l2 = me.team === "SOC · L2";
   const [period, setPeriod] = useState("this");
   const { data, loading, error, reload } = useFetch(`/api/shift/history?user=${me.id}&period=${period}`);
 
@@ -403,6 +404,32 @@ export function ShiftHistory() {
           <EmptyState icon="shift" title="No shift logs in this period" action={<Link className="btn btn-secondary btn-sm" href="/shift">Open today&apos;s log</Link>}>Logs appear here once you record activity. Try another period.</EmptyState>
         ) : (
           <div className="table-wrap">
+            {l2 ? (
+              <table className="dt" aria-label="Layer 2 shift log history">
+                <thead><tr>
+                  <th scope="col">Date</th>
+                  <th scope="col">Shift</th>
+                  <th scope="col">Status</th>
+                  <th scope="col" className="r">Tickets analyzed</th>
+                </tr></thead>
+                <tbody>
+                  {data.logs.map((entry) => {
+                    const isToday = entry.date === TODAY && !entry.absence;
+                    return (
+                      <tr key={entry.date} className={isToday ? "is-link" : ""}
+                        onClick={() => isToday && router.push("/shift")}>
+                        <td className="title">{isToday ? <Link href="/shift">Today</Link> : fmtDate(entry.date)} <span className="muted">· {weekday(entry.date)}</span></td>
+                        <td>{entry.absence ? "—" : entry.shiftType === "night" ? "Night" : entry.shiftType === "evening" ? "Until 20:00" : "Morning"}</td>
+                        <td>{entry.absence ? <span className="badge">{entry.shiftType === "off" ? "Day off" : "Leave"}</span> :
+                          entry.completed ? <Status s="done" label="Completed" /> :
+                          isToday ? <Status s="progress" label="In progress" /> : <Status s="returned" label="Incomplete" />}</td>
+                        <td className="r">{entry.absence ? "—" : entry.analyzedTickets ?? 0}</td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            ) : (
             <table className="dt">
               <thead><tr><th scope="col">Date</th><th scope="col">Status</th><th scope="col">Checklist</th><th scope="col">Activities</th><th scope="col" className="r">IOCs</th><th scope="col" className="r">Tickets</th>{me.team === "SOC · L2" && <th scope="col" className="r">تیکت تحلیل‌شده</th>}<th scope="col" className="r">Issues</th><th scope="col">Traffic report</th></tr></thead>
               <tbody>
@@ -424,6 +451,7 @@ export function ShiftHistory() {
                 })}
               </tbody>
             </table>
+            )}
           </div>
         )}
       </div>
