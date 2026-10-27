@@ -101,7 +101,8 @@ test.describe("fresh install", () => {
       await dialog.getByLabel("Work email").fill(u.email);
       await dialog.getByLabel("Role").selectOption(u.role);
       await dialog.getByLabel("Primary team").selectOption(u.team);
-      await dialog.getByLabel("استان").selectOption("قم");
+      await dialog.getByLabel("استان").fill("قم");
+      await dialog.getByRole("option", { name: "قم", exact: true }).click();
       await dialog.getByLabel("Initial password").fill(PW);
       await dialog.getByRole("button", { name: "Add Member" }).click();
       await expect(dialog).toBeHidden();
@@ -418,7 +419,8 @@ test.describe("members and accounts", () => {
     const dialog = page.getByRole("dialog", { name: "Add member" });
     await dialog.getByLabel("Full name").fill("Parisa Ahmadi");
     await dialog.getByLabel("Work email").fill("parisa@corp.test");
-    await dialog.getByLabel("استان").selectOption("قم");
+    await dialog.getByLabel("استان").fill("قم");
+      await dialog.getByRole("option", { name: "قم", exact: true }).click();
     await dialog.getByLabel("Initial password").fill(PW);
     await dialog.getByRole("button", { name: "Add Member" }).click();
     await expect(page.locator("tbody")).toContainText("Parisa Ahmadi");

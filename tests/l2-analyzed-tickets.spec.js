@@ -41,24 +41,32 @@ test("Layer 2 analyzes tickets quickly, records verdicts, and managers can corre
   await page.goto("/shift");
   const card = page.getByTestId("l2-analyzed-tickets");
   await expect(card).toBeVisible();
-  await card.getByLabel("شماره تیکت تحلیل‌شده").fill("INC-1001");
-  await card.getByRole("button", { name: "مثبت کاذب", exact: true }).click();
-  await card.getByRole("button", { name: "ثبت و افزودن بعدی" }).click();
-  await expect(card.getByTestId("l2-reviewed-count")).toHaveText("۱");
-  await card.getByLabel("شماره تیکت تحلیل‌شده").fill("INC-1002");
-  await card.getByRole("button", { name: "واقعی", exact: true }).click();
-  await card.getByRole("button", { name: "ثبت و افزودن بعدی" }).click();
-  await expect(card.getByTestId("l2-reviewed-count")).toHaveText("۲");
-  await expect(card.getByTestId("l2-fp-count")).toHaveText("۱");
-  await expect(card.getByTestId("l2-tp-count")).toHaveText("۱");
-  await card.getByLabel("شماره تیکت تحلیل‌شده").fill("inc-1001");
-  await card.getByRole("button", { name: "ثبت و افزودن بعدی" }).click();
+  // Typing is local; saving is an explicit action, not one POST per keystroke.
+  let mutations = 0;
+  await page.route("**/api/shift/analyzed-tickets", async (route) => {
+    if (route.request().method() === "POST") mutations += 1;
+    await route.continue();
+  });
+  await card.getByLabel("Ticket number").fill("INC-1001");
+  expect(mutations).toBe(0);
+  await card.getByRole("button", { name: "False positive", exact: true }).click();
+  await card.getByRole("button", { name: "Add ticket" }).click();
+  await expect(card.getByTestId("l2-reviewed-count")).toHaveText("1");
+  expect(mutations).toBe(1);
+  await card.getByLabel("Ticket number").fill("INC-1002");
+  await card.getByRole("button", { name: "True positive", exact: true }).click();
+  await card.getByRole("button", { name: "Add ticket" }).click();
+  await expect(card.getByTestId("l2-reviewed-count")).toHaveText("2");
+  await expect(card.getByTestId("l2-fp-count")).toHaveText("1");
+  await expect(card.getByTestId("l2-tp-count")).toHaveText("1");
+  await card.getByLabel("Ticket number").fill("inc-1001");
+  await card.getByRole("button", { name: "Add ticket" }).click();
   await expect(card.getByRole("alert")).toContainText("already registered");
 
-  await card.getByRole("button", { name: "ویرایش تیکت INC-1001" }).click();
-  await card.getByRole("button", { name: "واقعی", exact: true }).click();
-  await card.getByRole("button", { name: "ذخیره تغییرات" }).click();
-  await expect(card.getByTestId("l2-tp-count")).toHaveText("۲");
+  await card.getByRole("button", { name: "Edit ticket INC-1001" }).click();
+  await card.getByRole("button", { name: "True positive", exact: true }).click();
+  await card.getByRole("button", { name: "Save changes" }).click();
+  await expect(card.getByTestId("l2-tp-count")).toHaveText("2");
 
   const original = await page.request.get("/api/shift");
   const log = await original.json();
@@ -70,7 +78,7 @@ test("Layer 2 analyzes tickets quickly, records verdicts, and managers can corre
   }
   expect((await page.request.patch("/api/shift", { data: { completed: true } })).status()).toBe(200);
   await page.reload();
-  await expect(card).toContainText("ثبت نهایی شده");
+  await expect(card).toContainText("Submitted · read only");
   expect((await page.request.post("/api/shift/analyzed-tickets", {
     data: { ticketNumber: "INC-1003", verdict: "true_positive" },
   })).status()).toBe(409);
@@ -80,10 +88,10 @@ test("Layer 2 analyzes tickets quickly, records verdicts, and managers can corre
   await page.getByRole("combobox", { name: "Analyst" }).selectOption(ids["SOC · L2"]);
   const managerCard = page.getByTestId("l2-analyzed-tickets");
   await expect(managerCard).toBeVisible();
-  await expect(managerCard.getByTestId("l2-reviewed-count")).toHaveText("۲");
-  await managerCard.getByRole("button", { name: "حذف تیکت INC-1002" }).click();
-  await managerCard.getByRole("button", { name: "تأیید حذف" }).click();
-  await expect(managerCard.getByTestId("l2-reviewed-count")).toHaveText("۱");
+  await expect(managerCard.getByTestId("l2-reviewed-count")).toHaveText("2");
+  await managerCard.getByRole("button", { name: "Delete ticket INC-1002" }).click();
+  await managerCard.getByRole("button", { name: "Confirm delete" }).click();
+  await expect(managerCard.getByTestId("l2-reviewed-count")).toHaveText("1");
   const report = await page.request.get(`/api/reports/shift?period=custom&from=${tehranDate()}&to=${tehranDate()}&user=${ids["SOC · L2"]}`);
   expect(report.status()).toBe(200);
   const result = await report.json();
