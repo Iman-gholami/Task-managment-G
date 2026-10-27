@@ -26,7 +26,7 @@ function reducer(state, action) {
     case "shift/complete":
       return { ...state, shiftDone: action.value };
     case "shift/set":
-      return { ...state, activities: action.log.activities, tickets: action.log.tickets, shiftDone: !!action.log.completedAt, shiftChecklist: action.log.checklist ?? null, shiftTeam: action.log.team ?? state.shiftTeam };
+      return { ...state, activities: action.log.activities, tickets: action.log.tickets, shiftDone: !!action.log.completedAt, shiftDate: action.log.date, shiftChecklist: action.log.checklist ?? null, shiftTeam: action.log.team ?? state.shiftTeam };
     case "users/add":
       return { ...state, users: [...state.users, action.user].sort((a, b) => a.name.localeCompare(b.name)) };
     case "users/update":

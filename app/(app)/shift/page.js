@@ -2,15 +2,19 @@ import Link from "next/link";
 import { redirect } from "next/navigation";
 import ShiftLog from "@/components/screens/ShiftLog";
 import { getCurrentUser } from "@/lib/server/auth";
-import { getDayStatus, getShiftLog, getShiftSchedule } from "@/lib/server/repo";
+import { getDayStatus, getShiftLog, getShiftSchedule, today } from "@/lib/server/repo";
+import { isBackfillAllowed } from "@/lib/server/shift-backfill";
 import { isShiftAnalyst } from "@/lib/server/stats";
 
 export const metadata = { title: "Shift Log" };
 
-export default async function Page() {
+export default async function Page({ searchParams }) {
   const user = await getCurrentUser();
   if (!isShiftAnalyst(user)) redirect("/dashboard");
-  if (!getShiftSchedule(user.id)) {
+  const params = await searchParams;
+  const date = params?.date ? String(params.date) : today();
+  if (date !== today() && !isBackfillAllowed(user.id, date)) redirect("/shift/history");
+  if (!getShiftSchedule(user.id, date)) {
     const status = getDayStatus(user.id);
     const name = status === "off" ? "تعطیل شیفت" : status === "leave" ? "مرخصی" : null;
     return (
@@ -26,5 +30,5 @@ export default async function Page() {
       </div>
     );
   }
-  return <ShiftLog initialLog={getShiftLog(user.id)} />;
+  return <ShiftLog key={date} initialLog={getShiftLog(user.id, date)} />;
 }
