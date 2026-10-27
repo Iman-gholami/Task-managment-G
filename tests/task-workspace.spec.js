@@ -74,6 +74,12 @@ test("the task and selected attachments become visible together, and comments wo
     await dialog.getByRole("button", { name: "Review details" }).click();
     await expect(dialog.getByText("Ready to assign?")).toBeVisible();
     await expect(dialog.getByText("evidence.txt")).toBeVisible();
+    await dialog.getByRole("button", { name: "Close" }).click();
+    await expect(dialog.getByText("Discard this task?")).toBeVisible();
+    await dialog.locator('[aria-label="Task preview"] [tabindex="-1"]').focus();
+    await page.keyboard.press("Control+Enter");
+    await expect(dialog.getByText("Discard this task?")).toBeVisible();
+    await dialog.getByRole("button", { name: "Keep editing" }).click();
     await dialog.getByRole("button", { name: "Back to editing" }).click();
     await expect(dialog.getByText("evidence.txt")).toBeVisible();
     await dialog.getByRole("button", { name: "Review details" }).click();

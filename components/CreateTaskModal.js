@@ -83,7 +83,7 @@ function CreateTaskDialog({ onClose }) {
   };
 
   const submit = async () => {
-    if (busy) return;
+    if (busy || confirmDiscard) return;
     if (!preview) { if (validate()) setPreview(true); return; }
     setBusy(true);
     setSubmitError("");
