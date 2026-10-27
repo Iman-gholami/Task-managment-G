@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useApp } from "@/components/AppProvider";
 import useGreeting from "@/components/useGreeting";
 import Icon from "@/components/ui/Icon";
+import { ManagerReturnedQueue } from "@/components/screens/dashboard/ReturnedShifts";
 import { PageHeader, Panel } from "@/components/ui/layout";
 import { Metric, MetricGrid } from "@/components/ui/Metric";
 import { Bars } from "@/components/ui/charts";
@@ -60,6 +61,8 @@ export default function SocDashboard() {
           foot="Bars: last 7 days"
         />
       </MetricGrid>
+
+      <ManagerReturnedQueue />
 
       <div className="grid-2">
         <AttentionList items={attention} />

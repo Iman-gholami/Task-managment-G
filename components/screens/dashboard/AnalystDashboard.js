@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useApp } from "@/components/AppProvider";
 import TaskTable from "@/components/TaskTable";
 import Icon from "@/components/ui/Icon";
+import { ReturnedShiftAlerts } from "@/components/screens/dashboard/ReturnedShifts";
 import { PageHeader, Panel } from "@/components/ui/layout";
 import { Metric, MetricGrid } from "@/components/ui/Metric";
 import { Meter } from "@/components/ui/charts";
@@ -35,6 +36,8 @@ export default function AnalystDashboard() {
           </>
         }
       />
+
+      <ReturnedShiftAlerts />
 
       <MetricGrid label="My summary">
         <Metric label="Assigned to me" icon="tasks" value={mine.length} href="/tasks/my" foot={inReview ? `${inReview} awaiting review` : "Open tasks"} />

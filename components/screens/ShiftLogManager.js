@@ -7,12 +7,21 @@ import { PageHeader, Panel } from "@/components/ui/layout";
 import { EmptyState, Loading } from "@/components/ui/states";
 import { longDate, weekday } from "@/lib/format";
 import L2AnalyzedTickets from "@/components/screens/L2AnalyzedTickets";
+import { ManagerReturnedQueue } from "@/components/screens/dashboard/ReturnedShifts";
 
 export default function ShiftLogManager() {
   const { members, shiftDate, toast } = useApp();
   const analysts = useMemo(() => members.filter((member) => member.shift !== null), [members]);
   const [userId, setUserId] = useState(analysts[0]?.id ?? "");
   const [date, setDate] = useState(shiftDate);
+  useEffect(() => {
+    // Deep link from a manager's dashboard queue opens that exact analyst/day.
+    const params = new URLSearchParams(window.location.search);
+    const person = params.get("user");
+    const shiftDay = params.get("date");
+    if (person && analysts.some((item) => item.id === person)) setUserId(person);
+    if (shiftDay && /^\\d{4}-\\d{2}-\\d{2}$/.test(shiftDay)) setDate(shiftDay);
+  }, [analysts]);
   const [log, setLog] = useState(null);
   const [missedDays, setMissedDays] = useState([]);
   const [selectedMissed, setSelectedMissed] = useState([]);
@@ -41,7 +50,7 @@ export default function ShiftLogManager() {
         body: { userId, dates, enabled, reason: backfillReason.trim() } });
       setSelectedMissed([]);
       await refreshBackfills();
-      toast(enabled ? "Historical Shift Log entry enabled" : "Historical Shift Log entry revoked");
+      toast(enabled ? "Shift Logs returned to analyst for completion" : "Returned Shift Log access revoked");
     } catch (e) { setBackfillError(e.message); }
     finally { setBackfillBusy(false); }
   };
@@ -126,9 +135,11 @@ export default function ShiftLogManager() {
         </div>
       </Panel>
 
-      <Panel title="Missed shifts · backfill permission" meta="Authorize only rostered, unsubmitted past days">
+      <ManagerReturnedQueue showEmpty onPick={(item) => { setUserId(item.userId); setDate(item.date); }} />
+
+      <Panel title="Return missed Shift Logs" meta="Only scheduled, unsubmitted past days">
         <div className="panel-body" style={{ display: "grid", gap: "var(--s-3)" }}>
-          <p className="muted small">Select the missed dates below, then grant access. The analyst can open each day in Shift Log history, enter their work, and submit it normally. All grants and revocations are audited.</p>
+          <p className="muted small">Select one or more missed dates and return them to this staff member. They will see the returned count directly on their dashboard and can complete each log. Completed entries leave both pending queues; all grant and revocation events remain in the audit trail.</p>
           <div style={{ maxHeight: 235, overflowY: "auto", border: "1px solid var(--border)", borderRadius: "var(--r-md)", padding: 8 }}>
             {!missedDays.length ? <span className="muted small">No past scheduled shifts found in the last 120 days.</span> :
               missedDays.map((day) => (
@@ -139,7 +150,7 @@ export default function ShiftLogManager() {
                       e.target.checked ? [...prev, day.date] : prev.filter((item) => item !== day.date))} />
                   <span className="mono" style={{ minWidth: 105 }}>{day.date}</span>
                   <span className="muted small">{day.shiftType}</span>
-                  <span className={`badge dot ${day.granted ? "info" : ""}`}>{day.granted ? "Entry permitted" : day.hasLog ? "Incomplete" : "Not recorded"}</span>
+                  <span className={`badge dot ${day.granted ? "info" : ""}`}>{day.granted ? "Returned · awaiting completion" : day.hasLog ? "Incomplete" : "Not recorded"}</span>
                 </label>
               ))}
           </div>
@@ -149,7 +160,7 @@ export default function ShiftLogManager() {
               onChange={(e) => setBackfillReason(e.target.value)} />
             <button type="button" className="btn btn-primary btn-sm" disabled={backfillBusy || !selectedMissed.length}
               onClick={() => grantBackfills(true)}>
-              Allow selected days ({selectedMissed.length})
+              Return selected days ({selectedMissed.length})
             </button>
             <button type="button" className="btn btn-secondary btn-sm"
               disabled={backfillBusy || !selectedMissed.length} onClick={() => grantBackfills(false)}>
@@ -165,7 +176,7 @@ export default function ShiftLogManager() {
       ) : missing ? (
         <div className="panel" style={{ marginTop: "var(--s-4)" }}>
           <EmptyState compact icon="shift" title="No recorded shift log for this date">
-            Viewing a schedule does not create a log. Analysts can record only their own current-day log.
+            Viewing a schedule does not create a log. Managers can return past rostered dates so the analyst can enter and complete them.
           </EmptyState>
         </div>
       ) : log ? (

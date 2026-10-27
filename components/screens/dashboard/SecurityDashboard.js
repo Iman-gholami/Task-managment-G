@@ -7,6 +7,7 @@ import useFetch from "@/components/useFetch";
 import useGreeting from "@/components/useGreeting";
 import PeriodSelector from "@/components/PeriodSelector";
 import Icon from "@/components/ui/Icon";
+import { ManagerReturnedQueue } from "@/components/screens/dashboard/ReturnedShifts";
 import { PageHeader, Panel } from "@/components/ui/layout";
 import { Delta, Metric, MetricGrid } from "@/components/ui/Metric";
 import { PeopleTable } from "@/components/screens/Team";
@@ -91,6 +92,7 @@ export default function SecurityDashboard() {
         />
       </MetricGrid>
 
+      <ManagerReturnedQueue />
       <div className="stack-lg">
         <AttentionList items={attention} />
         <TeamComparison teams={teams} loading={busy} error={error} onRetry={reload} periodLabel={data ? `${fmtRange(data.period.from, data.period.to)} · trend: last 6 months` : null} />
