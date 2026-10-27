@@ -44,14 +44,16 @@ function Layer2ShiftLog({ initialLog }) {
   const { me, shiftDone, dispatch, toast } = useApp();
   const [tickets, setTickets] = useState(initialLog?.analyzedTickets ?? []);
   const [submitting, setSubmitting] = useState(false);
+  const [submitted, setSubmitted] = useState(!!initialLog?.completedAt);
   // initialLog is the server snapshot of THIS scheduled day; no checklists or
   // created-ticket widgets are mounted for L2.
-  const completed = !!initialLog?.completedAt || (shiftDone && initialLog?.date === TODAY);
+  const completed = submitted || !!initialLog?.completedAt || (shiftDone && initialLog?.date === TODAY);
   const submit = async () => {
     if (submitting || completed) return;
     setSubmitting(true);
     try {
       await api("/api/shift", { method: "PATCH", body: { completed: true, ...(initialLog.date !== TODAY ? { date: initialLog.date } : {}) } });
+      setSubmitted(true);
       dispatch({ type: "shift/complete", value: true });
       toast("Shift submitted");
     } catch (error) { toast(error.message, "error"); }
