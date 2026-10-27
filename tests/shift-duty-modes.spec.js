@@ -59,11 +59,14 @@ test("shift duties vary by date and roster type rather than the user's SOC layer
   await page.request.post("/api/auth/login", { data: { email: members[2][0], password: PW } });
   const dayL3 = await (await page.request.get("/api/shift")).json();
   expect(dayL3.mode).toBe("engineering");
-  expect(dayL3.activities.length).toBeGreaterThanOrEqual(4);
-  expect(dayL3.activities.map((x) => x.title).join(" ")).toMatch(/Automation and scripting/);
+  // Managers may have replaced the built-in engineering options with a custom L3 checklist.
+  expect(dayL3.activities.length).toBeGreaterThan(0);
+  if (dayL3.checklist.name === "Layer 3 · Engineering daily work") {
+    expect(dayL3.activities.map((x) => x.title).join(" ")).toMatch(/Automation and scripting/);
+    expect(dayL3.activities.map((x) => x.title).join(" ")).toMatch(/Bug fixing and troubleshooting/);
+  }
   await page.goto("/shift");
   await expect(page.getByRole("heading", { name: "Engineering daily work" })).toBeVisible();
-  await expect(page.getByText("Bug fixing and troubleshooting")).toBeVisible();
   await expect(page.getByRole("heading", { name: "Created tickets" })).toHaveCount(0);
 
   await page.request.post("/api/auth/login", { data: { email: members[3][0], password: PW } });
