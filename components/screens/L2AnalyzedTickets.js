@@ -1,69 +1,108 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { memo, useEffect, useRef, useState } from "react";
 import { api, useApp } from "@/components/AppProvider";
 import Icon from "@/components/ui/Icon";
 import styles from "./L2AnalyzedTickets.module.css";
 
-const EMPTY = { ticketNumber: "", verdict: "" };
-const FA = new Intl.NumberFormat("fa-IR");
-const LABEL = { false_positive: "مثبت کاذب (False Positive)", true_positive: "واقعی (True Positive)" };
+const LABEL = { false_positive: "False positive", true_positive: "True positive" };
+
+// Keep keystroke updates inside the small editor, never in the whole Shift Log or its ticket list.
+const TicketEditor = memo(function TicketEditor({ editing, defaultVerdict, busy, error, onSave, onCancel }) {
+  const [number, setNumber] = useState(editing?.ticketNumber ?? "");
+  const [verdict, setVerdict] = useState(editing?.verdict ?? defaultVerdict ?? "");
+  const [validation, setValidation] = useState("");
+  const input = useRef(null);
+  useEffect(() => {
+    setNumber(editing?.ticketNumber ?? "");
+    setVerdict(editing?.verdict ?? defaultVerdict ?? "");
+    setValidation("");
+    if (editing) input.current?.focus();
+  }, [editing?.id, editing?.ticketNumber, editing?.verdict, defaultVerdict]);
+
+  const submit = async (event) => {
+    event.preventDefault();
+    if (busy) return;
+    if (!number.trim()) { setValidation("Enter a ticket number."); input.current?.focus(); return; }
+    if (!verdict) { setValidation("Select an analysis result."); return; }
+    const saved = await onSave({ ticketNumber: number.trim(), verdict });
+    if (saved) { setNumber(""); setValidation(""); input.current?.focus(); }
+  };
+
+  return (
+    <form className={styles.editor} onSubmit={submit} noValidate>
+      <div className={styles.fields}>
+        <label className={styles.field} htmlFor="l2-reviewed-ticket-number">
+          <span>Ticket number</span>
+          <input id="l2-reviewed-ticket-number" ref={input} className="input mono" value={number}
+            placeholder="e.g. INC-12345" autoComplete="off" maxLength={80}
+            onChange={(event) => { setNumber(event.target.value); if (validation) setValidation(""); }} />
+        </label>
+        <fieldset className={styles.verdict}>
+          <legend>Analysis result</legend>
+          <div className={styles.choices}>
+            <button type="button" className={styles.choice} data-selected={verdict === "false_positive"}
+              aria-pressed={verdict === "false_positive"} onClick={() => { setVerdict("false_positive"); setValidation(""); }}>
+              <Icon name="x" size="sm" />False positive
+            </button>
+            <button type="button" className={styles.choice} data-selected={verdict === "true_positive"}
+              aria-pressed={verdict === "true_positive"} onClick={() => { setVerdict("true_positive"); setValidation(""); }}>
+              <Icon name="check" size="sm" />True positive
+            </button>
+          </div>
+        </fieldset>
+      </div>
+      <div className={styles.footer}>
+        <span className={styles.helper}>One record per analyzed ticket. Counts update automatically.</span>
+        <div className={styles.buttons}>
+          {editing && <button type="button" className="btn btn-ghost btn-sm" onClick={onCancel}>Cancel</button>}
+          <button type="submit" className="btn btn-primary btn-sm" disabled={busy}>
+            <Icon name={editing ? "check" : "plus"} size="sm" />
+            {busy ? "Saving…" : editing ? "Save changes" : "Add ticket"}
+          </button>
+        </div>
+      </div>
+      {(validation || error) && <p role="alert" className={styles.error}>{validation || error}</p>}
+    </form>
+  );
+});
 
 export default function L2AnalyzedTickets({ initialItems = [], readOnly = false, managerTarget = null, onChange }) {
   const { toast } = useApp();
   const [items, setItems] = useState(initialItems);
-  const [form, setForm] = useState(EMPTY);
   const [editingId, setEditingId] = useState(null);
   const [removingId, setRemovingId] = useState(null);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
-  const numberRef = useRef(null);
-
+  const [defaultVerdict, setDefaultVerdict] = useState("");
+  const target = managerTarget ? { user: managerTarget.user, date: managerTarget.date } : {};
   useEffect(() => {
     setItems(initialItems);
     setEditingId(null);
     setRemovingId(null);
+    setError("");
   }, [initialItems]);
 
   const falsePositive = items.filter((item) => item.verdict === "false_positive").length;
-  const truePositive = items.filter((item) => item.verdict === "true_positive").length;
-  const count = items.length;
-  const target = managerTarget ? { user: managerTarget.user, date: managerTarget.date } : {};
+  const truePositive = items.length - falsePositive;
+  const editing = items.find((item) => item.id === editingId) ?? null;
 
-  const startEdit = (item) => {
-    setForm({ ticketNumber: item.ticketNumber, verdict: item.verdict });
-    setEditingId(item.id);
-    setRemovingId(null);
-    setError("");
-    numberRef.current?.focus();
-  };
-  const cancel = () => {
-    setForm(EMPTY);
-    setEditingId(null);
-    setError("");
-    numberRef.current?.focus();
-  };
-
-  const save = async (event) => {
-    event.preventDefault();
-    if (busy || readOnly) return;
-    if (!form.ticketNumber.trim()) { setError("شماره تیکت رو وارد کن."); numberRef.current?.focus(); return; }
-    if (!form.verdict) { setError("نتیجه تحلیل تیکت رو انتخاب کن."); return; }
+  const save = async (fields) => {
+    if (busy || readOnly) return false;
     setBusy(true); setError("");
     try {
       const result = await api("/api/shift/analyzed-tickets", {
         method: editingId === null ? "POST" : "PATCH",
-        body: { ...target, ...(editingId === null ? {} : { id: editingId }), ...form },
+        body: { ...target, ...(editingId === null ? {} : { id: editingId }), ...fields },
       });
       setItems(result.items);
       onChange?.(result.items, result.stats);
-      setForm({ ticketNumber: "", verdict: form.verdict });
+      setDefaultVerdict(fields.verdict);
       setEditingId(null);
-      toast(editingId === null ? "تیکت تحلیل‌شده ثبت شد" : "نتیجه تیکت ویرایش شد");
-      numberRef.current?.focus();
-    } catch (e) {
-      setError(e.message);
-    } finally { setBusy(false); }
+      toast(editingId === null ? "Analyzed ticket added" : "Ticket analysis updated");
+      return true;
+    } catch (e) { setError(e.message); return false; }
+    finally { setBusy(false); }
   };
 
   const remove = async (id) => {
@@ -74,81 +113,55 @@ export default function L2AnalyzedTickets({ initialItems = [], readOnly = false,
       setItems(result.items);
       onChange?.(result.items, result.stats);
       setRemovingId(null);
-      if (editingId === id) cancel();
-      toast("تیکت از فهرست تحلیل‌ها حذف شد");
+      if (editingId === id) setEditingId(null);
+      toast("Analyzed ticket removed");
     } catch (e) { setError(e.message); }
     finally { setBusy(false); }
   };
 
   return (
-    <section className={styles.card} aria-label="ثبت تیکت‌های تحلیل‌شده لایه ۲" data-testid="l2-analyzed-tickets">
-      <header className={styles.head}>
-        <div>
-          <span className={styles.eyebrow}>فعالیت ویژه لایه ۲</span>
-          <h2>تیکت‌های تحلیل‌شده</h2>
-          <p>هر تیکت رو فقط یک‌بار با شماره و نتیجه بررسی ثبت کن؛ تعداد خودکار محاسبه می‌شه.</p>
-        </div>
-      </header>
-      <div className={styles.counters} aria-label="آمار تیکت‌های تحلیل‌شده">
-        <div><strong data-testid="l2-reviewed-count">{FA.format(count)}</strong><span>کل تحلیل‌ها</span></div>
-        <div data-tone="false"><strong data-testid="l2-fp-count">{FA.format(falsePositive)}</strong><span>مثبت کاذب</span></div>
-        <div data-tone="true"><strong data-testid="l2-tp-count">{FA.format(truePositive)}</strong><span>واقعی</span></div>
-      </div>
-
-      {!readOnly && (
-        <form className={styles.entry} onSubmit={save}>
-          <label className={styles.field}>
-            <span>شماره تیکت</span>
-            <input ref={numberRef} className="input" value={form.ticketNumber}
-              onChange={(e) => { setForm((v) => ({ ...v, ticketNumber: e.target.value })); setError(""); }}
-              placeholder="مثلاً INC-12345" maxLength={80} aria-label="شماره تیکت تحلیل‌شده" />
-          </label>
-          <fieldset className={styles.verdict}>
-            <legend>نتیجه تحلیل</legend>
-            <div className={styles.options}>
-              <button type="button" aria-pressed={form.verdict === "false_positive"}
-                className={form.verdict === "false_positive" ? styles.activeFalse : ""}
-                onClick={() => { setForm((v) => ({ ...v, verdict: "false_positive" })); setError(""); }}>
-                <Icon name="x" size="sm" /> مثبت کاذب
-              </button>
-              <button type="button" aria-pressed={form.verdict === "true_positive"}
-                className={form.verdict === "true_positive" ? styles.activeTrue : ""}
-                onClick={() => { setForm((v) => ({ ...v, verdict: "true_positive" })); setError(""); }}>
-                <Icon name="check" size="sm" /> واقعی
-              </button>
-            </div>
-          </fieldset>
-          <div className={styles.actions}>
-            {editingId !== null && <button type="button" className="btn btn-ghost btn-sm" onClick={cancel}>انصراف از ویرایش</button>}
-            <button type="submit" disabled={busy} className="btn btn-primary btn-sm">
-              <Icon name={editingId === null ? "plus" : "check"} size="sm" />
-              {busy ? "در حال ذخیره..." : editingId === null ? "ثبت و افزودن بعدی" : "ذخیره تغییرات"}
-            </button>
+    <section className={styles.card} aria-label="L2 ticket analysis" data-testid="l2-analyzed-tickets">
+      <header className={styles.header}>
+        <div className={styles.identity}>
+          <span className={styles.icon}><Icon name="review" /></span>
+          <div>
+            <div className={styles.overline}>SOC / LAYER 2</div>
+            <h2>Ticket analysis</h2>
+            <p>Record each investigated ticket and its final verdict.</p>
           </div>
-          {error && <p className={styles.error} role="alert">{error}</p>}
-        </form>
+        </div>
+        {readOnly && <span className="badge dot">Submitted · read only</span>}
+      </header>
+      <div className={styles.stats}>
+        <div className={styles.stat}><span>Analyzed</span><b data-testid="l2-reviewed-count">{items.length}</b></div>
+        <div className={styles.stat}><span>False positives</span><b data-testid="l2-fp-count">{falsePositive}</b></div>
+        <div className={styles.stat}><span>True positives</span><b data-testid="l2-tp-count">{truePositive}</b></div>
+      </div>
+      {!readOnly && (
+        <TicketEditor editing={editing} busy={busy} error={error} defaultVerdict={defaultVerdict}
+          onSave={save} onCancel={() => { setEditingId(null); setError(""); }} />
       )}
-      {readOnly && <p className={styles.readOnly}>شیفت ثبت نهایی شده؛ سوابق فقط با اصلاح مدیر قابل تغییرند.</p>}
-      <div className={styles.entries}>
-        <div className={styles.listTitle}><b>تیکت‌های ثبت‌شده</b><span>{FA.format(count)} مورد</span></div>
-        {!items.length && <p className={styles.empty}>هنوز تیکتی ثبت نشده است.</p>}
-        {items.map((item) => (
-          <div className={styles.item} key={item.id}>
-            <span className={styles.ticketNumber} dir="auto">{item.ticketNumber}</span>
-            <span className={styles.verdictBadge} data-verdict={item.verdict}>{LABEL[item.verdict]}</span>
+      <div className={styles.list}>
+        <div className={styles.listHeader}><h3>Reviewed tickets</h3><span>{items.length} total</span></div>
+        {!items.length ? (
+          <div className={styles.empty}><Icon name="inbox" /><span>No analyzed tickets recorded for this shift.</span></div>
+        ) : items.map((item) => (
+          <div key={item.id} className={styles.item}>
+            <span className={styles.ticket} dir="auto">{item.ticketNumber}</span>
+            <span className={styles.verdictTag} data-verdict={item.verdict}>{LABEL[item.verdict]}</span>
             {!readOnly && (
               <div className={styles.itemActions}>
-                {removingId === item.id ? (
-                  <>
-                    <button type="button" className={styles.danger} disabled={busy} onClick={() => remove(item.id)}>تأیید حذف</button>
-                    <button type="button" onClick={() => setRemovingId(null)}>انصراف</button>
-                  </>
-                ) : (
-                  <>
-                    <button type="button" aria-label={`ویرایش تیکت ${item.ticketNumber}`} disabled={busy} onClick={() => startEdit(item)}><Icon name="edit" size="sm" /> ویرایش</button>
-                    <button type="button" aria-label={`حذف تیکت ${item.ticketNumber}`} disabled={busy} onClick={() => setRemovingId(item.id)}><Icon name="x" size="sm" /> حذف</button>
-                  </>
-                )}
+                {removingId === item.id ? <>
+                  <button type="button" className={styles.danger} disabled={busy} onClick={() => remove(item.id)}>Confirm delete</button>
+                  <button type="button" onClick={() => setRemovingId(null)}>Cancel</button>
+                </> : <>
+                  <button type="button" aria-label={`Edit ticket ${item.ticketNumber}`} disabled={busy}
+                    onClick={() => { setEditingId(item.id); setRemovingId(null); setError(""); }}>
+                    <Icon name="edit" size="sm" /> Edit
+                  </button>
+                  <button type="button" aria-label={`Delete ticket ${item.ticketNumber}`} disabled={busy}
+                    onClick={() => setRemovingId(item.id)}><Icon name="x" size="sm" /> Delete</button>
+                </>}
               </div>
             )}
           </div>

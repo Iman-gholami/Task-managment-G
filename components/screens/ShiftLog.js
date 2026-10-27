@@ -197,7 +197,7 @@ export default function ShiftLog({ initialLog }) {
         <span className="s"><b>{done}/{activities.length}</b>activities</span>
         <span className="s"><b>{iocs}</b>IOCs added</span>
         <span className="s"><b>{tickets.length}</b>{tickets.length === 1 ? "ticket" : "tickets"}</span>
-        {me.team === "SOC · L2" && <span className="s"><b>{analyzedTickets.length}</b>تیکت تحلیل‌شده</span>}
+        {me.team === "SOC · L2" && <span className="s"><b>{analyzedTickets.length}</b>tickets analyzed</span>}
         <span className="s"><b>{issues}</b>{issues === 1 ? "issue" : "issues"}</span>
         <span className="remain" title={remaining.map((r) => r.title).join("\n")}>
           {!shiftDone && remaining.length > 0 && `${remaining.length} remaining · next: ${remaining[0].title}`}
