@@ -66,6 +66,10 @@ test("manager approves multiple past shifts atomically, with audit, revocation, 
   assert.equal(grants.isBackfillAllowed(analyst.id, dates[0]), false, "invalid batch did not partially grant");
   assert.deepEqual(grants.setBackfillDays(manager, analyst.id, dates, true, "Forgot to submit"), { dates, enabled: true });
   assert.ok(dates.every((date) => grants.isBackfillAllowed(analyst.id, date)));
+  assert.equal(grants.returnedShiftsForAnalyst(analyst).length, 4);
+  assert.equal(grants.returnedShiftsForManager(manager).filter((row) => row.userId === analyst.id).length, 4);
+  assert.equal(grants.returnedShiftsForManager(admin).filter((row) => row.userId === analyst.id).length, 4);
+  assert.throws(() => grants.returnedShiftsForManager(outsider), /Only SOC and Security Managers/);
   assert.equal(grants.backfillDays(analyst.id).filter((row) => row.granted).length, 4);
   assert.equal(db.prepare("SELECT COUNT(*) AS n FROM shift_log_backfill_events WHERE user_id = ?").get(analyst.id).n, 4);
   assert.throws(() => grants.setBackfillDays(manager, analyst.id, [repo.today()], true), /past shift/);
@@ -75,11 +79,14 @@ test("manager approves multiple past shifts atomically, with audit, revocation, 
   assert.equal(past.activities.length, 0, "L2 has no routine checklists");
   repo.setShiftCompleted(analyst.id, true, dates[0]);
   assert.equal(grants.isBackfillAllowed(analyst.id, dates[0]), false);
+  assert.equal(grants.returnedShiftsForAnalyst(analyst).length, 3);
+  assert.deepEqual(grants.returnedShiftsForManager(manager).filter((row) => row.userId === analyst.id).map((r) => r.date), dates.slice(1));
   assert.throws(() => grants.setBackfillDays(manager, analyst.id, [dates[0]], true), /already submitted/);
   const revoked = grants.setBackfillDays(manager, analyst.id, [dates[1], dates[2]], false, "Requested correction");
   assert.equal(revoked.enabled, false);
   assert.equal(grants.isBackfillAllowed(analyst.id, dates[1]), false);
   assert.equal(grants.isBackfillAllowed(analyst.id, dates[3]), true);
+  assert.deepEqual(grants.returnedShiftsForAnalyst(analyst).map((r) => r.date), [dates[3]]);
   assert.equal(db.prepare("SELECT COUNT(*) AS n FROM shift_log_backfill_events WHERE user_id = ?").get(analyst.id).n, 6);
   assert.deepEqual(grants.listEnabledBackfillDates(analyst.id, daysAgo(8), daysAgo(1))
     .map((r) => r.date), [dates[3]]);

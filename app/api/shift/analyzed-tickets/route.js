@@ -28,6 +28,8 @@ async function target(body) {
     return { denied: Response.json({ error: "Historical entry requires manager authorization." }, { status: 403 }) };
   const log = getShiftLog(actor.id, date);
   if (!log) return { denied: Response.json({ error: "No shift scheduled for today." }, { status: 404 }) };
+  if (log.mode !== "ticket_analysis")
+    return { denied: Response.json({ error: "Ticket analysis is for normal Layer 2 shifts; extended duty uses SOC operations." }, { status: 403 }) };
   return { userId: actor.id, date: log.date, opts: {} };
 }
 

@@ -68,8 +68,7 @@ test("a manager sets all three shifts with one save, including a Design engineer
   const log = await logResponse.json();
   expect(log.shiftType).toBe("evening");
   expect(log.team).toBe("SOC · L3");
-  // The Design engineer follows the currently assigned L3 checklist; another
-  // regression test may have changed that checklist earlier in this shared DB.
+  // Any scheduled Design engineer on extended duty follows shared SOC cover.
   expect(log.activities.length).toBeGreaterThan(0);
   await page.goto("/shift");
   await expect(page.getByText(/Shift Log —/)).toBeVisible();

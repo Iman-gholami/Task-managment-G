@@ -5,8 +5,9 @@ import { isManager } from "@/lib/roles";
 
 export const metadata = { title: "Shift Log Corrections" };
 
-export default async function Page() {
+export default async function Page({ searchParams }) {
   const user = await getCurrentUser();
   if (!isManager(user)) redirect("/dashboard");
-  return <ShiftLogManager />;
+  const params = await searchParams;
+  return <ShiftLogManager initialSelection={{ user: params?.user ?? "", date: params?.date ?? "" }} />;
 }

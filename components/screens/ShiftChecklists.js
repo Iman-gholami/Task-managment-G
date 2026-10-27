@@ -225,6 +225,14 @@ export default function ShiftChecklists() {
         actions={<button type="button" className="btn btn-primary" onClick={() => whenClean(() => setCreating(true))} disabled={!data}><Icon name="plus" />New checklist</button>}
       />
 
+      <div className="panel" role="note" style={{ padding: "var(--s-3)", marginBottom: "var(--s-3)" }}>
+        <strong>How daily work is selected</strong>
+        <p className="muted small" style={{ marginTop: 6 }}>
+          Morning L2: ticket analysis. Morning L3 / Design: engineering work (or an assigned custom L3 checklist).
+          Until 20:00 and Night: everyone uses the L1 SOC operational checklist, regardless of their team.
+          Logs already in progress keep their original activities.
+        </p>
+      </div>
       {!data ? (
         <div className="panel"><Loading label="Loading checklists" rows={6} /></div>
       ) : (
@@ -294,7 +302,7 @@ export default function ShiftChecklists() {
 function GroupAssignments({ groups, checklists, onAssign, onToggle, onOpen }) {
   const byId = Object.fromEntries(checklists.map((c) => [c.id, c]));
   return (
-    <Panel title="Groups" meta="Each SOC layer uses one checklist. Analysts see it in today's Shift Log.">
+    <Panel title="Groups" meta="L1 controls shared extended/Night duty; custom L3 controls normal L3 mornings.">
       <div className="cl-groups">
         {groups.map((g) => {
           const c = byId[g.checklistId];

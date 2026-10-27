@@ -1,22 +1,37 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useSearchParams } from "next/navigation";
 import { api, useApp } from "@/components/AppProvider";
 import Icon from "@/components/ui/Icon";
 import { PageHeader, Panel } from "@/components/ui/layout";
 import { EmptyState, Loading } from "@/components/ui/states";
 import { longDate, weekday } from "@/lib/format";
 import L2AnalyzedTickets from "@/components/screens/L2AnalyzedTickets";
+import { ManagerReturnedQueue } from "@/components/screens/dashboard/ReturnedShifts";
 
-export default function ShiftLogManager() {
+export default function ShiftLogManager({ initialSelection = {} }) {
   const { members, shiftDate, toast } = useApp();
+  const params = useSearchParams();
+  const selectedUser = params.get("user") || initialSelection.user || "";
+  const selectedDate = params.get("date") || initialSelection.date || "";
   const analysts = useMemo(() => members.filter((member) => member.shift !== null), [members]);
-  const [userId, setUserId] = useState(analysts[0]?.id ?? "");
-  const [date, setDate] = useState(shiftDate);
+  const [userId, setUserId] = useState(() =>
+    analysts.some((person) => person.id === selectedUser) ? selectedUser : analysts[0]?.id ?? "");
+  const [date, setDate] = useState(() =>
+    /^\d{4}-\d{2}-\d{2}$/.test(selectedDate) ? selectedDate : shiftDate);
+  useEffect(() => {
+    // Handle same-page client transitions as well as first SSR navigation.
+    if (selectedUser && analysts.some((person) => person.id === selectedUser))
+      setUserId(selectedUser);
+    if (/^\d{4}-\d{2}-\d{2}$/.test(selectedDate))
+      setDate(selectedDate);
+  }, [selectedUser, selectedDate, analysts]);
   const [log, setLog] = useState(null);
   const [missedDays, setMissedDays] = useState([]);
   const [selectedMissed, setSelectedMissed] = useState([]);
   const [backfillBusy, setBackfillBusy] = useState(false);
+  const [returnedRevision, setReturnedRevision] = useState(0);
   const [backfillReason, setBackfillReason] = useState("");
   const [backfillError, setBackfillError] = useState("");
   const backfillRequests = useRef(0);
@@ -41,7 +56,8 @@ export default function ShiftLogManager() {
         body: { userId, dates, enabled, reason: backfillReason.trim() } });
       setSelectedMissed([]);
       await refreshBackfills();
-      toast(enabled ? "Historical Shift Log entry enabled" : "Historical Shift Log entry revoked");
+      setReturnedRevision((revision) => revision + 1);
+      toast(enabled ? "Shift Logs returned to analyst for completion" : "Returned Shift Log access revoked");
     } catch (e) { setBackfillError(e.message); }
     finally { setBackfillBusy(false); }
   };
@@ -92,6 +108,8 @@ export default function ShiftLogManager() {
     try {
       const result = await api("/api/shift", { method: "PATCH", body: { user: userId, date, completed: true } });
       if (selection.current === target) setLog(result);
+      setReturnedRevision((revision) => revision + 1);
+      refreshBackfills();
       toast("Shift log marked completed");
     } catch (error) {
       toast(error.message, "error");
@@ -126,9 +144,11 @@ export default function ShiftLogManager() {
         </div>
       </Panel>
 
-      <Panel title="Missed shifts · backfill permission" meta="Authorize only rostered, unsubmitted past days">
+      <ManagerReturnedQueue showEmpty refreshKey={returnedRevision} onPick={(item) => { setUserId(item.userId); setDate(item.date); }} />
+
+      <Panel title="Return missed Shift Logs" meta="Only scheduled, unsubmitted past days">
         <div className="panel-body" style={{ display: "grid", gap: "var(--s-3)" }}>
-          <p className="muted small">Select the missed dates below, then grant access. The analyst can open each day in Shift Log history, enter their work, and submit it normally. All grants and revocations are audited.</p>
+          <p className="muted small">Select one or more missed dates and return them to this staff member. They will see the returned count directly on their dashboard and can complete each log. Completed entries leave both pending queues; all grant and revocation events remain in the audit trail.</p>
           <div style={{ maxHeight: 235, overflowY: "auto", border: "1px solid var(--border)", borderRadius: "var(--r-md)", padding: 8 }}>
             {!missedDays.length ? <span className="muted small">No past scheduled shifts found in the last 120 days.</span> :
               missedDays.map((day) => (
@@ -139,7 +159,7 @@ export default function ShiftLogManager() {
                       e.target.checked ? [...prev, day.date] : prev.filter((item) => item !== day.date))} />
                   <span className="mono" style={{ minWidth: 105 }}>{day.date}</span>
                   <span className="muted small">{day.shiftType}</span>
-                  <span className={`badge dot ${day.granted ? "info" : ""}`}>{day.granted ? "Entry permitted" : day.hasLog ? "Incomplete" : "Not recorded"}</span>
+                  <span className={`badge dot ${day.granted ? "info" : ""}`}>{day.granted ? "Returned · awaiting completion" : day.hasLog ? "Incomplete" : "Not recorded"}</span>
                 </label>
               ))}
           </div>
@@ -149,7 +169,7 @@ export default function ShiftLogManager() {
               onChange={(e) => setBackfillReason(e.target.value)} />
             <button type="button" className="btn btn-primary btn-sm" disabled={backfillBusy || !selectedMissed.length}
               onClick={() => grantBackfills(true)}>
-              Allow selected days ({selectedMissed.length})
+              Return selected days ({selectedMissed.length})
             </button>
             <button type="button" className="btn btn-secondary btn-sm"
               disabled={backfillBusy || !selectedMissed.length} onClick={() => grantBackfills(false)}>
@@ -165,7 +185,7 @@ export default function ShiftLogManager() {
       ) : missing ? (
         <div className="panel" style={{ marginTop: "var(--s-4)" }}>
           <EmptyState compact icon="shift" title="No recorded shift log for this date">
-            Viewing a schedule does not create a log. Analysts can record only their own current-day log.
+            Viewing a schedule does not create a log. Managers can return past rostered dates so the analyst can enter and complete them.
           </EmptyState>
         </div>
       ) : log ? (
@@ -176,16 +196,16 @@ export default function ShiftLogManager() {
                 <div><dt><small>Analyst</small></dt><dd>{person?.name ?? userId}</dd></div>
                 <div><dt><small>Date</small></dt><dd>{longDate(log.date)} · {weekday(log.date)}</dd></div>
                 <div><dt><small>Shift</small></dt><dd>{log.shift?.label ?? log.shiftType}</dd></div>
-                {person?.team !== "SOC · L2" && <div><dt><small>Checklist</small></dt><dd dir="auto">{log.checklist ? `${log.checklist.name}${log.checklist.version ? ` · v${log.checklist.version}` : ""}` : "None assigned"}</dd></div>}
+                {log.mode !== "ticket_analysis" && <div><dt><small>Checklist</small></dt><dd dir="auto">{log.checklist ? `${log.checklist.name}${log.checklist.version ? ` · v${log.checklist.version}` : ""}` : "None assigned"}</dd></div>}
                 <div><dt><small>Status</small></dt><dd>{log.completedAt ? <span className="badge dot success">Submitted & locked</span> : <span className="badge dot info">Incomplete</span>}</dd></div>
-                {person?.team !== "SOC · L2" && <div><dt><small>Activities</small></dt><dd>{done} of {log.activities.length}</dd></div>}
+                {log.mode !== "ticket_analysis" && <div><dt><small>Activities</small></dt><dd>{done} of {log.activities.length}</dd></div>}
                 <div><dt><small>Correction policy</small></dt><dd>Manager-only after submission</dd></div>
               </dl>
             </div>
           </div>
 
-          {person?.team !== "SOC · L2" && <Panel
-            title="Routine activities"
+          {log.mode !== "ticket_analysis" && <Panel
+            title={log.mode === "engineering" ? "Engineering daily work" : "SOC shift duties"}
             meta={log.completedAt ? "Manager corrections do not unlock this log for the analyst" : "You may correct the log and complete it when all activities are done"}
           >
             {log.activities.map((activity) => (
@@ -193,14 +213,14 @@ export default function ShiftLogManager() {
             ))}
           </Panel>}
 
-          {person?.team === "SOC · L2" && (
+          {(log.mode === "ticket_analysis" || (person?.team === "SOC · L2" && log.analyzedTickets?.length > 0)) && (
             <L2AnalyzedTickets key={`${userId}:${date}`} initialItems={log.analyzedTickets ?? []}
               managerTarget={{ user: userId, date }} onChange={(items, stats) =>
                 setLog((current) => current && ({ ...current, analyzedTickets: items, analyzedTicketStats: stats }))}
             />
           )}
 
-          {person?.team !== "SOC · L2" && <Panel title="Created tickets" meta={`${log.tickets.length} ticket${log.tickets.length === 1 ? "" : "s"}`}>
+          {log.mode === "operational" && <Panel title="Created tickets" meta={`${log.tickets.length} ticket${log.tickets.length === 1 ? "" : "s"}`}>
             {!log.tickets.length ? <p className="panel-body muted small">No tickets were recorded in this shift log.</p> : (
               <div role="table" aria-label="Tickets">
                 <div className="ticket head" role="row"><span role="columnheader">Ticket number</span><span role="columnheader">Related reference</span><span role="columnheader">Description</span></div>
@@ -218,7 +238,7 @@ export default function ShiftLogManager() {
           {!log.completedAt && (
             <div className="summary">
               <span className="remain">Completion is permanent. After submission, only managers can correct fields.</span>
-              <button type="button" className="btn btn-primary" onClick={complete} disabled={person?.team !== "SOC · L2" && !allDone}>Mark completed</button>
+              <button type="button" className="btn btn-primary" onClick={complete} disabled={log.mode !== "ticket_analysis" && !allDone}>Mark completed</button>
             </div>
           )}
         </div>
