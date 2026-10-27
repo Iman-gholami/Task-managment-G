@@ -130,7 +130,7 @@ test("an existing database is migrated without changing any recorded shift log",
   assert.equal(db.prepare("SELECT COUNT(*) AS n FROM shift_checklist_versions").get().n, 1);
 });
 
-test("managers give Layer 2 its own checklist; each group sees its own and completion stays per analyst and per shift", () => {
+test("managers give Layer 3 its own checklist; each group sees its own and completion stays per analyst and per shift", () => {
   useDatabase("fresh.db");
   const today = repo.today();
   const tomorrow = addDays(today, 1);
@@ -138,25 +138,25 @@ test("managers give Layer 2 its own checklist; each group sees its own and compl
   const manager = member("Mona Manager", "SOC", "soc_manager");
   const a1 = member("Ali First", "SOC · L1");
   const a2 = member("Ava Second", "SOC · L1");
-  const b1 = member("Bita First", "SOC · L2");
-  const b2 = member("Babak Second", "SOC · L2");
+  const b1 = member("Bita First", "SOC · L3");
+  const b2 = member("Babak Second", "SOC · L3");
   for (const u of [a1, a2, b1, b2]) repo.setShiftSchedule(u.id, today, "evening", manager.id);
   repo.setShiftSchedule(b1.id, tomorrow, "evening", manager.id);
 
-  // Before anything is configured, Layer 2 keeps the routine it used before (no regression).
+  // Before anything is configured, Layer 3 keeps the routine it used before (no regression).
   assert.equal(repo.getShiftLog(b2.id).checklist.name, "Standard SOC routine");
 
-  const l2 = checklists.createChecklist({ name: "Layer 2 technical routine", items: L2_ITEMS }, manager.id);
+  const l2 = checklists.createChecklist({ name: "Layer 3 technical routine", items: L2_ITEMS }, manager.id);
   assert.equal(l2.version, 1);
   assert.deepEqual(l2.groups, [], "a new checklist is not used until it is assigned");
-  checklists.setAssignment("SOC · L2", { checklistId: l2.id }, manager.id);
+  checklists.setAssignment("SOC · L3", { checklistId: l2.id }, manager.id);
 
   // Correct checklist per group.
   const logA1 = repo.getShiftLog(a1.id);
   const logB1 = repo.getShiftLog(b1.id);
   assert.equal(logA1.checklist.name, "Standard SOC routine");
   assert.equal(logA1.activities.length, 8);
-  assert.deepEqual(logB1.checklist, { id: l2.id, name: "Layer 2 technical routine", version: 1 });
+  assert.deepEqual(logB1.checklist, { id: l2.id, name: "Layer 3 technical routine", version: 1 });
   assert.deepEqual(logB1.activities.map((a) => a.title), L2_ITEMS.map((it) => it.title));
   assert.equal(logB1.activities[1].hint, "Escalate to L3 when blocked");
   assert.equal(repo.getShiftLog(b2.id).checklist.id, l2.id, "an unstarted log follows the new assignment");
@@ -179,7 +179,7 @@ test("managers give Layer 2 its own checklist; each group sees its own and compl
   const draft = {
     version: 1,
     name: l2.name,
-    description: "Layer 2 analysts",
+    description: "Layer 3 analysts",
     items: [
       { ...l2.items[3] },
       { ...l2.items[0], title: "Review escalated incidents (P1 first)" },
