@@ -260,7 +260,7 @@ test("editing a checklist never rewrites a started log; stale pages cannot tick 
   await expect(page.getByTestId("shift-checklist")).toHaveText(`${L2} · v3`);
 });
 
-test("a manager can turn a group's checklist off and on; analysts then see a clear empty state", async ({ page }) => {
+test("turning off a custom L3 checklist reverts new daytime logs to the engineering default", async ({ page }) => {
   await signIn(page, "manager");
   await page.goto("/shift/checklists");
   const card = page.locator('[data-group="SOC · L3"]');
@@ -271,8 +271,9 @@ test("a manager can turn a group's checklist off and on; analysts then see a cle
 
   await signIn(page, "roya");
   await page.goto("/shift");
-  await expect(page.getByText("No checklist for SOC · L3 yet")).toBeVisible();
-  await expect(page.getByTestId("shift-checklist")).toHaveText("None assigned");
+  await expect(page.getByTestId("shift-checklist")).toContainText("Layer 3 · Engineering daily work");
+  await expect(page.getByRole("heading", { name: "Engineering daily work" })).toBeVisible();
+  await expect(page.getByText("Automation and scripting")).toBeVisible();
 
   await signIn(page, "kian"); // already started: keeps his items
   expect((await (await page.request.get("/api/shift")).json()).activities).toHaveLength(4);
