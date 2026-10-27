@@ -234,7 +234,7 @@ test("turning a group's checklist off, reassigning and archiving", () => {
   const today = repo.today();
   const boss = repo.listUsers().find((u) => u.role === "security_manager");
   const analyst = repo.createMember({ name: "Lena One", email: "lena@corp.test", role: "analyst", team: "SOC · L1", passwordHash: hashPassword("x") });
-  repo.setShiftSchedule(analyst.id, today, "night", boss.id);
+  repo.setShiftSchedule(analyst.id, today, "morning", boss.id);
   const [standard] = checklists.listChecklists();
 
   checklists.setAssignment("SOC · L1", { enabled: false }, boss.id);
