@@ -17,6 +17,14 @@ const shiftLabel = (type) => SHIFT_TYPES[type]?.label ?? type;
 export function ReturnedShiftAlerts() {
   const { me } = useApp();
   const { data, error, reload } = useFetch(me.keepsShiftLog ? "/api/shift/backfill?scope=self" : null);
+  useEffect(() => {
+    if (!me.keepsShiftLog) return;
+    // A manager can return a shift while the analyst is already on the homepage.
+    const timer = setInterval(() => { if (document.visibilityState === "visible") reload(); }, 20000);
+    const focus = () => reload();
+    window.addEventListener("focus", focus);
+    return () => { clearInterval(timer); window.removeEventListener("focus", focus); };
+  }, [reload, me.keepsShiftLog]);
   if (!data?.count && !error) return null;
   return (
     <section data-testid="returned-shifts-card" aria-label="Returned shift logs">
