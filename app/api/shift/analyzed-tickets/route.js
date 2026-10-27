@@ -42,6 +42,8 @@ export async function PATCH(request) {
   const body = await request.json().catch(() => ({}));
   const t = await target(body);
   if (t.denied) return t.denied;
+  if (!Number.isSafeInteger(body.id) || body.id < 1)
+    return Response.json({ error: "Choose an existing ticket to edit." }, { status: 400 });
   try {
     return Response.json(saveAnalyzedTicket(t.userId, t.date,
       { id: body.id, ticketNumber: body.ticketNumber, verdict: body.verdict }, t.opts));
