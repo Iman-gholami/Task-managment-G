@@ -98,6 +98,7 @@ test("Layer 2 analyzes tickets quickly, records verdicts, and managers can corre
   await page.request.post("/api/auth/login", { data: ADMIN });
   await page.goto("/shift/manage");
   await page.getByRole("combobox", { name: "Analyst" }).selectOption(ids["SOC · L2"]);
+  await page.getByText("Review or correct a Shift Log").click();
   const managerCard = page.getByTestId("l2-analyzed-tickets");
   await expect(managerCard).toBeVisible();
   await expect(page.getByRole("heading", { name: "Routine activities" })).toHaveCount(0);

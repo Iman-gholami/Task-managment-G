@@ -1,99 +1,129 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { useApp } from "@/components/AppProvider";
 import useFetch from "@/components/useFetch";
 import Icon from "@/components/ui/Icon";
-import { Panel } from "@/components/ui/layout";
 import { longDate } from "@/lib/format";
 import { SHIFT_TYPES } from "@/lib/shifts";
+import styles from "@/components/screens/ShiftBackfill.module.css";
 
+const PREVIEW_LIMIT = 6;
 const hrefFor = (row) => `/shift?date=${encodeURIComponent(row.date)}`;
-const managerHref = (row) => `/shift/manage?user=${encodeURIComponent(row.userId)}&date=${encodeURIComponent(row.date)}`;
+const managerHref = (row) => `/shift/manage?user=${encodeURIComponent(row.userId)}&date=${encodeURIComponent(row.date)}#shift-log-details`;
 const shiftLabel = (type) => SHIFT_TYPES[type]?.label ?? type;
 
-/** Analyst homepage: a prominent, direct link to EACH returned Shift Log. */
-export function ReturnedShiftAlerts() {
-  const { me } = useApp();
-  const { data, error, reload } = useFetch(me.keepsShiftLog ? "/api/shift/backfill?scope=self" : null);
-  useEffect(() => {
-    if (!me.keepsShiftLog) return;
-    // A manager can return a shift while the analyst is already on the homepage.
-    const timer = setInterval(() => { if (document.visibilityState === "visible") reload(); }, 20000);
-    const focus = () => reload();
-    window.addEventListener("focus", focus);
-    return () => { clearInterval(timer); window.removeEventListener("focus", focus); };
-  }, [reload, me.keepsShiftLog]);
-  if (!data?.count && !error) return null;
-  return (
-    <section data-testid="returned-shifts-card" aria-label="Returned shift logs">
-      <Panel title="Returned Shift Logs" meta={data?.count ? `${data.count} shift logs returned for completion` : null}
-        actions={data?.count ? <span className="badge dot warning">{data.count} to complete</span> : null}>
-        {error ? <div className="panel-body"><p role="alert">{error.message}</p>
-          <button className="btn btn-secondary btn-sm" onClick={reload}>Retry</button></div> : (
-          <div className="panel-body" style={{ display: "grid", gap: 10 }}>
-            <p className="sec small">A manager returned these scheduled days to you. Open each day, record its shift activities, and select Complete shift. Completed days disappear automatically.</p>
-            <div role="list" style={{ display: "grid", gap: 8 }}>
-              {(data?.pending ?? []).map((item) => (
-                <Link key={item.date} role="listitem" href={hrefFor(item)}
-                  className="row" data-testid={`returned-shift-${item.date}`}
-                  style={{ display: "flex", justifyContent: "space-between", alignItems: "center",
-                    padding: "12px 14px", border: "1px solid var(--border)", borderRadius: 10, gap: 12 }}>
-                  <span><strong>{longDate(item.date)}</strong>
-                    <span className="muted small" style={{ display: "block", marginTop: 4 }}>
-                      {shiftLabel(item.shiftType)} · {item.hasLog ? "In progress" : "Not started"}
-                    </span>
-                  </span>
-                  <span className="row" style={{ display: "flex", gap: 6, alignItems: "center" }}>
-                    <span className="badge dot info">Returned</span><Icon name="arrowRight" />
-                  </span>
-                </Link>
-              ))}
-            </div>
-          </div>
-        )}
-      </Panel>
-    </section>
-  );
-}
-
-/** Managers see ONLY outstanding returned days. Database audit retains completed days. */
-export function ManagerReturnedQueue({ showEmpty = false, onPick = null, refreshKey = 0 }) {
-  const { data, error, reload } = useFetch("/api/shift/backfill?scope=pending");
+/** Refresh outstanding work when the page is visible or the user returns to it. */
+function useReturnedShifts(url, refreshKey = 0) {
+  const result = useFetch(url);
+  const { reload } = result;
   useEffect(() => {
     if (refreshKey > 0) reload();
   }, [refreshKey, reload]);
   useEffect(() => {
-    // Refresh while a manager has the page open; another user may finish a shift.
+    if (!url) return;
     const timer = setInterval(() => { if (document.visibilityState === "visible") reload(); }, 20000);
     const focus = () => reload();
     window.addEventListener("focus", focus);
     return () => { clearInterval(timer); window.removeEventListener("focus", focus); };
-  }, [reload]);
-  if (!showEmpty && !data?.count && !error) return null;
+  }, [url, reload]);
+  return result;
+}
+
+function QueueError({ error, reload, testId }) {
   return (
-    <section aria-label="Returned shift logs awaiting completion" data-testid="manager-returned-shifts">
-      <Panel title="Returned Shift Logs · Awaiting Completion"
-        meta={data ? `${data.count} outstanding` : "Checking returned shift logs"}
-        actions={<button type="button" className="btn btn-ghost btn-sm" onClick={reload}><Icon name="refresh" />Refresh</button>}>
-        <div className="panel-body" style={{ display: "grid", gap: 8 }}>
-          {error && <p role="alert">{error.message}</p>}
-          {data?.count === 0 && <p className="muted small">No returned shift logs are awaiting completion.</p>}
-          {(data?.pending ?? []).map((item) => (
-            <Link key={`${item.userId}:${item.date}`} href={managerHref(item)}
-              onClick={onPick ? () => onPick(item) : undefined}
-              className="row" data-testid={`manager-returned-${item.userId}-${item.date}`}
-              style={{ display: "flex", gap: 12, alignItems: "center", justifyContent: "space-between",
-                padding: "9px 12px", border: "1px solid var(--border)", borderRadius: 8 }}>
-              <span><strong>{item.userName}</strong>
-                <span className="muted small" style={{ display: "block" }}>{item.team} · {longDate(item.date)} · {shiftLabel(item.shiftType)}</span>
-              </span>
-              <span className="badge dot info">Awaiting analyst</span>
-            </Link>
-          ))}
-        </div>
-      </Panel>
+    <section className={styles.queueError} data-testid={testId} aria-label="Returned shift logs">
+      <div><strong>Could not load returned Shift Logs</strong><p role="alert">{error.message}</p></div>
+      <button type="button" className="btn btn-secondary btn-sm" onClick={reload}>Retry</button>
     </section>
+  );
+}
+
+/** Analyst homepage: the count stays visible and each day has a direct link. */
+export function ReturnedShiftAlerts() {
+  const { me } = useApp();
+  const { data, error, reload } = useReturnedShifts(me.keepsShiftLog ? "/api/shift/backfill?scope=self" : null);
+  const [showAll, setShowAll] = useState(false);
+  if (error) return <QueueError error={error} reload={reload} testId="returned-shifts-card" />;
+  if (!data?.count) return null;
+  const pending = data.pending ?? [];
+  const visible = showAll ? pending : pending.slice(0, PREVIEW_LIMIT);
+  return (
+    <details className={`${styles.queue} ${styles.analystQueue}`} data-testid="returned-shifts-card">
+      <summary className={styles.queueSummary}>
+        <span className={styles.queueIcon}><Icon name="shift" /></span>
+        <span className={styles.queueHeading}>
+          <strong>Returned Shift Logs</strong>
+          <span>{data.count} shift {data.count === 1 ? "log" : "logs"} returned for completion</span>
+        </span>
+        <span className={styles.queueAction}>View shifts <Icon name="down" /></span>
+      </summary>
+      <div className={styles.queueBody}>
+        <p className={styles.queueHint}>Open a day, record its activities, then complete the shift.</p>
+        <ul className={styles.queueList} aria-label="Your returned Shift Logs">
+          {visible.map((item) => (
+            <li key={item.date}>
+              <Link href={hrefFor(item)} className={styles.queueRow} data-testid={`returned-shift-${item.date}`}>
+                <span className={styles.rowMain}><strong><time dateTime={item.date}>{longDate(item.date)}</time></strong>
+                  <span>{shiftLabel(item.shiftType)} · {item.hasLog ? "In progress" : "Not started"}</span></span>
+                <span className={styles.rowAction}>Open <Icon name="arrowRight" /></span>
+              </Link>
+            </li>
+          ))}
+        </ul>
+        {pending.length > PREVIEW_LIMIT && <button type="button" className="btn btn-ghost btn-sm" onClick={() => setShowAll((v) => !v)}>{showAll ? "Show fewer" : `Show all ${pending.length} shifts`}</button>}
+      </div>
+    </details>
+  );
+}
+
+/** Managers see outstanding returned days; completed days remain in the audit. */
+export function ManagerReturnedQueue({ showEmpty = false, onPick = null, refreshKey = 0, disabled = false }) {
+  const { data, error, loading, reload } = useReturnedShifts("/api/shift/backfill?scope=pending", refreshKey);
+  const [showAll, setShowAll] = useState(false);
+  if (error) return <QueueError error={error} reload={reload} testId="manager-returned-shifts" />;
+  if (!data?.count) {
+    if (!showEmpty) return null;
+    return (
+      <section className={styles.emptyQueue} data-testid="manager-returned-shifts" aria-label="Returned shift logs awaiting completion">
+        <span><Icon name="checkCircle" />{loading ? "Checking returned Shift Logs…" : "No returned Shift Logs awaiting completion"}</span>
+        <button type="button" className="btn btn-ghost btn-sm" onClick={reload} disabled={loading}><Icon name="refresh" />Refresh</button>
+      </section>
+    );
+  }
+  const pending = data.pending ?? [];
+  const visible = showAll ? pending : pending.slice(0, PREVIEW_LIMIT);
+  return (
+    <details className={`${styles.queue} ${styles.managerQueue}`} data-testid="manager-returned-shifts">
+      <summary className={styles.queueSummary}>
+        <span className={styles.queueIcon}><Icon name="clock" /></span>
+        <span className={styles.queueHeading}>
+          <strong>Returned Shift Logs</strong>
+          <span>{data.count} {data.count === 1 ? "shift is" : "shifts are"} awaiting completion</span>
+        </span>
+        <span className={styles.queueAction}>View shifts <Icon name="down" /></span>
+      </summary>
+      <div className={styles.queueBody}>
+        <div className={styles.queueToolbar}>
+          <p className={styles.queueHint}>{disabled ? "Wait for the current action to finish." : "Completed shifts leave this list automatically."}</p>
+          <button type="button" className="btn btn-ghost btn-sm" onClick={reload} disabled={loading}><Icon name="refresh" />Refresh</button>
+        </div>
+        <ul className={styles.queueList} aria-label="Returned Shift Logs awaiting completion">
+          {visible.map((item) => (
+            <li key={`${item.userId}:${item.date}`}>
+              <Link href={managerHref(item)} aria-disabled={disabled || undefined} tabIndex={disabled ? -1 : undefined}
+                onClick={(event) => { if (disabled) event.preventDefault(); else onPick?.(item); }}
+                className={`${styles.queueRow} ${disabled ? styles.disabledRow : ""}`} data-testid={`manager-returned-${item.userId}-${item.date}`}>
+                <span className={styles.rowMain}><strong><bdi>{item.userName}</bdi></strong>
+                  <span><bdi>{item.team}</bdi> · {longDate(item.date)} · {shiftLabel(item.shiftType)}</span></span>
+                <span className={styles.rowAction}>Open <Icon name="arrowRight" /></span>
+              </Link>
+            </li>
+          ))}
+        </ul>
+        {pending.length > PREVIEW_LIMIT && <button type="button" className="btn btn-ghost btn-sm" onClick={() => setShowAll((v) => !v)}>{showAll ? "Show fewer" : `Show all ${pending.length} shifts`}</button>}
+      </div>
+    </details>
   );
 }

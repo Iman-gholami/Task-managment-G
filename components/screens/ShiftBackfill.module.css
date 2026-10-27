@@ -1,0 +1,125 @@
+/* Returned shifts use the application's existing surfaces and semantic tones. */
+.queue, .emptyQueue, .queueError, .correction {
+  min-width: 0;
+  border: 1px solid var(--border);
+  border-radius: var(--r-lg);
+  background: var(--surface-card);
+  box-shadow: var(--shadow-card), inset 0 1px 0 var(--edge);
+}
+
+.queue { border-inline-start: 3px solid var(--info); margin-bottom: var(--s-4); }
+.queueError { margin-bottom: var(--s-4); }
+.analystQueue { border-inline-start-color: var(--warning); }
+.queueSummary, .correctionSummary {
+  display: flex;
+  align-items: center;
+  gap: var(--s-3);
+  min-height: 68px;
+  padding: var(--s-3) var(--s-4);
+  cursor: pointer;
+  list-style: none;
+}
+.queueSummary::-webkit-details-marker, .correctionSummary::-webkit-details-marker { display: none; }
+.queueSummary:hover, .correctionSummary:hover { background: var(--hover); }
+.queueSummary:focus-visible, .correctionSummary:focus-visible { outline: 2px solid var(--focus); outline-offset: -3px; border-radius: var(--r-lg); }
+.queueIcon {
+  flex: none;
+  display: grid;
+  place-items: center;
+  width: 36px;
+  height: 36px;
+  border-radius: var(--r-md);
+  background: var(--info-soft);
+  color: var(--info);
+}
+.analystQueue .queueIcon { background: var(--warning-soft); color: var(--warning); }
+.queueHeading { display: grid; min-width: 0; gap: 2px; flex: 1; }
+.queueHeading strong { font: var(--type-card-title); color: var(--text); }
+.queueHeading > span { color: var(--text-2); font: var(--type-caption); }
+.queueAction, .rowAction {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  flex: none;
+  color: var(--link);
+  font: var(--type-label);
+  white-space: nowrap;
+}
+.queue[open] .queueAction svg, .correction[open] .queueAction svg { transform: rotate(180deg); }
+.queueBody { border-top: 1px solid var(--divider); padding: var(--s-3) var(--s-4); }
+.queueHint { margin: 0 0 var(--s-2); color: var(--text-2); font: var(--type-body-sm); }
+.queueToolbar { display: flex; align-items: center; justify-content: space-between; gap: var(--s-3); }
+.queueToolbar .queueHint { margin: 0; }
+.queueList { max-height: 320px; overflow-y: auto; margin: 0; padding: 0; list-style: none; }
+.queueList li + li { border-top: 1px solid var(--divider); }
+.queueRow {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--s-3);
+  min-height: 50px;
+  padding: var(--s-2) var(--s-1);
+  color: inherit;
+  text-decoration: none;
+  border-radius: var(--r-sm);
+}
+.queueRow:hover { background: var(--hover); }
+.queueRow:focus-visible { outline: 2px solid var(--focus); outline-offset: -2px; }
+.disabledRow, .disabledRow:hover { cursor: not-allowed; opacity: .55; background: transparent; }
+.rowMain { display: grid; min-width: 0; gap: 2px; }
+.rowMain strong { overflow-wrap: anywhere; font: var(--type-card-title); }
+.rowMain > span { overflow-wrap: anywhere; color: var(--text-2); font: var(--type-caption); }
+.emptyQueue, .queueError { display: flex; align-items: center; justify-content: space-between; gap: var(--s-3); padding: var(--s-3) var(--s-4); }
+.emptyQueue > span { display: inline-flex; align-items: center; gap: var(--s-2); color: var(--text-2); font: var(--type-body-sm); }
+.emptyQueue svg { color: var(--success); }
+.queueError strong { font: var(--type-card-title); }
+.queueError p { margin: 2px 0 0; color: var(--danger); font: var(--type-body-sm); }
+
+/* The manager works with one analyst at a time; detailed correction is separate. */
+.managerPage { display: grid; align-content: start; gap: var(--s-4); }
+.managerPage > header { margin-bottom: 0; }
+.managerPage > .queue, .managerPage > .queueError { margin-bottom: 0; }
+.analystPicker { display: flex; align-items: end; gap: var(--s-3); flex-wrap: wrap; }
+.analystPicker label { flex: 1 1 260px; max-width: 520px; }
+.missedBody { display: grid; gap: var(--s-3); }
+.missedIntro { margin: 0; color: var(--text-2); font: var(--type-body-sm); }
+.missedList { max-height: 270px; overflow-y: auto; border: 1px solid var(--divider); border-radius: var(--r-md); }
+.missedRow {
+  display: grid;
+  grid-template-columns: auto minmax(100px, 1fr) minmax(90px, .8fr) minmax(130px, 1fr);
+  align-items: center;
+  gap: var(--s-3);
+  min-height: 44px;
+  padding: var(--s-2) var(--s-3);
+  cursor: pointer;
+}
+.missedRow + .missedRow { border-top: 1px solid var(--divider); }
+.missedRow:hover { background: var(--hover); }
+.missedRow:has(input:checked) { background: var(--selected); }
+.missedRow > span { min-width: 0; }
+.missedStatus { justify-self: start; }
+.statusShort { display: none; }
+.missedEmpty { padding: var(--s-3); color: var(--text-2); font: var(--type-body-sm); }
+.missedActions { display: flex; align-items: end; flex-wrap: wrap; gap: var(--s-2); }
+.missedActions label { flex: 1 1 220px; }
+.missedActions button { flex: none; }
+.backfillError { margin: 0; color: var(--danger); font: var(--type-body-sm); }
+.correctionSummary .queueIcon { background: var(--primary-soft); color: var(--link); }
+.correction { scroll-margin-top: var(--s-4); }
+.correctionBody { border-top: 1px solid var(--divider); padding: var(--s-4); }
+.correctionControls { display: flex; align-items: end; flex-wrap: wrap; gap: var(--s-3); }
+.correctionControls label { flex: 1 1 190px; max-width: 260px; }
+
+@media (max-width: 600px) {
+  .queueSummary, .correctionSummary { padding: var(--s-3); gap: var(--s-2); }
+  .queueIcon { width: 32px; height: 32px; }
+  .queueAction { font-size: var(--fs-12); }
+  .queueBody, .correctionBody { padding: var(--s-3); }
+  .missedRow { grid-template-columns: auto 1fr auto; gap: var(--s-1) var(--s-2); }
+  .missedRow > :nth-child(3) { grid-column: 2; }
+  .missedStatus { grid-column: 3; grid-row: 1 / span 2; }
+  .statusLong { display: none; }
+  .statusShort { display: inline; }
+  .missedActions label { flex-basis: 100%; }
+  .missedActions button { flex: 1 1 auto; }
+}
