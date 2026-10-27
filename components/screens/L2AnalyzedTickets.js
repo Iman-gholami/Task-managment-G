@@ -146,7 +146,7 @@ export default function L2AnalyzedTickets({ initialItems = [], readOnly = false,
                 ) : (
                   <>
                     <button type="button" aria-label={`ویرایش تیکت ${item.ticketNumber}`} disabled={busy} onClick={() => startEdit(item)}><Icon name="edit" size="sm" /> ویرایش</button>
-                    <button type="button" aria-label={`حذف تیکت ${item.ticketNumber}`} disabled={busy} onClick={() => setRemovingId(item.id)}><Icon name="trash" size="sm" /> حذف</button>
+                    <button type="button" aria-label={`حذف تیکت ${item.ticketNumber}`} disabled={busy} onClick={() => setRemovingId(item.id)}><Icon name="x" size="sm" /> حذف</button>
                   </>
                 )}
               </div>
