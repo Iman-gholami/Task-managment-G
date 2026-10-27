@@ -189,7 +189,7 @@ function RoutineShiftLog({ initialLog }) {
           <dl className="facts">
             <div><dt><small>Analyst</small></dt><dd><Who id={me.id} /></dd></div>
             <div><dt><small>Checklist</small></dt><dd dir="auto" data-testid="shift-checklist">{checklistLabel(shiftChecklist)}</dd></div>
-            <div><dt><small>Status</small></dt><dd>{shiftDone ? <span className="badge dot success">Submitted & locked</span> : done ? <span className="badge dot info">In progress</span> : <span className="badge dot">Not started</span>}</dd></div>
+            <div><dt><small>Status</small></dt><dd>{readOnly ? <span className="badge dot success">Submitted & locked</span> : done ? <span className="badge dot info">In progress</span> : <span className="badge dot">Not started</span>}</dd></div>
             <div><dt><small>Completion</small></dt><dd className="num">{done} of {activities.length} · {pct}%</dd></div>
             <div><dt><small>Last change</small></dt><dd className="num" style={saved === "failed" ? { color: "var(--danger)" } : undefined} aria-live="polite">{SAVE_LABEL[saved]}</dd></div>
           </dl>
@@ -265,13 +265,15 @@ function RoutineShiftLog({ initialLog }) {
 
       <div className="summary" role="region" aria-label="Shift summary">
         <span className="s"><b>{done}/{activities.length}</b>activities</span>
-        <span className="s"><b>{iocs}</b>IOCs added</span>
-        <span className="s"><b>{tickets.length}</b>{tickets.length === 1 ? "ticket" : "tickets"}</span>
-        <span className="s"><b>{issues}</b>{issues === 1 ? "issue" : "issues"}</span>
+        {!technical && <>
+          <span className="s"><b>{iocs}</b>IOCs added</span>
+          <span className="s"><b>{tickets.length}</b>{tickets.length === 1 ? "ticket" : "tickets"}</span>
+          <span className="s"><b>{issues}</b>{issues === 1 ? "issue" : "issues"}</span>
+        </>}
         <span className="remain" title={remaining.map((r) => r.title).join("\n")}>
-          {!shiftDone && remaining.length > 0 && `${remaining.length} remaining · next: ${remaining[0].title}`}
+          {!readOnly && remaining.length > 0 && `${remaining.length} remaining · next: ${remaining[0].title}`}
         </span>
-        {shiftDone
+        {readOnly
           ? <span className="muted small">Submitted — manager correction only</span>
           : <button type="button" className="btn btn-primary" onClick={completeShift}>Complete shift</button>}
       </div>
