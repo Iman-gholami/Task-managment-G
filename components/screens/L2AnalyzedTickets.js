@@ -67,7 +67,7 @@ const TicketEditor = memo(function TicketEditor({ editing, defaultVerdict, busy,
   );
 });
 
-export default function L2AnalyzedTickets({ initialItems = [], readOnly = false, managerTarget = null, onChange }) {
+export default function L2AnalyzedTickets({ initialItems = [], readOnly = false, managerTarget = null, backfillDate = null, onChange }) {
   const { toast } = useApp();
   const [items, setItems] = useState(initialItems);
   const [editingId, setEditingId] = useState(null);
@@ -75,7 +75,8 @@ export default function L2AnalyzedTickets({ initialItems = [], readOnly = false,
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
   const [defaultVerdict, setDefaultVerdict] = useState("");
-  const target = managerTarget ? { user: managerTarget.user, date: managerTarget.date } : {};
+  const target = managerTarget ? { user: managerTarget.user, date: managerTarget.date } :
+    backfillDate ? { date: backfillDate } : {};
   useEffect(() => {
     setItems(initialItems);
     setEditingId(null);
