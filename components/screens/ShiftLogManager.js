@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useSearchParams } from "next/navigation";
 import { api, useApp } from "@/components/AppProvider";
 import Icon from "@/components/ui/Icon";
 import { PageHeader, Panel } from "@/components/ui/layout";
@@ -11,18 +12,21 @@ import { ManagerReturnedQueue } from "@/components/screens/dashboard/ReturnedShi
 
 export default function ShiftLogManager({ initialSelection = {} }) {
   const { members, shiftDate, toast } = useApp();
+  const params = useSearchParams();
+  const selectedUser = params.get("user") || initialSelection.user || "";
+  const selectedDate = params.get("date") || initialSelection.date || "";
   const analysts = useMemo(() => members.filter((member) => member.shift !== null), [members]);
   const [userId, setUserId] = useState(() =>
-    analysts.some((person) => person.id === initialSelection.user) ? initialSelection.user : analysts[0]?.id ?? "");
+    analysts.some((person) => person.id === selectedUser) ? selectedUser : analysts[0]?.id ?? "");
   const [date, setDate] = useState(() =>
-    /^\\d{4}-\\d{2}-\\d{2}$/.test(initialSelection.date ?? "") ? initialSelection.date : shiftDate);
+    /^\\d{4}-\\d{2}-\\d{2}$/.test(selectedDate) ? selectedDate : shiftDate);
   useEffect(() => {
-    // Next.js may retain this page instance while changing only its query.
-    if (initialSelection.user && analysts.some((person) => person.id === initialSelection.user))
-      setUserId(initialSelection.user);
-    if (/^\\d{4}-\\d{2}-\\d{2}$/.test(initialSelection.date ?? ""))
-      setDate(initialSelection.date);
-  }, [initialSelection.user, initialSelection.date, analysts]);
+    // Handle same-page client transitions as well as first SSR navigation.
+    if (selectedUser && analysts.some((person) => person.id === selectedUser))
+      setUserId(selectedUser);
+    if (/^\\d{4}-\\d{2}-\\d{2}$/.test(selectedDate))
+      setDate(selectedDate);
+  }, [selectedUser, selectedDate, analysts]);
   const [log, setLog] = useState(null);
   const [missedDays, setMissedDays] = useState([]);
   const [selectedMissed, setSelectedMissed] = useState([]);
