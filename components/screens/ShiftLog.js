@@ -13,6 +13,7 @@ import { EmptyState, ErrorState, Loading } from "@/components/ui/states";
 import useUnsavedChanges from "@/components/useUnsavedChanges";
 import { Meter } from "@/components/ui/charts";
 import { Status, Who } from "@/components/ui/indicators";
+import L2AnalyzedTickets from "@/components/screens/L2AnalyzedTickets";
 import { TODAY, fmtDate, fmtRange, longDate, plural, weekday } from "@/lib/format";
 
 const HINTS = { misp: "The IOC count feeds monthly reports", report: "Prepare and share the daily traffic report" };
@@ -37,6 +38,8 @@ export default function ShiftLog({ initialLog }) {
   }, [dispatch, initialLog]);
 
   const [saved, setSaved] = useState("saved");
+  const [analyzedTickets, setAnalyzedTickets] = useState(initialLog?.analyzedTickets ?? []);
+  useEffect(() => { if (initialLog) setAnalyzedTickets(initialLog.analyzedTickets ?? []); }, [initialLog]);
   const [pending, setPending] = useState(0);
   const [issueOpen, setIssueOpen] = useState(null);
   const [flash, setFlash] = useState(null);
@@ -121,6 +124,11 @@ export default function ShiftLog({ initialLog }) {
         </div>
       </div>
 
+      {me.team === "SOC · L2" && (
+        <L2AnalyzedTickets initialItems={analyzedTickets} readOnly={readOnly}
+          onChange={(items) => setAnalyzedTickets(items)} />
+      )}
+
       <Panel title="Routine activities" meta={activities.length ? `${done} of ${activities.length} done` : shiftTeam}>
         {activities.length === 0 && (
           <EmptyState compact icon="shift" title={shiftChecklist ? "No checklist items for this shift" : `No checklist for ${shiftTeam} yet`}>
@@ -189,6 +197,7 @@ export default function ShiftLog({ initialLog }) {
         <span className="s"><b>{done}/{activities.length}</b>activities</span>
         <span className="s"><b>{iocs}</b>IOCs added</span>
         <span className="s"><b>{tickets.length}</b>{tickets.length === 1 ? "ticket" : "tickets"}</span>
+        {me.team === "SOC · L2" && <span className="s"><b>{analyzedTickets.length}</b>تیکت تحلیل‌شده</span>}
         <span className="s"><b>{issues}</b>{issues === 1 ? "issue" : "issues"}</span>
         <span className="remain" title={remaining.map((r) => r.title).join("\n")}>
           {!shiftDone && remaining.length > 0 && `${remaining.length} remaining · next: ${remaining[0].title}`}
@@ -311,7 +320,7 @@ export function ShiftHistory() {
         ) : (
           <div className="table-wrap">
             <table className="dt">
-              <thead><tr><th scope="col">Date</th><th scope="col">Status</th><th scope="col">Checklist</th><th scope="col">Activities</th><th scope="col" className="r">IOCs</th><th scope="col" className="r">Tickets</th><th scope="col" className="r">Issues</th><th scope="col">Traffic report</th></tr></thead>
+              <thead><tr><th scope="col">Date</th><th scope="col">Status</th><th scope="col">Checklist</th><th scope="col">Activities</th><th scope="col" className="r">IOCs</th><th scope="col" className="r">Tickets</th>{me.team === "SOC · L2" && <th scope="col" className="r">تیکت تحلیل‌شده</th>}<th scope="col" className="r">Issues</th><th scope="col">Traffic report</th></tr></thead>
               <tbody>
                 {data.logs.map((r) => {
                   const today = r.date === TODAY && !r.absence;
@@ -323,6 +332,7 @@ export function ShiftHistory() {
                       <td>{r.absence ? <span className="muted">—</span> : <Meter value={r.done} max={r.total} label={`Activities done on ${fmtDate(r.date)}`} tone="ok" readout={`${r.done}/${r.total}`} />}</td>
                       <td className="r">{r.iocs}</td>
                       <td className="r">{r.tickets || <span className="zero">0</span>}</td>
+                      {me.team === "SOC · L2" && <td className="r">{r.analyzedTickets ?? 0}</td>}
                       <td className="r">{r.issues || <span className="zero">0</span>}</td>
                       <td>{r.absence ? <span className="muted">—</span> : r.report ? <span className="sec">Done</span> : <span className="muted">Not done</span>}</td>
                     </tr>

@@ -6,6 +6,7 @@ import Icon from "@/components/ui/Icon";
 import { PageHeader, Panel } from "@/components/ui/layout";
 import { EmptyState, Loading } from "@/components/ui/states";
 import { longDate, weekday } from "@/lib/format";
+import L2AnalyzedTickets from "@/components/screens/L2AnalyzedTickets";
 
 export default function ShiftLogManager() {
   const { members, shiftDate, toast } = useApp();
@@ -126,6 +127,13 @@ export default function ShiftLogManager() {
               <ManagerActivity key={`${activity.n}-${activity.itemId ?? "built-in"}`} activity={activity} onPatch={(patch) => patchActivity(activity, patch)} />
             ))}
           </Panel>
+
+          {person?.team === "SOC · L2" && (
+            <L2AnalyzedTickets key={`${userId}:${date}`} initialItems={log.analyzedTickets ?? []}
+              managerTarget={{ user: userId, date }} onChange={(items, stats) =>
+                setLog((current) => current && ({ ...current, analyzedTickets: items, analyzedTicketStats: stats }))}
+            />
+          )}
 
           <Panel title="Created tickets" meta={`${log.tickets.length} ticket${log.tickets.length === 1 ? "" : "s"}`}>
             {!log.tickets.length ? <p className="panel-body muted small">No tickets were recorded in this shift log.</p> : (
