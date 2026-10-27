@@ -19,12 +19,12 @@ export default function ShiftLogManager({ initialSelection = {} }) {
   const [userId, setUserId] = useState(() =>
     analysts.some((person) => person.id === selectedUser) ? selectedUser : analysts[0]?.id ?? "");
   const [date, setDate] = useState(() =>
-    /^\\d{4}-\\d{2}-\\d{2}$/.test(selectedDate) ? selectedDate : shiftDate);
+    /^\d{4}-\d{2}-\d{2}$/.test(selectedDate) ? selectedDate : shiftDate);
   useEffect(() => {
     // Handle same-page client transitions as well as first SSR navigation.
     if (selectedUser && analysts.some((person) => person.id === selectedUser))
       setUserId(selectedUser);
-    if (/^\\d{4}-\\d{2}-\\d{2}$/.test(selectedDate))
+    if (/^\d{4}-\d{2}-\d{2}$/.test(selectedDate))
       setDate(selectedDate);
   }, [selectedUser, selectedDate, analysts]);
   const [log, setLog] = useState(null);
