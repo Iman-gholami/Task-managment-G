@@ -35,7 +35,7 @@ function checklistLabel(checklist) {
  */
 export default function ShiftLog({ initialLog }) {
   const { me } = useApp();
-  return me.team === "SOC · L2"
+  return initialLog?.mode === "ticket_analysis"
     ? <Layer2ShiftLog initialLog={initialLog} />
     : <RoutineShiftLog initialLog={initialLog} />;
 }
@@ -98,6 +98,7 @@ function RoutineShiftLog({ initialLog }) {
   const { dispatch, toast, me, activities, tickets, shiftDone, shiftDate, shiftChecklist, shiftTeam } = useApp();
   const logDate = initialLog?.date ?? shiftDate;
   const backfill = logDate !== TODAY;
+  const technical = initialLog?.mode === "engineering";
   // The app layout can stay mounted while a manager adds today's shift.
   // Sync the current server-rendered log when this page opens.
   useEffect(() => {
@@ -195,7 +196,8 @@ function RoutineShiftLog({ initialLog }) {
         </div>
       </div>
 
-      <Panel title="Routine activities" meta={activities.length ? `${done} of ${activities.length} done` : shiftTeam}>
+      <Panel title={technical ? "Engineering daily work" : "SOC shift duties"}
+        meta={activities.length ? `${done} of ${activities.length} done` : shiftTeam}>
         {activities.length === 0 && (
           <EmptyState compact icon="shift" title={shiftChecklist ? "No checklist items for this shift" : `No checklist for ${shiftTeam} yet`}>
             {shiftChecklist
@@ -259,7 +261,7 @@ function RoutineShiftLog({ initialLog }) {
         })}
       </Panel>
 
-      <Tickets readOnly={readOnly} list={tickets} date={backfill ? logDate : null} />
+      {!technical && <Tickets readOnly={readOnly} list={tickets} date={backfill ? logDate : null} />}
 
       <div className="summary" role="region" aria-label="Shift summary">
         <span className="s"><b>{done}/{activities.length}</b>activities</span>
@@ -425,6 +427,7 @@ export function ShiftHistory() {
                   <th scope="col">Shift</th>
                   <th scope="col">Status</th>
                   <th scope="col" className="r">Tickets analyzed</th>
+                  <th scope="col" className="r">SOC tasks</th>
                 </tr></thead>
                 <tbody>
                   {data.logs.map((entry) => {
@@ -440,7 +443,8 @@ export function ShiftHistory() {
                         <td>{entry.absence ? <span className="badge">{entry.shiftType === "off" ? "Day off" : "Leave"}</span> :
                           entry.completed ? <Status s="done" label="Completed" /> :
                           isToday ? <Status s="progress" label="In progress" /> : <Status s="returned" label="Incomplete" />}</td>
-                        <td className="r">{entry.absence ? "—" : entry.analyzedTickets ?? 0}</td>
+                        <td className="r">{entry.absence ? "—" : entry.mode === "ticket_analysis" ? entry.analyzedTickets ?? 0 : "—"}</td>
+                        <td className="r">{entry.absence ? "—" : entry.mode === "operational" ? `${entry.done}/${entry.total}` : "—"}</td>
                       </tr>
                     );
                   })}
