@@ -14,6 +14,37 @@ export default function ShiftLogManager() {
   const [userId, setUserId] = useState(analysts[0]?.id ?? "");
   const [date, setDate] = useState(shiftDate);
   const [log, setLog] = useState(null);
+  const [missedDays, setMissedDays] = useState([]);
+  const [selectedMissed, setSelectedMissed] = useState([]);
+  const [backfillBusy, setBackfillBusy] = useState(false);
+  const [backfillReason, setBackfillReason] = useState("");
+  const [backfillError, setBackfillError] = useState("");
+  const backfillRequests = useRef(0);
+  const refreshBackfills = useCallback(async () => {
+    const request = ++backfillRequests.current;
+    if (!userId) { setMissedDays([]); return; }
+    try {
+      const result = await api(`/api/shift/backfill?user=${encodeURIComponent(userId)}`);
+      if (request === backfillRequests.current) setMissedDays(result.days.filter((day) => !day.completed));
+    } catch (e) {
+      if (request === backfillRequests.current) setBackfillError(e.message);
+    }
+  }, [userId]);
+
+  useEffect(() => { setSelectedMissed([]); setBackfillError(""); refreshBackfills(); }, [refreshBackfills]);
+
+  const grantBackfills = async (enabled, dates = selectedMissed) => {
+    if (!dates.length || backfillBusy) return;
+    setBackfillBusy(true); setBackfillError("");
+    try {
+      await api("/api/shift/backfill", { method: "POST",
+        body: { userId, dates, enabled, reason: backfillReason.trim() } });
+      setSelectedMissed([]);
+      await refreshBackfills();
+      toast(enabled ? "Historical Shift Log entry enabled" : "Historical Shift Log entry revoked");
+    } catch (e) { setBackfillError(e.message); }
+    finally { setBackfillBusy(false); }
+  };
   const [loading, setLoading] = useState(false);
   const [missing, setMissing] = useState(false);
   // The selection a response belongs to. Answers for an earlier selection are dropped, so the screen never shows
@@ -92,6 +123,40 @@ export default function ShiftLogManager() {
           </label>
           <span className="spacer" />
           <button type="button" className="btn btn-secondary" onClick={load} disabled={loading}><Icon name="clock" />Refresh</button>
+        </div>
+      </Panel>
+
+      <Panel title="Missed shifts · backfill permission" meta="Authorize only rostered, unsubmitted past days">
+        <div className="panel-body" style={{ display: "grid", gap: "var(--s-3)" }}>
+          <p className="muted small">Select the missed dates below, then grant access. The analyst can open each day in Shift Log history, enter their work, and submit it normally. All grants and revocations are audited.</p>
+          <div style={{ maxHeight: 235, overflowY: "auto", border: "1px solid var(--border)", borderRadius: "var(--r-md)", padding: 8 }}>
+            {!missedDays.length ? <span className="muted small">No past scheduled shifts found in the last 120 days.</span> :
+              missedDays.map((day) => (
+                <label key={day.date} className="row" style={{ display: "flex", alignItems: "center", gap: 12, padding: 7 }}>
+                  <input type="checkbox" className="cb" aria-label={`Select missed shift ${day.date}`}
+                    checked={selectedMissed.includes(day.date)}
+                    onChange={(e) => setSelectedMissed((prev) =>
+                      e.target.checked ? [...prev, day.date] : prev.filter((item) => item !== day.date))} />
+                  <span className="mono" style={{ minWidth: 105 }}>{day.date}</span>
+                  <span className="muted small">{day.shiftType}</span>
+                  <span className={`badge dot ${day.granted ? "info" : ""}`}>{day.granted ? "Entry permitted" : day.hasLog ? "Incomplete" : "Not recorded"}</span>
+                </label>
+              ))}
+          </div>
+          <div className="row" style={{ gap: 10, flexWrap: "wrap", alignItems: "center" }}>
+            <input className="input" style={{ flex: "1 1 200px" }} maxLength={500}
+              aria-label="Backfill reason (optional)" placeholder="Reason (optional)" value={backfillReason}
+              onChange={(e) => setBackfillReason(e.target.value)} />
+            <button type="button" className="btn btn-primary btn-sm" disabled={backfillBusy || !selectedMissed.length}
+              onClick={() => grantBackfills(true)}>
+              Allow selected days ({selectedMissed.length})
+            </button>
+            <button type="button" className="btn btn-secondary btn-sm"
+              disabled={backfillBusy || !selectedMissed.length} onClick={() => grantBackfills(false)}>
+              Revoke selected
+            </button>
+          </div>
+          {backfillError && <p role="alert" style={{ color: "var(--danger)" }}>{backfillError}</p>}
         </div>
       </Panel>
 
