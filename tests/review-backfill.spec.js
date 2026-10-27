@@ -57,7 +57,7 @@ test("SOC Manager can bypass review for own task only, and grant four auditable 
     { data: { reviewRequired: false } })).status()).toBe(403);
 
   await page.goto("/shift/manage");
-  await expect(page.getByText("Missed shifts · backfill permission")).toBeVisible();
+  await expect(page.getByText("Return missed Shift Logs")).toBeVisible();
   await page.getByLabel("Analyst").selectOption(analystId);
   await expect(page.getByLabel(`Select missed shift ${dates[0]}`)).toBeVisible();
   for (const date of dates) await page.getByLabel(`Select missed shift ${date}`).check();
