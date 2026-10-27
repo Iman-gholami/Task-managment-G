@@ -1,4 +1,5 @@
-import { isManager, requireUser } from "@/lib/server/auth";
+import { requireUser } from "@/lib/server/auth";
+import { canViewManagementAnalytics } from "@/lib/roles";
 import { err } from "@/lib/server/access";
 import { buildReport, reportFileName, toXlsx } from "@/lib/server/reports";
 import { resolvePeriod } from "@/lib/server/stats";
@@ -11,7 +12,7 @@ export async function GET(request, { params }) {
   const q = Object.fromEntries(new URL(request.url).searchParams);
   const period = resolvePeriod(q);
   // Analysts only see their own data; team reports are for managers.
-  if (!isManager(user)) {
+  if (!canViewManagementAnalytics(user)) {
     if (report === "team") return err(403, "Team reports are available to managers.");
     q.user = user.id;
   }

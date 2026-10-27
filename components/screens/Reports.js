@@ -12,6 +12,7 @@ import { EmptyState, ErrorState, Loading } from "@/components/ui/states";
 import { CX, QUAL, STATUS, fmtRange, plural } from "@/lib/format";
 import { periodQuery } from "@/lib/period";
 import { REPORTS } from "@/lib/reports";
+import { canViewManagementAnalytics } from "@/lib/roles";
 import { isManager } from "@/lib/roles";
 
 // Which filters each report offers.
@@ -28,7 +29,7 @@ const PAGE_SIZE = 100;
 export default function Reports({ report }) {
   const { me, members } = useApp();
   const params = useSearchParams();
-  const manager = isManager(me);
+  const manager = canViewManagementAnalytics(me);
   const cur = REPORTS.find((r) => r[0] === report) || REPORTS[0];
   const key = cur[0];
   const [period, setPeriod] = useState("this");
