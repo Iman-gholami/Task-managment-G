@@ -51,8 +51,11 @@ export function ReturnedShiftAlerts() {
 }
 
 /** Managers see ONLY outstanding returned days. Database audit retains completed days. */
-export function ManagerReturnedQueue({ showEmpty = false, onPick = null }) {
+export function ManagerReturnedQueue({ showEmpty = false, onPick = null, refreshKey = 0 }) {
   const { data, error, reload } = useFetch("/api/shift/backfill?scope=pending");
+  useEffect(() => {
+    if (refreshKey > 0) reload();
+  }, [refreshKey, reload]);
   useEffect(() => {
     // Refresh while a manager has the page open; another user may finish a shift.
     const timer = setInterval(() => { if (document.visibilityState === "visible") reload(); }, 20000);

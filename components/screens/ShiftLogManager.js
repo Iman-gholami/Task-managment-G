@@ -26,6 +26,7 @@ export default function ShiftLogManager() {
   const [missedDays, setMissedDays] = useState([]);
   const [selectedMissed, setSelectedMissed] = useState([]);
   const [backfillBusy, setBackfillBusy] = useState(false);
+  const [returnedRevision, setReturnedRevision] = useState(0);
   const [backfillReason, setBackfillReason] = useState("");
   const [backfillError, setBackfillError] = useState("");
   const backfillRequests = useRef(0);
@@ -50,6 +51,7 @@ export default function ShiftLogManager() {
         body: { userId, dates, enabled, reason: backfillReason.trim() } });
       setSelectedMissed([]);
       await refreshBackfills();
+      setReturnedRevision((revision) => revision + 1);
       toast(enabled ? "Shift Logs returned to analyst for completion" : "Returned Shift Log access revoked");
     } catch (e) { setBackfillError(e.message); }
     finally { setBackfillBusy(false); }
@@ -101,6 +103,8 @@ export default function ShiftLogManager() {
     try {
       const result = await api("/api/shift", { method: "PATCH", body: { user: userId, date, completed: true } });
       if (selection.current === target) setLog(result);
+      setReturnedRevision((revision) => revision + 1);
+      refreshBackfills();
       toast("Shift log marked completed");
     } catch (error) {
       toast(error.message, "error");
@@ -135,7 +139,7 @@ export default function ShiftLogManager() {
         </div>
       </Panel>
 
-      <ManagerReturnedQueue showEmpty onPick={(item) => { setUserId(item.userId); setDate(item.date); }} />
+      <ManagerReturnedQueue showEmpty refreshKey={returnedRevision} onPick={(item) => { setUserId(item.userId); setDate(item.date); }} />
 
       <Panel title="Return missed Shift Logs" meta="Only scheduled, unsubmitted past days">
         <div className="panel-body" style={{ display: "grid", gap: "var(--s-3)" }}>
