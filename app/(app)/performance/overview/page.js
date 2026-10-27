@@ -1,7 +1,7 @@
 import { redirect } from "next/navigation";
 import { PerformanceOverview } from "@/components/screens/Performance";
 import { getCurrentUser } from "@/lib/server/auth";
-import { isManager } from "@/lib/roles";
+import { canViewManagementAnalytics } from "@/lib/roles";
 
 export const metadata = { title: "Performance Overview" };
 

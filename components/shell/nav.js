@@ -1,6 +1,6 @@
 // Navigation model for the app shell: sidebar groups, breadcrumbs and command-menu pages.
 import { REPORTS } from "@/lib/reports";
-import { canManageChecklists, isManager } from "@/lib/roles";
+import { canManageChecklists, isManager, canViewManagementAnalytics } from "@/lib/roles";
 
 const REPORT_NAMES = Object.fromEntries(REPORTS.map(([k, n]) => [k, n]));
 export const TASK_VIEWS = { my: "My tasks", assigned: "Assigned by me", team: "Team tasks" };
@@ -9,6 +9,15 @@ const ANALYTICS_PAGES = [["", "Overview"], ["teams", "Teams"], ["people", "Peopl
 /** Sidebar groups for a user. Operational work first, then insights, then organisation. */
 export function navFor(me, counts = {}) {
   const manager = isManager(me);
+  if (me.role === "observer") {
+    return [
+      { id: "insights", label: "نظارت و ارزیابی", items: [
+        { href: "/analytics", match: "/analytics", label: "Analytics · استان‌ها و عملکرد", icon: "bars" },
+        { href: "/performance/overview", match: "/performance", label: "عملکرد نیروها", icon: "perf" },
+        { href: "/reports/employee", match: "/reports", label: "گزارش‌ها و Excel", icon: "report" },
+      ] },
+    ];
+  }
   const taskViews = (manager ? ["assigned", "team", "my"] : ["my", "team"]).map((k) => ({ href: `/tasks/${k}`, label: TASK_VIEWS[k], count: counts[k] }));
   const shiftPlanning = me.keepsShiftLog || manager;
   return [
@@ -68,8 +77,8 @@ export function pagesFor(me) {
       else out.push({ href: it.href, label: it.label, icon: it.icon });
     }
   }
-  if (isManager(me)) ANALYTICS_PAGES.forEach(([k, label]) => k && out.push({ href: `/analytics/${k}`, label: `Analytics · ${label}`, icon: "bars" }));
-  const reports = isManager(me) ? REPORTS : REPORTS.filter(([k]) => k !== "team");
+  if (canViewManagementAnalytics(me)) ANALYTICS_PAGES.forEach(([k, label]) => k && out.push({ href: `/analytics/${k}`, label: `Analytics · ${label}`, icon: "bars" }));
+  const reports = canViewManagementAnalytics(me) ? REPORTS : REPORTS.filter(([k]) => k !== "team");
   reports.forEach(([k, n]) => out.push({ href: `/reports/${k}`, label: n, icon: "sheet" }));
   out.push({ href: "/account", label: "Account & password", icon: "user" });
   // The Reports nav item links to the first report, which the report list also adds; keep one entry per page.
@@ -93,12 +102,12 @@ export function crumbsFor(path, peopleMap, me) {
       return [{ label: "Team" }];
     case "performance":
       return b === "employees"
-        ? [{ label: "Performance", href: isManager(me) ? "/performance/overview" : undefined }, { label: peopleMap[c]?.name ?? "Employee" }]
+        ? [{ label: "Performance", href: canViewManagementAnalytics(me) ? "/performance/overview" : undefined }, { label: peopleMap[c]?.name ?? "Employee" }]
         : [{ label: "Performance" }, { label: "Overview" }];
     case "analytics": {
       if (b === "people" && c) {
         const name = peopleMap[decodeURIComponent(c)]?.name;
-        return isManager(me) ? [{ label: "Analytics", href: "/analytics" }, { label: "People", href: "/analytics/people" }, { label: name ?? "Person" }] : [{ label: "My statistics" }];
+        return canViewManagementAnalytics(me) ? [{ label: "Analytics", href: "/analytics" }, { label: "People", href: "/analytics/people" }, { label: name ?? "Person" }] : [{ label: "My statistics" }];
       }
       return [{ label: "Analytics", href: b ? "/analytics" : undefined }, { label: ANALYTICS_PAGES.find(([k]) => k === (b ?? ""))?.[1] ?? "Overview" }];
     }
