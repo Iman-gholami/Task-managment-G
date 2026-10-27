@@ -23,8 +23,6 @@ export default function L2AnalyzedTickets({ initialItems = [], readOnly = false,
     setItems(initialItems);
     setEditingId(null);
     setRemovingId(null);
-    setForm(EMPTY);
-    setError("");
   }, [initialItems]);
 
   const falsePositive = items.filter((item) => item.verdict === "false_positive").length;
