@@ -72,7 +72,10 @@ test("province member setup and observer access to provincial analytics, but not
   expect(exported.status()).toBe(200);
   expect(exported.headers()["content-type"]).toContain("spreadsheetml");
   expect((await page.request.post("/api/tasks", { data: { title: "Not allowed", a: obs.id } })).status()).toBe(403);
-  expect((await page.request.post("/api/members", { data: { name: "Not allowed" } })).status()).toBe(403);
+  expect((await page.request.post("/api/members", { data: {
+    name: "Not allowed", email: "deny@province-analytics.test", password: PW,
+    team: "SOC · L1", role: "analyst", province: "قم",
+  } })).status()).toBe(403);
   expect((await page.request.post("/api/shift/schedule", {
     data: { userId: qomId, date: "2026-11-01", shiftType: "morning" },
   })).status()).toBe(403);
