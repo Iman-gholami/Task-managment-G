@@ -9,19 +9,13 @@ import { longDate, weekday } from "@/lib/format";
 import L2AnalyzedTickets from "@/components/screens/L2AnalyzedTickets";
 import { ManagerReturnedQueue } from "@/components/screens/dashboard/ReturnedShifts";
 
-export default function ShiftLogManager() {
+export default function ShiftLogManager({ initialSelection = {} }) {
   const { members, shiftDate, toast } = useApp();
   const analysts = useMemo(() => members.filter((member) => member.shift !== null), [members]);
-  const [userId, setUserId] = useState(analysts[0]?.id ?? "");
-  const [date, setDate] = useState(shiftDate);
-  useEffect(() => {
-    // Deep link from a manager's dashboard queue opens that exact analyst/day.
-    const params = new URLSearchParams(window.location.search);
-    const person = params.get("user");
-    const shiftDay = params.get("date");
-    if (person && analysts.some((item) => item.id === person)) setUserId(person);
-    if (shiftDay && /^\\d{4}-\\d{2}-\\d{2}$/.test(shiftDay)) setDate(shiftDay);
-  }, [analysts]);
+  const [userId, setUserId] = useState(() =>
+    analysts.some((person) => person.id === initialSelection.user) ? initialSelection.user : analysts[0]?.id ?? "");
+  const [date, setDate] = useState(() =>
+    /^\\d{4}-\\d{2}-\\d{2}$/.test(initialSelection.date ?? "") ? initialSelection.date : shiftDate);
   const [log, setLog] = useState(null);
   const [missedDays, setMissedDays] = useState([]);
   const [selectedMissed, setSelectedMissed] = useState([]);
