@@ -92,6 +92,7 @@ export default function ShiftLog({ initialLog }) {
   };
 
   const completeShift = () => {
+    if (pending > 0) { toast("Finish saving your last change before submitting the shift.", "info"); return; }
     if (remaining.length) {
       const first = remaining[0];
       document.getElementById(`act-${first.n}`)?.scrollIntoView({ behavior: "smooth", block: "center" });
@@ -162,15 +163,17 @@ export default function ShiftLog({ initialLog }) {
                     <label htmlFor={`ioc-${a.n}`} className="sec small">IOC count</label>
                     <span className="stepper">
                       <button type="button" aria-label="Decrease IOC count" disabled={readOnly} onClick={() => update(a.n, { iocs: Math.max(0, a.iocs - 1) })}>−</button>
-                      <input id={`ioc-${a.n}`} aria-label="IOC count" inputMode="numeric" value={a.iocs} readOnly={readOnly}
-                        onChange={(e) => update(a.n, { iocs: Math.max(0, parseInt(e.target.value.replace(/\D/g, "") || "0", 10)) })}
-                        onKeyDown={(e) => { if (e.key === "ArrowUp") { e.preventDefault(); update(a.n, { iocs: a.iocs + 1 }); } if (e.key === "ArrowDown") { e.preventDefault(); update(a.n, { iocs: Math.max(0, a.iocs - 1) }); } }} />
+                      <BufferedShiftInput id={`ioc-${a.n}`} aria-label="IOC count" inputMode="numeric"
+                        value={a.iocs ?? 0} numeric readOnly={readOnly}
+                        onCommit={(iocs) => update(a.n, { iocs })} />
                       <button type="button" aria-label="Increase IOC count" disabled={readOnly} onClick={() => update(a.n, { iocs: a.iocs + 1 })}>+</button>
                     </span>
                     <label className="toggle-label">
                       <input type="checkbox" role="switch" className="switch" checked={a.bale} disabled={readOnly} onChange={(e) => update(a.n, { bale: e.target.checked })} />Shared via Bale
                     </label>
-                    <input className="input input-sm mono" placeholder="MISP event ID" value={a.mispRef} readOnly={readOnly} onChange={(e) => update(a.n, { mispRef: e.target.value })} aria-label="MISP event reference" />
+                    <BufferedShiftInput className="input input-sm mono" placeholder="MISP event ID"
+                      value={a.mispRef ?? ""} readOnly={readOnly} aria-label="MISP event reference"
+                      onCommit={(mispRef) => update(a.n, { mispRef })} />
                   </div>
                 </div>
               )}
@@ -207,6 +210,30 @@ export default function ShiftLog({ initialLog }) {
           : <button type="button" className="btn btn-primary" onClick={completeShift}>Complete shift</button>}
       </div>
     </div>
+  );
+}
+
+/**
+ * Text stays local while typing: one PATCH on blur/Enter instead of a network
+ * request and full-context rerender per keystroke.
+ */
+function BufferedShiftInput({ value, onCommit, numeric = false, readOnly, ...props }) {
+  const persisted = String(value ?? (numeric ? 0 : ""));
+  const [draft, setDraft] = useState(persisted);
+  useEffect(() => { setDraft(persisted); }, [persisted]);
+  const dirty = draft !== persisted;
+  useUnsavedChanges(dirty, { links: true, message: "This Shift Log field has unsaved text. Leave anyway?" });
+  const commit = () => {
+    if (readOnly || !dirty) return;
+    const result = numeric ? Math.max(0, parseInt(draft.replace(/\D/g, "") || "0", 10)) : draft;
+    setDraft(String(result));
+    if (String(result) !== persisted) onCommit(result);
+  };
+  return (
+    <input {...props} readOnly={readOnly} value={draft}
+      onChange={(event) => setDraft(event.target.value)}
+      onBlur={commit}
+      onKeyDown={(event) => { if (event.key === "Enter") { event.preventDefault(); event.currentTarget.blur(); } }} />
   );
 }
 
