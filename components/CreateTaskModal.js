@@ -9,7 +9,7 @@ import AssigneePicker from "@/components/ui/AssigneePicker";
 import { CX, PRIO, TODAY } from "@/lib/format";
 import { canAssignTask, isManager } from "@/lib/roles";
 
-const blank = { title: "", description: "", prio: "normal", cx: 2, start: TODAY, due: "" };
+const blank = { title: "", description: "", prio: "normal", cx: 2, start: TODAY, due: "", reviewRequired: true };
 
 export default function CreateTaskModal() {
   const { createOpen, setCreateOpen } = useApp();
@@ -45,6 +45,7 @@ function CreateTaskDialog({ onClose }) {
         a: form.a,
         prio: form.prio,
         cx: form.cx,
+        reviewRequired: me.role === "soc_manager" && form.a === me.id ? form.reviewRequired : true,
         start: form.start,
         due: form.due,
       });
@@ -116,7 +117,7 @@ function CreateTaskDialog({ onClose }) {
                 value={form.a}
                 people={people}
                 disabled={!manager}
-                onSelect={(id) => { set({ a: id }); setError(null); }}
+                onSelect={(id) => { set({ a: id, reviewRequired: true }); setError(null); }}
                 onClear={() => { set({ a: "" }); setError(null); }}
               />
             </Field>
@@ -159,10 +160,14 @@ function CreateTaskDialog({ onClose }) {
 
             <div className="create-task-v2__review">
               <label>
-                <input type="checkbox" className="cb" checked disabled readOnly />
+                <input type="checkbox" className="cb" checked={form.a === me.id && me.role === "soc_manager" ? form.reviewRequired : true}
+                  disabled={me.role !== "soc_manager" || form.a !== me.id}
+                  onChange={(e) => set({ reviewRequired: e.target.checked })} aria-label="Manager review required" />
                 <span>
                   <b>Manager review required</b>
-                  <small>Tasks must pass Review before they can be approved as Done.</small>
+                  <small>{me.role === "soc_manager" && form.a === me.id
+                    ? "Optional for your own tasks. Uncheck to complete directly without a reviewer."
+                    : "Analyst tasks must pass manager review before completion."}</small>
                 </span>
               </label>
             </div>
@@ -260,7 +265,7 @@ function CreateTaskDialog({ onClose }) {
           display: flex;
           align-items: flex-start;
           gap: 10px;
-          cursor: default;
+          cursor: pointer;
           color: var(--text-2);
         }
         .create-task-v2__review .cb {

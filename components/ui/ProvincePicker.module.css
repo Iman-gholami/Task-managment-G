@@ -1,0 +1,15 @@
+.root { position: relative; width: 100%; min-width: 0; font-family: var(--font-vazirmatn), var(--font-sans); }
+.control { position: relative; display: flex; align-items: center; width: 100%; }
+.control > svg:first-child { position: absolute; right: 10px; color: var(--text-3); pointer-events: none; z-index: 1; }
+.control > svg:last-child { position: absolute; left: 10px; color: var(--text-3); pointer-events: none; }
+.input { width: 100%; min-width: 0; padding-right: 32px; padding-left: 30px; font: var(--fw-medium) var(--fs-13)/1.5 var(--font-vazirmatn), var(--font-sans); direction: rtl; text-align: right; }
+.input::placeholder { font-weight: var(--fw-regular); }
+.chevron { position: absolute; left: 4px; display: grid; place-items: center; width: 26px; height: 26px; border: 0; border-radius: var(--r-sm); background: transparent; color: var(--text-3); cursor: pointer; }
+.chevron:hover { background: var(--hover); color: var(--text); }
+.menu { position: absolute; top: calc(100% + 5px); right: 0; left: 0; z-index: var(--z-pop); max-height: 250px; overflow: auto; padding: 4px; border: 1px solid var(--border-strong); border-radius: var(--r-lg); background: var(--surface-raised); box-shadow: var(--shadow-lg); overscroll-behavior: contain; }
+.hint { padding: 7px 10px; font: var(--type-overline); font-family: var(--font-sans); color: var(--text-3); direction: ltr; text-align: left; }
+.option { display: flex; align-items: center; justify-content: space-between; gap: 8px; width: 100%; min-height: 36px; padding: 7px 10px; border: none; border-radius: var(--r-sm); background: transparent; text-align: right; font: var(--fw-medium) var(--fs-13)/1.65 var(--font-vazirmatn), var(--font-sans); color: var(--text); cursor: pointer; }
+.option:hover, .option[data-active="true"] { background: var(--hover); }
+.option[aria-selected="true"] { background: var(--primary-soft); color: var(--link); }
+.option svg { color: var(--primary); flex: none; }
+.empty { padding: 12px 10px; margin: 0; font: var(--type-caption); color: var(--text-3); direction: ltr; }

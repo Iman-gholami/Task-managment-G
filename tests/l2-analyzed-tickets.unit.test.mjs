@@ -25,7 +25,11 @@ test("L2 ticket analyses: counted by verdict, isolated by shift, editable and pr
   const date = repo.today();
   repo.setShiftSchedule(l2.id, date, "morning", manager.id);
   repo.setShiftSchedule(l1.id, date, "morning", manager.id);
-  assert.deepEqual(repo.getShiftLog(l2.id).analyzedTickets, []);
+  const l2Log = repo.getShiftLog(l2.id);
+  assert.deepEqual(l2Log.analyzedTickets, []);
+  assert.deepEqual(l2Log.activities, [], "L2 has no L1 routine on any assigned shift");
+  assert.equal(l2Log.checklist, null);
+  assert.throws(() => repo.updateActivity(l2.id, 1, { done: true }), /ticket analysis only/);
   assert.equal(repo.getShiftLog(l1.id).analyzedTickets.length, 0);
   assert.throws(() => svc.saveAnalyzedTicket(l1.id, date, { ticketNumber: "INC-2", verdict: "false_positive" }), /Only SOC Layer 2/);
   assert.throws(() => svc.saveAnalyzedTicket(l2.id, date, { ticketNumber: "INC-1", verdict: "pending" }), /Choose False Positive/);

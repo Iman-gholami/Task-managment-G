@@ -5,6 +5,8 @@ import { findShiftLog, getShiftLog, getUser, setShiftCompleted, updateActivity }
 import { managerCompleteShiftLog, managerUpdateShiftActivity } from "@/lib/server/shift-log-admin";
 import { isShiftAnalyst } from "@/lib/server/stats";
 import { isIsoDate } from "@/lib/shifts";
+import { today } from "@/lib/server/repo";
+import { isBackfillAllowed } from "@/lib/server/shift-backfill";
 
 /** Maps a failed write to a response. A stale client gets the current log back so it can show the latest checklist. */
 function failure(e, currentLog) {
@@ -35,7 +37,8 @@ export async function GET(request) {
 
   const owner = getUser(target);
   if (!owner || !isShiftAnalyst(owner)) return err(404, "Shift logs are kept by SOC analysts only.");
-  const log = target === user.id && !date ? getShiftLog(target) : findShiftLog(target, date);
+  const log = target === user.id && !date ? getShiftLog(target) :
+    target === user.id && date && isBackfillAllowed(target, date) ? getShiftLog(target, date) : findShiftLog(target, date);
   if (!log) return err(404, "No shift log was recorded for this day.");
   return Response.json(log);
 }
@@ -68,6 +71,7 @@ export async function PATCH(request) {
       }
     }
 
+    if (getUser(target)?.team === "SOC · L2") return err(403, "Layer 2 shift logs accept ticket analysis only.");
     const n = Number(body.n);
     if (!Number.isInteger(n) || !body.patch || typeof body.patch !== "object") return err(400, "Invalid request.");
     if ("iocs" in body.patch && !(Number.isInteger(body.patch.iocs) && body.patch.iocs >= 0)) return err(400, "IOC count must be a whole number.");
@@ -80,26 +84,30 @@ export async function PATCH(request) {
   }
 
   if (!isShiftAnalyst(user)) return err(403, "Shift logs are kept by SOC analysts only.");
-  const log = getShiftLog(user.id);
+  const date = body.date === undefined ? today() : String(body.date);
+  if (date !== today() && !isBackfillAllowed(user.id, date))
+    return err(403, "A manager must authorize historical Shift Log entry for that date.");
+  const log = getShiftLog(user.id, date);
   if (!log) return err(404, "No shift is scheduled for today.");
 
   if ("completed" in body) {
     if (!body.completed) return err(409, "Submitted shift logs are locked. Ask a manager to make any correction.");
     if (log.completedAt) return err(409, "Shift is already completed.");
-    if (log.activities.some((a) => !a.done)) return err(400, "Complete all activities first.");
+    if (user.team !== "SOC · L2" && log.activities.some((a) => !a.done)) return err(400, "Complete all activities first.");
     try {
-      return Response.json(setShiftCompleted(user.id, true));
+      return Response.json(setShiftCompleted(user.id, true, date));
     } catch (e) {
       return err(409, e.message);
     }
   }
 
+  if (user.team === "SOC · L2") return err(403, "Layer 2 shift logs accept ticket analysis only.");
   const n = Number(body.n);
   if (!Number.isInteger(n) || !body.patch || typeof body.patch !== "object") return err(400, "Invalid request.");
   if ("iocs" in body.patch && !(Number.isInteger(body.patch.iocs) && body.patch.iocs >= 0)) return err(400, "IOC count must be a whole number.");
   try {
-    return Response.json({ activities: updateActivity(user.id, n, body.patch, itemIdOf(body)) });
+    return Response.json({ activities: updateActivity(user.id, n, body.patch, itemIdOf(body), date) });
   } catch (e) {
-    return failure(e, () => getShiftLog(user.id));
+    return failure(e, () => getShiftLog(user.id, date));
   }
 }

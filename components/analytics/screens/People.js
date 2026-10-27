@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useMemo, useState } from "react";
+import { memo, useCallback, useDeferredValue, useMemo, useState } from "react";
 import AnalyticsFrame from "@/components/analytics/AnalyticsFrame";
 import { useAnalytics } from "@/components/analytics/AnalyticsContext";
 import { stripOption } from "@/components/analytics/chartOptions";
@@ -27,7 +27,6 @@ export default function People() {
 function PeopleBody() {
   const a = useAnalytics();
   const { view, range, cmp, gran, params, setParam } = a;
-  const [q, setQ] = useState("");
   const person = params.get("person");
   const metric = DIST_METRICS.includes(params.get("metric")) ? params.get("metric") : "completed";
   const m = useMemo(() => {
@@ -35,10 +34,9 @@ function PeopleBody() {
     const rows = peopleRows(view, range, cmp).map((r) => ({ ...r, id: r.person.id, spark: bucketStats(view, [r.person.id], b).map((x) => x.completed) }));
     return { rows, groups: groupsIn(view), shift: rows.some((r) => r.person.shift) };
   }, [view, range, cmp, gran]);
-  const shown = q.trim() ? m.rows.filter((r) => r.person.name.includes(q.trim())) : m.rows;
-  const reviews = (view.reviews ?? []).filter((r) =>
-    !q.trim() || m.rows.some((p) => p.person.id === r.a && p.person.name.includes(q.trim())))
-    .sort((a, b) => b.month.localeCompare(a.month) || a.a.localeCompare(b.a));
+  const reviews = useMemo(() => [...(view.reviews ?? [])].sort(
+    (a, b) => b.month.localeCompare(a.month) || a.a.localeCompare(b.a)
+  ), [view]);
   const def = METRICS[metric];
 
   const distRows = m.rows.filter((r) => def.area !== "soc" || r.person.shift);
@@ -48,55 +46,13 @@ function PeopleBody() {
     kind: def.kind, median: median(distRows.map((r) => r.cur[metric])),
   }), [m, metric]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  const columns = [
-    { key: "name", label: "کارشناس", value: (r) => r.person.name, render: (r) => <span className="an-person">{r.person.name}<small>{[r.person.province || "استان تعیین‌نشده", groupFa(r.person.group), r.person.level, ROLE_FA[r.person.role], r.person.active ? null : "غیرفعال"].filter(Boolean).join(" · ")}</small></span> },
-    { key: "c", label: "تکمیل‌شده", kind: "count", value: (r) => r.cur.completed },
-    { key: "good", label: "عالی/خوب", kind: "count", value: (r) => r.cur.quality[0] + r.cur.quality[1] },
-    { key: "needs", label: "نیاز بهبود", kind: "count", value: (r) => r.cur.quality[3] },
-    { key: "d", label: "تغییر", value: (r) => (r.prev ? r.cur.completed - r.prev.completed : null), render: (r) => (r.prev ? <Delta now={r.cur.completed} before={r.prev.completed} /> : "—") },
-    { key: "u", label: "حجم وزن‌دار", kind: "count", value: (r) => r.cur.units },
-    { key: "h", label: "ساعت", kind: "count", value: (r) => r.cur.hours },
-    { key: "hp", label: "ساعت/تسک", kind: "avg", value: (r) => r.cur.hoursPerTask },
-    { key: "ot", label: "به‌موقع", kind: "rate", value: (r) => r.cur.onTimeRate, title: "نرخ وقتی حداقل ۵ تسک دارای ددلاین باشد نمایش داده می‌شود" },
-    { key: "cy", label: "زمان انجام", kind: "days", value: (r) => r.cur.cycleMedian },
-    { key: "rt", label: "برگشت", kind: "count", value: (r) => r.cur.returns },
-    { key: "o", label: "صف باز", kind: "count", value: (r) => r.open.open },
-    { key: "od", label: "معوق", kind: "count", value: (r) => r.open.overdue },
-    ...(m.shift ? [
-      { key: "s", label: "شیفت", kind: "count", value: (r) => (r.person.shift ? r.cur.shifts : null) },
-      { key: "off", label: "تعطیل شیفت", kind: "count", value: (r) => (r.person.shift ? r.cur.offDays : null) },
-      { key: "leave", label: "مرخصی", kind: "count", value: (r) => (r.person.shift ? r.cur.leaveDays : null) },
-      { key: "cl", label: "بسته‌شدن لاگ", kind: "rate", value: (r) => (r.person.shift ? r.cur.closureRate : null) },
-      { key: "rn", label: "روتین", kind: "rate", value: (r) => (r.person.shift ? r.cur.routineRate : null) },
-      { key: "io", label: "IOC", kind: "count", value: (r) => (r.person.shift ? r.cur.iocs : null) },
-      { key: "tk", label: "تیکت", kind: "count", value: (r) => (r.person.shift ? r.cur.tickets : null) },
-    ] : []),
-    { key: "sp", label: "روند", sort: false, value: () => null, render: (r) => <Sparkline values={r.spark} width={76} height={22} /> },
-  ];
+
 
   if (!m.rows.length) return <Panel><AnEmpty title="کارشناسی در این دامنه نیست">فیلترها را تغییر دهید یا اعضای تیم را از صفحه Team اضافه کنید.</AnEmpty></Panel>;
 
   return (
     <>
-      <Panel
-        title="همه کارشناسان"
-        meta={`${faDigits(shown.length)} نفر · الفبایی؛ مرتب‌سازی با کلیک روی سرستون`}
-        actions={
-          <div className="search an-no-print" style={{ width: 220 }}>
-            <Icon name="search" />
-            <input type="search" className="input" placeholder="جست‌وجوی نام" aria-label="جست‌وجوی کارشناس" value={q} onChange={(e) => setQ(e.target.value)} />
-          </div>
-        }
-      >
-        <DataTable
-          columns={columns}
-          rows={shown}
-          onRowClick={(r) => setParam("person", r.person.id)}
-          caption="آمار کارشناسان"
-          testId="people-table"
-          empty={<AnEmpty icon="search" title="کسی پیدا نشد">نامی شبیه «{q}» در این فهرست نیست.</AnEmpty>}
-        />
-      </Panel>
+      <PeopleSearchTable m={m} setParam={setParam} />
 
       <Panel title="سوابق ارزیابی ماهانه شیفت‌لاگ" meta="جدیدترین ارزیابی‌ها در ابتدا نمایش داده می‌شوند">
         {!reviews.length ? <p className="panel-body muted">برای این استان و دوره، ارزیابی ماهانه ثبت نشده است.</p> : (
@@ -127,3 +83,61 @@ function PeopleBody() {
     </>
   );
 }
+
+// Search input state belongs to this small table subtree. ECharts, detailed
+// employee metrics, and the province's history do not rerender per keystroke.
+const PeopleSearchTable = memo(function PeopleSearchTable({ m, setParam }) {
+  const [q, setQ] = useState("");
+  const deferredQ = useDeferredValue(q);
+  const shown = useMemo(() => {
+    const query = deferredQ.trim();
+    return query ? m.rows.filter((r) => r.person.name.includes(query)) : m.rows;
+  }, [deferredQ, m.rows]);
+
+  const columns = [
+    { key: "name", label: "کارشناس", value: (r) => r.person.name, render: (r) => <span className="an-person">{r.person.name}<small>{[r.person.province || "استان تعیین‌نشده", groupFa(r.person.group), r.person.level, ROLE_FA[r.person.role], r.person.active ? null : "غیرفعال"].filter(Boolean).join(" · ")}</small></span> },
+    { key: "c", label: "تکمیل‌شده", kind: "count", value: (r) => r.cur.completed },
+    { key: "good", label: "عالی/خوب", kind: "count", value: (r) => r.cur.quality[0] + r.cur.quality[1] },
+    { key: "needs", label: "نیاز بهبود", kind: "count", value: (r) => r.cur.quality[3] },
+    { key: "d", label: "تغییر", value: (r) => (r.prev ? r.cur.completed - r.prev.completed : null), render: (r) => (r.prev ? <Delta now={r.cur.completed} before={r.prev.completed} /> : "—") },
+    { key: "u", label: "حجم وزن‌دار", kind: "count", value: (r) => r.cur.units },
+    { key: "h", label: "ساعت", kind: "count", value: (r) => r.cur.hours },
+    { key: "hp", label: "ساعت/تسک", kind: "avg", value: (r) => r.cur.hoursPerTask },
+    { key: "ot", label: "به‌موقع", kind: "rate", value: (r) => r.cur.onTimeRate, title: "نرخ وقتی حداقل ۵ تسک دارای ددلاین باشد نمایش داده می‌شود" },
+    { key: "cy", label: "زمان انجام", kind: "days", value: (r) => r.cur.cycleMedian },
+    { key: "rt", label: "برگشت", kind: "count", value: (r) => r.cur.returns },
+    { key: "o", label: "صف باز", kind: "count", value: (r) => r.open.open },
+    { key: "od", label: "معوق", kind: "count", value: (r) => r.open.overdue },
+    ...(m.shift ? [
+      { key: "s", label: "شیفت", kind: "count", value: (r) => (r.person.shift ? r.cur.shifts : null) },
+      { key: "off", label: "تعطیل شیفت", kind: "count", value: (r) => (r.person.shift ? r.cur.offDays : null) },
+      { key: "leave", label: "مرخصی", kind: "count", value: (r) => (r.person.shift ? r.cur.leaveDays : null) },
+      { key: "cl", label: "بسته‌شدن لاگ", kind: "rate", value: (r) => (r.person.shift ? r.cur.closureRate : null) },
+      { key: "rn", label: "روتین", kind: "rate", value: (r) => (r.person.shift ? r.cur.routineRate : null) },
+      { key: "io", label: "IOC", kind: "count", value: (r) => (r.person.shift ? r.cur.iocs : null) },
+      { key: "tk", label: "تیکت", kind: "count", value: (r) => (r.person.shift ? r.cur.tickets : null) },
+    ] : []),
+    { key: "sp", label: "روند", sort: false, value: () => null, render: (r) => <Sparkline values={r.spark} width={76} height={22} /> },
+  ];
+  return (
+      <Panel
+        title="همه کارشناسان"
+        meta={`${faDigits(shown.length)} نفر · الفبایی؛ مرتب‌سازی با کلیک روی سرستون`}
+        actions={
+          <div className="search an-no-print" style={{ width: 220 }}>
+            <Icon name="search" />
+            <input type="search" className="input" placeholder="جست‌وجوی نام" aria-label="جست‌وجوی کارشناس" value={q} onChange={(e) => setQ(e.target.value)} />
+          </div>
+        }
+      >
+        <DataTable
+          columns={columns}
+          rows={shown}
+          onRowClick={(r) => setParam("person", r.person.id)}
+          caption="آمار کارشناسان"
+          testId="people-table"
+          empty={<AnEmpty icon="search" title="کسی پیدا نشد">نامی شبیه «{q}» در این فهرست نیست.</AnEmpty>}
+        />
+      </Panel>
+  );
+});

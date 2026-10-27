@@ -14,6 +14,37 @@ export default function ShiftLogManager() {
   const [userId, setUserId] = useState(analysts[0]?.id ?? "");
   const [date, setDate] = useState(shiftDate);
   const [log, setLog] = useState(null);
+  const [missedDays, setMissedDays] = useState([]);
+  const [selectedMissed, setSelectedMissed] = useState([]);
+  const [backfillBusy, setBackfillBusy] = useState(false);
+  const [backfillReason, setBackfillReason] = useState("");
+  const [backfillError, setBackfillError] = useState("");
+  const backfillRequests = useRef(0);
+  const refreshBackfills = useCallback(async () => {
+    const request = ++backfillRequests.current;
+    if (!userId) { setMissedDays([]); return; }
+    try {
+      const result = await api(`/api/shift/backfill?user=${encodeURIComponent(userId)}`);
+      if (request === backfillRequests.current) setMissedDays(result.days.filter((day) => !day.completed));
+    } catch (e) {
+      if (request === backfillRequests.current) setBackfillError(e.message);
+    }
+  }, [userId]);
+
+  useEffect(() => { setSelectedMissed([]); setBackfillError(""); refreshBackfills(); }, [refreshBackfills]);
+
+  const grantBackfills = async (enabled, dates = selectedMissed) => {
+    if (!dates.length || backfillBusy) return;
+    setBackfillBusy(true); setBackfillError("");
+    try {
+      await api("/api/shift/backfill", { method: "POST",
+        body: { userId, dates, enabled, reason: backfillReason.trim() } });
+      setSelectedMissed([]);
+      await refreshBackfills();
+      toast(enabled ? "Historical Shift Log entry enabled" : "Historical Shift Log entry revoked");
+    } catch (e) { setBackfillError(e.message); }
+    finally { setBackfillBusy(false); }
+  };
   const [loading, setLoading] = useState(false);
   const [missing, setMissing] = useState(false);
   // The selection a response belongs to. Answers for an earlier selection are dropped, so the screen never shows
@@ -95,6 +126,40 @@ export default function ShiftLogManager() {
         </div>
       </Panel>
 
+      <Panel title="Missed shifts · backfill permission" meta="Authorize only rostered, unsubmitted past days">
+        <div className="panel-body" style={{ display: "grid", gap: "var(--s-3)" }}>
+          <p className="muted small">Select the missed dates below, then grant access. The analyst can open each day in Shift Log history, enter their work, and submit it normally. All grants and revocations are audited.</p>
+          <div style={{ maxHeight: 235, overflowY: "auto", border: "1px solid var(--border)", borderRadius: "var(--r-md)", padding: 8 }}>
+            {!missedDays.length ? <span className="muted small">No past scheduled shifts found in the last 120 days.</span> :
+              missedDays.map((day) => (
+                <label key={day.date} className="row" style={{ display: "flex", alignItems: "center", gap: 12, padding: 7 }}>
+                  <input type="checkbox" className="cb" aria-label={`Select missed shift ${day.date}`}
+                    checked={selectedMissed.includes(day.date)}
+                    onChange={(e) => setSelectedMissed((prev) =>
+                      e.target.checked ? [...prev, day.date] : prev.filter((item) => item !== day.date))} />
+                  <span className="mono" style={{ minWidth: 105 }}>{day.date}</span>
+                  <span className="muted small">{day.shiftType}</span>
+                  <span className={`badge dot ${day.granted ? "info" : ""}`}>{day.granted ? "Entry permitted" : day.hasLog ? "Incomplete" : "Not recorded"}</span>
+                </label>
+              ))}
+          </div>
+          <div className="row" style={{ gap: 10, flexWrap: "wrap", alignItems: "center" }}>
+            <input className="input" style={{ flex: "1 1 200px" }} maxLength={500}
+              aria-label="Backfill reason (optional)" placeholder="Reason (optional)" value={backfillReason}
+              onChange={(e) => setBackfillReason(e.target.value)} />
+            <button type="button" className="btn btn-primary btn-sm" disabled={backfillBusy || !selectedMissed.length}
+              onClick={() => grantBackfills(true)}>
+              Allow selected days ({selectedMissed.length})
+            </button>
+            <button type="button" className="btn btn-secondary btn-sm"
+              disabled={backfillBusy || !selectedMissed.length} onClick={() => grantBackfills(false)}>
+              Revoke selected
+            </button>
+          </div>
+          {backfillError && <p role="alert" style={{ color: "var(--danger)" }}>{backfillError}</p>}
+        </div>
+      </Panel>
+
       {loading ? (
         <div className="panel" style={{ marginTop: "var(--s-4)" }}><Loading label="Loading shift log" rows={6} /></div>
       ) : missing ? (
@@ -111,22 +176,22 @@ export default function ShiftLogManager() {
                 <div><dt><small>Analyst</small></dt><dd>{person?.name ?? userId}</dd></div>
                 <div><dt><small>Date</small></dt><dd>{longDate(log.date)} · {weekday(log.date)}</dd></div>
                 <div><dt><small>Shift</small></dt><dd>{log.shift?.label ?? log.shiftType}</dd></div>
-                <div><dt><small>Checklist</small></dt><dd dir="auto">{log.checklist ? `${log.checklist.name}${log.checklist.version ? ` · v${log.checklist.version}` : ""}` : "None assigned"}</dd></div>
+                {person?.team !== "SOC · L2" && <div><dt><small>Checklist</small></dt><dd dir="auto">{log.checklist ? `${log.checklist.name}${log.checklist.version ? ` · v${log.checklist.version}` : ""}` : "None assigned"}</dd></div>}
                 <div><dt><small>Status</small></dt><dd>{log.completedAt ? <span className="badge dot success">Submitted & locked</span> : <span className="badge dot info">Incomplete</span>}</dd></div>
-                <div><dt><small>Activities</small></dt><dd>{done} of {log.activities.length}</dd></div>
+                {person?.team !== "SOC · L2" && <div><dt><small>Activities</small></dt><dd>{done} of {log.activities.length}</dd></div>}
                 <div><dt><small>Correction policy</small></dt><dd>Manager-only after submission</dd></div>
               </dl>
             </div>
           </div>
 
-          <Panel
+          {person?.team !== "SOC · L2" && <Panel
             title="Routine activities"
             meta={log.completedAt ? "Manager corrections do not unlock this log for the analyst" : "You may correct the log and complete it when all activities are done"}
           >
             {log.activities.map((activity) => (
               <ManagerActivity key={`${activity.n}-${activity.itemId ?? "built-in"}`} activity={activity} onPatch={(patch) => patchActivity(activity, patch)} />
             ))}
-          </Panel>
+          </Panel>}
 
           {person?.team === "SOC · L2" && (
             <L2AnalyzedTickets key={`${userId}:${date}`} initialItems={log.analyzedTickets ?? []}
@@ -135,7 +200,7 @@ export default function ShiftLogManager() {
             />
           )}
 
-          <Panel title="Created tickets" meta={`${log.tickets.length} ticket${log.tickets.length === 1 ? "" : "s"}`}>
+          {person?.team !== "SOC · L2" && <Panel title="Created tickets" meta={`${log.tickets.length} ticket${log.tickets.length === 1 ? "" : "s"}`}>
             {!log.tickets.length ? <p className="panel-body muted small">No tickets were recorded in this shift log.</p> : (
               <div role="table" aria-label="Tickets">
                 <div className="ticket head" role="row"><span role="columnheader">Ticket number</span><span role="columnheader">Related reference</span><span role="columnheader">Description</span></div>
@@ -148,12 +213,12 @@ export default function ShiftLogManager() {
                 ))}
               </div>
             )}
-          </Panel>
+          </Panel>}
 
           {!log.completedAt && (
             <div className="summary">
               <span className="remain">Completion is permanent. After submission, only managers can correct fields.</span>
-              <button type="button" className="btn btn-primary" onClick={complete} disabled={!allDone}>Mark completed</button>
+              <button type="button" className="btn btn-primary" onClick={complete} disabled={person?.team !== "SOC · L2" && !allDone}>Mark completed</button>
             </div>
           )}
         </div>

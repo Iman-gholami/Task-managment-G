@@ -13,7 +13,8 @@ import { Meter } from "@/components/ui/charts";
 import { EmptyState } from "@/components/ui/states";
 import { Who } from "@/components/ui/indicators";
 import { plural } from "@/lib/format";
-import { ROLE_LABELS, IRAN_PROVINCES, assignableFor, canManageMember, canViewManagementAnalytics } from "@/lib/roles";
+import { ROLE_LABELS, assignableFor, canManageMember, canViewManagementAnalytics } from "@/lib/roles";
+import ProvincePicker from "@/components/ui/ProvincePicker";
 
 /** People with role, team and live workload (open tasks; 6 = full). Rows open the person's performance. */
 export function PeopleTable({ list, onRemove, onEdit }) {
@@ -182,10 +183,8 @@ function AddMemberModal({ onClose }) {
             </Field>
           </div>
           <Field label="استان" htmlFor="m-province" error={errors.province}>
-            <select id="m-province" className="input" value={form.province} onChange={set("province")}>
-              <option value="">انتخاب استان...</option>
-              {IRAN_PROVINCES.map((province) => <option key={province} value={province}>{province}</option>)}
-            </select>
+            <ProvincePicker id="m-province" value={form.province}
+              onChange={(value) => { setForm((f) => ({ ...f, province: value })); setErrors((old) => ({ ...old, province: null })); setServerError(""); }} />
           </Field>
           <Field label="Initial password" htmlFor="m-pass" hint="At least 8 characters. Share it with the member securely." error={errors.password}>
             <input id="m-pass" type="password" className="input" value={form.password} onChange={set("password")} autoComplete="new-password" />
@@ -246,10 +245,8 @@ function EditMemberModal({ member, onClose }) {
             </Field>
           </div>
           <Field label="استان" htmlFor="e-province">
-            <select id="e-province" className="input" value={form.province} onChange={set("province")}>
-              <option value="">تعیین نشده</option>
-              {IRAN_PROVINCES.map((province) => <option key={province} value={province}>{province}</option>)}
-            </select>
+            <ProvincePicker id="e-province" value={form.province}
+              onChange={(value) => { setForm((f) => ({ ...f, province: value })); setError(""); }} />
           </Field>
           <Field label="Reset password (optional)" htmlFor="e-pass" hint="Leave empty to keep the current password. Resetting signs the member out." error={passwordError}>
             <input id="e-pass" type="password" className="input" value={form.password} onChange={set("password")} autoComplete="new-password" />

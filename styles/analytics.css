@@ -56,6 +56,8 @@
 }
 .an-select { display: inline-flex; align-items: center; gap: 6px; font: var(--type-caption); color: var(--text-3); }
 .an-select .input { width: auto; min-width: 120px; }
+.an-select .an-province-picker { width: 188px; flex: 0 1 188px; min-width: 150px; }
+.an-select .an-province-picker .input { width: 100%; min-width: 0; }
 .an-period-btn { gap: 8px; }
 .an-period-btn .an-period-label { font-weight: var(--fw-semibold); color: var(--text); }
 .an-period-btn .muted { font-weight: var(--fw-regular); }

@@ -7,13 +7,13 @@ const ADMIN = { email: "test-admin@local.invalid", password: "E2E-Only-Admin-202
 const PW = "Checklists2026!";
 const P = {
   manager: { name: "Nadia Rostami", email: "nadia@checklists.test", role: "soc_manager", team: "SOC" },
-  kian: { name: "Kian Ahmadi", email: "kian@checklists.test", role: "analyst", team: "SOC · L2" },
-  roya: { name: "Roya Karimi", email: "roya@checklists.test", role: "analyst", team: "SOC · L2" },
+  kian: { name: "Kian Ahmadi", email: "kian@checklists.test", role: "analyst", team: "SOC · L3" },
+  roya: { name: "Roya Karimi", email: "roya@checklists.test", role: "analyst", team: "SOC · L3" },
   dariush: { name: "Dariush Ebadi", email: "dariush@checklists.test", role: "analyst", team: "SOC · L1" },
   elham: { name: "Elham Nazari", email: "elham@checklists.test", role: "engineer", team: "Design & Automation" },
 };
 const ids = {};
-const L2 = "Layer 2 technical routine";
+const L2 = "Layer 3 technical routine";
 const L2_ITEMS = ["Review escalated incidents", "Investigate unresolved alerts", "Verify ongoing incident investigations", "Complete technical shift handover"];
 
 test.describe.configure({ mode: "serial" });
@@ -32,14 +32,14 @@ function tehranDate() {
 
 const savedToggle = (page) => page.waitForResponse((r) => r.url().endsWith("/api/shift") && r.request().method() === "PATCH");
 
-test("setup: a SOC manager, two Layer 2 analysts, a Layer 1 analyst and an engineer", async ({ page }) => {
+test("setup: a SOC manager, two Layer 3 analysts, a Layer 1 analyst and an engineer", async ({ page }) => {
   await signIn(page, "admin");
   for (const [key, p] of Object.entries(P)) {
     const res = await page.request.post("/api/members", { data: { ...p, password: PW } });
     expect(res.status(), key).toBe(201);
     ids[key] = (await res.json()).user.id;
   }
-  // Everyone is on an extended shift today, so every standard item applies.
+  // Everyone is on an extended shift today; L3 and L1 use configurable routines.
   for (const key of ["kian", "roya", "dariush"]) {
     const res = await page.request.post("/api/shift/schedule", { data: { userId: ids[key], date: tehranDate(), shiftType: "evening" } });
     expect(res.status(), key).toBe(201);
@@ -55,7 +55,7 @@ test("only SOC Managers and Security Managers can manage checklists, enforced by
     expect((await page.request.put("/api/shift/checklists/1", { data: { version: 1, name: "Sneaky", items: [] } })).status(), who).toBe(403);
     expect((await page.request.delete("/api/shift/checklists/1")).status(), who).toBe(403);
     expect((await page.request.get("/api/shift/checklist-assignments")).status(), who).toBe(403);
-    expect((await page.request.put("/api/shift/checklist-assignments", { data: { team: "SOC · L2", enabled: false } })).status(), who).toBe(403);
+    expect((await page.request.put("/api/shift/checklist-assignments", { data: { team: "SOC · L3", enabled: false } })).status(), who).toBe(403);
     await page.goto("/shift/checklists");
     await expect(page).toHaveURL(/\/dashboard$/);
     await expect(page.locator(".sidebar")).not.toContainText("Log checklists");
@@ -82,7 +82,7 @@ test("before any configuration every SOC layer keeps the standard routine", asyn
   }
 });
 
-test("SOC manager builds a Layer 2 checklist in the editor and assigns it to SOC · L2", async ({ page }) => {
+test("SOC manager builds a Layer 3 checklist in the editor and assigns it to SOC · L3", async ({ page }) => {
   await signIn(page, "manager");
   await page.goto("/shift/checklists");
   await expect(page.locator("h1")).toHaveText("Shift Log checklists");
@@ -129,10 +129,10 @@ test("SOC manager builds a Layer 2 checklist in the editor and assigns it to SOC
   await expect(page.getByText(`“${L2}” saved as version 2`)).toBeVisible();
   await expect(page.getByText("All changes saved · v2")).toBeVisible();
 
-  // Assign it to Layer 2 (replaces the standard routine there, so it asks first).
-  const card = page.locator('[data-group="SOC · L2"]');
-  await card.getByLabel("Checklist for SOC · L2", { exact: true }).selectOption({ label: L2 });
-  const confirm = page.getByRole("dialog", { name: `Switch SOC · L2 to “${L2}”?` });
+  // Assign it to Layer 3 (replaces the standard routine there, so it asks first).
+  const card = page.locator('[data-group="SOC · L3"]');
+  await card.getByLabel("Checklist for SOC · L3", { exact: true }).selectOption({ label: L2 });
+  const confirm = page.getByRole("dialog", { name: `Switch SOC · L3 to “${L2}”?` });
   await expect(confirm).toContainText("Logs already in progress keep");
   await confirm.getByRole("button", { name: "Switch checklist" }).click();
   await expect(card.locator(".cl-group-head .badge")).toHaveText("Active");
@@ -143,9 +143,9 @@ test("SOC manager builds a Layer 2 checklist in the editor and assigns it to SOC
   await page.locator(".cl-list").getByRole("button", { name: new RegExp(L2) }).click();
   await expect(page.getByLabel("Checklist name")).toHaveValue(L2);
   for (let i = 0; i < L2_ITEMS.length; i++) await expect(page.getByLabel(`Item ${i + 1} title`)).toHaveValue(L2_ITEMS[i]);
-  await expect(page.locator('[data-group="SOC · L2"]').getByLabel("Checklist for SOC · L2", { exact: true })).toHaveValue(/\d+/);
-  await expect(page.locator('[data-group="SOC · L1"]').locator("select")).not.toHaveValue(await page.locator('[data-group="SOC · L2"]').locator("select").inputValue());
-  await expect(page.locator(".cl-history")).toContainText("Assigned to SOC · L2, replacing “Standard SOC routine”");
+  await expect(page.locator('[data-group="SOC · L3"]').getByLabel("Checklist for SOC · L3", { exact: true })).toHaveValue(/\d+/);
+  await expect(page.locator('[data-group="SOC · L1"]').locator("select")).not.toHaveValue(await page.locator('[data-group="SOC · L3"]').locator("select").inputValue());
+  await expect(page.locator(".cl-history")).toContainText("Assigned to SOC · L3, replacing “Standard SOC routine”");
 });
 
 test("unsaved edits are protected when switching checklists or leaving the page", async ({ page }) => {
@@ -172,7 +172,7 @@ test("unsaved edits are protected when switching checklists or leaving the page"
   await expect(page.getByText("All changes saved · v2")).toBeVisible();
 });
 
-test("Layer 2 analysts see their own checklist and complete it individually; Layer 1 is unchanged", async ({ page }) => {
+test("Layer 3 analysts see their own checklist and complete it individually; Layer 1 is unchanged", async ({ page }) => {
   await signIn(page, "kian");
   await page.goto("/shift");
   await expect(page.getByTestId("shift-checklist")).toHaveText(`${L2} · v2`);
@@ -197,7 +197,7 @@ test("Layer 2 analysts see their own checklist and complete it individually; Lay
   await page.goto("/shift");
   await expect(page.locator("#act-1 .cb")).not.toBeChecked();
 
-  // Layer 1 keeps the standard routine, untouched by the Layer 2 work.
+  // Layer 1 keeps the standard routine, untouched by the Layer 3 work.
   await signIn(page, "dariush");
   const l1 = await (await page.request.get("/api/shift")).json();
   expect(l1.checklist.name).toBe("Standard SOC routine");
@@ -256,24 +256,24 @@ test("editing a checklist never rewrites a started log; stale pages cannot tick 
 test("a manager can turn a group's checklist off and on; analysts then see a clear empty state", async ({ page }) => {
   await signIn(page, "manager");
   await page.goto("/shift/checklists");
-  const card = page.locator('[data-group="SOC · L2"]');
-  await card.getByRole("switch", { name: "Use the checklist for SOC · L2" }).click();
-  const confirm = page.getByRole("dialog", { name: "Turn off the checklist for SOC · L2?" });
+  const card = page.locator('[data-group="SOC · L3"]');
+  await card.getByRole("switch", { name: "Use the checklist for SOC · L3" }).click();
+  const confirm = page.getByRole("dialog", { name: "Turn off the checklist for SOC · L3?" });
   await confirm.getByRole("button", { name: "Turn off" }).click();
   await expect(card.locator(".cl-group-head .badge")).toHaveText("Turned off");
 
   await signIn(page, "roya");
   await page.goto("/shift");
-  await expect(page.getByText("No checklist for SOC · L2 yet")).toBeVisible();
+  await expect(page.getByText("No checklist for SOC · L3 yet")).toBeVisible();
   await expect(page.getByTestId("shift-checklist")).toHaveText("None assigned");
 
   await signIn(page, "kian"); // already started: keeps his items
   expect((await (await page.request.get("/api/shift")).json()).activities).toHaveLength(4);
 
   await signIn(page, "manager");
-  const on = await page.request.put("/api/shift/checklist-assignments", { data: { team: "SOC · L2", enabled: true } });
+  const on = await page.request.put("/api/shift/checklist-assignments", { data: { team: "SOC · L3", enabled: true } });
   expect(on.status()).toBe(200);
-  expect((await on.json()).group).toMatchObject({ team: "SOC · L2", checklistName: L2, enabled: true });
+  expect((await on.json()).group).toMatchObject({ team: "SOC · L3", checklistName: L2, enabled: true });
   await signIn(page, "roya");
   expect((await (await page.request.get("/api/shift")).json()).activities).toHaveLength(3);
 });

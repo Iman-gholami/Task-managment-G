@@ -145,7 +145,7 @@ export default function TaskDetail({ id }) {
         )}
         {t.status === "done" && (
           <div className="callout" style={{ "--tone": "var(--success)" }} role="status">
-            <strong>Approved · <Quality q={t.quality} /></strong>
+            <strong>{t.reviewRequired ? <>Approved · <Quality q={t.quality} /></> : "Completed · No review required"}</strong>
             <span>This task is closed{d?.completedAt ? ` since ${when(d.completedAt)}` : ""}.{transitions.includes("progress") ? " You can reopen it if more work is needed." : ""}</span>
           </div>
         )}
@@ -275,7 +275,14 @@ export default function TaskDetail({ id }) {
           </dd>
           <dt>Started</dt><dd className="num">{when(d?.startedAt)}</dd>
           <dt>Created by</dt><dd>{d?.createdBy ? <Who id={d.createdBy} /> : <span className="muted">—</span>}</dd>
-          <dt>Quality</dt><dd>{t.quality ? <Quality q={t.quality} /> : <span className="muted">Set on approval</span>}</dd>
+          <dt>Manager review</dt><dd>{me.role === "soc_manager" && t.a === me.id && !closed && t.status !== "review"
+            ? <label className="row" style={{ gap: 8 }}>
+                <input className="cb" type="checkbox" aria-label="Manager review required" checked={t.reviewRequired}
+                  onChange={async (e) => { if (await updateTask(t, { reviewRequired: e.target.checked })) toast("Review requirement updated"); }} />
+                <span>{t.reviewRequired ? "Required" : "Not required"}</span>
+              </label>
+            : <span className="muted">{t.reviewRequired ? "Required" : "Not required · self-managed"}</span>}</dd>
+          <dt>Quality</dt><dd>{t.quality ? <Quality q={t.quality} /> : <span className="muted">{t.reviewRequired ? "Set on approval" : "Not rated · self-managed"}</span>}</dd>
         </dl>
         <div className="side-h">Activity</div>
         <ol className="timeline" data-testid="activity">

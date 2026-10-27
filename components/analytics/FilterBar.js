@@ -3,7 +3,7 @@
 import { useMemo, useState } from "react";
 import { useApp } from "@/components/AppProvider";
 import { useAnalytics } from "@/components/analytics/AnalyticsContext";
-import { IRAN_PROVINCES } from "@/lib/roles";
+import ProvincePicker from "@/components/ui/ProvincePicker";
 import { Drawer } from "@/components/analytics/ui";
 import Icon from "@/components/ui/Icon";
 import { WEEKDAYS_SHORT, addDays, faDate, faDigits, faRange, fromJalali, jalaliMonthLength, toJalali, weekdayIndex } from "@/lib/analytics/calendar";
@@ -184,11 +184,8 @@ export default function FilterBar({ hideTeam = false }) {
       {manager && (
         <label className="an-select">
           <span>استان</span>
-          <select className={`input ${filters.province ? "is-set" : ""}`} value={filters.province}
-            onChange={(e) => setFilters({ province: e.target.value })} aria-label="استان">
-            <option value="">همه استان‌ها</option>
-            {IRAN_PROVINCES.map((province) => <option key={province} value={province}>{province}</option>)}
-          </select>
+          <ProvincePicker className="an-province-picker" value={filters.province}
+            onChange={(province) => setFilters({ province })} aria-label="استان" placeholder="All provinces" />
         </label>
       )}
       {showLevel && (

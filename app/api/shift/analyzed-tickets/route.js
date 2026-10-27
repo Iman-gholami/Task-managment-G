@@ -2,6 +2,8 @@ import { requireUser, isManager } from "@/lib/server/auth";
 import { canManageShift } from "@/lib/roles";
 import { getShiftLog, getUser, findShiftLog } from "@/lib/server/repo";
 import { isIsoDate } from "@/lib/shifts";
+import { today } from "@/lib/server/repo";
+import { isBackfillAllowed } from "@/lib/server/shift-backfill";
 import { isShiftAnalyst } from "@/lib/server/stats";
 import { saveAnalyzedTicket, removeAnalyzedTicket } from "@/lib/server/l2-analyzed-tickets";
 
@@ -19,9 +21,12 @@ async function target(body) {
   }
   if (!isShiftAnalyst(actor) || actor.team !== "SOC · L2")
     return { denied: Response.json({ error: "Only SOC Layer 2 can record analyzed tickets." }, { status: 403 }) };
-  if (body.user !== undefined || body.date !== undefined)
-    return { denied: Response.json({ error: "Analysts can only edit their own current shift." }, { status: 403 }) };
-  const log = getShiftLog(actor.id);
+  if (body.user !== undefined)
+    return { denied: Response.json({ error: "Analysts can only edit their own shifts." }, { status: 403 }) };
+  const date = body.date === undefined ? today() : String(body.date);
+  if (date !== today() && !isBackfillAllowed(actor.id, date))
+    return { denied: Response.json({ error: "Historical entry requires manager authorization." }, { status: 403 }) };
+  const log = getShiftLog(actor.id, date);
   if (!log) return { denied: Response.json({ error: "No shift scheduled for today." }, { status: 404 }) };
   return { userId: actor.id, date: log.date, opts: {} };
 }
