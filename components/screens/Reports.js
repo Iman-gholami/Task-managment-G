@@ -13,7 +13,6 @@ import { CX, QUAL, STATUS, fmtRange, plural } from "@/lib/format";
 import { periodQuery } from "@/lib/period";
 import { REPORTS } from "@/lib/reports";
 import { canViewManagementAnalytics } from "@/lib/roles";
-import { isManager } from "@/lib/roles";
 
 // Which filters each report offers.
 const FILTERS = {
