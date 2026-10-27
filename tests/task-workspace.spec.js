@@ -28,6 +28,15 @@ test("both managers may waive review within their scope; only the assignee can c
   expect((await (await page.request.get(`/api/tasks/${regularTask.id}`)).json()).task.reviewRequired).toBe(true);
   expect((await page.request.patch(`/api/tasks/${regularTask.id}`, { data: { reviewRequired: false } })).status()).toBe(200);
   expect((await page.request.patch(`/api/tasks/${regularTask.id}`, { data: { reviewRequired: true } })).status()).toBe(200);
+  await page.goto(`/tasks/${regularTask.id}`);
+  const reviewSetting = page.getByRole("checkbox", { name: "Manager review required" });
+  const changed = page.waitForResponse((response) => response.url().endsWith(`/api/tasks/${regularTask.id}`) && response.request().method() === "PATCH");
+  await reviewSetting.uncheck();
+  expect((await changed).status()).toBe(200);
+  expect((await (await page.request.get(`/api/tasks/${regularTask.id}`)).json()).task.reviewRequired).toBe(false);
+  const restored = page.waitForResponse((response) => response.url().endsWith(`/api/tasks/${regularTask.id}`) && response.request().method() === "PATCH");
+  await reviewSetting.check();
+  expect((await restored).status()).toBe(200);
 
   await page.request.post("/api/auth/login", { data: { email: outsider.email, password: PW } });
   expect((await page.request.patch(`/api/tasks/${task.id}`, { data: { status: "done" } })).status()).toBe(404);
@@ -65,6 +74,9 @@ test("the task and selected attachments become visible together, and comments wo
     await dialog.getByRole("button", { name: "Review details" }).click();
     await expect(dialog.getByText("Ready to assign?")).toBeVisible();
     await expect(dialog.getByText("evidence.txt")).toBeVisible();
+    await dialog.getByRole("button", { name: "Back to editing" }).click();
+    await expect(dialog.getByText("evidence.txt")).toBeVisible();
+    await dialog.getByRole("button", { name: "Review details" }).click();
     const before = await (await analystContext.request.get("/api/tasks")).json();
     expect(before.tasks.some((t) => t.title === "Investigate suspicious connection")).toBe(false);
     const responsePromise = page.waitForResponse((response) => response.url().endsWith("/api/tasks") && response.request().method() === "POST");
