@@ -8,13 +8,14 @@ export async function POST(request) {
   const [user, denied] = await requireUser();
   if (denied) return denied;
   if (!isShiftAnalyst(user)) return Response.json({ error: "Shift logs are kept by SOC analysts only." }, { status: 403 });
-  if (user.team === "SOC · L2") return Response.json({ error: "Layer 2 uses analyzed tickets only." }, { status: 403 });
+  // Layer 2 on extended/night shifts uses standard SOC cover duty.
   const body = await request.json().catch(() => ({}));
   const date = body.date === undefined ? today() : String(body.date);
   if (date !== today() && !isBackfillAllowed(user.id, date))
     return Response.json({ error: "Historical entry requires manager authorization." }, { status: 403 });
   const log = getShiftLog(user.id, date);
   if (!log) return Response.json({ error: "No shift is scheduled for today." }, { status: 404 });
+  if (log.mode === "ticket_analysis") return Response.json({ error: "Daytime Layer 2 records analyzed tickets instead." }, { status: 403 });
   if (log.completedAt) return Response.json({ error: "Shift is already completed." }, { status: 409 });
   const no = String(body.no ?? "").trim();
   if (!no) return Response.json({ error: "Ticket number is required." }, { status: 400 });
