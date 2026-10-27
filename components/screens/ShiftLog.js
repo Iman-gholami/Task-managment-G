@@ -99,32 +99,38 @@ function RoutineShiftLog({ initialLog }) {
   const logDate = initialLog?.date ?? shiftDate;
   const backfill = logDate !== TODAY;
   const technical = initialLog?.mode === "engineering";
-  // The app layout can stay mounted while a manager adds today's shift.
-  // Sync the current server-rendered log when this page opens.
+  // Historical backfill must NEVER replace today's global Shift Log state.
+  // The app shell remains mounted when navigating between days.
+  const [historicalActivities, setHistoricalActivities] = useState(initialLog?.activities ?? []);
+  const [historicalTickets, setHistoricalTickets] = useState(initialLog?.tickets ?? []);
+  const displayActivities = backfill ? historicalActivities : activities;
+  const displayTickets = backfill ? historicalTickets : tickets;
+  const displayChecklist = backfill ? initialLog?.checklist : shiftChecklist;
   useEffect(() => {
-    if (initialLog) dispatch({ type: "shift/set", log: initialLog });
-  }, [dispatch, initialLog]);
+    if (initialLog && !backfill) dispatch({ type: "shift/set", log: initialLog });
+  }, [dispatch, initialLog, backfill]);
 
   const [saved, setSaved] = useState("saved");
   const [historicalSubmitted, setHistoricalSubmitted] = useState(!!initialLog?.completedAt);
   const [pending, setPending] = useState(0);
   const [issueOpen, setIssueOpen] = useState(null);
   const [flash, setFlash] = useState(null);
-  const done = activities.filter((a) => a.done).length;
-  const pct = activities.length ? Math.round((done / activities.length) * 100) : 0;
-  const iocs = activities.filter((a) => a.kind === "misp").reduce((sum, a) => sum + (a.iocs ?? 0), 0);
-  const issues = activities.filter((a) => a.issue).length;
-  const remaining = activities.filter((a) => !a.done);
+  const done = displayActivities.filter((a) => a.done).length;
+  const pct = displayActivities.length ? Math.round((done / displayActivities.length) * 100) : 0;
+  const iocs = displayActivities.filter((a) => a.kind === "misp").reduce((sum, a) => sum + (a.iocs ?? 0), 0);
+  const issues = displayActivities.filter((a) => a.issue).length;
+  const remaining = displayActivities.filter((a) => !a.done);
   const readOnly = backfill ? historicalSubmitted : shiftDone;
-  const latest = useRef(activities);
-  latest.current = activities;
+  const latest = useRef(displayActivities);
+  latest.current = displayActivities;
   useUnsavedChanges(pending > 0, { message: "A change is still being saved. Leave anyway?" });
 
   const update = async (n, patch) => {
-    const before = activities.find((a) => a.n === n);
+    const before = displayActivities.find((a) => a.n === n);
     if (!before) return;
     const previous = Object.fromEntries(Object.keys(patch).map((k) => [k, before[k]]));
-    dispatch({ type: "activity/update", n, patch });
+    if (backfill) setHistoricalActivities((current) => current.map((a) => a.n === n ? { ...a, ...patch } : a));
+    else dispatch({ type: "activity/update", n, patch });
     setSaved("saving");
     setPending((p) => p + 1);
     try {
@@ -133,14 +139,18 @@ function RoutineShiftLog({ initialLog }) {
     } catch (e) {
       if (e.data?.stale && e.data.log) {
         // A manager changed this group's checklist before anything was recorded: show the current one.
-        dispatch({ type: "shift/set", log: e.data.log });
+        if (backfill) setHistoricalActivities(e.data.log.activities);
+        else dispatch({ type: "shift/set", log: e.data.log });
         setSaved("saved");
         toast(e.message, "info");
       } else {
         // Undo only the fields nobody has changed again since, so a later edit is never overwritten.
         const now = latest.current.find((a) => a.n === n);
         const undo = Object.fromEntries(Object.entries(previous).filter(([k]) => now && now[k] === patch[k]));
-        if (Object.keys(undo).length) dispatch({ type: "activity/update", n, patch: undo });
+        if (Object.keys(undo).length) {
+          if (backfill) setHistoricalActivities((current) => current.map((a) => a.n === n ? { ...a, ...undo } : a));
+          else dispatch({ type: "activity/update", n, patch: undo });
+        }
         setSaved("failed");
         toast(e.message, "error");
       }
@@ -188,24 +198,24 @@ function RoutineShiftLog({ initialLog }) {
           <div className="ring" style={{ "--v": pct }} role="img" aria-label={`${pct}% complete`} />
           <dl className="facts">
             <div><dt><small>Analyst</small></dt><dd><Who id={me.id} /></dd></div>
-            <div><dt><small>Checklist</small></dt><dd dir="auto" data-testid="shift-checklist">{checklistLabel(shiftChecklist)}</dd></div>
+            <div><dt><small>Checklist</small></dt><dd dir="auto" data-testid="shift-checklist">{checklistLabel(displayChecklist)}</dd></div>
             <div><dt><small>Status</small></dt><dd>{readOnly ? <span className="badge dot success">Submitted & locked</span> : done ? <span className="badge dot info">In progress</span> : <span className="badge dot">Not started</span>}</dd></div>
-            <div><dt><small>Completion</small></dt><dd className="num">{done} of {activities.length} · {pct}%</dd></div>
+            <div><dt><small>Completion</small></dt><dd className="num">{done} of {displayActivities.length} · {pct}%</dd></div>
             <div><dt><small>Last change</small></dt><dd className="num" style={saved === "failed" ? { color: "var(--danger)" } : undefined} aria-live="polite">{SAVE_LABEL[saved]}</dd></div>
           </dl>
         </div>
       </div>
 
       <Panel title={technical ? "Engineering daily work" : "SOC shift duties"}
-        meta={activities.length ? `${done} of ${activities.length} done` : shiftTeam}>
-        {activities.length === 0 && (
-          <EmptyState compact icon="shift" title={shiftChecklist ? "No checklist items for this shift" : `No checklist for ${shiftTeam} yet`}>
-            {shiftChecklist
+        meta={displayActivities.length ? `${done} of ${displayActivities.length} done` : shiftTeam}>
+        {displayActivities.length === 0 && (
+          <EmptyState compact icon="shift" title={displayChecklist ? "No checklist items for this shift" : `No checklist for ${shiftTeam} yet`}>
+            {displayChecklist
               ? "Your group's checklist has no items for this shift type. You can still record tickets and submit the shift."
               : "A manager hasn't assigned a Shift Log checklist to your group, or it is turned off. You can still record tickets and submit the shift."}
           </EmptyState>
         )}
-        {activities.map((a) => {
+        {displayActivities.map((a) => {
           const kindHint = a.kind === "monitor" ? (a.issue ? "Completed with an issue" : "Mark it completed when nothing unusual was found") : HINTS[a.kind];
           const hint = [a.hint, kindHint].filter(Boolean).join(" · ");
           return (
@@ -261,13 +271,14 @@ function RoutineShiftLog({ initialLog }) {
         })}
       </Panel>
 
-      {!technical && <Tickets readOnly={readOnly} list={tickets} date={backfill ? logDate : null} />}
+      {!technical && <Tickets readOnly={readOnly} list={displayTickets} date={backfill ? logDate : null}
+        onUpdate={backfill ? setHistoricalTickets : null} />}
 
       <div className="summary" role="region" aria-label="Shift summary">
-        <span className="s"><b>{done}/{activities.length}</b>activities</span>
+        <span className="s"><b>{done}/{displayActivities.length}</b>activities</span>
         {!technical && <>
           <span className="s"><b>{iocs}</b>IOCs added</span>
-          <span className="s"><b>{tickets.length}</b>{tickets.length === 1 ? "ticket" : "tickets"}</span>
+          <span className="s"><b>{displayTickets.length}</b>{displayTickets.length === 1 ? "ticket" : "tickets"}</span>
           <span className="s"><b>{issues}</b>{issues === 1 ? "issue" : "issues"}</span>
         </>}
         <span className="remain" title={remaining.map((r) => r.title).join("\n")}>
@@ -335,7 +346,7 @@ function IssueForm({ onSave, onCancel }) {
   );
 }
 
-function Tickets({ readOnly, list: tickets, date = null }) {
+function Tickets({ readOnly, list: tickets, date = null, onUpdate = null }) {
   const { dispatch, toast } = useApp();
   const [adding, setAdding] = useState(false);
   const [row, setRow] = useState({ no: "", ref: "", desc: "" });
@@ -348,7 +359,8 @@ function Tickets({ readOnly, list: tickets, date = null }) {
     setBusy(true);
     try {
       const res = await api("/api/shift/tickets", { method: "POST", body: { ...row, ...(date ? { date } : {}) } });
-      dispatch({ type: "tickets/set", tickets: res.tickets });
+      if (onUpdate) onUpdate(res.tickets);
+      else dispatch({ type: "tickets/set", tickets: res.tickets });
     } catch (e) {
       toast(e.message, "error");
       return;
