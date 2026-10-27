@@ -34,6 +34,8 @@ export async function PATCH(request, { params }) {
     const approving = task.status === "review" && body.status === "done";
     const selfComplete = task.status === "progress" && body.status === "done" && !task.reviewRequired &&
       user.role === "soc_manager" && task.a === user.id;
+    if (selfComplete && (("a" in body && body.a !== user.id) || ("reviewRequired" in body && body.reviewRequired !== false)))
+      return err(409, "Complete this self-managed task separately from reassignment or review-setting changes.");
     if (approving) {
       if (!(body.quality in QUAL)) return err(400, "Choose a quality rating to approve.");
       patch.quality = body.quality;
