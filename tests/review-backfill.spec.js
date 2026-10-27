@@ -128,3 +128,55 @@ test("SOC Manager can bypass review for own task only, and grant four auditable 
     date: dates[1], ticketNumber: "INC-NO-GRANT", verdict: "false_positive",
   } })).status()).toBe(403);
 });
+
+
+test("a returned extended L3 shift can be ticked and completed from homepage without overwriting today's engineering log", async ({ page }) => {
+  expect((await page.request.post("/api/auth/login", { data: ADMIN })).status()).toBe(200);
+  const person = { name: "Returned Extended L3", email: "returned-extended-l3@test.invalid",
+    team: "SOC · L3", role: "analyst", password: PW };
+  const added = await page.request.post("/api/members", { data: person });
+  expect(added.status()).toBe(201);
+  const userId = (await added.json()).user.id;
+  const yesterday = daysAgo(2);
+  for (const [date, shiftType] of [[yesterday, "evening"], [dateToday(), "morning"]]) {
+    expect((await page.request.post("/api/shift/schedule", { data: { userId, date, shiftType } })).status()).toBe(201);
+  }
+  expect((await page.request.post("/api/shift/backfill", { data: {
+    userId, dates: [yesterday], enabled: true, reason: "Forgot shift activities",
+  } })).status()).toBe(200);
+
+  expect((await page.request.post("/api/auth/login", { data: { email: person.email, password: PW } })).status()).toBe(200);
+  await page.goto("/dashboard");
+  await expect(page.getByTestId("returned-shifts-card")).toContainText("1 shift logs returned for completion");
+  await page.getByTestId(`returned-shift-${yesterday}`).click();
+  await expect(page.getByRole("heading", { name: "SOC shift duties" })).toBeVisible();
+  const historic = (await (await page.request.get(`/api/shift?date=${yesterday}`)).json());
+  expect(historic.mode).toBe("operational");
+  expect(historic.activities.length).toBeGreaterThan(0);
+  for (const activity of historic.activities) {
+    const saved = page.waitForResponse((response) =>
+      response.url().endsWith("/api/shift") && response.request().method() === "PATCH");
+    await page.locator(`#act-${activity.n} .toggle-done`).click();
+    expect((await saved).status()).toBe(200);
+  }
+  await expect(page.getByRole("region", { name: "Shift summary" }))
+    .toContainText(`${historic.activities.length}/${historic.activities.length}`);
+  await page.getByRole("button", { name: "Complete shift" }).click();
+  await expect(page.getByRole("link", { name: "Back to dashboard" })).toBeVisible();
+  await page.getByRole("link", { name: "Back to dashboard" }).click();
+  await expect(page).toHaveURL(/\/dashboard$/);
+  await expect(page.getByTestId("returned-shifts-card")).toHaveCount(0);
+
+  // Client navigation must not replace today's L3 engineering duties with past SOC activities.
+  await page.getByRole("link", { name: /Start Shift Log|Continue Shift Log|View Shift Log/ }).first().click();
+  await expect(page.getByRole("heading", { name: "Engineering daily work" })).toBeVisible();
+  const current = (await (await page.request.get("/api/shift")).json());
+  expect(current.mode).toBe("engineering");
+  expect(current.date).toBe(dateToday());
+  expect(current.completedAt).toBeNull();
+  expect((await (await page.request.get("/api/shift/backfill?scope=self")).json()).count).toBe(0);
+
+  await page.request.post("/api/auth/login", { data: ADMIN });
+  await page.goto("/dashboard");
+  await expect(page.getByTestId(`manager-returned-${userId}-${yesterday}`)).toHaveCount(0);
+});
