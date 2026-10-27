@@ -66,9 +66,6 @@ function Layer2ShiftLog({ initialLog }) {
         meta={[weekday(initialLog.date), `SOC · L2 · ${initialLog.shift?.label ?? initialLog.shiftType}`,
           completed ? "Submitted — read only" : "Tickets are saved as you add them"]}
         actions={<Link className="btn btn-secondary" href="/shift/history"><Icon name="clock" />History</Link>} />
-      {backfill && <div className="panel" style={{ padding: "var(--s-3)", marginBottom: "var(--s-3)" }}>
-        <span className="badge dot info">Manager-authorized backfill · {fmtDate(logDate)}</span>
-      </div>}
       <div className="panel" style={{ marginBottom: "var(--s-4)" }}>
         <div className="shift-head">
           <dl className="facts">
@@ -180,6 +177,9 @@ function RoutineShiftLog({ initialLog }) {
         actions={<Link className="btn btn-secondary" href="/shift/history"><Icon name="clock" />History</Link>}
       />
 
+      {backfill && <div className="panel" style={{ padding: "var(--s-3)", marginBottom: "var(--s-3)" }}>
+        <span className="badge dot info">Manager-authorized backfill · {fmtDate(logDate)}</span>
+      </div>}
       <div className="panel" style={{ marginBottom: "var(--s-4)" }}>
         <div className="shift-head">
           <div className="ring" style={{ "--v": pct }} role="img" aria-label={`${pct}% complete`} />
