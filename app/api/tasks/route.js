@@ -23,6 +23,8 @@ export async function POST(request) {
   if (!assignee || !assignee.active) return Response.json({ error: "Assignee not found." }, { status: 400 });
   if (!canAssignTask(user, assignee)) return Response.json({ error: "You can't assign a task to this member." }, { status: 403 });
 
+  if (body.reviewRequired === false && (user.role !== "soc_manager" || assignee.id !== user.id))
+    return Response.json({ error: "Only SOC Managers can skip review for their own tasks." }, { status: 403 });
   const start = DATE.test(body.start ?? "") ? body.start : null;
   const task = createTask({
     title,
@@ -30,6 +32,7 @@ export async function POST(request) {
     a: assignee.id,
     prio: PRIOS.includes(body.prio) ? body.prio : "normal",
     cx: [1, 2, 3, 4].includes(body.cx) ? body.cx : 2,
+    reviewRequired: body.reviewRequired !== false,
     due: DATE.test(body.due ?? "") ? body.due : "—",
   }, user.id);
 

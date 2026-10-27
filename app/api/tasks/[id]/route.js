@@ -32,6 +32,8 @@ export async function PATCH(request, { params }) {
       return err(409, task.status === "done" ? "This task is already approved. A manager can reopen it." : `You can't move this task from ${STATUS[task.status]} to ${STATUS[body.status]}.`);
     }
     const approving = task.status === "review" && body.status === "done";
+    const selfComplete = task.status === "progress" && body.status === "done" && !task.reviewRequired &&
+      user.role === "soc_manager" && task.a === user.id;
     if (approving) {
       if (!(body.quality in QUAL)) return err(400, "Choose a quality rating to approve.");
       patch.quality = body.quality;
@@ -41,8 +43,9 @@ export async function PATCH(request, { params }) {
       }
     }
     patch.status = body.status;
+    if (selfComplete) patch.quality = null;
     const label = actionLabel(task.status, body.status);
-    const PAST = { Start: "started the task", "Submit for review": "submitted it for review", Approve: "approved it", "Return for changes": "returned it for changes", Reopen: "reopened the task", Unblock: "unblocked the task", "Resume work": "resumed work", "Mark blocked": "marked it blocked", "Cancel task": "cancelled the task", Restore: "restored the task" };
+    const PAST = { "Complete task": "completed their own task (review not required)", Start: "started the task", "Submit for review": "submitted it for review", Approve: "approved it", "Return for changes": "returned it for changes", Reopen: "reopened the task", Unblock: "unblocked the task", "Resume work": "resumed work", "Mark blocked": "marked it blocked", "Cancel task": "cancelled the task", Restore: "restored the task" };
     let event = `${PAST[label] ?? `moved it to ${STATUS[body.status]}`}${patch.quality ? ` · quality: ${QUAL[patch.quality]}` : ""}`;
     if (approving && patch.cx !== undefined && patch.cx !== task.cx) event += ` · complexity: ${CX[task.cx]} → ${CX[patch.cx]}`;
     events.push(event);
@@ -60,6 +63,17 @@ export async function PATCH(request, { params }) {
     if (!Number.isFinite(h) || h < 0 || h > 1000) return err(400, "Invalid hours.");
     if (!isOpenStatus(task.status)) return err(409, "Hours can't be changed after approval.");
     patch.hours = h;
+  }
+  // The review bypass is available ONLY on an open SOC Manager self-task.
+  // Requiring the actor to be the assignee prevents bypass on any analyst task.
+  if ("reviewRequired" in body) {
+    if (typeof body.reviewRequired !== "boolean") return err(400, "Invalid review requirement.");
+    if (user.role !== "soc_manager" || task.a !== user.id) return err(403, "Review settings can only be changed on your own SOC Manager tasks.");
+    if (!isOpenStatus(task.status) || task.status === "review") return err(409, "Review settings cannot change while the task is in review or closed.");
+    if (body.reviewRequired !== task.reviewRequired) {
+      patch.reviewRequired = body.reviewRequired ? 1 : 0;
+      events.push(body.reviewRequired ? "enabled manager review" : "disabled manager review for their own task");
+    }
   }
   // Details (title, description, deadline, complexity, assignee) are edited by managers.
   const detailKeys = ["title", "description", "due", "cx", "a"].filter((k) => k in body);
@@ -89,6 +103,8 @@ export async function PATCH(request, { params }) {
     if (!canAssignTask(user, assignee)) return err(403, "You can't assign a task to this member.");
     patch.a = assignee.id;
     patch.team = assignee.team;
+    // Never carry a self-review exemption onto a different assignee.
+    if (assignee.id !== user.id || user.role !== "soc_manager") patch.reviewRequired = 1;
     events.push(`reassigned to ${assignee.name}`);
   }
   const updated = updateTask(id, patch, user.id);
