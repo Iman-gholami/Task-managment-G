@@ -7,7 +7,7 @@ import { addDays, minIso } from "@/lib/analytics/calendar";
 import { HISTORY_DAYS } from "@/lib/analytics/config";
 import { applyFilters, filterQuery, parseFilters } from "@/lib/analytics/filters";
 import { autoGranularity, comparisonRange, resolveRange } from "@/lib/analytics/periods";
-import { isManager } from "@/lib/roles";
+import { canViewManagementAnalytics } from "@/lib/roles";
 import { tehranDate } from "@/lib/shifts";
 
 const Ctx = createContext(null);
@@ -40,7 +40,7 @@ export function AnalyticsProvider({ children }) {
   const router = useRouter();
   const pathname = usePathname();
   const { me } = useApp();
-  const manager = isManager(me);
+  const manager = canViewManagementAnalytics(me);
   const filters = useMemo(() => parseFilters(params), [params]);
   const today = useMemo(() => tehranDate(), []);
   const range = useMemo(() => resolveRange(filters, today), [filters, today]);

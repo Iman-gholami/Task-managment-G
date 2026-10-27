@@ -13,13 +13,13 @@ import { Meter } from "@/components/ui/charts";
 import { EmptyState } from "@/components/ui/states";
 import { Who } from "@/components/ui/indicators";
 import { plural } from "@/lib/format";
-import { ROLE_LABELS, assignableFor, canManageMember, isManager } from "@/lib/roles";
+import { ROLE_LABELS, IRAN_PROVINCES, assignableFor, canManageMember, canViewManagementAnalytics } from "@/lib/roles";
 
 /** People with role, team and live workload (open tasks; 6 = full). Rows open the person's performance. */
 export function PeopleTable({ list, onRemove, onEdit }) {
   const router = useRouter();
   const { me } = useApp();
-  const canView = (p) => p.id === me.id || isManager(me);
+  const canView = (p) => p.id === me.id || canViewManagementAnalytics(me);
   const hasActions = list.some((p) => canView(p) || (onEdit && canManageMember(me, p)));
   return (
     <div className="table-wrap">
@@ -29,6 +29,7 @@ export function PeopleTable({ list, onRemove, onEdit }) {
             <th scope="col">Name</th>
             <th scope="col">Role</th>
             <th scope="col">Primary team</th>
+            <th scope="col">استان</th>
             <th scope="col">Workload</th>
             <th scope="col" className="r">Open tasks</th>
             {hasActions && <th scope="col"><span className="sr-only">Actions</span></th>}
@@ -40,6 +41,7 @@ export function PeopleTable({ list, onRemove, onEdit }) {
               <td className="title">{canView(p) ? <Link href={`/performance/employees/${p.id}`}><Who id={p.id} /></Link> : <Who id={p.id} />}</td>
               <td>{ROLE_LABELS[p.role] ?? p.role}</td>
               <td>{p.team}{p.assist && <span className="muted"> · assisting {p.assist}</span>}</td>
+              <td>{p.province || <span className="muted">تعیین‌نشده</span>}</td>
               <td><Meter value={p.open} max={6} label={`${p.name}'s workload`} tone={p.load > 90 ? "warn" : undefined} /></td>
               <td className="r">{p.open || <span className="zero">0</span>}</td>
               {hasActions && (
@@ -130,7 +132,7 @@ const EMAIL = /^\S+@\S+\.\S+$/;
 function AddMemberModal({ onClose }) {
   const { me, dispatch, toast } = useApp();
   const { roles, teams } = assignableFor(me);
-  const [form, setForm] = useState({ name: "", email: "", role: roles[0], team: teams[0], password: "" });
+  const [form, setForm] = useState({ name: "", email: "", role: roles[0], team: teams[0], province: "", password: "" });
   const [errors, setErrors] = useState({});
   const [serverError, setServerError] = useState("");
   const [busy, setBusy] = useState(false);
@@ -143,6 +145,7 @@ function AddMemberModal({ onClose }) {
       name: form.name.trim() ? null : "Enter the member's full name.",
       email: EMAIL.test(form.email.trim()) ? null : "Enter a valid work email, like name@company.com.",
       password: form.password.length >= 8 ? null : "Use at least 8 characters.",
+      province: form.province ? null : "استان محل فعالیت را انتخاب کنید.",
     };
     setErrors(next);
     const firstBad = Object.keys(next).find((k) => next[k]);
@@ -178,6 +181,12 @@ function AddMemberModal({ onClose }) {
               <select id="m-team" className="input" value={form.team} onChange={set("team")}>{teams.map((t) => <option key={t}>{t}</option>)}</select>
             </Field>
           </div>
+          <Field label="استان" htmlFor="m-province" error={errors.province}>
+            <select id="m-province" className="input" value={form.province} onChange={set("province")}>
+              <option value="">انتخاب استان...</option>
+              {IRAN_PROVINCES.map((province) => <option key={province} value={province}>{province}</option>)}
+            </select>
+          </Field>
           <Field label="Initial password" htmlFor="m-pass" hint="At least 8 characters. Share it with the member securely." error={errors.password}>
             <input id="m-pass" type="password" className="input" value={form.password} onChange={set("password")} autoComplete="new-password" />
           </Field>
@@ -195,14 +204,14 @@ function AddMemberModal({ onClose }) {
 function EditMemberModal({ member, onClose }) {
   const { me, dispatch, toast } = useApp();
   const { roles, teams } = assignableFor(me);
-  const [form, setForm] = useState({ role: member.role, team: member.team, password: "" });
+  const [form, setForm] = useState({ role: member.role, team: member.team, province: member.province ?? "", password: "" });
   const [error, setError] = useState("");
   const [passwordError, setPasswordError] = useState(null);
   const [busy, setBusy] = useState(false);
   const set = (k) => (e) => { setForm((f) => ({ ...f, [k]: e.target.value })); setError(""); setPasswordError(null); };
   const roleOptions = roles.includes(member.role) ? roles : [member.role, ...roles];
   const teamOptions = teams.includes(member.team) ? teams : [member.team, ...teams];
-  const changed = form.role !== member.role || form.team !== member.team || form.password;
+  const changed = form.role !== member.role || form.team !== member.team || form.province !== (member.province ?? "") || form.password;
 
   const submit = async (e) => {
     e.preventDefault();
@@ -212,7 +221,7 @@ function EditMemberModal({ member, onClose }) {
     }
     setBusy(true);
     try {
-      const body = { role: form.role, team: form.team, ...(form.password ? { password: form.password } : {}) };
+      const body = { role: form.role, team: form.team, province: form.province, ...(form.password ? { password: form.password } : {}) };
       const { user } = await api(`/api/members/${member.id}`, { method: "PATCH", body });
       dispatch({ type: "users/update", user });
       toast(`${member.name} updated${form.password ? " · password reset" : ""}`);
@@ -236,6 +245,12 @@ function EditMemberModal({ member, onClose }) {
               <select id="e-team" className="input" value={form.team} onChange={set("team")}>{teamOptions.map((t) => <option key={t}>{t}</option>)}</select>
             </Field>
           </div>
+          <Field label="استان" htmlFor="e-province">
+            <select id="e-province" className="input" value={form.province} onChange={set("province")}>
+              <option value="">تعیین نشده</option>
+              {IRAN_PROVINCES.map((province) => <option key={province} value={province}>{province}</option>)}
+            </select>
+          </Field>
           <Field label="Reset password (optional)" htmlFor="e-pass" hint="Leave empty to keep the current password. Resetting signs the member out." error={passwordError}>
             <input id="e-pass" type="password" className="input" value={form.password} onChange={set("password")} autoComplete="new-password" />
           </Field>

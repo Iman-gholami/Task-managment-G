@@ -17,6 +17,7 @@ export async function GET(request, { params }) {
 export async function PATCH(request, { params }) {
   const [user, denied] = await requireUser();
   if (denied) return denied;
+  if (user.role === "observer") return err(403, "Observers have read-only access.");
   const { id } = await params;
   const [task, no] = viewableTask(user, id);
   if (no) return no;

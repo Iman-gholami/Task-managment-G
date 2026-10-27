@@ -10,7 +10,7 @@ import Icon from "@/components/ui/Icon";
 import { Panel } from "@/components/ui/layout";
 import { faDigits } from "@/lib/analytics/calendar";
 import { median } from "@/lib/analytics/format";
-import { ROLE_FA, groupFa } from "@/lib/analytics/labels";
+import { ROLE_FA, QUAL_FA, groupFa } from "@/lib/analytics/labels";
 import { METRICS, bucketStats, groupsIn, peopleRows } from "@/lib/analytics/metrics";
 import { buckets } from "@/lib/analytics/periods";
 
@@ -36,6 +36,9 @@ function PeopleBody() {
     return { rows, groups: groupsIn(view), shift: rows.some((r) => r.person.shift) };
   }, [view, range, cmp, gran]);
   const shown = q.trim() ? m.rows.filter((r) => r.person.name.includes(q.trim())) : m.rows;
+  const reviews = (view.reviews ?? []).filter((r) =>
+    !q.trim() || m.rows.some((p) => p.person.id === r.a && p.person.name.includes(q.trim())))
+    .sort((a, b) => b.month.localeCompare(a.month) || a.a.localeCompare(b.a));
   const def = METRICS[metric];
 
   const distRows = m.rows.filter((r) => def.area !== "soc" || r.person.shift);
@@ -46,8 +49,10 @@ function PeopleBody() {
   }), [m, metric]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const columns = [
-    { key: "name", label: "کارشناس", value: (r) => r.person.name, render: (r) => <span className="an-person">{r.person.name}<small>{[groupFa(r.person.group), r.person.level, ROLE_FA[r.person.role], r.person.active ? null : "غیرفعال"].filter(Boolean).join(" · ")}</small></span> },
+    { key: "name", label: "کارشناس", value: (r) => r.person.name, render: (r) => <span className="an-person">{r.person.name}<small>{[r.person.province || "استان تعیین‌نشده", groupFa(r.person.group), r.person.level, ROLE_FA[r.person.role], r.person.active ? null : "غیرفعال"].filter(Boolean).join(" · ")}</small></span> },
     { key: "c", label: "تکمیل‌شده", kind: "count", value: (r) => r.cur.completed },
+    { key: "good", label: "عالی/خوب", kind: "count", value: (r) => r.cur.quality[0] + r.cur.quality[1] },
+    { key: "needs", label: "نیاز بهبود", kind: "count", value: (r) => r.cur.quality[3] },
     { key: "d", label: "تغییر", value: (r) => (r.prev ? r.cur.completed - r.prev.completed : null), render: (r) => (r.prev ? <Delta now={r.cur.completed} before={r.prev.completed} /> : "—") },
     { key: "u", label: "حجم وزن‌دار", kind: "count", value: (r) => r.cur.units },
     { key: "h", label: "ساعت", kind: "count", value: (r) => r.cur.hours },
@@ -91,6 +96,17 @@ function PeopleBody() {
           testId="people-table"
           empty={<AnEmpty icon="search" title="کسی پیدا نشد">نامی شبیه «{q}» در این فهرست نیست.</AnEmpty>}
         />
+      </Panel>
+
+      <Panel title="سوابق ارزیابی ماهانه شیفت‌لاگ" meta="جدیدترین ارزیابی‌ها در ابتدا نمایش داده می‌شوند">
+        {!reviews.length ? <p className="panel-body muted">برای این استان و دوره، ارزیابی ماهانه ثبت نشده است.</p> : (
+          <DataTable dense columns={[
+            { key: "month", label: "ماه ارزیابی", value: (r) => r.month },
+            { key: "name", label: "کارشناس", value: (r) => m.rows.find((p) => p.person.id === r.a)?.person.name ?? "—" },
+            { key: "rating", label: "نتیجه", value: (r) => QUAL_FA[r.rating] ?? r.rating },
+            { key: "note", label: "توضیحات ارزیابی", value: (r) => r.note || "—" },
+          ]} rows={reviews.map((r, i) => ({ ...r, id: `${r.a}-${r.month}-${i}` }))} caption="سوابق ارزیابی کارشناسان" />
+        )}
       </Panel>
 
       <ChartPanel
