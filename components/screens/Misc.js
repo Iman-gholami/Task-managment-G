@@ -15,18 +15,18 @@ import { ThemeChooser } from "@/components/ThemePicker";
 import { applyTheme, currentTheme, syncThemeColor } from "@/components/theme";
 
 // What each role can do, as enforced by the API (lib/roles.js, lib/workflow.js, app/api/*).
-const ROLES = ["analyst", "engineer", "soc_manager", "security_manager"];
+const ROLES = ["analyst", "engineer", "soc_manager", "security_manager", "observer"];
 const NO = null;
 const PERMISSIONS = [
-  ["Create tasks", "For themselves", "For themselves", "For anyone", "For anyone"],
-  ["Edit task details (title, deadline, assignee)", NO, NO, "Yes", "Yes"],
-  ["Approve or return tasks in review", NO, NO, "Yes, except their own", "Yes, except their own"],
-  ["Reopen approved tasks", NO, NO, "Yes", "Yes"],
-  ["Keep a Shift Log", "SOC · L1–L3 only", NO, NO, NO],
-  ["Define Shift Log checklists and assign them to SOC groups", NO, NO, "Yes", "Yes"],
-  ["View performance", "Their own", "Their own", "Everyone", "Everyone"],
-  ["Reports and Excel export", "Own data (no team report)", "Own data (no team report)", "All reports", "All reports"],
-  ["Add, edit and remove members", NO, NO, "SOC analysts", "Everyone except Security Managers"],
+  ["Create tasks", "For themselves", "For themselves", "For anyone", "For anyone", NO],
+  ["Edit task details (title, deadline, assignee)", NO, NO, "Yes", "Yes", NO],
+  ["Approve or return tasks in review", NO, NO, "Yes, except their own", "Yes, except their own", NO],
+  ["Reopen approved tasks", NO, NO, "Yes", "Yes", NO],
+  ["Keep a Shift Log", "SOC · L1–L3 only", NO, NO, NO, NO],
+  ["Define Shift Log checklists and assign them to SOC groups", NO, NO, "Yes", "Yes", NO],
+  ["View performance", "Their own", "Their own", "Everyone", "Everyone", "All staff"],
+  ["Reports and Excel export", "Own data (no team report)", "Own data (no team report)", "All reports", "All reports", "All reports (read-only)"],
+  ["Add, edit and remove members", NO, NO, "SOC analysts", "Everyone except Security Managers", NO],
 ];
 
 export function Admin() {
@@ -64,13 +64,13 @@ export function Admin() {
             {list.length === 0 ? <EmptyState compact icon="search" title="No users match">Try another name, role or team.</EmptyState> : (
               <div className="table-wrap">
                 <table className="dt hover">
-                  <thead><tr><th scope="col">User</th><th scope="col">Role</th><th scope="col">Primary team</th><th scope="col">Assisting</th><th scope="col">Email</th><th scope="col">Status</th></tr></thead>
+                  <thead><tr><th scope="col">User</th><th scope="col">Role</th><th scope="col">Primary team</th><th scope="col">استان</th><th scope="col">Assisting</th><th scope="col">Email</th><th scope="col">Status</th></tr></thead>
                   <tbody>
                     {list.map((p) => (
                       <tr key={p.id}>
                         <td className="title"><Who id={p.id} /></td>
                         <td>{ROLE_LABELS[p.role]}</td>
-                        <td>{p.team}</td>
+                        <td>{p.team}</td><td>{p.province || "تعیین‌نشده"}</td>
                         <td>{p.assist ?? <span className="muted">—</span>}</td>
                         <td className="muted">{p.email}</td>
                         <td><span className="badge dot success">Active</span></td>

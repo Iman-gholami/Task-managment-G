@@ -2,7 +2,7 @@ import { canManageMember, requireUser } from "@/lib/server/auth";
 import { err } from "@/lib/server/access";
 import { hashPassword } from "@/lib/server/password";
 import { deactivateMember, endSessions, getUser, updateMember } from "@/lib/server/repo";
-import { assignableFor } from "@/lib/roles";
+import { assignableFor, isIranProvince } from "@/lib/roles";
 
 async function target(params) {
   const [user, denied] = await requireUser();
@@ -24,12 +24,14 @@ export async function PATCH(request, { params }) {
   const team = b.team ?? t.team;
   if ((b.role && !roles.includes(role)) || (b.team && !teams.includes(team))) return err(403, "You can't assign that role or team.");
   if (!canManageMember(user, { id: t.id, role, team })) return err(403, "That change is outside what you can manage.");
+  const province = b.province === undefined ? undefined : b.province === "" || b.province === null ? null : String(b.province);
+  if (province !== undefined && province !== null && !isIranProvince(province)) return err(400, "Select a valid Iranian province.");
   let passwordHash;
   if (b.password !== undefined && b.password !== "") {
     if (String(b.password).length < 8) return err(400, "Password must be at least 8 characters.");
     passwordHash = hashPassword(String(b.password));
   }
-  const member = updateMember(t.id, { role, team, passwordHash });
+  const member = updateMember(t.id, { role, team, province, passwordHash });
   if (passwordHash || role !== t.role) endSessions(t.id);
   return Response.json({ user: member });
 }
