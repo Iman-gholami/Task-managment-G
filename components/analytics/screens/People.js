@@ -1,6 +1,6 @@
 "use client";
 
-import { memo, useCallback, useMemo, useState } from "react";
+import { memo, useCallback, useDeferredValue, useMemo, useState } from "react";
 import AnalyticsFrame from "@/components/analytics/AnalyticsFrame";
 import { useAnalytics } from "@/components/analytics/AnalyticsContext";
 import { stripOption } from "@/components/analytics/chartOptions";
@@ -88,10 +88,11 @@ function PeopleBody() {
 // employee metrics, and the province's history do not rerender per keystroke.
 const PeopleSearchTable = memo(function PeopleSearchTable({ m, setParam }) {
   const [q, setQ] = useState("");
+  const deferredQ = useDeferredValue(q);
   const shown = useMemo(() => {
-    const query = q.trim();
+    const query = deferredQ.trim();
     return query ? m.rows.filter((r) => r.person.name.includes(query)) : m.rows;
-  }, [q, m.rows]);
+  }, [deferredQ, m.rows]);
 
   const columns = [
     { key: "name", label: "کارشناس", value: (r) => r.person.name, render: (r) => <span className="an-person">{r.person.name}<small>{[r.person.province || "استان تعیین‌نشده", groupFa(r.person.group), r.person.level, ROLE_FA[r.person.role], r.person.active ? null : "غیرفعال"].filter(Boolean).join(" · ")}</small></span> },

@@ -41,6 +41,14 @@ test("Layer 2 analyzes tickets quickly, records verdicts, and managers can corre
   await page.goto("/shift");
   const card = page.getByTestId("l2-analyzed-tickets");
   await expect(card).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Routine activities" })).toHaveCount(0);
+  await expect(page.getByRole("heading", { name: "Created tickets" })).toHaveCount(0);
+  await expect(page.getByTestId("shift-checklist")).toHaveCount(0);
+  const shift = await (await page.request.get("/api/shift")).json();
+  expect(shift.activities).toEqual([]);
+  expect(shift.checklist).toBeNull();
+  expect((await page.request.post("/api/shift/tickets", { data: { no: "CREATED-NO" } })).status()).toBe(403);
+  expect((await page.request.patch("/api/shift", { data: { n: 1, patch: { done: true } } })).status()).toBe(403);
   // Typing is local; saving is an explicit action, not one POST per keystroke.
   let mutations = 0;
   await page.route("**/api/shift/analyzed-tickets", async (route) => {
@@ -79,6 +87,10 @@ test("Layer 2 analyzes tickets quickly, records verdicts, and managers can corre
   expect((await page.request.patch("/api/shift", { data: { completed: true } })).status()).toBe(200);
   await page.reload();
   await expect(card).toContainText("Submitted · read only");
+  await page.goto("/shift/history");
+  await expect(page.getByRole("table", { name: "Layer 2 shift log history" })).toBeVisible();
+  await expect(page.getByRole("columnheader", { name: "Tickets analyzed" })).toBeVisible();
+  await expect(page.getByRole("columnheader", { name: "IOCs" })).toHaveCount(0);
   expect((await page.request.post("/api/shift/analyzed-tickets", {
     data: { ticketNumber: "INC-1003", verdict: "true_positive" },
   })).status()).toBe(409);
@@ -88,6 +100,8 @@ test("Layer 2 analyzes tickets quickly, records verdicts, and managers can corre
   await page.getByRole("combobox", { name: "Analyst" }).selectOption(ids["SOC · L2"]);
   const managerCard = page.getByTestId("l2-analyzed-tickets");
   await expect(managerCard).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Routine activities" })).toHaveCount(0);
+  await expect(page.getByRole("heading", { name: "Created tickets" })).toHaveCount(0);
   await expect(managerCard.getByTestId("l2-reviewed-count")).toHaveText("2");
   await managerCard.getByRole("button", { name: "Delete ticket INC-1002" }).click();
   await managerCard.getByRole("button", { name: "Confirm delete" }).click();
