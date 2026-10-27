@@ -85,7 +85,10 @@ function Layer2ShiftLog({ initialLog }) {
       <div className="summary" role="region" aria-label="L2 shift summary">
         <span className="s"><b>{tickets.length}</b>tickets analyzed</span>
         <span className="remain">Only rostered shift days have an editable L2 log.</span>
-        {completed ? <span className="muted small">Submitted — manager correction only</span> :
+        {completed ? <>
+          <span className="muted small">Submitted — manager correction only</span>
+          {initialLog.date !== TODAY && <Link className="btn btn-secondary" href="/dashboard">Back to dashboard</Link>}
+        </> :
           <button type="button" className="btn btn-primary" onClick={submit} disabled={submitting}>
             {submitting ? "Submitting…" : "Complete shift"}
           </button>}
@@ -285,7 +288,10 @@ function RoutineShiftLog({ initialLog }) {
           {!readOnly && remaining.length > 0 && `${remaining.length} remaining · next: ${remaining[0].title}`}
         </span>
         {readOnly
-          ? <span className="muted small">Submitted — manager correction only</span>
+          ? <>
+            <span className="muted small">Submitted — manager correction only</span>
+            {backfill && <Link className="btn btn-secondary" href="/dashboard">Back to dashboard</Link>}
+          </>
           : <button type="button" className="btn btn-primary" onClick={completeShift}>Complete shift</button>}
       </div>
     </div>
