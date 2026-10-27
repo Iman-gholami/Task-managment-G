@@ -54,7 +54,7 @@ function Layer2ShiftLog({ initialLog }) {
     try {
       await api("/api/shift", { method: "PATCH", body: { completed: true, ...(initialLog.date !== TODAY ? { date: initialLog.date } : {}) } });
       setSubmitted(true);
-      dispatch({ type: "shift/complete", value: true });
+      if (initialLog.date === TODAY) dispatch({ type: "shift/complete", value: true });
       toast("Shift submitted");
     } catch (error) { toast(error.message, "error"); }
     finally { setSubmitting(false); }
@@ -105,6 +105,7 @@ function RoutineShiftLog({ initialLog }) {
   }, [dispatch, initialLog]);
 
   const [saved, setSaved] = useState("saved");
+  const [historicalSubmitted, setHistoricalSubmitted] = useState(!!initialLog?.completedAt);
   const [pending, setPending] = useState(0);
   const [issueOpen, setIssueOpen] = useState(null);
   const [flash, setFlash] = useState(null);
@@ -113,7 +114,7 @@ function RoutineShiftLog({ initialLog }) {
   const iocs = activities.filter((a) => a.kind === "misp").reduce((sum, a) => sum + (a.iocs ?? 0), 0);
   const issues = activities.filter((a) => a.issue).length;
   const remaining = activities.filter((a) => !a.done);
-  const readOnly = shiftDone;
+  const readOnly = backfill ? historicalSubmitted : shiftDone;
   const latest = useRef(activities);
   latest.current = activities;
   useUnsavedChanges(pending > 0, { message: "A change is still being saved. Leave anyway?" });
@@ -149,7 +150,8 @@ function RoutineShiftLog({ initialLog }) {
   const setCompleted = async () => {
     try {
       await api("/api/shift", { method: "PATCH", body: { completed: true, ...(backfill ? { date: logDate } : {}) } });
-      dispatch({ type: "shift/complete", value: true });
+      if (backfill) setHistoricalSubmitted(true);
+      else dispatch({ type: "shift/complete", value: true });
       toast("Shift submitted and locked");
     } catch (e) {
       toast(e.message, "error");
