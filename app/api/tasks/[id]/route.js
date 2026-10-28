@@ -1,6 +1,6 @@
 import { isManager, requireUser } from "@/lib/server/auth";
 import { err, viewableTask } from "@/lib/server/access";
-import { addEvent, deleteOwnTask, getTaskDetails, getUser, updateTask } from "@/lib/server/repo";
+import { commitTaskUpdate, deleteOwnTask, getTaskDetails, getTaskReport, getUser } from "@/lib/server/repo";
 import { actionLabel, allowedTransitions, canTransition } from "@/lib/workflow";
 import { CX, PRIO, QUAL, STATUS } from "@/lib/format";
 import { canAssignTask, canDeleteOwnTask } from "@/lib/roles";
@@ -23,13 +23,48 @@ export async function PATCH(request, { params }) {
   if (no) return no;
 
   const body = await request.json().catch(() => ({}));
+  if (!body || typeof body !== "object" || Array.isArray(body)) return err(400, "Invalid task update.");
   const patch = {};
   const events = [];
+  const previousReport = getTaskReport(id);
+  let report = null;
+  let expectedRevision = null;
+  let returnReason = null;
+
+  if ("report" in body) {
+    if (task.a !== user.id) return err(403, "Only the assignee can edit the work report.");
+    if (!["progress", "blocked", "returned"].includes(task.status)) return err(409, "The work report can only be edited while working on the task.");
+    const input = body.report;
+    if (!input || typeof input !== "object" || Array.isArray(input) ||
+        typeof input.workPerformed !== "string" || typeof input.outcome !== "string" ||
+        ("clearHours" in input && typeof input.clearHours !== "boolean") ||
+        !Number.isSafeInteger(input.revision) || input.revision < 0) return err(400, "Invalid work report.");
+    if (input.workPerformed.length > 10000 || input.outcome.length > 10000) return err(400, "Each report field must be at most 10000 characters.");
+    if (input.revision !== previousReport.revision) return err(409, "The report changed. Check the current task before saving again.");
+    expectedRevision = input.revision;
+    if (input.clearHours && "hours" in body) return err(400, "Clear hours or enter a total, not both.");
+    report = { workPerformed: input.workPerformed.trim(), outcome: input.outcome.trim(), hoursRecorded: input.clearHours ? false : previousReport.hoursRecorded };
+  }
+
+  if ("hours" in body) {
+    if ((typeof body.hours !== "number" && typeof body.hours !== "string") || String(body.hours).trim() === "") return err(400, "Enter total hours from 0 to 1000.");
+    const h = Number(body.hours);
+    if (!Number.isFinite(h) || h < 0 || h > 1000) return err(400, "Invalid hours.");
+    if (!isOpenStatus(task.status)) return err(409, "Hours can't be changed after approval.");
+    if (task.a === user.id && task.status === "review") return err(409, "Hours cannot be changed while the report is in review.");
+    patch.hours = h;
+    if (task.a === user.id) {
+      report = { ...(report ?? previousReport), hoursRecorded: true };
+      expectedRevision = previousReport.revision;
+    }
+  }
 
   if ("reviewRequired" in body && body.reviewRequired !== task.reviewRequired &&
       (("status" in body && body.status !== task.status) || ("a" in body && body.a !== task.a))) {
     return err(409, "Change the review requirement separately from status or reassignment.");
   }
+  if ("a" in body && body.a !== task.a && ("report" in body || (task.status === "progress" && body.status === "review")))
+    return err(409, "Reassign the task separately from saving or submitting a report.");
 
   if ("status" in body && body.status !== task.status) {
     if (!(body.status in STATUS)) return err(400, "Invalid status.");
@@ -38,15 +73,27 @@ export async function PATCH(request, { params }) {
     }
     const approving = task.status === "review" && body.status === "done";
     const selfComplete = task.status === "progress" && body.status === "done" && !task.reviewRequired && task.a === user.id;
+    const sending = task.status === "progress" && (body.status === "review" || selfComplete);
     if (selfComplete && (("a" in body && body.a !== user.id) || ("reviewRequired" in body && body.reviewRequired !== false)))
       return err(409, "Complete this task separately from reassignment or review-setting changes.");
     if (approving) {
-      if (!(body.quality in QUAL)) return err(400, "Choose a quality rating to approve.");
+      if (typeof body.quality !== "string" || !Object.hasOwn(QUAL, body.quality)) return err(400, "Choose a quality rating to approve.");
       patch.quality = body.quality;
       if ("cx" in body) {
         if (![1, 2, 3, 4].includes(body.cx)) return err(400, "Invalid complexity.");
         patch.cx = body.cx;
       }
+    }
+    if (sending) {
+      const handover = report ?? previousReport;
+      if (!handover.workPerformed.trim() || !handover.outcome.trim() || !handover.hoursRecorded)
+        return err(400, "Complete the work performed, outcome and total hours before sending the task.");
+      expectedRevision ??= previousReport.revision;
+    }
+    if (task.status === "review" && body.status === "returned") {
+      if (typeof body.returnReason !== "string" || !body.returnReason.trim()) return err(400, "Enter a reason for returning the task.");
+      if (body.returnReason.length > 5000) return err(400, "The return reason must be at most 5000 characters.");
+      returnReason = body.returnReason.trim();
     }
     patch.status = body.status;
     if (selfComplete) patch.quality = null;
@@ -58,17 +105,12 @@ export async function PATCH(request, { params }) {
   } else if ("quality" in body) {
     return err(400, "Quality is set when a reviewer approves the task.");
   }
+  if ("returnReason" in body && !returnReason) return err(400, "A return reason can only be recorded when returning a task.");
   if ("prio" in body && body.prio !== task.prio) {
     if (!(body.prio in PRIO)) return err(400, "Invalid priority.");
     if (!isOpenStatus(task.status)) return err(409, "Closed tasks can't be changed.");
     patch.prio = body.prio;
     events.push(`priority ${PRIO[task.prio]} → ${PRIO[body.prio]}`);
-  }
-  if ("hours" in body) {
-    const h = Number(body.hours);
-    if (!Number.isFinite(h) || h < 0 || h > 1000) return err(400, "Invalid hours.");
-    if (!isOpenStatus(task.status)) return err(409, "Hours can't be changed after approval.");
-    patch.hours = h;
   }
   // Managers may decide whether an open task requires review within their scope.
   if ("reviewRequired" in body) {
@@ -112,8 +154,8 @@ export async function PATCH(request, { params }) {
     patch.reviewRequired = 1;
     events.push(`reassigned to ${assignee.name}`);
   }
-  const updated = updateTask(id, patch, user.id);
-  events.forEach((e) => addEvent(id, user.id, e));
+  const updated = commitTaskUpdate(id, patch, user.id, { expectedStatus: task.status, expectedAssignee: task.a, expectedRevision, report, returnReason, events });
+  if (!updated) return err(409, "The task changed. Check the current task before trying again.");
   return Response.json({ task: updated, details: getTaskDetails(id), transitions: allowedTransitions(user, updated) });
 }
 

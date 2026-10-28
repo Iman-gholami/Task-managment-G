@@ -15,7 +15,7 @@ async function readyForReview(page, suffix) {
   const task = (await created.json()).task;
   expect((await page.request.post("/api/auth/login", { data: { email: analyst.email, password: PASSWORD } })).ok()).toBeTruthy();
   expect((await page.request.patch(`/api/tasks/${task.id}`, { data: { status: "progress" } })).ok()).toBeTruthy();
-  expect((await page.request.patch(`/api/tasks/${task.id}`, { data: { status: "review", hours: 2.5 } })).ok()).toBeTruthy();
+  expect((await page.request.patch(`/api/tasks/${task.id}`, { data: { status: "review", hours: 2.5, report: { workPerformed: "Reviewed the evidence", outcome: "Review completed", revision: 0 } } })).ok()).toBeTruthy();
   expect((await page.request.post("/api/auth/login", { data: ADMIN })).ok()).toBeTruthy();
   await page.goto(`/tasks/${task.id}`);
   await expect(page.getByRole("button", { name: "Approve", exact: true })).toBeEnabled();
@@ -24,14 +24,9 @@ async function readyForReview(page, suffix) {
 
 async function chooseReview(page) {
   await expect(page.getByRole("button", { name: "Approve", exact: true })).toBeVisible();
-  // The page enters with a short animation; wait for its layout to settle before
-  // opening a scroll-dismissed popover.
-  await page.locator(".detail-main").evaluate(async (element) => {
-    await Promise.all(element.getAnimations({ subtree: true }).map((animation) => animation.finished.catch(() => {})));
-  });
+  await page.getByRole("radio", { name: "Good", exact: true }).check();
+  await page.getByLabel("Confirm complexity").selectOption("2");
   await page.getByRole("button", { name: "Approve", exact: true }).click();
-  await page.getByRole("menu", { name: "Approve with quality" }).getByRole("menuitem", { name: /Good/ }).click();
-  await page.getByRole("menu", { name: "Confirm complexity" }).getByRole("menuitemradio", { name: /Medium/ }).click();
 }
 
 test("approval is confirmed before showing a lasting outcome, and reopening clears it", async ({ page }) => {
@@ -62,7 +57,7 @@ test("approval is confirmed before showing a lasting outcome, and reopening clea
 
   await page.getByRole("button", { name: "Reopen", exact: true }).click();
   await expect(outcome).toHaveCount(0);
-  await expect(page.locator(".detail-side .status").first()).toHaveText("In Progress");
+  await expect(page.locator(".task-brief-meta .status").first()).toHaveText("In Progress");
   await expect.poll(async () => (await (await page.request.get(`/api/tasks/${task.id}`)).json()).details.approvedBy).toBeNull();
 
   const second = await page.request.post("/api/members", { data: {
@@ -120,12 +115,17 @@ test("a manager can still reopen their own review-exempt task", async ({ page })
   const task = (await created.json()).task;
   await page.goto(`/tasks/${task.id}`);
   await page.getByRole("button", { name: "Start", exact: true }).click();
+  await page.getByLabel(/What did you do/).fill("Completed the task");
+  await page.getByRole("button", { name: /^Continue/ }).click();
+  await page.getByLabel(/What was the outcome/).fill("Completed successfully");
+  await page.getByRole("button", { name: /^Continue/ }).click();
+  await page.getByLabel(/Total hours/).fill("1");
+  await page.getByRole("button", { name: /Review submission/ }).click();
   await page.getByRole("button", { name: "Complete task", exact: true }).click();
-  await page.getByRole("dialog", { name: "Review completion" }).getByRole("button", { name: "Confirm completion" }).click();
   const outcome = page.getByRole("status", { name: "Task completion" });
   await expect(outcome).toContainText("Completed · No review required");
   await expect(outcome).not.toContainText("Approved by");
   await page.getByRole("button", { name: "Reopen", exact: true }).click();
   await expect(outcome).toHaveCount(0);
-  await expect(page.locator(".detail-side .status").first()).toHaveText("In Progress");
+  await expect(page.locator(".task-brief-meta .status").first()).toHaveText("In Progress");
 });

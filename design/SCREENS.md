@@ -179,31 +179,17 @@ Cross-team scope (SOC, Design & Automation, Threat Intelligence). Adds **Team** 
 ```
 
 ## 9. Task Details  ▶ `/tasks/T-1042`
+
 | | |
 |---|---|
-| **Purpose** | Everything about one task, editable in place |
-| **Primary user** | Assignee, Reviewer |
-| **Hierarchy** | ID/team → title (28px, editable) → description → attachments/refs → checklist → comments interleaved with activity |
-| **Layout** | Split view: a fluid main column (max 880px) and a 320px properties rail on a slightly darker plane. There are no cards. |
-| **Primary action** | Context-aware: **Start** (To Do) → **Submit for Review** (In Progress) → **Approve / Return** (Reviewer, with a Quality picker on Approve) |
-| **Secondary** | Inline properties, hours stepper, ⋯ menu (Duplicate, Cancel task, Copy link) |
-| **Components** | Key-value list, Checklist (drag grip on hover, add row), File tiles, Comment, Composer, Activity rows |
-| **Empty** | Checklist: "+ Add item" row only. Comments: composer only |
-| **Loading** | Title and description skeletons, with the rail in skeleton key/values |
-| **Error** | Not found: "This task doesn't exist or was deleted. [Go to My Tasks]" |
-```
-T-1042 · SOC · L1                                    │ [Submit for Review] [⋯]
-Tune Splunk correlation rule for anomalous VPN logins│ Status     ◐ In Progress
-Current rule fires on every login from a new …       │ Assignee   (SR) Sara
-[SPL vpn_anomaly_v3.spl] [🔗 Splunk search]          │ Priority   ▮▮▮ High
-Checklist 3 of 5 ▬▬▬░░                               │ Complexity ◆◆◆◇ Complex
- ☑ Pull 30 days of VPN auth logs                     │ Deadline   Sep 29
- ☐ Validate against last month's true positives      │ Hours      [− 6.5 +]
-Comments 2                                           │ Reviewer   (LN) Leila
- (LN) Leila · Sep 27  Please coordinate with @Arash… │ Quality    Set on approval
- │ › priority Normal → High                          │ Activity …
- [Leave a comment…  @ 📎            Comment ⌘↵]      │
-```
+| **Primary users** | Assignee and reviewer, with actions constrained by the server-side role and workflow |
+| **Hierarchy** | Brief and key facts → vertical task journey → conversation, checklist and task overview |
+| **Assignee** | Start, save one draft report, record work performed, outcome and manual total hours, attach optional files, then review and send; a manager can waive the review step |
+| **Reviewer** | Read the submitted report and files; approve with quality and confirmed complexity, or return with a required reason |
+| **Returned** | Show the latest return reason prominently; preserve the report while the assignee resumes, revises and resubmits |
+| **Existing tasks** | Display historical comments, files, hours and history as recorded; do not fabricate a structured report or block approval of work already in review |
+| **Recovery** | Retain unsaved input on request failure; check the current server state before retrying an uncertain mutation; warn before leaving a changed draft |
+| **Secondary** | Conversation, attachments, checklist, properties and activity remain available in expandable sections |
 
 ## 10. Shift Log: Active Shift  ▶ `/shift`
 | | |
