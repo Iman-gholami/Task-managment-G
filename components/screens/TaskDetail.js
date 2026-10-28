@@ -151,13 +151,13 @@ export default function TaskDetail({ id }) {
 
         {isAssignee && <TaskWorkPanel key={id} task={t} details={d} transitions={transitions} ready={!!data} onMove={doMove} setData={setData} commentDraftRef={commentDraftRef} editingCommentRef={editingCommentRef} posting={posting} />}
 
-        {t.status === "review" && (
+        {t.status === "review" && !isAssignee && (
           <div className="callout" style={{ "--tone": "var(--violet)" }} role="status">
             <strong>Waiting for review</strong>
             <span>{transitions.includes("done") ? "Approve it with a quality rating, or return it to the assignee with a comment." : "A manager will approve it or return it for changes."}</span>
           </div>
         )}
-        {t.status === "returned" && (
+        {t.status === "returned" && !isAssignee && (
           <div className="callout" style={{ "--tone": "var(--warning)" }} role="status">
             <strong>Returned for changes</strong>
             <span>Check the comments below, then resume work and submit it again.</span>
@@ -176,7 +176,7 @@ export default function TaskDetail({ id }) {
           <>
             <section className="detail-section task-surface task-conversation" aria-label="Comments">
               <SectionHeader icon="chat" title="Comments" meta={d.comments.length || null} />
-              {!d.comments.length && <p className="conversation-empty">No updates yet. Share context or the next step with your team.</p>}
+              {!d.comments.length && <p className="conversation-empty">No comments yet.</p>}
               {d.comments.map((c) => (
                 <div key={c.id} className="comment">
                   <Avatar id={c.by} />
@@ -371,7 +371,7 @@ function CommentComposer({ draftRef, onPost, posting, resetVersion }) {
   const post = () => { if (draft.trim() && !posting) onPost(draft); };
   return (
     <div className="composer">
-      <div className="composer-heading"><Icon name="chat" /><span>Share a work update</span></div>
+      <label htmlFor="task-comment-input" className="composer-heading">Share a work update</label>
       <textarea id="task-comment-input" placeholder="What did you find, change or hand over?" value={draft} onChange={(e) => { draftRef.current = e.target.value; setDraft(e.target.value); }} aria-label="New comment" dir="auto" maxLength={5000} disabled={posting}
         onKeyDown={(e) => { if (e.key === "Enter" && (e.metaKey || e.ctrlKey) && !e.nativeEvent.isComposing) { e.preventDefault(); post(); } }} />
       <div className="bar">

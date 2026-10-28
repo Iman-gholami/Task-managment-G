@@ -40,12 +40,14 @@ test("assignee can log Persian decimal hours and review the actual handover", as
   await expect(dialog.getByText("0 / 1")).toBeVisible();
   await dialog.getByRole("button", { name: "Back to comment" }).click();
   await expect(page.getByLabel("New comment")).toHaveValue("نتیجه بررسی آماده است.");
+  await expect(page.getByLabel("New comment")).toBeFocused();
   await page.getByRole("button", { name: /^Comment/ }).click();
   await expect(page.locator(".comment p").getByText("نتیجه بررسی آماده است.")).toBeVisible();
   await page.getByLabel("Total hours").fill("۲٫۵");
   await page.getByRole("button", { name: "Submit for review" }).click();
   await expect(dialog.getByText("2.5 hrs")).toBeVisible();
   await expect(dialog.getByText("Unposted comment")).toHaveCount(0);
+  await expect(dialog.locator(".handoff-stats div").filter({ hasText: "Posted comments" }).locator("dd")).toHaveText("1");
   const request = page.waitForRequest((req) => req.url().endsWith(`/api/tasks/${task.id}`) && req.method() === "PATCH");
   await dialog.getByRole("button", { name: "Send for review" }).click();
   expect((await request).postDataJSON()).toEqual({ hours: 2.5, status: "review" });
