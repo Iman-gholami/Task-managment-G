@@ -148,22 +148,42 @@ test("task text editing remains local, and a failed comment can be retried", asy
   await page.getByRole("button", { name: "Save changes" }).click();
   await expect(page.getByRole("heading", { name: "بررسی رخداد مشکوک" })).toBeVisible();
 
-  await page.route(`**/api/tasks/${task.id}/comments`, (route) => route.fulfill({ status: 503, contentType: "application/json", body: JSON.stringify({ error: "Temporary test failure" }) }), { times: 1 });
   const composer = page.getByLabel("New comment");
   await composer.pressSequentially("نتیجه بررسی آماده است.");
+  await page.getByLabel("New checklist item").fill("بررسی نشانی IP");
+  let failDetailsOnce = true;
+  await page.route(`**/api/tasks/${task.id}`, (route) => {
+    if (route.request().method() === "GET" && failDetailsOnce) {
+      failDetailsOnce = false;
+      return route.fulfill({ status: 503, contentType: "application/json", body: JSON.stringify({ error: "Temporary test failure" }) });
+    }
+    return route.continue();
+  });
+  await page.getByRole("button", { name: "Start", exact: true }).click();
+  await expect(page.getByText("The server ran into a problem")).toBeVisible();
+  await page.getByRole("button", { name: "Try again" }).click();
+  await expect(composer).toHaveValue("نتیجه بررسی آماده است.");
+  await expect(page.getByLabel("New checklist item")).toHaveValue("بررسی نشانی IP");
+
+  await page.route(`**/api/tasks/${task.id}/comments`, (route) => route.fulfill({ status: 503, contentType: "application/json", body: JSON.stringify({ error: "Temporary test failure" }) }), { times: 1 });
   await page.getByRole("button", { name: /^Comment/ }).click();
   await expect(composer).toHaveValue("نتیجه بررسی آماده است.");
   await expect(page.getByRole("button", { name: /^Comment/ })).toBeEnabled();
   await page.getByRole("button", { name: /^Comment/ }).click();
   await expect(page.getByText("نتیجه بررسی آماده است.")).toBeVisible();
+  await expect(composer).toHaveValue("");
 
   const comment = page.locator(".comment", { hasText: "نتیجه بررسی آماده است." });
   await comment.getByRole("button", { name: "Edit" }).click();
   const commentEditor = page.locator(".comment-edit");
   await commentEditor.getByLabel("Edit comment").fill("نتیجه نهایی ثبت شد.");
+  failDetailsOnce = true;
+  await page.getByRole("button", { name: "Submit for review" }).click();
+  await expect(page.getByText("The server ran into a problem")).toBeVisible();
+  await page.getByRole("button", { name: "Try again" }).click();
+  await expect(commentEditor.getByLabel("Edit comment")).toHaveValue("نتیجه نهایی ثبت شد.");
   await commentEditor.getByRole("button", { name: "Save", exact: true }).click();
   await expect(page.getByText("نتیجه نهایی ثبت شد.")).toBeVisible();
-  await page.getByLabel("New checklist item").pressSequentially("بررسی نشانی IP");
   await page.getByLabel("New checklist item").press("Enter");
   await page.reload();
   await expect(page.getByText("نتیجه نهایی ثبت شد.")).toBeVisible();

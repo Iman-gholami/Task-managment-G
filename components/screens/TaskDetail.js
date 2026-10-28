@@ -38,7 +38,12 @@ export default function TaskDetail({ id }) {
   const [deleteConfirm, setDeleteConfirm] = useState(false);
   const [deleting, setDeleting] = useState(false);
   const [deleteError, setDeleteError] = useState("");
+  const [posting, setPosting] = useState(false);
+  const [commentReset, setCommentReset] = useState(0);
   const fileRef = useRef(null);
+  const commentDraftRef = useRef("");
+  const editingCommentRef = useRef(null);
+  const checklistDraftRef = useRef("");
   const status = t?.status;
   // Refresh transitions and activity whenever the status changes (approve, return, start…).
   useEffect(() => { if (status && data) reload(); }, [status]); // eslint-disable-line react-hooks/exhaustive-deps
@@ -80,6 +85,17 @@ export default function TaskDetail({ id }) {
     if (await run(`/api/tasks/${id}/attachments`, { method: "POST", body: form })) toast(`${file.name} attached`);
     setUploading(false);
     if (fileRef.current) fileRef.current.value = "";
+  };
+
+  const postComment = async (body) => {
+    if (posting) return;
+    setPosting(true);
+    try {
+      if (await run(`/api/tasks/${id}/comments`, { method: "POST", body: { body } })) {
+        commentDraftRef.current = "";
+        setCommentReset((version) => version + 1);
+      }
+    } finally { setPosting(false); }
   };
 
   const removeOwnTask = async () => {
@@ -204,7 +220,7 @@ export default function TaskDetail({ id }) {
                 </label>
               ))}
               {canEdit && !closed && (
-                <ChecklistAdder onAdd={(label) => run(`/api/tasks/${id}/checklist`, { method: "POST", body: { label } })} />
+                <ChecklistAdder draftRef={checklistDraftRef} onAdd={(label) => run(`/api/tasks/${id}/checklist`, { method: "POST", body: { label } })} />
               )}
               {!d.checklist.length && (!canEdit || closed) && <p className="muted small">No checklist for this task.</p>}
             </section>
@@ -220,18 +236,18 @@ export default function TaskDetail({ id }) {
                       <b>{peopleMap[c.by]?.name}</b><span className="muted">{when(c.at)}{c.edited ? " · edited" : ""}</span>
                       {c.by === me.id && editing !== c.id && (
                         <span className="tools">
-                          <button type="button" className="btn btn-ghost btn-sm" onClick={() => setEditing(c.id)}>Edit</button>
+                          <button type="button" className="btn btn-ghost btn-sm" onClick={() => { editingCommentRef.current = { id: c.id, body: c.body }; setEditing(c.id); }}>Edit</button>
                           <button type="button" className="btn btn-ghost btn-sm danger" onClick={() => setConfirm({ title: "Delete this comment?", body: "It is removed for everyone. This can't be undone.", action: "Delete comment", run: () => run(`/api/tasks/${id}/comments/${c.id}`, { method: "DELETE" }) })}>Delete</button>
                         </span>
                       )}
                     </div>
-                    {editing === c.id ? <CommentEditor initialBody={c.body} onCancel={() => setEditing(null)}
-                      onSave={async (body) => { if (await run(`/api/tasks/${id}/comments/${c.id}`, { method: "PATCH", body: { body } })) setEditing(null); }} />
+                    {editing === c.id ? <CommentEditor commentId={c.id} draftRef={editingCommentRef} onCancel={() => { editingCommentRef.current = null; setEditing(null); }}
+                      onSave={async (body) => { if (await run(`/api/tasks/${id}/comments/${c.id}`, { method: "PATCH", body: { body } })) { editingCommentRef.current = null; setEditing(null); } }} />
                       : <p dir="auto">{highlight(c.body)}</p>}
                   </div>
                 </div>
               ))}
-              <CommentComposer onPost={(body) => run(`/api/tasks/${id}/comments`, { method: "POST", body: { body } })} />
+              <CommentComposer draftRef={commentDraftRef} onPost={postComment} posting={posting} resetVersion={commentReset} />
             </section>
           </>
         )}
@@ -318,22 +334,22 @@ function TaskBriefEditor({ task, onSave, onCancel }) {
   );
 }
 
-function ChecklistAdder({ onAdd }) {
-  const [text, setText] = useState("");
+function ChecklistAdder({ draftRef, onAdd }) {
+  const [text, setText] = useState(() => draftRef.current);
   return (
     <div className="check-item check-add">
       <Icon name="plus" />
-      <input className="input" placeholder="Add an item and press Enter" value={text} onChange={(e) => setText(e.target.value)} aria-label="New checklist item" dir="auto"
-        onKeyDown={async (e) => { if (e.key === "Enter" && !e.nativeEvent.isComposing && text.trim()) { e.preventDefault(); const label = text.trim(); setText(""); await onAdd(label); } }} />
+      <input className="input" placeholder="Add an item and press Enter" value={text} onChange={(e) => { draftRef.current = e.target.value; setText(e.target.value); }} aria-label="New checklist item" dir="auto"
+        onKeyDown={async (e) => { if (e.key === "Enter" && !e.nativeEvent.isComposing && text.trim()) { e.preventDefault(); const label = text.trim(); draftRef.current = ""; setText(""); await onAdd(label); } }} />
     </div>
   );
 }
 
-function CommentEditor({ initialBody, onSave, onCancel }) {
-  const [body, setBody] = useState(initialBody);
+function CommentEditor({ commentId, draftRef, onSave, onCancel }) {
+  const [body, setBody] = useState(() => draftRef.current?.body ?? "");
   return (
     <div className="comment-edit">
-      <textarea className="textarea" value={body} onChange={(e) => setBody(e.target.value)} aria-label="Edit comment" dir="auto" autoFocus />
+      <textarea className="textarea" value={body} onChange={(e) => { draftRef.current = { id: commentId, body: e.target.value }; setBody(e.target.value); }} aria-label="Edit comment" dir="auto" autoFocus />
       <div className="row">
         <button type="button" className="btn btn-primary btn-sm" disabled={!body.trim()} onClick={() => onSave(body)}>Save</button>
         <button type="button" className="btn btn-ghost btn-sm" onClick={onCancel}>Cancel</button>
@@ -342,18 +358,16 @@ function CommentEditor({ initialBody, onSave, onCancel }) {
   );
 }
 
-function CommentComposer({ onPost }) {
-  const [draft, setDraft] = useState("");
-  const [posting, setPosting] = useState(false);
-  const post = async () => {
-    if (!draft.trim() || posting) return;
-    setPosting(true);
-    try { if (await onPost(draft)) setDraft(""); }
-    finally { setPosting(false); }
-  };
+function CommentComposer({ draftRef, onPost, posting, resetVersion }) {
+  const [draft, setDraft] = useState(() => draftRef.current);
+  const lastReset = useRef(resetVersion);
+  useEffect(() => {
+    if (lastReset.current !== resetVersion) { lastReset.current = resetVersion; setDraft(draftRef.current); }
+  }, [draftRef, resetVersion]);
+  const post = () => { if (draft.trim() && !posting) onPost(draft); };
   return (
     <div className="composer">
-      <textarea placeholder="Write an update or handover note…" value={draft} onChange={(e) => setDraft(e.target.value)} aria-label="New comment" dir="auto" maxLength={5000} disabled={posting}
+      <textarea placeholder="Write an update or handover note…" value={draft} onChange={(e) => { draftRef.current = e.target.value; setDraft(e.target.value); }} aria-label="New comment" dir="auto" maxLength={5000} disabled={posting}
         onKeyDown={(e) => { if (e.key === "Enter" && (e.metaKey || e.ctrlKey) && !e.nativeEvent.isComposing) { e.preventDefault(); post(); } }} />
       <div className="bar">
         <span className="hint">Visible to everyone who can open this task</span>
