@@ -11,7 +11,9 @@ The Security Department's internal work tool: Task Management, SOC Shift Logs, a
 ### Task workflow
 `Backlog → To Do → In Progress → Review → Done`, plus `Blocked`, `Returned`, `Cancelled`.
 - The assignee starts the task, submits it for review, or marks it blocked. SOC and Security Managers may turn off review when creating or editing an eligible open task; the assignee can then complete it directly, without a quality rating. Reassignment restores the review requirement.
-- When review is required, a manager reviews a task **once**: **Approve** (with a quality rating) or **Return for changes**. Nobody approves their own task.
+- The task page guides the assignee through one editable work report: actions taken, outcome and manually entered total hours are required before handover or direct completion; attachments are optional. Drafts can be saved between steps. Comments and checklists remain separate and available.
+- When review is required, a manager reviews the report and chooses **Approve** (with quality and confirmed complexity) or **Return for changes**, with a required reason shown to the assignee. Nobody approves their own task.
+- Reports and return reasons are stored alongside existing data. Tasks already in review or completed before this feature remain accessible; their previous comments, hours and files are not turned into an invented report or retroactively required for approval.
 - An approved task is closed: status, priority and hours are locked. Only a manager can **Reopen** it, and that is recorded in the task's activity.
 - Before assigning a new task, the creator reviews its details and any selected attachments. Up to 8 files (20 MB each, 40 MB total) can be added at creation; the task and its attachments become visible together.
 - Analysts and engineers can delete their own created tasks while they remain visible to them. Deleted tasks disappear from normal lists and reports; their records, history and files remain stored for audit.

@@ -18,21 +18,13 @@ const HEAD = { title: "Task", a: "Assignee", team: "Team", status: "Status", pri
 // Columns that stay visible on phones (the rest collapse into the card layout).
 const PRIMARY = new Set(["title", "status", "prio", "due", "a"]);
 
-export const qualityItems = () => Object.entries(QUAL).map(([v, l], i) => ({ value: v, label: <Quality q={v} />, kbd: String(i + 1) }));
-const approvalComplexityItems = (task) => [1, 2, 3, 4].map((cx) => ({
-  value: cx,
-  label: <Complexity c={cx} />,
-  hint: cx === task.cx ? "current" : undefined,
-  checked: cx === task.cx,
-  kbd: String(cx),
-}));
-
 /**
  * Workflow-aware status/priority editing shared by the table, details and keyboard shortcuts.
  * Only transitions the current user is allowed to make are offered; approving asks for quality.
  */
 export function useTaskActions() {
   const { openPopover, updateTask, toast, me, dispatch } = useApp();
+  const router = useRouter();
   const pendingRef = useRef(new Set());
   const [pendingApprovals, setPendingApprovals] = useState(() => new Set());
 
@@ -67,23 +59,12 @@ export function useTaskActions() {
 
   const move = async (anchor, task, to, onUpdated) => {
     if (pendingRef.current.has(task.id)) return;
-    if (task.status === "review" && to === "done") {
-      return openPopover(anchor, {
-        title: "Approve with quality",
-        force: true,
-        items: qualityItems(),
-        onPick: (quality) => {
-          openPopover(anchor, {
-            title: "Confirm complexity",
-            force: true,
-            header: task.createdBy === task.a
-              ? <div className="muted small" style={{ padding: "0 12px 8px" }}>Created by the assignee — check the complexity</div>
-              : null,
-            items: approvalComplexityItems(task),
-            onPick: (cx) => applyApproval(task, quality, cx, onUpdated),
-          });
-        },
-      });
+    // Handoffs and returns need their report/feedback, so collect them on the task page.
+    if ((task.a === me.id && task.status === "progress" && ["review", "done"].includes(to)) ||
+        (task.status === "review" && ["returned", "done"].includes(to))) {
+      router.push(`/tasks/${task.id}`);
+      toast(task.status === "review" ? "Review the report on the task page." : "Complete your report on the task page.", "info");
+      return;
     }
     if (await updateTask(task, { status: to })) toast(`${task.id} moved to ${STATUS[to]}`);
   };
@@ -105,7 +86,7 @@ export function useTaskActions() {
     });
   };
 
-  return { edit, move, isApproving: (id) => pendingApprovals.has(id) };
+  return { edit, move, approve: applyApproval, isApproving: (id) => pendingApprovals.has(id) };
 }
 
 /** Back-compat alias used by keyboard shortcuts. */

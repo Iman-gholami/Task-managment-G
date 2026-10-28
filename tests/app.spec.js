@@ -27,6 +27,15 @@ async function createTask(page, title, assignee) {
   return (await res.json()).task.id;
 }
 
+async function prepareTaskReport(page) {
+  await page.getByLabel(/What did you do/).fill("Reviewed the task evidence.");
+  await page.getByRole("button", { name: /^Continue/ }).click();
+  await page.getByLabel(/What was the outcome/).fill("The investigation is complete.");
+  await page.getByRole("button", { name: /^Continue/ }).click();
+  await page.getByLabel(/Total hours/).fill("1");
+  await page.getByRole("button", { name: "Review submission" }).click();
+}
+
 function tehranDate() {
   const parts = new Intl.DateTimeFormat("en-CA", {
     timeZone: "Asia/Tehran", year: "numeric", month: "2-digit", day: "2-digit",
@@ -277,9 +286,9 @@ test.describe("task workflow", () => {
     await signIn(page, "sara");
     await page.goto(`/tasks/${ids.t1}`);
     await page.getByRole("button", { name: "Start" }).click();
-    await expect(page.locator(".detail-side .status").first()).toHaveText("In Progress");
+    await expect(page.locator(".task-brief-meta .status").first()).toHaveText("In Progress");
+    await prepareTaskReport(page);
     await page.getByRole("button", { name: "Submit for review" }).click();
-    await page.getByRole("dialog", { name: "Review handover" }).getByRole("button", { name: "Send for review" }).click();
     await expect(page.getByText("Waiting for review")).toBeVisible();
     await expect(page.getByRole("button", { name: "Approve" })).toHaveCount(0);
     expect((await page.request.patch(`/api/tasks/${ids.t1}`, { data: { status: "done", quality: "excellent" } })).status()).toBe(409);
@@ -290,12 +299,12 @@ test.describe("task workflow", () => {
     await page.goto("/tasks/assigned");
     await page.getByRole("tab", { name: /Needs review/ }).click();
     await page.locator("tr", { hasText: ids.t1 }).locator("td.title").click();
+    await page.getByRole("radio", { name: "Excellent" }).check();
+    await expect(page.getByLabel("Confirm complexity")).toHaveValue("2");
+    await page.getByLabel("Confirm complexity").selectOption("3");
     await page.getByRole("button", { name: "Approve" }).click();
-    await page.getByRole("menuitem", { name: /Excellent/ }).click();
-    const complexity = page.getByRole("menu", { name: "Confirm complexity" });
-    await expect(complexity.getByRole("menuitemradio", { name: /Medium.*current/ })).toBeVisible();
-    await complexity.getByRole("menuitemradio", { name: /Complex/ }).click();
     await expect(page.getByRole("status", { name: "Task approval" }).getByRole("heading", { name: "Task approved" })).toBeVisible();
+    await page.getByText("Task overview & activity").click();
     await expect(page.getByTestId("activity")).toContainText("approved it · quality: Excellent · complexity: Medium → Complex");
     await expect(page.getByRole("button", { name: "Approve" })).toHaveCount(0);
     await expect(page.getByRole("button", { name: "Return for changes" })).toHaveCount(0);
@@ -311,31 +320,39 @@ test.describe("task workflow", () => {
     await signIn(page, "arash");
     await page.goto(`/tasks/${ids.t2}`);
     await page.getByRole("button", { name: "Start" }).click();
+    await prepareTaskReport(page);
     await page.getByRole("button", { name: "Submit for review" }).click();
-    await page.getByRole("dialog", { name: "Review handover" }).getByRole("button", { name: "Send for review" }).click();
     await expect(page.getByText("Waiting for review")).toBeVisible();
     await signIn(page, "soc");
     await page.goto(`/tasks/${ids.t2}`);
     await page.getByRole("button", { name: "Return for changes" }).click();
-    await expect(page.locator(".detail-side .status").first()).toHaveText("Returned");
+    await page.getByLabel(/What needs to change/).fill("Please add the missing evidence.");
+    await page.getByRole("button", { name: "Send back" }).click();
+    await expect(page.locator(".task-brief-meta .status").first()).toHaveText("Returned");
     await signIn(page, "arash");
     await page.goto(`/tasks/${ids.t2}`);
     await page.getByRole("button", { name: "Resume work" }).click();
-    await expect(page.locator(".detail-side .status").first()).toHaveText("In Progress");
+    await expect(page.locator(".task-brief-meta .status").first()).toHaveText("In Progress");
   });
 
   test("checklist, comments and attachments persist", async ({ page }) => {
     await signIn(page, "sara");
     await page.goto(`/tasks/${ids.t3}`);
+    await page.getByText("Checklist", { exact: true }).first().click();
     await page.getByLabel("New checklist item").fill("Export scanner inventory");
     await page.getByLabel("New checklist item").press("Enter");
     await page.locator("label.check-item", { hasText: "Export scanner inventory" }).locator("input").check();
+    await page.getByText("Conversation", { exact: true }).click();
     await page.getByLabel("New comment").fill("Started on this, @Leila Nouri FYI");
     await page.getByRole("button", { name: /^Comment/ }).click();
     await expect(page.locator(".mention", { hasText: "@Leila Nouri" })).toBeVisible();
+    await page.getByText("Attachments", { exact: true }).first().click();
     await page.getByTestId("attach-input").setInputFiles({ name: "inventory.txt", mimeType: "text/plain", buffer: Buffer.from("hello") });
     await expect(page.getByRole("link", { name: /inventory\.txt/ })).toBeVisible();
     await page.reload();
+    await page.getByText("Checklist", { exact: true }).first().click();
+    await page.getByText("Conversation", { exact: true }).click();
+    await page.getByText("Attachments", { exact: true }).first().click();
     await expect(page.locator("label.check-item", { hasText: "Export scanner inventory" }).locator("input")).toBeChecked();
     await expect(page.getByText("Started on this")).toBeVisible();
     const [download] = await Promise.all([page.waitForEvent("download"), page.getByRole("link", { name: /inventory\.txt/ }).click()]);

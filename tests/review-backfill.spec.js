@@ -37,9 +37,10 @@ test("SOC Manager can waive review and grant four auditable missed L2 shift days
   const ownTask = (await own.json()).task;
   expect(ownTask.reviewRequired).toBe(false);
   await page.goto(`/tasks/${ownTask.id}`);
+  await page.getByText("Task overview & activity").click();
   await expect(page.getByRole("checkbox", { name: "Manager review required" })).not.toBeChecked();
   expect((await page.request.patch(`/api/tasks/${ownTask.id}`, { data: { status: "progress" } })).status()).toBe(200);
-  const finished = await page.request.patch(`/api/tasks/${ownTask.id}`, { data: { status: "done" } });
+  const finished = await page.request.patch(`/api/tasks/${ownTask.id}`, { data: { status: "done", hours: 1, report: { workPerformed: "Completed the task", outcome: "Finished", revision: 0 } } });
   expect(finished.status()).toBe(200);
   expect((await finished.json()).task).toMatchObject({ status: "done", reviewRequired: false, quality: null });
 

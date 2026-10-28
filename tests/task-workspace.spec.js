@@ -7,6 +7,14 @@ async function addPerson(page, person) {
   expect(result.status()).toBe(201);
   return (await result.json()).user;
 }
+async function prepareReport(page, hours = "1") {
+  await page.getByLabel(/What did you do/).fill("Reviewed the assigned task.");
+  await page.getByRole("button", { name: /^Continue/ }).click();
+  await page.getByLabel(/What was the outcome/).fill("The task was completed.");
+  await page.getByRole("button", { name: /^Continue/ }).click();
+  await page.getByLabel(/Total hours/).fill(hours);
+  await page.getByRole("button", { name: "Review submission" }).click();
+}
 
 test("both managers may waive review within their scope; only the assignee can complete", async ({ page }) => {
   await page.request.post("/api/auth/login", { data: ADMIN });
@@ -29,6 +37,7 @@ test("both managers may waive review within their scope; only the assignee can c
   expect((await page.request.patch(`/api/tasks/${regularTask.id}`, { data: { reviewRequired: false } })).status()).toBe(200);
   expect((await page.request.patch(`/api/tasks/${regularTask.id}`, { data: { reviewRequired: true } })).status()).toBe(200);
   await page.goto(`/tasks/${regularTask.id}`);
+  await page.getByText("Task overview & activity").click();
   const reviewSetting = page.getByRole("checkbox", { name: "Manager review required" });
   const changed = page.waitForResponse((response) => response.url().endsWith(`/api/tasks/${regularTask.id}`) && response.request().method() === "PATCH");
   await reviewSetting.uncheck();
@@ -44,7 +53,7 @@ test("both managers may waive review within their scope; only the assignee can c
   expect((await page.request.post("/api/tasks", { data: { title: "Forbidden review bypass", a: analyst.id, reviewRequired: false } })).status()).toBe(403);
   expect((await page.request.patch(`/api/tasks/${regularTask.id}`, { data: { reviewRequired: false } })).status()).toBe(403);
   expect((await page.request.patch(`/api/tasks/${task.id}`, { data: { status: "progress" } })).status()).toBe(200);
-  const complete = await page.request.patch(`/api/tasks/${task.id}`, { data: { status: "done" } });
+  const complete = await page.request.patch(`/api/tasks/${task.id}`, { data: { status: "done", hours: 1, report: { workPerformed: "Reviewed the task", outcome: "Completed", revision: 0 } } });
   expect(complete.status()).toBe(200);
   expect((await complete.json()).task).toMatchObject({ status: "done", reviewRequired: false, quality: null });
 });
@@ -104,12 +113,13 @@ test("the task and selected attachments become visible together, and comments wo
 
     const analystPage = await analystContext.newPage();
     await analystPage.goto(`/tasks/${task.id}`);
+    await analystPage.getByText("Conversation", { exact: true }).click();
     await analystPage.getByLabel("New comment").fill("Initial triage completed.");
     await analystPage.getByRole("button", { name: /^Comment/ }).click();
     await expect(analystPage.getByText("Initial triage completed.")).toBeVisible();
     await analystPage.getByRole("button", { name: "Start", exact: true }).click();
+    await prepareReport(analystPage);
     await analystPage.getByRole("button", { name: "Complete task", exact: true }).click();
-    await analystPage.getByRole("dialog", { name: "Review completion" }).getByRole("button", { name: "Confirm completion" }).click();
     await expect(analystPage.getByText("Completed · No review required")).toBeVisible();
   } finally { await analystContext.close(); }
 });
@@ -149,6 +159,8 @@ test("task text editing remains local, and a failed comment can be retried", asy
   await page.getByRole("button", { name: "Save changes" }).click();
   await expect(page.getByRole("heading", { name: "بررسی رخداد مشکوک" })).toBeVisible();
 
+  await page.getByText("Conversation", { exact: true }).click();
+  await page.getByText("Checklist", { exact: true }).first().click();
   const composer = page.getByLabel("New comment");
   await composer.pressSequentially("نتیجه بررسی آماده است.");
   await page.getByLabel("New checklist item").fill("بررسی نشانی IP");
@@ -164,6 +176,7 @@ test("task text editing remains local, and a failed comment can be retried", asy
   await expect(page.getByText("The server ran into a problem")).toBeVisible();
   await page.getByRole("button", { name: "Try again" }).click();
   await expect(composer).toHaveValue("نتیجه بررسی آماده است.");
+  await page.getByText("Checklist", { exact: true }).first().click();
   await expect(page.getByLabel("New checklist item")).toHaveValue("بررسی نشانی IP");
 
   await page.route(`**/api/tasks/${task.id}/comments`, (route) => route.fulfill({ status: 503, contentType: "application/json", body: JSON.stringify({ error: "Temporary test failure" }) }), { times: 1 });
@@ -178,16 +191,21 @@ test("task text editing remains local, and a failed comment can be retried", asy
   await comment.getByRole("button", { name: "Edit" }).click();
   const commentEditor = page.locator(".comment-edit");
   await commentEditor.getByLabel("Edit comment").fill("نتیجه نهایی ثبت شد.");
+  await prepareReport(page);
   failDetailsOnce = true;
   await page.getByRole("button", { name: "Submit for review" }).click();
-  await page.getByRole("dialog", { name: "Review handover" }).getByRole("button", { name: "Send for review" }).click();
   await expect(page.getByText("The server ran into a problem")).toBeVisible();
   await page.getByRole("button", { name: "Try again" }).click();
   await expect(commentEditor.getByLabel("Edit comment")).toHaveValue("نتیجه نهایی ثبت شد.");
   await commentEditor.getByRole("button", { name: "Save", exact: true }).click();
-  await expect(page.getByText("نتیجه نهایی ثبت شد.")).toBeVisible();
+  await expect(commentEditor).toHaveCount(0);
+  await expect(page.locator(".comment p").getByText("نتیجه نهایی ثبت شد.")).toBeVisible();
+  await page.getByText("Checklist", { exact: true }).first().click();
   await page.getByLabel("New checklist item").press("Enter");
+  await expect(page.getByText("بررسی نشانی IP")).toBeVisible();
   await page.reload();
+  await page.getByText("Conversation", { exact: true }).click();
+  await page.getByText("Checklist", { exact: true }).first().click();
   await expect(page.getByText("نتیجه نهایی ثبت شد.")).toBeVisible();
   await expect(page.getByText("بررسی نشانی IP")).toBeVisible();
 });

@@ -3,7 +3,8 @@
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import AssigneePicker from "@/components/ui/AssigneePicker";
-import TaskWorkPanel from "@/components/screens/TaskWorkPanel";
+import TaskWorkPanel, { TaskReportSummary } from "@/components/screens/TaskWorkPanel";
+import TaskReviewPanel from "@/components/screens/TaskReviewPanel";
 import { useEffect, useRef, useState } from "react";
 import { api, useApp } from "@/components/AppProvider";
 import { useTaskActions } from "@/components/TaskTable";
@@ -28,9 +29,9 @@ const QUIET = ["cancelled", "blocked"];
 export default function TaskDetail({ id }) {
   const { tasks, updateTask, deleteTask, toast, me, peopleMap, openPopover, members } = useApp();
   const router = useRouter();
-  const { edit, move, isApproving } = useTaskActions();
+  const { edit, move, approve, isApproving } = useTaskActions();
   const t = tasks.find((x) => x.id === id);
-  const { data, loading, error, setData, reload } = useFetch(t ? `/api/tasks/${id}` : null);
+  const { data, loading, error, setData, reload } = useFetch(t ? `/api/tasks/${id}` : null, { keepDataOnError: true });
   const [editing, setEditing] = useState(null);
   const [uploading, setUploading] = useState(false);
   const [dragOver, setDragOver] = useState(false);
@@ -40,6 +41,7 @@ export default function TaskDetail({ id }) {
   const [deleting, setDeleting] = useState(false);
   const [deleteError, setDeleteError] = useState("");
   const [posting, setPosting] = useState(false);
+  const [commentsOpen, setCommentsOpen] = useState(false);
   const [commentReset, setCommentReset] = useState(0);
   const fileRef = useRef(null);
   const commentDraftRef = useRef("");
@@ -118,6 +120,33 @@ export default function TaskDetail({ id }) {
   const approving = isApproving(t.id);
   const reviewer = d?.approvedBy ? peopleMap[d.approvedBy] : null;
   const reviewed = t.reviewRequired && (!!t.quality || !!d?.approvedBy);
+  const showReviewPanel = !isAssignee && t.status === "review" && transitions.includes("done");
+  const evidenceInFlow = (isAssignee && ["progress", "review"].includes(t.status)) || showReviewPanel;
+  const showComments = () => {
+    setCommentsOpen(true);
+    window.setTimeout(() => document.querySelector(editingCommentRef.current ? ".comment-edit textarea" : "#task-comment-input")?.focus(), 0);
+  };
+  const evidence = d && (
+    <section className="task-evidence" aria-label="Attachments">
+      <SectionHeader icon="clip" title="Attachments" meta={d.attachments.length || null} actions={canEdit && <>
+        <input ref={fileRef} type="file" hidden onChange={(e) => upload(e.target.files[0])} aria-label="Upload attachment" data-testid="attach-input" />
+        <button type="button" className="btn btn-ghost btn-sm" disabled={uploading} aria-busy={uploading} onClick={() => fileRef.current?.click()}><Icon name="clip" />Attach file</button>
+      </>} />
+      {d.attachments.length === 0 ? (canEdit ? (
+        <button type="button" className={`dropzone ${dragOver ? "over" : ""}`} disabled={uploading} onClick={() => fileRef.current?.click()}
+          onDragOver={(e) => { e.preventDefault(); setDragOver(true); }} onDragLeave={(e) => { if (!e.currentTarget.contains(e.relatedTarget)) setDragOver(false); }}
+          onDrop={(e) => { e.preventDefault(); setDragOver(false); const f = e.dataTransfer.files?.[0]; if (f) upload(f); }}>
+          <span className="glyph"><Icon name="clip" /></span><span><b>No files yet — drop one here or browse</b><small>Optional · up to 20 MB per file</small></span>
+        </button>
+      ) : <p className="muted small">No files attached.</p>) : <div className="files">{d.attachments.map((a) => (
+        <span key={a.id} className="file"><span className="ext" data-kind={EXT_KIND[ext(a.name)]} aria-hidden="true">{ext(a.name)}</span>
+          <a href={`/api/tasks/${id}/attachments/${a.id}`} download>{a.name}<small>{size(a.size)} · {peopleMap[a.by]?.name}</small></a>
+          {canEdit && <button type="button" className="btn btn-ghost icon-btn btn-sm" aria-label={`Remove ${a.name}`} data-tooltip="Remove file"
+            onClick={() => setConfirm({ title: `Remove ${a.name}?`, body: "The file is deleted for everyone on this task.", action: "Remove file", run: () => run(`/api/tasks/${id}/attachments/${a.id}`, { method: "DELETE" }) })}><Icon name="x" /></button>}
+        </span>
+      ))}</div>}
+    </section>
+  );
 
   return (
     <div className="detail">
@@ -133,7 +162,7 @@ export default function TaskDetail({ id }) {
             {manager && !closed && !editingDetails && (
               <button type="button" className="btn btn-secondary btn-sm" disabled={approving} onClick={() => setEditingDetails(true)}><Icon name="edit" />Edit</button>
             )}
-            {(!isAssignee || t.status === "done") && [...main.slice(1), ...main.slice(0, 1)].map((s) => (
+            {(!isAssignee || t.status === "done") && !(t.status === "review" && !isAssignee) && [...main.slice(1), ...main.slice(0, 1)].map((s) => (
               <button key={s} type="button" className={`btn btn-sm ${s === main[0] && t.status !== "done" ? "btn-primary" : "btn-secondary"}`} disabled={approving} aria-busy={approving && s === "done"} onClick={(e) => doMove(e.currentTarget, s)}>
                 {approving && s === "done" ? "Approving…" : actionLabel(t.status, s) ?? STATUS[s]}
               </button>
@@ -170,28 +199,26 @@ export default function TaskDetail({ id }) {
             <div className="task-brief-label"><Icon name="tasks" />Task brief</div>
             <h1 dir="auto">{t.title}</h1>
             <p className="prose" dir="auto">{t.description || <span className="muted">No description yet.</span>}</p>
+            <div className="task-brief-meta"><Status s={t.status} /><span>Priority <Priority p={t.prio} /></span><span>Deadline <Due task={t} /></span><span>Assignee <Who id={t.a} /></span></div>
           </div>
         )}
 
-        {isAssignee && t.status !== "done" && <TaskWorkPanel key={id} task={t} details={d} transitions={transitions} ready={!!data} onMove={doMove} setData={setData} commentDraftRef={commentDraftRef} editingCommentRef={editingCommentRef} posting={posting} />}
-
-        {t.status === "review" && !isAssignee && (
-          <div className="callout" style={{ "--tone": "var(--violet)" }} role="status">
-            <strong>Waiting for review</strong>
-            <span>{transitions.includes("done") ? "Approve it with a quality rating, or return it to the assignee with a comment." : "A manager will approve it or return it for changes."}</span>
-          </div>
-        )}
+        {isAssignee && d && t.status !== "done" && <TaskWorkPanel key={id} task={t} details={d} transitions={transitions} onMove={doMove} setData={setData} commentDraftRef={commentDraftRef} editingCommentRef={editingCommentRef} posting={posting} uploading={uploading} attachments={evidenceInFlow ? evidence : null} onShowComments={showComments} />}
+        {showReviewPanel && d && <TaskReviewPanel key={id} task={t} details={d} setData={setData} onApprove={(task, quality, cx) => approve(task, quality, cx, (result) => setData((current) => current ? { ...current, details: result.details, transitions: result.transitions } : current))} approving={approving} attachments={evidence} />}
         {t.status === "returned" && !isAssignee && (
           <div className="callout" style={{ "--tone": "var(--warning)" }} role="status">
             <strong>Returned for changes</strong>
-            <span>Check the comments below, then resume work and submit it again.</span>
+            <span>Waiting for the assignee to update and resubmit the report.</span>
           </div>
         )}
+        {d && (t.status === "done" || (!isAssignee && t.status !== "review")) && <details className="task-extra"><summary><span>Work report</span><span>{d.report.workPerformed || d.report.outcome ? "View report" : "No structured report"}</span></summary><div className="task-extra-body"><TaskReportSummary task={t} details={d} /></div></details>}
         {loading && !d ? <div className="detail-section"><Loading label="Loading task details" rows={5} /></div> : error ? (
           <div className="detail-section panel"><ErrorState error={error} title="Couldn't load task details" onRetry={reload} compact /></div>
         ) : d && (
           <>
-            <section className="detail-section task-surface task-conversation" aria-label="Comments">
+            <details className="task-extra" open={commentsOpen} onToggle={(e) => setCommentsOpen(e.currentTarget.open)}>
+              <summary><span>Conversation</span><span>{d.comments.length} {d.comments.length === 1 ? "comment" : "comments"}</span></summary>
+              <section className="task-extra-body task-conversation" aria-label="Comments">
               <SectionHeader icon="chat" title="Comments" meta={d.comments.length || null} />
               {!d.comments.length && <p className="conversation-empty">No comments yet.</p>}
               {d.comments.map((c) => (
@@ -214,46 +241,13 @@ export default function TaskDetail({ id }) {
                 </div>
               ))}
               <CommentComposer draftRef={commentDraftRef} onPost={postComment} posting={posting} resetVersion={commentReset} />
-            </section>
+              </section>
+            </details>
 
-            <section className="detail-section task-surface" aria-label="Attachments">
-              <SectionHeader
-                icon="clip"
-                title="Attachments"
-                meta={d.attachments.length || null}
-                actions={canEdit && (
-                  <>
-                    <input ref={fileRef} type="file" hidden onChange={(e) => upload(e.target.files[0])} aria-label="Upload attachment" data-testid="attach-input" />
-                    <button type="button" className="btn btn-ghost btn-sm" disabled={uploading} aria-busy={uploading} onClick={() => fileRef.current.click()}><Icon name="clip" />Attach file</button>
-                  </>
-                )}
-              />
-              {d.attachments.length === 0 ? (canEdit ? (
-                <button type="button" className={`dropzone ${dragOver ? "over" : ""}`} disabled={uploading} onClick={() => fileRef.current.click()}
-                  onDragOver={(e) => { e.preventDefault(); setDragOver(true); }} onDragLeave={(e) => { if (!e.currentTarget.contains(e.relatedTarget)) setDragOver(false); }}
-                  onDrop={(e) => { e.preventDefault(); setDragOver(false); const f = e.dataTransfer.files?.[0]; if (f) upload(f); }}>
-                  <span className="glyph"><Icon name="clip" /></span>
-                  <span><b>No files yet — drop one here or browse</b><small>Reports, exports or evidence, up to 20 MB each</small></span>
-                </button>
-              ) : <p className="muted small">No files yet.</p>) : (
-                <div className="files">
-                  {d.attachments.map((a) => (
-                    <span key={a.id} className="file">
-                      <span className="ext" data-kind={EXT_KIND[ext(a.name)]} aria-hidden="true">{ext(a.name)}</span>
-                      <a href={`/api/tasks/${id}/attachments/${a.id}`} download>{a.name}<small>{size(a.size)} · {peopleMap[a.by]?.name}</small></a>
-                      {canEdit && (
-                        <button type="button" className="btn btn-ghost icon-btn btn-sm" aria-label={`Remove ${a.name}`} data-tooltip="Remove file"
-                          onClick={() => setConfirm({ title: `Remove ${a.name}?`, body: "The file is deleted for everyone on this task.", action: "Remove file", run: () => run(`/api/tasks/${id}/attachments/${a.id}`, { method: "DELETE" }) })}>
-                          <Icon name="x" />
-                        </button>
-                      )}
-                    </span>
-                  ))}
-                </div>
-              )}
-            </section>
+            {!evidenceInFlow && <details className="task-extra"><summary><span>Attachments</span><span>{d.attachments.length} files</span></summary><div className="task-extra-body">{evidence}</div></details>}
 
-            <section className="detail-section task-surface" aria-label="Checklist">
+            <details className="task-extra"><summary><span>Checklist</span><span>{doneCount} / {d.checklist.length} completed</span></summary>
+            <section className="task-extra-body" aria-label="Checklist">
               <SectionHeader icon="checkCircle" title="Checklist" meta={d.checklist.length ? `${doneCount} of ${d.checklist.length}` : null}>
                 {d.checklist.length > 0 && <span className="progress ok" style={{ width: 88 }} role="progressbar" aria-label="Checklist progress" aria-valuenow={doneCount} aria-valuemin={0} aria-valuemax={d.checklist.length}><span style={{ width: `${(doneCount / d.checklist.length) * 100}%` }} /></span>}
               </SectionHeader>
@@ -269,13 +263,13 @@ export default function TaskDetail({ id }) {
                 <ChecklistAdder draftRef={checklistDraftRef} onAdd={(label) => run(`/api/tasks/${id}/checklist`, { method: "POST", body: { label } })} />
               )}
               {!d.checklist.length && (!canEdit || closed) && <p className="muted small">No checklist for this task.</p>}
-            </section>
+            </section></details>
           </>
         )}
       </div>
 
       <aside className="detail-side" aria-label="Task properties">
-        <div className="task-properties-title"><Icon name="list" /><span>Task overview</span></div>
+        <details className="task-overview"><summary><Icon name="list" /><span>Task overview & activity</span></summary>
         {!transitions.length && data && <p className="side-note">{t.status === "review" ? "Waiting for a reviewer." : closed ? "This task is closed." : "No workflow actions are available to you."}</p>}
         <dl className="kv">
           <dt>Status</dt><dd>{isAssignee ? <Status s={t.status} /> : <span className="cell-edit" role="button" tabIndex={0} aria-label={`Status: ${STATUS[t.status]}. Change status`} onClick={(e) => edit(e.currentTarget, "status", t)} onKeyDown={(e) => (e.key === "Enter" || e.key === " ") && (e.preventDefault(), edit(e.currentTarget, "status", t))}><Status s={t.status} /></span>}</dd>
@@ -310,6 +304,8 @@ export default function TaskDetail({ id }) {
         <ol className="timeline" data-testid="activity">
           {d?.events.length ? d.events.map((e) => <li key={e.id}><b>{peopleMap[e.by]?.name ?? "System"}</b> {e.text}<time>{when(e.at)}</time></li>) : <li>No activity yet.</li>}
         </ol>
+        {!!d?.reviewReturns.length && <><div className="side-h">Review feedback</div><ol className="task-return-history">{d.reviewReturns.map((item) => <li key={item.id}><strong>{peopleMap[item.by]?.name ?? "Manager"}</strong><time>{when(item.at)}</time><p dir="auto">{item.reason}</p></li>)}</ol></>}
+        </details>
       </aside>
 
       {confirm && (

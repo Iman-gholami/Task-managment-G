@@ -6,8 +6,9 @@ import { api } from "@/components/AppProvider";
 /**
  * Loads JSON from `url` (skips when null). Returns { data, error, loading, reload, setData }.
  * `error` is the ApiError (with `status` / `kind`), so the UI can tell permission, network and server failures apart.
+ * `keepDataOnError` keeps the current URL's data during a failed refresh so an active editor is not unmounted.
  */
-export default function useFetch(url) {
+export default function useFetch(url, { keepDataOnError = false } = {}) {
   const [state, setState] = useState({ data: null, error: null, loading: !!url, url: null });
   const latest = useRef(url);
   latest.current = url;
@@ -21,9 +22,11 @@ export default function useFetch(url) {
       const data = await api(url);
       if (latest.current === url) setState({ data, error: null, loading: false, url });
     } catch (e) {
-      if (latest.current === url) setState({ data: null, error: e, loading: false, url });
+      if (latest.current === url) setState((current) => keepDataOnError && current.url === url && current.data
+        ? { ...current, error: e, loading: false }
+        : { data: null, error: e, loading: false, url });
     }
-  }, [url]);
+  }, [url, keepDataOnError]);
 
   useEffect(() => { load(); }, [load]);
   const setData = useCallback((fn) => setState((s) => ({ ...s, data: typeof fn === "function" ? fn(s.data) : fn })), []);
