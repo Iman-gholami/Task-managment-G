@@ -95,6 +95,8 @@ Semantic styles (`--type-*` font shorthands): display 28/600 (sign-in heading 32
 
 **Persian screens.** The shell stays English; Shift Schedule, Shift changes and Analytics are Persian and right-to-left (`dir="rtl"` on the page). Analytics charts (ECharts) draw in a left-to-right box and wrap every label in a right-to-left embedding, so mixed Persian/Latin text stays in order; category labels sit on the right and bars grow leftwards. `styles/rtl.css` redefines every `--type-*` token under `[dir="rtl"]` on Vazirmatn, so these screens keep the same hierarchy with no screen-specific sizes: labels and captions go up half a step (12.5px), line heights open to 1.6–1.75, and there is no uppercase or tracking. Shared components (selects, search, dialogs, panel actions) are mirrored there too. Use logical properties (`margin-inline-start`, `text-align: start`) in RTL screen styles; month navigation puts *previous* on the right.
 
+The shift calendar uses neutral, compact day cells that grow to fit their shift markers, with an outline for the selected day. The selected-day roster and expanded monthly statistics use dividers instead of nested coloured cards; shift colours identify categories and center closures remain distinct.
+
 ### Spacing, radius, sizing, motion
 - **Spacing:** 4, 8, 12, 16, 20, 24, 32, 40, 48, 64 (`--s-1` … `--s-16`).
 - **Radius:** 4 (checkbox, kbd, badges) · 6 (buttons, inputs, menu items) · 8 (segmented tracks, tiles, brand mark) · 12 (cards, panels, popovers) · 14 (main sheet, dialogs) · 20 (sign-in hero).
