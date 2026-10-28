@@ -25,7 +25,9 @@ The Security Department's internal work tool: Task Management, SOC Shift Logs, a
 ### Shift logs
 Staff scheduled for SOC shifts can complete a Shift Log on the assigned day: SOC L1/L2/L3 analysts and engineers, plus Design & Automation analysts/engineers. Design & Automation members retain their organisational team and task permissions, but use the **SOC · L3 operational checklist** for shift logs. Staff without a scheduled shift cannot submit a Shift Log; managers view and correct logs through their management screens.
 
-The shift calendar presents all three work shifts side by side in the selected-day summary, while individual off/leave and monthly statistics live in collapsible sections. Managers can edit the roster through a separate editor, selecting staff across the three work shift tabs and saving the day once. Each person can hold only one shift per date; changing or removing a shift after its log has started is rejected transactionally.
+The shift calendar presents all three work shifts together in the selected-day summary, while individual off/leave and monthly statistics live in collapsible sections. Managers can edit the roster through a separate editor, selecting staff across the three work shift tabs and saving the day once. Each person can hold only one shift per date; changing or removing a shift after its log has started is rejected transactionally.
+
+If the calendar cannot be loaded, the page reports the failure instead of presenting an empty roster. Editing that day's roster or center holiday is available again after the schedule is retrieved.
 
 **Center holiday (تعطیلی مرکز)** is a separate whole-center date marker, optionally with a reason. A manager can register or remove it in the selected day's summary. Marking a center holiday highlights the date red, but does not remove or block work shifts, individual absences, or existing shift logs. Managers can still staff the SOC on those dates and retain all previous shift records. Excel import accepts multiple monthly `.xlsx` files with date, until-20:00, normal attendance, off, leave and notes columns, previews user mappings/conflicts, then atomically replaces only approved dates; explicit «تعطیلی مرکز» notes mark dates red.
 
@@ -59,11 +61,11 @@ A fresh install contains **no sample data** — only one administrator account (
 
 | Setting | Default |
 |---|---|
-| `ADMIN_EMAIL` | `admin@local` |
-| `ADMIN_PASSWORD` | `ChangeMe123!` |
+| `ADMIN_EMAIL` | Required when no active Security Manager exists |
+| `ADMIN_PASSWORD` | Required when no active Security Manager exists |
 | `ADMIN_NAME` | `Administrator` |
 
-Set these before the first start (e.g. `ADMIN_EMAIL=you@company ADMIN_PASSWORD='…' npm start`), or change the password on the **Account** page right after signing in.
+Set these before the first start (e.g. `ADMIN_EMAIL=you@company ADMIN_PASSWORD='…' npm start`). They bootstrap an administrator only if no active Security Manager exists; changing them later does not reset an existing account's password.
 
 **Upgrading from an earlier version:** the demo people (`…@corp.local`), their tasks, shift logs and tickets are removed automatically on the first start. Anything you created yourself is kept. If no Security Manager is left, the administrator account above is created.
 
@@ -80,6 +82,8 @@ Set these before the first start (e.g. `ADMIN_EMAIL=you@company ADMIN_PASSWORD='
 | `PORT` | `3000` | HTTP port |
 | `DATABASE_PATH` | `./data/sentinel.db` | SQLite file location. Back up this file and the `uploads/` folder next to it |
 | `ADMIN_EMAIL` / `ADMIN_PASSWORD` / `ADMIN_NAME` | see above | Built-in administrator (created only when no Security Manager exists) |
+
+For a separate preview database at `test-data/sentinel.db`, `scripts/configure-preview-admin.cjs --apply` can configure `admin@local` as a Security Manager. It reads the password from standard input, backs up the database before changing it, and refuses to modify an inactive account or one with another role. It does not act on the application's default database.
 | `COOKIE_SECURE` | `false` | Set to `true` when serving over HTTPS |
 
 ## Run on your server

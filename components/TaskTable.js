@@ -2,8 +2,8 @@
 
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { Fragment } from "react";
-import { useApp } from "@/components/AppProvider";
+import { Fragment, useRef, useState } from "react";
+import { api, useApp } from "@/components/AppProvider";
 import Icon from "@/components/ui/Icon";
 import { Complexity, Due, Priority, Quality, Status, Who } from "@/components/ui/indicators";
 import { EmptyState } from "@/components/ui/states";
@@ -32,9 +32,41 @@ const approvalComplexityItems = (task) => [1, 2, 3, 4].map((cx) => ({
  * Only transitions the current user is allowed to make are offered; approving asks for quality.
  */
 export function useTaskActions() {
-  const { openPopover, updateTask, toast, me } = useApp();
+  const { openPopover, updateTask, toast, me, dispatch } = useApp();
+  const pendingRef = useRef(new Set());
+  const [pendingApprovals, setPendingApprovals] = useState(() => new Set());
 
-  const move = async (anchor, task, to) => {
+  const applyApproval = async (task, quality, cx, onUpdated) => {
+    if (pendingRef.current.has(task.id)) return;
+    pendingRef.current.add(task.id);
+    setPendingApprovals(new Set(pendingRef.current));
+    const sync = (result) => {
+      onUpdated?.(result);
+      dispatch({ type: "task/update", id: task.id, patch: result.task });
+    };
+    try {
+      const result = await api(`/api/tasks/${task.id}`, { method: "PATCH", body: { status: "done", quality, cx } });
+      sync(result);
+      toast(`${task.id} approved · ${QUAL[quality]} · ${CX[cx]}`);
+    } catch (error) {
+      if (error.kind === "network" || error.status >= 500 || error.status === 409) {
+        try {
+          const current = await api(`/api/tasks/${task.id}`);
+          sync(current);
+          if (current.task.status === "done") toast(`${task.id} is ${current.task.reviewRequired && current.task.quality ? "approved" : "completed"}`, "info");
+          else toast(error.status === 409 ? error.message : "Approval could not be confirmed. Check the current task before trying again.", "error");
+        } catch {
+          toast("Approval could not be confirmed. Refresh the task before trying again.", "error");
+        }
+      } else toast(error.message, "error");
+    } finally {
+      pendingRef.current.delete(task.id);
+      setPendingApprovals(new Set(pendingRef.current));
+    }
+  };
+
+  const move = async (anchor, task, to, onUpdated) => {
+    if (pendingRef.current.has(task.id)) return;
     if (task.status === "review" && to === "done") {
       return openPopover(anchor, {
         title: "Approve with quality",
@@ -48,9 +80,7 @@ export function useTaskActions() {
               ? <div className="muted small" style={{ padding: "0 12px 8px" }}>Created by the assignee — check the complexity</div>
               : null,
             items: approvalComplexityItems(task),
-            onPick: async (cx) => {
-              if (await updateTask(task, { status: "done", quality, cx })) toast(`${task.id} approved · ${QUAL[quality]} · ${CX[cx]}`);
-            },
+            onPick: (cx) => applyApproval(task, quality, cx, onUpdated),
           });
         },
       });
@@ -75,7 +105,7 @@ export function useTaskActions() {
     });
   };
 
-  return { edit, move };
+  return { edit, move, isApproving: (id) => pendingApprovals.has(id) };
 }
 
 /** Back-compat alias used by keyboard shortcuts. */

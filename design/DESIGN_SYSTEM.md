@@ -28,7 +28,8 @@ only the colours change.
 - **Signal**: one accent per theme (teal, gold or violet) for primary actions, the active navigation item, links, focus rings and data emphasis. Because nothing else uses it, anything in the accent colour is actionable or "the latest value".
 - **Signature gradient**: the accent runs into a second stop (`--accent`) as one 135° gradient. It marks the brand mark, primary buttons, the active-page bar, checked controls, progress fills and the latest chart bar — never text that has to be read, and never large areas.
 - **Light, not decoration**: a faint ambient glow in the accent colour sits behind the app, at the top of the content sheet and in the corner of KPI cards. It is always behind opaque cards, so it never changes text contrast.
-- **Depth from layering**: in the dark themes each level is a step lighter — app background → content sheet → cards → insets → menus — with a 1px top highlight (`--edge`) on cards. In the light theme cards get a soft two-layer shadow (`--shadow-card`). Menus, toasts and most dialog scrims blur what is behind them. The task workspace uses a tinted scrim without blur to keep long editing sessions responsive.
+- **Depth from layering**: in the dark themes each level is a step lighter — app background → content sheet → cards → insets → menus — with a 1px top highlight (`--edge`) on cards. In the light theme cards get a soft two-layer shadow (`--shadow-card`). Menus, toasts and most dialog scrims blur what is behind them. Task creation and assignee handoff use unblurred scrims to keep the workspace clear and responsive.
+- **Task outcome**: a closed task leads with a neutral outcome panel and a success check, showing the recorded review and completion facts. Reopen is secondary to the outcome; approval is shown only after the server confirms the state.
 - **One typeface per script**: Geist (UI) with tabular numbers for all figures; Geist Mono only for IDs, ticket numbers and references. Persian (RTL) screens use Vazirmatn through the same type tokens (see *Persian screens* below). (The earlier display serif was removed: its condensed digits made "11" read as "ll".)
 
 ---
@@ -94,6 +95,8 @@ Each theme is one block in `tokens.css` (`<html data-theme="…">`) that defines
 Semantic styles (`--type-*` font shorthands): display 28/600 (sign-in heading 32) · page title 24/600 · section 15/600 · card title 13/600 · body 14/400 · prose 15/1.6 (descriptions, comments) · body-sm 13 · table 13 · label 12/500 · caption 12 · overline 11/500 uppercase · KPI 28/600 tabular. Weights 400/500/600 only.
 
 **Persian screens.** The shell stays English; Shift Schedule, Shift changes and Analytics are Persian and right-to-left (`dir="rtl"` on the page). Analytics charts (ECharts) draw in a left-to-right box and wrap every label in a right-to-left embedding, so mixed Persian/Latin text stays in order; category labels sit on the right and bars grow leftwards. `styles/rtl.css` redefines every `--type-*` token under `[dir="rtl"]` on Vazirmatn, so these screens keep the same hierarchy with no screen-specific sizes: labels and captions go up half a step (12.5px), line heights open to 1.6–1.75, and there is no uppercase or tracking. Shared components (selects, search, dialogs, panel actions) are mirrored there too. Use logical properties (`margin-inline-start`, `text-align: start`) in RTL screen styles; month navigation puts *previous* on the right.
+
+The shift calendar uses neutral, compact day cells that grow to fit their shift markers, with an outline for the selected day. The selected-day roster and expanded monthly statistics use dividers instead of nested coloured cards; shift colours identify categories and center closures remain distinct.
 
 ### Spacing, radius, sizing, motion
 - **Spacing:** 4, 8, 12, 16, 20, 24, 32, 40, 48, 64 (`--s-1` … `--s-16`).
@@ -164,8 +167,8 @@ Status, priority and complexity each use a different shape, so none depends on c
 | Pattern | Rule |
 |---|---|
 | Progressive disclosure | Long attention lists show 6 rows then "Show all"; issue details and ticket entry open inline. |
-| Inline editing | Status, priority, hours, IOC count, checklist and tickets are edited in place and saved immediately. |
-| Task handoff | The task workspace groups the brief, assignment and selected files, and labels the details and confirmation steps. Its editing controls use a 14px body size and taller input targets. Selected files and the task appear to the assignee together; if no files are selected, the review says so. |
+| Inline editing | Status, priority, IOC count, checklist and tickets are edited in place and saved immediately. Assignees explicitly save total task hours, or include the entered total when they hand over their work. |
+| Task handoff | The creation workspace groups the brief, assignment and selected files. The assignee workspace groups status, explicitly saved total hours and the next workflow action; a handover summary shows posted comments, files and checklist progress before review or direct completion. Unposted comment drafts are called out and remain editable. Hours and a handover status are sent together. |
 | Drop to attach | A task with no files shows one dashed drop zone: click to browse or drop a file onto it (it lights up while a file is over it). |
 | Confirmation | Toasts confirm; dialogs confirm destructive actions (remove member, delete task, delete comment, remove file). The task draft asks before discarding unsaved details. |
 | Autosave | The Shift Log shows "Autosaved / Saving… / Not saved" as a live status. |

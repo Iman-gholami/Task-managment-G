@@ -279,6 +279,7 @@ test.describe("task workflow", () => {
     await page.getByRole("button", { name: "Start" }).click();
     await expect(page.locator(".detail-side .status").first()).toHaveText("In Progress");
     await page.getByRole("button", { name: "Submit for review" }).click();
+    await page.getByRole("dialog", { name: "Review handover" }).getByRole("button", { name: "Send for review" }).click();
     await expect(page.getByText("Waiting for review")).toBeVisible();
     await expect(page.getByRole("button", { name: "Approve" })).toHaveCount(0);
     expect((await page.request.patch(`/api/tasks/${ids.t1}`, { data: { status: "done", quality: "excellent" } })).status()).toBe(409);
@@ -294,7 +295,7 @@ test.describe("task workflow", () => {
     const complexity = page.getByRole("menu", { name: "Confirm complexity" });
     await expect(complexity.getByRole("menuitemradio", { name: /Medium.*current/ })).toBeVisible();
     await complexity.getByRole("menuitemradio", { name: /Complex/ }).click();
-    await expect(page.locator(".callout", { hasText: "Approved ·" })).toBeVisible();
+    await expect(page.getByRole("status", { name: "Task approval" }).getByRole("heading", { name: "Task approved" })).toBeVisible();
     await expect(page.getByTestId("activity")).toContainText("approved it · quality: Excellent · complexity: Medium → Complex");
     await expect(page.getByRole("button", { name: "Approve" })).toHaveCount(0);
     await expect(page.getByRole("button", { name: "Return for changes" })).toHaveCount(0);
@@ -311,6 +312,7 @@ test.describe("task workflow", () => {
     await page.goto(`/tasks/${ids.t2}`);
     await page.getByRole("button", { name: "Start" }).click();
     await page.getByRole("button", { name: "Submit for review" }).click();
+    await page.getByRole("dialog", { name: "Review handover" }).getByRole("button", { name: "Send for review" }).click();
     await expect(page.getByText("Waiting for review")).toBeVisible();
     await signIn(page, "soc");
     await page.goto(`/tasks/${ids.t2}`);
