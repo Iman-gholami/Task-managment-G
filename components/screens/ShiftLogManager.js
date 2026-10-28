@@ -7,8 +7,10 @@ import Icon from "@/components/ui/Icon";
 import { PageHeader, Panel } from "@/components/ui/layout";
 import { EmptyState, Loading } from "@/components/ui/states";
 import { longDate, weekday } from "@/lib/format";
+import { SHIFT_TYPES } from "@/lib/shifts";
 import L2AnalyzedTickets from "@/components/screens/L2AnalyzedTickets";
 import { ManagerReturnedQueue } from "@/components/screens/dashboard/ReturnedShifts";
+import styles from "@/components/screens/ShiftBackfill.module.css";
 
 export default function ShiftLogManager({ initialSelection = {} }) {
   const { members, shiftDate, toast } = useApp();
@@ -20,6 +22,7 @@ export default function ShiftLogManager({ initialSelection = {} }) {
     analysts.some((person) => person.id === selectedUser) ? selectedUser : analysts[0]?.id ?? "");
   const [date, setDate] = useState(() =>
     /^\d{4}-\d{2}-\d{2}$/.test(selectedDate) ? selectedDate : shiftDate);
+  const [showCorrection, setShowCorrection] = useState(() => !!selectedUser && !!selectedDate);
   useEffect(() => {
     // Handle same-page client transitions as well as first SSR navigation.
     if (selectedUser && analysts.some((person) => person.id === selectedUser))
@@ -27,30 +30,55 @@ export default function ShiftLogManager({ initialSelection = {} }) {
     if (/^\d{4}-\d{2}-\d{2}$/.test(selectedDate))
       setDate(selectedDate);
   }, [selectedUser, selectedDate, analysts]);
-  const [log, setLog] = useState(null);
+  useEffect(() => {
+    if (selectedUser && /^\d{4}-\d{2}-\d{2}$/.test(selectedDate)) setShowCorrection(true);
+  }, [selectedUser, selectedDate]);
+  const [logData, setLog] = useState(null);
+  const [resolvedFor, setResolvedFor] = useState("");
   const [missedDays, setMissedDays] = useState([]);
   const [selectedMissed, setSelectedMissed] = useState([]);
   const [backfillBusy, setBackfillBusy] = useState(false);
+  const [backfillAction, setBackfillAction] = useState(null);
+  const [backfillLoading, setBackfillLoading] = useState(!!userId);
   const [returnedRevision, setReturnedRevision] = useState(0);
   const [backfillReason, setBackfillReason] = useState("");
   const [backfillError, setBackfillError] = useState("");
   const backfillRequests = useRef(0);
   const refreshBackfills = useCallback(async () => {
     const request = ++backfillRequests.current;
-    if (!userId) { setMissedDays([]); return; }
+    if (!userId) { setMissedDays([]); setBackfillLoading(false); return; }
+    setBackfillLoading(true);
+    setBackfillError("");
     try {
       const result = await api(`/api/shift/backfill?user=${encodeURIComponent(userId)}`);
-      if (request === backfillRequests.current) setMissedDays(result.days.filter((day) => !day.completed));
+      if (request === backfillRequests.current) {
+        const days = result.days.filter((day) => !day.completed);
+        setMissedDays(days);
+        setSelectedMissed((selected) => selected.filter((date) => days.some((day) => day.date === date)));
+      }
     } catch (e) {
       if (request === backfillRequests.current) setBackfillError(e.message);
+    } finally {
+      if (request === backfillRequests.current) setBackfillLoading(false);
     }
   }, [userId]);
 
-  useEffect(() => { setSelectedMissed([]); setBackfillError(""); refreshBackfills(); }, [refreshBackfills]);
+  useEffect(() => { setSelectedMissed([]); setMissedDays([]); refreshBackfills(); }, [refreshBackfills]);
+
+  const chooseAnalyst = (nextId) => {
+    if (nextId === userId) return;
+    backfillRequests.current += 1;
+    setBackfillLoading(!!nextId);
+    setSelectedMissed([]);
+    setMissedDays([]);
+    setBackfillError("");
+    setBackfillReason("");
+    setUserId(nextId);
+  };
 
   const grantBackfills = async (enabled, dates = selectedMissed) => {
     if (!dates.length || backfillBusy) return;
-    setBackfillBusy(true); setBackfillError("");
+    setBackfillBusy(true); setBackfillAction(enabled ? "return" : "revoke"); setBackfillError("");
     try {
       await api("/api/shift/backfill", { method: "POST",
         body: { userId, dates, enabled, reason: backfillReason.trim() } });
@@ -59,7 +87,7 @@ export default function ShiftLogManager({ initialSelection = {} }) {
       setReturnedRevision((revision) => revision + 1);
       toast(enabled ? "Shift Logs returned to analyst for completion" : "Returned Shift Log access revoked");
     } catch (e) { setBackfillError(e.message); }
-    finally { setBackfillBusy(false); }
+    finally { setBackfillBusy(false); setBackfillAction(null); }
   };
   const [loading, setLoading] = useState(false);
   const [missing, setMissing] = useState(false);
@@ -71,23 +99,27 @@ export default function ShiftLogManager({ initialSelection = {} }) {
 
   const load = useCallback(async () => {
     if (!userId || !date) return;
+    const target = `${userId}|${date}`;
     const request = ++requests.current;
     setLoading(true);
     setMissing(false);
     setLog(null);
     try {
       const data = await api(`/api/shift?user=${encodeURIComponent(userId)}&date=${encodeURIComponent(date)}`);
-      if (request === requests.current) setLog(data);
+      if (request === requests.current && selection.current === target) {
+        setResolvedFor(target);
+        setLog(data);
+      }
     } catch (error) {
-      if (request !== requests.current) return;
-      if (error.status === 404) setMissing(true);
+      if (request !== requests.current || selection.current !== target) return;
+      if (error.status === 404) { setResolvedFor(target); setMissing(true); }
       else toast(error.message, "error");
     } finally {
-      if (request === requests.current) setLoading(false);
+      if (request === requests.current && selection.current === target) setLoading(false);
     }
   }, [userId, date, toast]);
 
-  useEffect(() => { load(); }, [load]);
+  useEffect(() => { if (showCorrection) load(); }, [load, showCorrection]);
 
   const patchActivity = async (activity, patch) => {
     const target = selection.current;
@@ -117,72 +149,94 @@ export default function ShiftLogManager({ initialSelection = {} }) {
   };
 
   const person = analysts.find((member) => member.id === userId);
+  const log = resolvedFor === selection.current ? logData : null;
+  const currentMissing = resolvedFor === selection.current && missing;
   const done = log?.activities.filter((activity) => activity.done).length ?? 0;
   const allDone = !!log?.activities.length && done === log.activities.length;
 
   return (
-    <div className="page mid shift-page">
+    <div className={`page mid shift-page ${styles.managerPage}`}>
       <PageHeader
         title="Shift log corrections"
-        meta={["Manager-only", "Submitted analyst logs stay locked after corrections"]}
+        meta={["Manager-only", "Return missed days or correct a recorded log"]}
       />
 
-      <Panel title="Select a log" meta="Managers can correct recorded logs from any date">
-        <div className="panel-body row" style={{ gap: "var(--s-3)", flexWrap: "wrap" }}>
-          <label className="field" style={{ minWidth: 240 }}>
+      <ManagerReturnedQueue showEmpty refreshKey={returnedRevision} disabled={backfillBusy} onPick={(item) => { chooseAnalyst(item.userId); setDate(item.date); setShowCorrection(true); }} />
+
+      <Panel title="Staff member" meta="Choose whose shift logs you want to manage">
+        <div className={`panel-body ${styles.analystPicker}`}>
+          <label className="field">
             <span className="label">Analyst</span>
-            <select className="input" value={userId} onChange={(event) => setUserId(event.target.value)} aria-label="Analyst">
+            <select className="input" value={userId} disabled={backfillBusy} onChange={(event) => chooseAnalyst(event.target.value)} aria-label="Analyst">
+              {!analysts.length && <option value="">No analysts available</option>}
               {analysts.map((member) => <option key={member.id} value={member.id}>{member.name} · {member.team}</option>)}
             </select>
           </label>
-          <label className="field" style={{ minWidth: 190 }}>
-            <span className="label">Shift date</span>
-            <input className="input" type="date" value={date} onChange={(event) => setDate(event.target.value)} aria-label="Shift date" />
-          </label>
-          <span className="spacer" />
-          <button type="button" className="btn btn-secondary" onClick={load} disabled={loading}><Icon name="clock" />Refresh</button>
         </div>
       </Panel>
 
-      <ManagerReturnedQueue showEmpty refreshKey={returnedRevision} onPick={(item) => { setUserId(item.userId); setDate(item.date); }} />
-
-      <Panel title="Return missed Shift Logs" meta="Only scheduled, unsubmitted past days">
-        <div className="panel-body" style={{ display: "grid", gap: "var(--s-3)" }}>
-          <p className="muted small">Select one or more missed dates and return them to this staff member. They will see the returned count directly on their dashboard and can complete each log. Completed entries leave both pending queues; all grant and revocation events remain in the audit trail.</p>
-          <div style={{ maxHeight: 235, overflowY: "auto", border: "1px solid var(--border)", borderRadius: "var(--r-md)", padding: 8 }}>
-            {!missedDays.length ? <span className="muted small">No past scheduled shifts found in the last 120 days.</span> :
+      <Panel title="Return missed Shift Logs" meta={backfillLoading ? "Loading shifts…" : backfillError ? "Couldn't load shifts" : `${missedDays.length} unsubmitted`}>
+        <div className={`panel-body ${styles.missedBody}`} aria-busy={backfillLoading}>
+          <p className={styles.missedIntro}>Select past scheduled days to return. The analyst can open and complete them from their dashboard.</p>
+          {backfillError ? <p className={styles.backfillError} role="alert">{backfillError} <button type="button" className="btn btn-ghost btn-sm" onClick={refreshBackfills}>Retry</button></p> : (
+          <div className={styles.missedList}>
+            {backfillLoading ? <p className={styles.missedEmpty} role="status">Loading missed shifts…</p> : !userId ? <p className={styles.missedEmpty}>Select an analyst to see missed shifts.</p> :
+              !missedDays.length ? <p className={styles.missedEmpty}>No unsubmitted scheduled shifts in the last 120 days.</p> :
               missedDays.map((day) => (
-                <label key={day.date} className="row" style={{ display: "flex", alignItems: "center", gap: 12, padding: 7 }}>
+                <label key={day.date} className={styles.missedRow}>
                   <input type="checkbox" className="cb" aria-label={`Select missed shift ${day.date}`}
                     checked={selectedMissed.includes(day.date)}
+                    disabled={backfillBusy || (selectedMissed.length >= 31 && !selectedMissed.includes(day.date))}
                     onChange={(e) => setSelectedMissed((prev) =>
                       e.target.checked ? [...prev, day.date] : prev.filter((item) => item !== day.date))} />
-                  <span className="mono" style={{ minWidth: 105 }}>{day.date}</span>
-                  <span className="muted small">{day.shiftType}</span>
-                  <span className={`badge dot ${day.granted ? "info" : ""}`}>{day.granted ? "Returned · awaiting completion" : day.hasLog ? "Incomplete" : "Not recorded"}</span>
+                  <span><strong><time dateTime={day.date}>{longDate(day.date)}</time></strong></span>
+                  <span className="sec small">{SHIFT_TYPES[day.shiftType]?.label ?? day.shiftType}</span>
+                  <span className={`${styles.missedStatus} badge dot ${day.granted ? "info" : ""}`}>
+                    {day.granted ? <><span className={styles.statusLong}>Returned · awaiting completion</span><span className={styles.statusShort}>Returned</span></> : day.hasLog ? "Incomplete" : "Not recorded"}
+                  </span>
                 </label>
               ))}
           </div>
-          <div className="row" style={{ gap: 10, flexWrap: "wrap", alignItems: "center" }}>
-            <input className="input" style={{ flex: "1 1 200px" }} maxLength={500}
-              aria-label="Backfill reason (optional)" placeholder="Reason (optional)" value={backfillReason}
-              onChange={(e) => setBackfillReason(e.target.value)} />
-            <button type="button" className="btn btn-primary btn-sm" disabled={backfillBusy || !selectedMissed.length}
+          )}
+          {selectedMissed.length === 31 && <p className="muted small">You can select up to 31 shifts at a time.</p>}
+          <div className={styles.missedActions}>
+            <label className="field">
+              <span className="label">Reason <span className="muted">(optional)</span></span>
+              <input className="input" maxLength={500} aria-label="Backfill reason (optional)" placeholder="Add a reason" value={backfillReason}
+                onChange={(e) => setBackfillReason(e.target.value)} />
+            </label>
+            <button type="button" className="btn btn-primary" disabled={backfillBusy || backfillLoading || !!backfillError || !selectedMissed.length}
+              aria-busy={backfillAction === "return"}
               onClick={() => grantBackfills(true)}>
               Return selected days ({selectedMissed.length})
             </button>
-            <button type="button" className="btn btn-secondary btn-sm"
-              disabled={backfillBusy || !selectedMissed.length} onClick={() => grantBackfills(false)}>
+            <button type="button" className="btn btn-secondary"
+              aria-busy={backfillAction === "revoke"}
+              disabled={backfillBusy || backfillLoading || !!backfillError || !selectedMissed.length} onClick={() => grantBackfills(false)}>
               Revoke selected
             </button>
           </div>
-          {backfillError && <p role="alert" style={{ color: "var(--danger)" }}>{backfillError}</p>}
         </div>
       </Panel>
 
+      <details id="shift-log-details" className={styles.correction} open={showCorrection} onToggle={(event) => setShowCorrection(event.currentTarget.open)}>
+        <summary className={styles.correctionSummary}>
+          <span className={styles.queueIcon}><Icon name="edit" /></span>
+          <span className={styles.queueHeading}><strong>Review or correct a Shift Log</strong><span>Choose a date to view the recorded log</span></span>
+          <span className={styles.queueAction}>Details <Icon name="down" /></span>
+        </summary>
+        <div className={styles.correctionBody}>
+          <div className={styles.correctionControls}>
+            <label className="field">
+              <span className="label">Shift date</span>
+              <input className="input" type="date" value={date} onChange={(event) => setDate(event.target.value)} aria-label="Shift date" />
+            </label>
+            <button type="button" className="btn btn-secondary" onClick={load} disabled={loading}><Icon name="refresh" />Refresh</button>
+          </div>
+
       {loading ? (
         <div className="panel" style={{ marginTop: "var(--s-4)" }}><Loading label="Loading shift log" rows={6} /></div>
-      ) : missing ? (
+      ) : currentMissing ? (
         <div className="panel" style={{ marginTop: "var(--s-4)" }}>
           <EmptyState compact icon="shift" title="No recorded shift log for this date">
             Viewing a schedule does not create a log. Managers can return past rostered dates so the analyst can enter and complete them.
@@ -243,6 +297,8 @@ export default function ShiftLogManager({ initialSelection = {} }) {
           )}
         </div>
       ) : null}
+        </div>
+      </details>
     </div>
   );
 }

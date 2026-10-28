@@ -196,6 +196,7 @@ test.describe("shift logs for rostered staff", () => {
     await page.goto("/shift/manage");
     await expect(page.locator("h1")).toHaveText("Shift log corrections");
     await page.getByLabel("Analyst").selectOption(ids.sara);
+    await page.getByText("Review or correct a Shift Log").click();
     await expect(page.getByText("Submitted & locked")).toBeVisible();
 
     await signIn(page, "sara");

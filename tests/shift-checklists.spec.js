@@ -290,6 +290,7 @@ test("manager corrections show the log's own checklist version and are stamped",
   await signIn(page, "manager");
   await page.goto("/shift/manage");
   await page.getByLabel("Analyst").selectOption(ids.kian);
+  await page.getByText("Review or correct a Shift Log").click();
   await expect(page.locator(".facts")).toContainText(`${L2} · v2`);
   await expect(page.locator(".act .t").first()).toContainText(L2_ITEMS[0]);
 

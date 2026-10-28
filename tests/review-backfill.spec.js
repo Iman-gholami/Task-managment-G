@@ -58,6 +58,7 @@ test("SOC Manager can bypass review for own task only, and grant four auditable 
 
   await page.goto("/shift/manage");
   await expect(page.getByText("Return missed Shift Logs")).toBeVisible();
+  await expect(page.getByLabel("Shift date")).toBeHidden();
   await page.getByLabel("Analyst").selectOption(analystId);
   await expect(page.getByLabel(`Select missed shift ${dates[0]}`)).toBeVisible();
   for (const date of dates) await page.getByLabel(`Select missed shift ${date}`).check();
@@ -67,6 +68,7 @@ test("SOC Manager can bypass review for own task only, and grant four auditable 
   await expect(page.getByTestId("manager-returned-shifts")).toContainText(people[1].name);
   await page.goto("/dashboard");
   await expect(page.getByTestId("manager-returned-shifts")).toContainText(people[1].name);
+  await page.getByTestId("manager-returned-shifts").locator("summary").click();
   await expect(page.getByTestId(`manager-returned-${analystId}-${dates[0]}`)).toBeVisible();
 
   // The server refuses arbitrary backdating; every authorized date was on the roster.
@@ -80,6 +82,7 @@ test("SOC Manager can bypass review for own task only, and grant four auditable 
   expect((await page.request.get("/api/shift/backfill?scope=pending")).status()).toBe(403);
   await page.goto("/dashboard");
   await expect(page.getByTestId("returned-shifts-card")).toContainText("4 shift logs returned for completion");
+  await page.getByTestId("returned-shifts-card").locator("summary").click();
   for (const date of dates) await expect(page.getByTestId(`returned-shift-${date}`)).toBeVisible();
   expect((await page.request.post("/api/shift/backfill", { data: { userId: analystId, dates, enabled: true } })).status()).toBe(403);
   expect((await page.request.patch("/api/shift", { data: { date: daysAgo(10), completed: true } })).status()).toBe(403);
@@ -108,11 +111,13 @@ test("SOC Manager can bypass review for own task only, and grant four auditable 
   await page.goto("/dashboard");
   await expect(page.getByTestId("manager-returned-shifts")).toContainText(people[1].name);
   await expect(page.getByTestId(`manager-returned-${analystId}-${dates[0]}`)).toHaveCount(0);
+  await page.getByTestId("manager-returned-shifts").locator("summary").click();
   await expect(page.getByTestId(`manager-returned-${analystId}-${dates[1]}`)).toBeVisible();
   const firstRemaining = page.getByTestId(`manager-returned-${analystId}-${dates[1]}`);
   await firstRemaining.click();
   await expect(page).toHaveURL(/\/shift\/manage\?user=/);
   await expect(page.getByLabel("Shift date")).toHaveValue(dates[1]);
+  await expect(page.locator("#shift-log-details")).toBeInViewport();
   expect((await page.request.post("/api/shift/backfill", { data: {
     userId: analystId, dates: [dates[0]], enabled: true,
   } })).status()).toBe(409);
@@ -121,6 +126,7 @@ test("SOC Manager can bypass review for own task only, and grant four auditable 
   } })).status()).toBe(200);
   await page.request.post("/api/auth/login", { data: ADMIN });
   await page.goto("/dashboard");
+  await page.getByTestId("manager-returned-shifts").locator("summary").click();
   await expect(page.getByTestId(`manager-returned-${analystId}-${dates[1]}`)).toHaveCount(0);
   await expect(page.getByTestId(`manager-returned-${analystId}-${dates[2]}`)).toBeVisible();
   await page.request.post("/api/auth/login", { data: { email: people[1].email, password: PW } });
@@ -147,7 +153,8 @@ test("a returned extended L3 shift can be ticked and completed from homepage wit
 
   expect((await page.request.post("/api/auth/login", { data: { email: person.email, password: PW } })).status()).toBe(200);
   await page.goto("/dashboard");
-  await expect(page.getByTestId("returned-shifts-card")).toContainText("1 shift logs returned for completion");
+  await expect(page.getByTestId("returned-shifts-card")).toContainText("1 shift log returned for completion");
+  await page.getByTestId("returned-shifts-card").locator("summary").click();
   await page.getByTestId(`returned-shift-${yesterday}`).click();
   await expect(page.getByRole("heading", { name: "SOC shift duties" })).toBeVisible();
   const historic = (await (await page.request.get(`/api/shift?date=${yesterday}`)).json());
@@ -179,4 +186,81 @@ test("a returned extended L3 shift can be ticked and completed from homepage wit
   await page.request.post("/api/auth/login", { data: ADMIN });
   await page.goto("/dashboard");
   await expect(page.getByTestId(`manager-returned-${userId}-${yesterday}`)).toHaveCount(0);
+});
+
+test("returned shifts stay compact, recover from a loading error, and open on a phone", async ({ page }) => {
+  expect((await page.request.post("/api/auth/login", { data: ADMIN })).status()).toBe(200);
+  const person = { name: "Compact Queue Analyst", email: "compact-queue@test.invalid",
+    team: "SOC · L3", role: "analyst", password: PW };
+  const added = await page.request.post("/api/members", { data: person });
+  expect(added.status()).toBe(201);
+  const userId = (await added.json()).user.id;
+  const dates = Array.from({ length: 8 }, (_, i) => daysAgo(i + 1));
+  for (const date of dates) {
+    expect((await page.request.post("/api/shift/schedule", { data: { userId, date, shiftType: "morning" } })).status()).toBe(201);
+  }
+  expect((await page.request.post("/api/shift/backfill", { data: { userId, dates, enabled: true } })).status()).toBe(200);
+  await page.setViewportSize({ width: 390, height: 844 });
+  await page.goto(`/shift/manage?user=${userId}`);
+  await expect(page.getByLabel(`Select missed shift ${dates[0]}`)).toBeVisible();
+  const managerPanel = page.getByRole("region", { name: "Return missed Shift Logs" });
+  expect(await managerPanel.evaluate((el) => el.scrollWidth <= el.clientWidth + 1)).toBe(true);
+  await expect(page.getByLabel("Shift date")).toBeHidden();
+
+  expect((await page.request.post("/api/auth/login", { data: { email: person.email, password: PW } })).status()).toBe(200);
+
+  // A failed load stays visible and can be retried without losing the queue.
+  await page.route((url) => url.pathname === "/api/shift/backfill" && url.searchParams.get("scope") === "self",
+    (route) => route.fulfill({ status: 503, contentType: "application/json", body: JSON.stringify({ error: "Try again" }) }), { times: 1 });
+  await page.goto("/dashboard");
+  await expect(page.getByTestId("returned-shifts-card")).toContainText("Could not load returned Shift Logs");
+  await page.getByTestId("returned-shifts-card").getByRole("button", { name: "Retry" }).click();
+  const queue = page.getByTestId("returned-shifts-card");
+  await expect(queue).toContainText("8 shift logs returned for completion");
+  await expect(page.getByTestId(`returned-shift-${dates[0]}`)).toBeHidden();
+  const summary = queue.locator("summary");
+  await summary.focus();
+  await summary.press("Enter");
+  await expect(page.getByTestId(`returned-shift-${dates[0]}`)).toBeVisible();
+  await expect(page.getByTestId(`returned-shift-${dates[7]}`)).toHaveCount(0);
+  await queue.getByRole("button", { name: "Show all 8 shifts" }).click();
+  const last = page.getByTestId(`returned-shift-${dates[7]}`);
+  await expect(last).toBeVisible();
+  expect(await queue.evaluate((el) => el.scrollWidth <= el.clientWidth + 1)).toBe(true);
+  await last.click();
+  await expect(page).toHaveURL(new RegExp(`/shift\\?date=${dates[7]}`));
+});
+
+test("switching analysts never shows the previous person's log under the new selection", async ({ page }) => {
+  expect((await page.request.post("/api/auth/login", { data: ADMIN })).status()).toBe(200);
+  const people = [
+    { name: "Correction First Analyst", email: "correction-first@test.invalid" },
+    { name: "Correction Second Analyst", email: "correction-second@test.invalid" },
+  ];
+  for (const person of people) {
+    const response = await page.request.post("/api/members", { data: { ...person, team: "SOC · L3", role: "analyst", password: PW } });
+    expect(response.status()).toBe(201);
+    person.id = (await response.json()).user.id;
+    expect((await page.request.post("/api/shift/schedule", { data: { userId: person.id, date: dateToday(), shiftType: "morning" } })).status()).toBe(201);
+  }
+  for (const person of people) {
+    await page.request.post("/api/auth/login", { data: { email: person.email, password: PW } });
+    expect((await page.request.get("/api/shift")).status()).toBe(200);
+  }
+  await page.request.post("/api/auth/login", { data: ADMIN });
+  await page.goto(`/shift/manage?user=${people[0].id}&date=${dateToday()}`);
+  await expect(page.locator(".facts")).toContainText(people[0].name);
+
+  let release;
+  const gate = new Promise((resolve) => { release = resolve; });
+  await page.route((url) => url.pathname === "/api/shift" && url.searchParams.get("user") === people[1].id,
+    async (route) => { await gate; await route.continue(); }, { times: 1 });
+  try {
+    await page.getByLabel("Analyst").selectOption(people[1].id);
+    await expect(page.locator(".facts")).toHaveCount(0);
+  } finally {
+    release();
+  }
+  await expect(page.locator(".facts")).toContainText(people[1].name);
+  await expect(page.locator(".facts")).not.toContainText(people[0].name);
 });
