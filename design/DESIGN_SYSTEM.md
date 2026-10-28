@@ -164,8 +164,8 @@ Status, priority and complexity each use a different shape, so none depends on c
 | Pattern | Rule |
 |---|---|
 | Progressive disclosure | Long attention lists show 6 rows then "Show all"; issue details and ticket entry open inline. |
-| Inline editing | Status, priority, hours, IOC count, checklist and tickets are edited in place and saved immediately. |
-| Task handoff | The task workspace groups the brief, assignment and selected files, and labels the details and confirmation steps. Its editing controls use a 14px body size and taller input targets. Selected files and the task appear to the assignee together; if no files are selected, the review says so. |
+| Inline editing | Status, priority, IOC count, checklist and tickets are edited in place and saved immediately. Assignees explicitly save total task hours, or include the entered total when they hand over their work. |
+| Task handoff | The creation workspace groups the brief, assignment and selected files. The assignee workspace groups status, explicitly saved total hours and the next workflow action; a handover summary shows posted comments, files and checklist progress before review or direct completion. Unposted comment drafts are called out and remain editable. Hours and a handover status are sent together. |
 | Drop to attach | A task with no files shows one dashed drop zone: click to browse or drop a file onto it (it lights up while a file is over it). |
 | Confirmation | Toasts confirm; dialogs confirm destructive actions (remove member, delete task, delete comment, remove file). The task draft asks before discarding unsaved details. |
 | Autosave | The Shift Log shows "Autosaved / Saving… / Not saved" as a live status. |

@@ -109,6 +109,7 @@ test("the task and selected attachments become visible together, and comments wo
     await expect(analystPage.getByText("Initial triage completed.")).toBeVisible();
     await analystPage.getByRole("button", { name: "Start", exact: true }).click();
     await analystPage.getByRole("button", { name: "Complete task", exact: true }).click();
+    await analystPage.getByRole("dialog", { name: "Review completion" }).getByRole("button", { name: "Confirm completion" }).click();
     await expect(analystPage.getByText("Completed · No review required")).toBeVisible();
   } finally { await analystContext.close(); }
 });
@@ -179,6 +180,7 @@ test("task text editing remains local, and a failed comment can be retried", asy
   await commentEditor.getByLabel("Edit comment").fill("نتیجه نهایی ثبت شد.");
   failDetailsOnce = true;
   await page.getByRole("button", { name: "Submit for review" }).click();
+  await page.getByRole("dialog", { name: "Review handover" }).getByRole("button", { name: "Send for review" }).click();
   await expect(page.getByText("The server ran into a problem")).toBeVisible();
   await page.getByRole("button", { name: "Try again" }).click();
   await expect(commentEditor.getByLabel("Edit comment")).toHaveValue("نتیجه نهایی ثبت شد.");

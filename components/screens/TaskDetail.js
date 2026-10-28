@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import AssigneePicker from "@/components/ui/AssigneePicker";
+import TaskWorkPanel from "@/components/screens/TaskWorkPanel";
 import { useEffect, useRef, useState } from "react";
 import { api, useApp } from "@/components/AppProvider";
 import { useTaskActions } from "@/components/TaskTable";
@@ -60,6 +61,7 @@ export default function TaskDetail({ id }) {
 
   const canEdit = t.a === me.id || isManager(me);
   const manager = isManager(me);
+  const isAssignee = t.a === me.id;
   const assignableMembers = members.filter((person) => person.active !== false && canAssignTask(me, person));
   const closed = t.status === "done" || t.status === "cancelled";
   const d = data?.details;
@@ -126,7 +128,7 @@ export default function TaskDetail({ id }) {
             {manager && !closed && !editingDetails && (
               <button type="button" className="btn btn-secondary btn-sm" onClick={() => setEditingDetails(true)}><Icon name="edit" />Edit</button>
             )}
-            {[...main.slice(1), ...main.slice(0, 1)].map((s) => (
+            {!isAssignee && [...main.slice(1), ...main.slice(0, 1)].map((s) => (
               <button key={s} type="button" className={`btn btn-sm ${s === main[0] ? "btn-primary" : "btn-secondary"}`} onClick={(e) => doMove(e.currentTarget, s)}>
                 {actionLabel(t.status, s) ?? STATUS[s]}
               </button>
@@ -146,6 +148,8 @@ export default function TaskDetail({ id }) {
             <p className="prose" dir="auto">{t.description || <span className="muted">No description yet.</span>}</p>
           </div>
         )}
+
+        {isAssignee && <TaskWorkPanel key={id} task={t} details={d} transitions={transitions} ready={!!data} onMove={doMove} setData={setData} commentDraftRef={commentDraftRef} editingCommentRef={editingCommentRef} posting={posting} />}
 
         {t.status === "review" && (
           <div className="callout" style={{ "--tone": "var(--violet)" }} role="status">
@@ -170,6 +174,31 @@ export default function TaskDetail({ id }) {
           <div className="detail-section panel"><ErrorState error={error} title="Couldn't load task details" onRetry={reload} compact /></div>
         ) : d && (
           <>
+            <section className="detail-section task-surface task-conversation" aria-label="Comments">
+              <SectionHeader icon="chat" title="Comments" meta={d.comments.length || null} />
+              {!d.comments.length && <p className="conversation-empty">No updates yet. Share context or the next step with your team.</p>}
+              {d.comments.map((c) => (
+                <div key={c.id} className="comment">
+                  <Avatar id={c.by} />
+                  <div>
+                    <div className="h">
+                      <b>{peopleMap[c.by]?.name}</b><span className="muted">{when(c.at)}{c.edited ? " · edited" : ""}</span>
+                      {c.by === me.id && editing !== c.id && (
+                        <span className="tools">
+                          <button type="button" className="btn btn-ghost btn-sm" onClick={() => { editingCommentRef.current = { id: c.id, body: c.body }; setEditing(c.id); }}>Edit</button>
+                          <button type="button" className="btn btn-ghost btn-sm danger" onClick={() => setConfirm({ title: "Delete this comment?", body: "It is removed for everyone. This can't be undone.", action: "Delete comment", run: () => run(`/api/tasks/${id}/comments/${c.id}`, { method: "DELETE" }) })}>Delete</button>
+                        </span>
+                      )}
+                    </div>
+                    {editing === c.id ? <CommentEditor commentId={c.id} draftRef={editingCommentRef} onCancel={() => { editingCommentRef.current = null; setEditing(null); }}
+                      onSave={async (body) => { if (await run(`/api/tasks/${id}/comments/${c.id}`, { method: "PATCH", body: { body } })) { editingCommentRef.current = null; setEditing(null); } }} />
+                      : <p dir="auto">{highlight(c.body)}</p>}
+                  </div>
+                </div>
+              ))}
+              <CommentComposer draftRef={commentDraftRef} onPost={postComment} posting={posting} resetVersion={commentReset} />
+            </section>
+
             <section className="detail-section task-surface" aria-label="Attachments">
               <SectionHeader
                 icon="clip"
@@ -224,31 +253,6 @@ export default function TaskDetail({ id }) {
               )}
               {!d.checklist.length && (!canEdit || closed) && <p className="muted small">No checklist for this task.</p>}
             </section>
-
-            <section className="detail-section task-surface task-conversation" aria-label="Comments">
-              <SectionHeader icon="chat" title="Comments" meta={d.comments.length || null} />
-              {!d.comments.length && <p className="conversation-empty">No updates yet. Share context or the next step with your team.</p>}
-              {d.comments.map((c) => (
-                <div key={c.id} className="comment">
-                  <Avatar id={c.by} />
-                  <div>
-                    <div className="h">
-                      <b>{peopleMap[c.by]?.name}</b><span className="muted">{when(c.at)}{c.edited ? " · edited" : ""}</span>
-                      {c.by === me.id && editing !== c.id && (
-                        <span className="tools">
-                          <button type="button" className="btn btn-ghost btn-sm" onClick={() => { editingCommentRef.current = { id: c.id, body: c.body }; setEditing(c.id); }}>Edit</button>
-                          <button type="button" className="btn btn-ghost btn-sm danger" onClick={() => setConfirm({ title: "Delete this comment?", body: "It is removed for everyone. This can't be undone.", action: "Delete comment", run: () => run(`/api/tasks/${id}/comments/${c.id}`, { method: "DELETE" }) })}>Delete</button>
-                        </span>
-                      )}
-                    </div>
-                    {editing === c.id ? <CommentEditor commentId={c.id} draftRef={editingCommentRef} onCancel={() => { editingCommentRef.current = null; setEditing(null); }}
-                      onSave={async (body) => { if (await run(`/api/tasks/${id}/comments/${c.id}`, { method: "PATCH", body: { body } })) { editingCommentRef.current = null; setEditing(null); } }} />
-                      : <p dir="auto">{highlight(c.body)}</p>}
-                  </div>
-                </div>
-              ))}
-              <CommentComposer draftRef={commentDraftRef} onPost={postComment} posting={posting} resetVersion={commentReset} />
-            </section>
           </>
         )}
       </div>
@@ -257,7 +261,7 @@ export default function TaskDetail({ id }) {
         <div className="task-properties-title"><Icon name="list" /><span>Task overview</span></div>
         {!transitions.length && data && <p className="side-note">{t.status === "review" ? "Waiting for a reviewer." : closed ? "This task is closed." : "No workflow actions are available to you."}</p>}
         <dl className="kv">
-          <dt>Status</dt><dd><span className="cell-edit" role="button" tabIndex={0} aria-label={`Status: ${STATUS[t.status]}. Change status`} onClick={(e) => edit(e.currentTarget, "status", t)} onKeyDown={(e) => (e.key === "Enter" || e.key === " ") && (e.preventDefault(), edit(e.currentTarget, "status", t))}><Status s={t.status} /></span></dd>
+          <dt>Status</dt><dd>{isAssignee ? <Status s={t.status} /> : <span className="cell-edit" role="button" tabIndex={0} aria-label={`Status: ${STATUS[t.status]}. Change status`} onClick={(e) => edit(e.currentTarget, "status", t)} onKeyDown={(e) => (e.key === "Enter" || e.key === " ") && (e.preventDefault(), edit(e.currentTarget, "status", t))}><Status s={t.status} /></span>}</dd>
           <dt>Assignee</dt><dd>{canDetail ? <span className="cell-edit" role="button" tabIndex={0} aria-label="Reassign" onClick={(e) => openPopover(e.currentTarget, { label: "Reassign to", title: "Reassign to", width: 340, render: (close) => <div style={{ padding: 12 }}><AssigneePicker id="task-reassign" value={t.a} people={assignableMembers} autoFocus onSelect={(a) => { if (a !== t.a) updateTask(t, { a }); close(); }} /></div> })} onKeyDown={(e) => (e.key === "Enter" || e.key === " ") && (e.preventDefault(), e.currentTarget.click())}><Who id={t.a} /></span> : <Who id={t.a} />}</dd>
           <dt>Priority</dt><dd><span className="cell-edit" role="button" tabIndex={0} aria-label="Change priority" onClick={(e) => edit(e.currentTarget, "prio", t)} onKeyDown={(e) => (e.key === "Enter" || e.key === " ") && (e.preventDefault(), e.currentTarget.click())}><Priority p={t.prio} /></span></dd>
           <dt>Complexity</dt><dd>{canDetail ? <span className="cell-edit" role="button" tabIndex={0} aria-label="Change complexity" onClick={(e) => openPopover(e.currentTarget, { title: "Complexity", items: cxItems(), onPick: (cx) => updateTask(t, { cx }) })} onKeyDown={(e) => (e.key === "Enter" || e.key === " ") && (e.preventDefault(), e.currentTarget.click())}><Complexity c={t.cx} /></span> : <Complexity c={t.cx} />}</dd>
@@ -266,7 +270,7 @@ export default function TaskDetail({ id }) {
             : <Due task={t} />}</dd>
           <dt>Actual hours</dt>
           <dd>
-            {canEdit && !closed ? (
+            {canEdit && !closed && !isAssignee ? (
               <span className="stepper">
                 <button type="button" aria-label="Decrease hours" onClick={() => updateTask(t, { hours: Math.max(0, t.hours - 0.5) })}>−</button>
                 <input aria-label="Actual hours" defaultValue={t.hours} key={t.hours} inputMode="decimal" onBlur={(e) => { const h = Number(e.target.value); if (Number.isFinite(h) && h >= 0 && h !== t.hours) updateTask(t, { hours: h }); else e.target.value = t.hours; }} />
@@ -367,7 +371,8 @@ function CommentComposer({ draftRef, onPost, posting, resetVersion }) {
   const post = () => { if (draft.trim() && !posting) onPost(draft); };
   return (
     <div className="composer">
-      <textarea placeholder="Write an update or handover note…" value={draft} onChange={(e) => { draftRef.current = e.target.value; setDraft(e.target.value); }} aria-label="New comment" dir="auto" maxLength={5000} disabled={posting}
+      <div className="composer-heading"><Icon name="chat" /><span>Share a work update</span></div>
+      <textarea id="task-comment-input" placeholder="What did you find, change or hand over?" value={draft} onChange={(e) => { draftRef.current = e.target.value; setDraft(e.target.value); }} aria-label="New comment" dir="auto" maxLength={5000} disabled={posting}
         onKeyDown={(e) => { if (e.key === "Enter" && (e.metaKey || e.ctrlKey) && !e.nativeEvent.isComposing) { e.preventDefault(); post(); } }} />
       <div className="bar">
         <span className="hint">Visible to everyone who can open this task</span>
