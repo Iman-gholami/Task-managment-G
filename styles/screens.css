@@ -29,6 +29,21 @@
 .detail-side .kv dd .cell-edit { margin: 0 -6px; }
 .detail-side .input[type="date"] { width: 156px; height: var(--control-h-sm); }
 
+/* Task workspace: a distinct brief, grouped work surfaces and a clear activity rail. */
+.task-brief { padding: var(--s-5); border: 1px solid var(--border); border-radius: var(--r-lg); background: var(--surface-card); box-shadow: var(--shadow-card), inset 0 1px 0 var(--edge); }
+.task-brief-label { display: flex; align-items: center; gap: var(--s-2); margin-bottom: var(--s-3); color: var(--link); font: var(--type-label); }
+.task-brief-label svg { width: 15px; height: 15px; }
+.task-brief .prose { max-width: none; white-space: pre-wrap; overflow-wrap: anywhere; }
+.task-surface { margin-top: var(--s-4); padding: var(--s-5); border: 1px solid var(--border); border-radius: var(--r-lg); background: var(--surface-card); box-shadow: var(--shadow-card), inset 0 1px 0 var(--edge); }
+.task-surface .section-head { margin-bottom: var(--s-4); }
+.task-properties-title { display: flex; align-items: center; gap: var(--s-2); margin-bottom: var(--s-5); color: var(--text); font: var(--type-section); }
+.task-properties-title svg { color: var(--primary); }
+.task-conversation .comment { margin-bottom: var(--s-2); padding: var(--s-3); border: 1px solid var(--divider); border-radius: var(--r-md); background: var(--surface-inset); }
+.task-conversation .comment .h .tools { opacity: 1; }
+.conversation-empty { color: var(--text-2); font: var(--type-body-sm); }
+.task-conversation .composer { background: var(--surface-card); }
+.task-delete-error { padding: var(--s-3) var(--s-5); color: var(--danger); font: var(--type-body-sm); }
+
 .files { display: flex; flex-wrap: wrap; gap: var(--s-2); }
 /* Empty attachments: one dashed target that opens the file picker or takes a dropped file. */
 .dropzone { display: flex; align-items: center; gap: var(--s-3); width: 100%; padding: var(--s-4); border: 1px dashed var(--border-strong); border-radius: var(--r-lg); background: transparent; color: var(--text-2); font: var(--type-body-sm); text-align: left; cursor: pointer; transition: border-color var(--t-fast), background-color var(--t-fast), box-shadow var(--t-base); }

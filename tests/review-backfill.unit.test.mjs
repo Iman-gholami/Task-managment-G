@@ -16,6 +16,9 @@ const repo = await import("@/lib/server/repo");
 const { db } = await import("@/lib/server/db");
 const { hashPassword } = await import("@/lib/server/password");
 const { allowedTransitions } = await import("../lib/workflow.js");
+const { canDeleteOwnTask } = await import("../lib/roles.js");
+const { completedTasks, taskReport, resolvePeriod } = await import("@/lib/server/stats");
+const { saveUpload, readUpload } = await import("@/lib/server/uploads");
 const grants = await import("@/lib/server/shift-backfill");
 const daysAgo = (n) => new Date(Date.parse(repo.today() + "T00:00:00Z") - n * 864e5).toISOString().slice(0,10);
 const admin = repo.listUsers().find((u) => u.role === "security_manager");
@@ -23,7 +26,7 @@ const make = (name, role, team) => repo.createMember({ name, role, team,
   email: name.toLowerCase().replaceAll(" ", "-") + "@review-backfill.test",
   passwordHash: hashPassword("Testing-2026!") });
 
-test("review-exempt self tasks transition directly from progress to done, but analyst tasks do not", () => {
+test("review-exempt tasks can finish directly while review remains the default", () => {
   const boss = make("Task SOC Manager", "soc_manager", "SOC");
   const analyst = make("Task L1 Analyst", "analyst", "SOC · L1");
   const self = repo.createTask({ title: "My planned work", a: boss.id, prio: "normal", cx: 2,
@@ -50,6 +53,32 @@ test("review-exempt self tasks transition directly from progress to done, but an
   const assigned = repo.updateTask(transferable.id, { a: analyst.id, team: analyst.team, reviewRequired: 1 }, boss.id);
   assert.equal(assigned.reviewRequired, true);
   assert.ok(!allowedTransitions(analyst, repo.updateTask(assigned.id, { status: "progress" }, analyst.id)).includes("done"));
+});
+
+test("deleting a creator-owned task hides it from lists and reports while retaining its history and files", async () => {
+  const owner = make("Delete Task Owner", "analyst", "SOC · L1");
+  const other = make("Delete Task Other", "analyst", "SOC · L1");
+  const task = repo.createTask({ title: "Owner test task", a: owner.id, prio: "normal", cx: 1 }, owner.id);
+  repo.updateTask(task.id, { status: "done", hours: 2 }, owner.id);
+  repo.addComment(task.id, owner.id, "Retain this audit history");
+  const stored = await saveUpload(new File(["Retained evidence"], "evidence.txt", { type: "text/plain" }));
+  repo.addAttachment({ taskId: task.id, userId: owner.id, name: "evidence.txt", size: 17, mime: "text/plain", path: stored });
+  assert.equal(canDeleteOwnTask(owner, task), true);
+  assert.equal(canDeleteOwnTask(other, task), false);
+  assert.equal(canDeleteOwnTask(admin, task), false);
+  assert.equal(repo.deleteOwnTask(task.id, other.id), false);
+  assert.equal(repo.deleteOwnTask(task.id, owner.id), true);
+  assert.equal(repo.getTask(task.id), null);
+  assert.ok(!repo.listTasks().some((item) => item.id === task.id));
+  assert.ok(!completedTasks(owner.id, resolvePeriod()).some((item) => item.id === task.id));
+  assert.ok(!taskReport(resolvePeriod()).some((item) => item.id === task.id));
+  const retained = db.prepare("SELECT deleted_at, deleted_by FROM tasks WHERE id = ?").get(task.id);
+  assert.ok(retained.deleted_at);
+  assert.equal(retained.deleted_by, owner.id);
+  assert.equal(db.prepare("SELECT COUNT(*) AS n FROM comments WHERE task_id = ?").get(task.id).n, 1);
+  assert.equal(db.prepare("SELECT COUNT(*) AS n FROM attachments WHERE task_id = ?").get(task.id).n, 1);
+  assert.equal(readUpload(stored).toString(), "Retained evidence");
+  assert.equal(db.prepare("SELECT COUNT(*) AS n FROM task_events WHERE task_id = ? AND text = 'deleted the task'").get(task.id).n, 1);
 });
 
 test("manager approves multiple past shifts atomically, with audit, revocation, and submitted locks", () => {

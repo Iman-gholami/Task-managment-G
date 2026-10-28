@@ -8,7 +8,7 @@ const dateToday = () => {
 };
 const daysAgo = (n) => new Date(Date.parse(dateToday() + "T00:00:00Z") - n * 864e5).toISOString().slice(0, 10);
 
-test("SOC Manager can bypass review for own task only, and grant four auditable missed L2 shift days", async ({ page }) => {
+test("SOC Manager can waive review and grant four auditable missed L2 shift days", async ({ page }) => {
   expect((await page.request.post("/api/auth/login", { data: ADMIN })).ok()).toBeTruthy();
   const people = [
     { name: "Backfill Test SOC Manager", email: "soc-backfill@test.invalid", role: "soc_manager", team: "SOC" },
@@ -44,9 +44,10 @@ test("SOC Manager can bypass review for own task only, and grant four auditable 
   expect((await finished.json()).task).toMatchObject({ status: "done", reviewRequired: false, quality: null });
 
   const assigned = await page.request.post("/api/tasks", { data: {
-    title: "Analyst task needs independent review", a: analystId, reviewRequired: false,
+    title: "Analyst task without review", a: analystId, reviewRequired: false,
   } });
-  expect(assigned.status()).toBe(403);
+  expect(assigned.status()).toBe(201);
+  expect((await assigned.json()).task.reviewRequired).toBe(false);
   const normal = await page.request.post("/api/tasks", { data: {
     title: "Analyst work", a: analystId,
   } });
@@ -54,7 +55,7 @@ test("SOC Manager can bypass review for own task only, and grant four auditable 
   const analystTask = (await normal.json()).task;
   expect(analystTask.reviewRequired).toBe(true);
   expect((await page.request.patch(`/api/tasks/${analystTask.id}`,
-    { data: { reviewRequired: false } })).status()).toBe(403);
+    { data: { reviewRequired: false } })).status()).toBe(200);
 
   await page.goto("/shift/manage");
   await expect(page.getByText("Return missed Shift Logs")).toBeVisible();

@@ -1,4 +1,6 @@
 .wrapper { min-width: 0; width: 100%; }
+.overlayOptions { position: relative; }
+.overlayOptions .options { position: absolute; inset-inline: 0; top: 100%; z-index: 2; }
 .input { width: 100%; }
 .options {
   display: grid;
