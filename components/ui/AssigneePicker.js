@@ -3,11 +3,13 @@
 import { useEffect, useId, useMemo, useRef, useState } from "react";
 import styles from "./AssigneePicker.module.css";
 
+const nameCollator = new Intl.Collator("fa");
+
 /**
  * Accessible name/team search for task assignment and reassignment.
  * Free text is not an assignee: an explicit result must be chosen.
  */
-export default function AssigneePicker({ id, value, people, onSelect, onClear, disabled = false, autoFocus = false, ...inputProps }) {
+export default function AssigneePicker({ id, value, people, onSelect, onClear, disabled = false, autoFocus = false, overlayOptions = false, ...inputProps }) {
   const selected = people.find((person) => person.id === value);
   const [search, setSearch] = useState(() => selected?.name ?? "");
   const [open, setOpen] = useState(false);
@@ -19,12 +21,14 @@ export default function AssigneePicker({ id, value, people, onSelect, onClear, d
     if (autoFocus) inputRef.current?.focus();
   }, [autoFocus]);
 
+  // Member data changes rarely; don't re-sort or normalize it for every keystroke.
+  const searchIndex = useMemo(() => people
+    .map((person) => ({ person, text: (person.name + " " + person.team).toLocaleLowerCase() }))
+    .sort((a, b) => nameCollator.compare(a.person.name, b.person.name)), [people]);
   const filtered = useMemo(() => {
     const normalized = search.trim().toLocaleLowerCase();
-    return people
-      .filter((person) => !normalized || (person.name + " " + person.team).toLocaleLowerCase().includes(normalized))
-      .sort((a, b) => a.name.localeCompare(b.name, "fa"));
-  }, [people, search]);
+    return searchIndex.filter((entry) => !normalized || entry.text.includes(normalized)).map((entry) => entry.person);
+  }, [searchIndex, search]);
 
   const choose = (person) => {
     setSearch(person.name);
@@ -50,7 +54,7 @@ export default function AssigneePicker({ id, value, people, onSelect, onClear, d
   };
 
   return (
-    <div className={styles.wrapper} onBlur={(event) => {
+    <div className={`${styles.wrapper} ${overlayOptions ? styles.overlayOptions : ""}`} onBlur={(event) => {
       if (event.currentTarget.contains(event.relatedTarget)) return;
       setOpen(false);
       if (selected) setSearch(selected.name);
@@ -76,6 +80,14 @@ export default function AssigneePicker({ id, value, people, onSelect, onClear, d
           onClear?.();
           setActive(0);
           setOpen(true);
+        }}
+        onKeyDownCapture={(event) => {
+          if (event.key === "Escape" && open) {
+            event.preventDefault();
+            event.stopPropagation();
+            setOpen(false);
+            setSearch(selected?.name ?? "");
+          }
         }}
         onKeyDown={keyDown}
       />

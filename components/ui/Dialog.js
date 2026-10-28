@@ -10,11 +10,11 @@ import Icon from "@/components/ui/Icon";
  * (use while a form has unsaved input); Esc and the close button always work.
  * Children are the body and footer (`.modal-body`, `.modal-foot`).
  */
-export default function Dialog({ label, title, description, onClose, children, width = 520, onKeyDown, dismissible = true, className = "" }) {
+export default function Dialog({ label, title, description, onClose, children, width = 520, onKeyDown, dismissible = true, className = "", scrimClassName = "" }) {
   const ref = useFocusTrap(onClose);
   const descId = useId();
   return (
-    <div className="scrim" onMouseDown={(e) => dismissible && e.target === e.currentTarget && onClose()}>
+    <div className={`scrim ${scrimClassName}`} onMouseDown={(e) => dismissible && e.target === e.currentTarget && onClose()}>
       <div ref={ref} className={`modal ${className}`} role="dialog" aria-modal="true" aria-label={label} aria-describedby={description ? descId : undefined} style={{ maxWidth: width }} onKeyDown={onKeyDown}>
         {title && (
           <div className="modal-head">

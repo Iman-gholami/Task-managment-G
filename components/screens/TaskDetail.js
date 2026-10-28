@@ -30,14 +30,10 @@ export default function TaskDetail({ id }) {
   const { edit, move } = useTaskActions();
   const t = tasks.find((x) => x.id === id);
   const { data, loading, error, setData, reload } = useFetch(t ? `/api/tasks/${id}` : null);
-  const [newItem, setNewItem] = useState("");
-  const [draft, setDraft] = useState("");
-  const [posting, setPosting] = useState(false);
   const [editing, setEditing] = useState(null);
   const [uploading, setUploading] = useState(false);
   const [dragOver, setDragOver] = useState(false);
-  const [editingDetails, setEditingDetails] = useState(null);
-  const [titleError, setTitleError] = useState(false);
+  const [editingDetails, setEditingDetails] = useState(false);
   const [confirm, setConfirm] = useState(null);
   const [deleteConfirm, setDeleteConfirm] = useState(false);
   const [deleting, setDeleting] = useState(false);
@@ -86,18 +82,6 @@ export default function TaskDetail({ id }) {
     if (fileRef.current) fileRef.current.value = "";
   };
 
-  const saveDetails = async () => {
-    if (!editingDetails.title.trim()) { setTitleError(true); return; }
-    if (await updateTask(t, { title: editingDetails.title.trim(), description: editingDetails.description })) { setEditingDetails(null); toast("Task updated"); }
-  };
-
-  const postComment = async () => {
-    if (!draft.trim() || posting) return;
-    setPosting(true);
-    try { if (await run(`/api/tasks/${id}/comments`, { method: "POST", body: { body: draft } })) setDraft(""); }
-    finally { setPosting(false); }
-  };
-
   const removeOwnTask = async () => {
     if (deleting) return;
     setDeleting(true);
@@ -124,7 +108,7 @@ export default function TaskDetail({ id }) {
               <button key={s} type="button" className={`btn btn-ghost btn-sm ${s === "cancelled" ? "danger" : ""}`} onClick={(e) => doMove(e.currentTarget, s)}>{actionLabel(t.status, s)}</button>
             ))}
             {manager && !closed && !editingDetails && (
-              <button type="button" className="btn btn-secondary btn-sm" onClick={() => { setEditingDetails({ title: t.title, description: t.description }); setTitleError(false); }}><Icon name="edit" />Edit</button>
+              <button type="button" className="btn btn-secondary btn-sm" onClick={() => setEditingDetails(true)}><Icon name="edit" />Edit</button>
             )}
             {[...main.slice(1), ...main.slice(0, 1)].map((s) => (
               <button key={s} type="button" className={`btn btn-sm ${s === main[0] ? "btn-primary" : "btn-secondary"}`} onClick={(e) => doMove(e.currentTarget, s)}>
@@ -135,15 +119,10 @@ export default function TaskDetail({ id }) {
         </div>
 
         {editingDetails ? (
-          <div className="detail-edit">
-            <input className="input" value={editingDetails.title} onChange={(e) => { setEditingDetails({ ...editingDetails, title: e.target.value }); setTitleError(false); }} aria-label="Title" aria-invalid={titleError || undefined} aria-describedby={titleError ? "title-error" : undefined} autoFocus maxLength={200} />
-            {titleError && <FieldError id="title-error">A task needs a title.</FieldError>}
-            <textarea className="textarea" style={{ minHeight: 120 }} value={editingDetails.description} onChange={(e) => setEditingDetails({ ...editingDetails, description: e.target.value })} aria-label="Description" placeholder="Describe the work, context and expected outcome" />
-            <div className="row">
-              <button type="button" className="btn btn-primary btn-sm" onClick={saveDetails}>Save changes</button>
-              <button type="button" className="btn btn-ghost btn-sm" onClick={() => setEditingDetails(null)}>Cancel</button>
-            </div>
-          </div>
+          <TaskBriefEditor task={t} onCancel={() => setEditingDetails(false)} onSave={async (patch) => {
+            if (!(await updateTask(t, patch))) return false;
+            setEditingDetails(false); toast("Task updated"); return true;
+          }} />
         ) : (
           <div className="task-brief">
             <div className="task-brief-label"><Icon name="tasks" />Task brief</div>
@@ -225,11 +204,7 @@ export default function TaskDetail({ id }) {
                 </label>
               ))}
               {canEdit && !closed && (
-                <div className="check-item check-add">
-                  <Icon name="plus" />
-                  <input className="input" placeholder="Add an item and press Enter" value={newItem} onChange={(e) => setNewItem(e.target.value)} aria-label="New checklist item"
-                    onKeyDown={async (e) => { if (e.key === "Enter" && newItem.trim()) { const label = newItem.trim(); setNewItem(""); await run(`/api/tasks/${id}/checklist`, { method: "POST", body: { label } }); } }} />
-                </div>
+                <ChecklistAdder onAdd={(label) => run(`/api/tasks/${id}/checklist`, { method: "POST", body: { label } })} />
               )}
               {!d.checklist.length && (!canEdit || closed) && <p className="muted small">No checklist for this task.</p>}
             </section>
@@ -243,33 +218,20 @@ export default function TaskDetail({ id }) {
                   <div>
                     <div className="h">
                       <b>{peopleMap[c.by]?.name}</b><span className="muted">{when(c.at)}{c.edited ? " · edited" : ""}</span>
-                      {c.by === me.id && editing?.id !== c.id && (
+                      {c.by === me.id && editing !== c.id && (
                         <span className="tools">
-                          <button type="button" className="btn btn-ghost btn-sm" onClick={() => setEditing({ id: c.id, body: c.body })}>Edit</button>
+                          <button type="button" className="btn btn-ghost btn-sm" onClick={() => setEditing(c.id)}>Edit</button>
                           <button type="button" className="btn btn-ghost btn-sm danger" onClick={() => setConfirm({ title: "Delete this comment?", body: "It is removed for everyone. This can't be undone.", action: "Delete comment", run: () => run(`/api/tasks/${id}/comments/${c.id}`, { method: "DELETE" }) })}>Delete</button>
                         </span>
                       )}
                     </div>
-                    {editing?.id === c.id ? (
-                      <div className="comment-edit">
-                        <textarea className="textarea" value={editing.body} onChange={(e) => setEditing({ ...editing, body: e.target.value })} aria-label="Edit comment" autoFocus />
-                        <div className="row">
-                          <button type="button" className="btn btn-primary btn-sm" disabled={!editing.body.trim()} onClick={async () => { if (await run(`/api/tasks/${id}/comments/${c.id}`, { method: "PATCH", body: { body: editing.body } })) setEditing(null); }}>Save</button>
-                          <button type="button" className="btn btn-ghost btn-sm" onClick={() => setEditing(null)}>Cancel</button>
-                        </div>
-                      </div>
-                    ) : <p dir="auto">{highlight(c.body)}</p>}
+                    {editing === c.id ? <CommentEditor initialBody={c.body} onCancel={() => setEditing(null)}
+                      onSave={async (body) => { if (await run(`/api/tasks/${id}/comments/${c.id}`, { method: "PATCH", body: { body } })) setEditing(null); }} />
+                      : <p dir="auto">{highlight(c.body)}</p>}
                   </div>
                 </div>
               ))}
-              <div className="composer">
-                <textarea placeholder="Write an update or handover note…" value={draft} onChange={(e) => setDraft(e.target.value)} aria-label="New comment" dir="auto" maxLength={5000} disabled={posting}
-                  onKeyDown={(e) => { if (e.key === "Enter" && (e.metaKey || e.ctrlKey) && !e.nativeEvent.isComposing) { e.preventDefault(); postComment(); } }} />
-                <div className="bar">
-                  <span className="hint">Visible to everyone who can open this task</span>
-                  <button type="button" className="btn btn-primary btn-sm" style={{ marginLeft: "auto" }} disabled={!draft.trim() || posting} aria-busy={posting} onClick={postComment}>Comment <kbd>⌘↵</kbd></button>
-                </div>
-              </div>
+              <CommentComposer onPost={(body) => run(`/api/tasks/${id}/comments`, { method: "POST", body: { body } })} />
             </section>
           </>
         )}
@@ -330,6 +292,73 @@ export default function TaskDetail({ id }) {
           </div>
         </Dialog>
       )}
+    </div>
+  );
+}
+
+// Keep text editing local so each keystroke doesn't redraw the entire task and its activity.
+function TaskBriefEditor({ task, onSave, onCancel }) {
+  const [title, setTitle] = useState(task.title);
+  const [description, setDescription] = useState(task.description);
+  const [titleError, setTitleError] = useState(false);
+  const save = async () => {
+    if (!title.trim()) { setTitleError(true); return; }
+    await onSave({ title: title.trim(), description });
+  };
+  return (
+    <div className="detail-edit">
+      <input className="input" value={title} onChange={(e) => { setTitle(e.target.value); setTitleError(false); }} aria-label="Title" aria-invalid={titleError || undefined} aria-describedby={titleError ? "title-error" : undefined} autoFocus maxLength={200} dir="auto" />
+      {titleError && <FieldError id="title-error">A task needs a title.</FieldError>}
+      <textarea className="textarea" style={{ minHeight: 120 }} value={description} onChange={(e) => setDescription(e.target.value)} aria-label="Description" placeholder="Describe the work, context and expected outcome" dir="auto" />
+      <div className="row">
+        <button type="button" className="btn btn-primary btn-sm" onClick={save}>Save changes</button>
+        <button type="button" className="btn btn-ghost btn-sm" onClick={onCancel}>Cancel</button>
+      </div>
+    </div>
+  );
+}
+
+function ChecklistAdder({ onAdd }) {
+  const [text, setText] = useState("");
+  return (
+    <div className="check-item check-add">
+      <Icon name="plus" />
+      <input className="input" placeholder="Add an item and press Enter" value={text} onChange={(e) => setText(e.target.value)} aria-label="New checklist item" dir="auto"
+        onKeyDown={async (e) => { if (e.key === "Enter" && !e.nativeEvent.isComposing && text.trim()) { e.preventDefault(); const label = text.trim(); setText(""); await onAdd(label); } }} />
+    </div>
+  );
+}
+
+function CommentEditor({ initialBody, onSave, onCancel }) {
+  const [body, setBody] = useState(initialBody);
+  return (
+    <div className="comment-edit">
+      <textarea className="textarea" value={body} onChange={(e) => setBody(e.target.value)} aria-label="Edit comment" dir="auto" autoFocus />
+      <div className="row">
+        <button type="button" className="btn btn-primary btn-sm" disabled={!body.trim()} onClick={() => onSave(body)}>Save</button>
+        <button type="button" className="btn btn-ghost btn-sm" onClick={onCancel}>Cancel</button>
+      </div>
+    </div>
+  );
+}
+
+function CommentComposer({ onPost }) {
+  const [draft, setDraft] = useState("");
+  const [posting, setPosting] = useState(false);
+  const post = async () => {
+    if (!draft.trim() || posting) return;
+    setPosting(true);
+    try { if (await onPost(draft)) setDraft(""); }
+    finally { setPosting(false); }
+  };
+  return (
+    <div className="composer">
+      <textarea placeholder="Write an update or handover note…" value={draft} onChange={(e) => setDraft(e.target.value)} aria-label="New comment" dir="auto" maxLength={5000} disabled={posting}
+        onKeyDown={(e) => { if (e.key === "Enter" && (e.metaKey || e.ctrlKey) && !e.nativeEvent.isComposing) { e.preventDefault(); post(); } }} />
+      <div className="bar">
+        <span className="hint">Visible to everyone who can open this task</span>
+        <button type="button" className="btn btn-primary btn-sm" style={{ marginLeft: "auto" }} disabled={!draft.trim() || posting} aria-busy={posting} onClick={post}>Comment <kbd>⌘↵</kbd></button>
+      </div>
     </div>
   );
 }

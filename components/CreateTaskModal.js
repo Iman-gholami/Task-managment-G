@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useApp } from "@/components/AppProvider";
 import Icon from "@/components/ui/Icon";
 import Dialog from "@/components/ui/Dialog";
@@ -32,13 +32,16 @@ function CreateTaskDialog({ onClose }) {
   const [dragOver, setDragOver] = useState(false);
   const [confirmDiscard, setConfirmDiscard] = useState(false);
   const [preview, setPreview] = useState(false);
+  const [textDirty, setTextDirty] = useState(false);
   const titleRef = useRef(null);
+  const descriptionRef = useRef(null);
+  const textDirtyRef = useRef(false);
   const fileRef = useRef(null);
   const fileSequence = useRef(0);
   const keepRef = useRef(null);
   const previewRef = useRef(null);
   const set = (patch) => setForm((f) => ({ ...f, ...patch }));
-  const dirty = !!(form.title.trim() || form.description.trim() || form.due || form.start !== TODAY ||
+  const dirty = !!(textDirty || form.due || form.start !== TODAY ||
     form.prio !== blank.prio || form.cx !== blank.cx || !form.reviewRequired || (manager && form.a) || files.length);
 
   useEffect(() => { titleRef.current?.focus(); }, []);
@@ -76,15 +79,28 @@ function CreateTaskDialog({ onClose }) {
     setFiles((current) => [...current, ...next.map((file) => ({ key: ++fileSequence.current, file }))]);
   };
 
-  const validate = () => {
-    if (!form.title.trim()) { setError("title"); titleRef.current?.focus(); return; }
+  // The browser owns these text fields while editing; the complete values are
+  // collected before preview so typing doesn't redraw the whole workspace.
+  const trackText = () => {
+    const next = !!(titleRef.current?.value.trim() || descriptionRef.current?.value.trim());
+    if (textDirtyRef.current !== next) { textDirtyRef.current = next; setTextDirty(next); }
+    if (error) setError(null);
+  };
+
+  const validate = (title) => {
+    if (!title.trim()) { setError("title"); titleRef.current?.focus(); return false; }
     if (!form.a) { setError("assignee"); document.getElementById("task-assignee")?.focus(); return false; }
     return !fileError;
   };
 
   const submit = async () => {
     if (busy || confirmDiscard) return;
-    if (!preview) { if (validate()) setPreview(true); return; }
+    if (!preview) {
+      const title = titleRef.current?.value ?? form.title;
+      const description = descriptionRef.current?.value ?? form.description;
+      if (validate(title)) { setForm((current) => ({ ...current, title, description })); setPreview(true); }
+      return;
+    }
     setBusy(true);
     setSubmitError("");
     try {
@@ -104,27 +120,31 @@ function CreateTaskDialog({ onClose }) {
     } finally { setBusy(false); }
   };
 
-  const people = users.filter((u) => u.active !== false && canAssignTask(me, u));
+  const people = useMemo(() => users.filter((u) => u.active !== false && canAssignTask(me, u)), [users, me]);
 
   return (
-    <Dialog label="Create task" onClose={requestClose} width={940} className={styles.dialog} dismissible={!dirty && !busy}
+    <Dialog label="Create task" onClose={requestClose} width={980} className={styles.dialog} scrimClassName={styles.scrim} dismissible={!dirty && !busy}
       onKeyDown={(e) => { if (e.key === "Enter" && (e.metaKey || e.ctrlKey) && !e.nativeEvent.isComposing) { e.preventDefault(); submit(); } }}>
       <form noValidate onSubmit={(e) => { e.preventDefault(); submit(); }}>
         <header className={styles.header}>
           <span className={styles.headerIcon}><Icon name="tasks" /></span>
-          <div><span className={styles.eyebrow}>Task workspace</span><h2>{preview ? "Confirm task details" : "Create a task"}</h2><p>{preview ? "Check the details before assigning this task." : "Give the assignee everything they need before work begins."}</p></div>
+          <div className={styles.headerCopy}><span className={styles.eyebrow}>Task workspace</span><h2>{preview ? "Confirm task details" : "Create a task"}</h2><p>{preview ? "Check the details before assigning this task." : "Give the assignee everything they need before work begins."}</p></div>
+          <ol className={styles.steps} aria-label="Task creation steps">
+            <li className={!preview ? styles.currentStep : styles.completedStep} aria-current={!preview ? "step" : undefined}><span>1</span>Details</li>
+            <li className={preview ? styles.currentStep : undefined} aria-current={preview ? "step" : undefined}><span>2</span>Confirm</li>
+          </ol>
         </header>
 
         {!preview && <fieldset className={styles.layout} disabled={busy} aria-label="Task details and settings">
           <div className={styles.main}>
             <div className={styles.sectionTitle}><strong>Task details</strong><span>What needs to be done?</span></div>
             <Field label="Task title" htmlFor="task-title" error={error === "title" ? "Add a title to create the task." : undefined}>
-              <input id="task-title" ref={titleRef} className="input input-lg" dir="auto" placeholder="Give this task a clear title" value={form.title}
-                onChange={(e) => { set({ title: e.target.value }); setError(null); }} maxLength={200} autoComplete="off" />
+              <input id="task-title" ref={titleRef} className="input input-lg" dir="auto" placeholder="Give this task a clear title" defaultValue={form.title}
+                onChange={trackText} maxLength={200} autoComplete="off" />
             </Field>
             <Field label="Description" htmlFor="task-description">
-              <textarea id="task-description" className={`textarea ${styles.description}`} dir="auto" placeholder="Add context, the expected outcome, and anything the assignee should know."
-                value={form.description} onChange={(e) => set({ description: e.target.value })} />
+              <textarea id="task-description" ref={descriptionRef} className={`textarea ${styles.description}`} dir="auto" placeholder="Add context, the expected outcome, and anything the assignee should know."
+                defaultValue={form.description} onChange={trackText} />
             </Field>
 
             <div className={styles.attachments}>
@@ -147,8 +167,8 @@ function CreateTaskDialog({ onClose }) {
           <aside className={styles.settings} aria-label="Task settings">
             <div className={styles.sectionTitle}><strong>Assignment</strong><span>Who and when</span></div>
             <Field label="Assignee" htmlFor="task-assignee" error={error === "assignee" ? "Choose who this task is for." : undefined}>
-              <AssigneePicker id="task-assignee" value={form.a} people={people} disabled={!manager}
-                onSelect={(id) => { set({ a: id }); setError(null); }} onClear={() => { set({ a: "" }); setError(null); }} />
+              <AssigneePicker id="task-assignee" value={form.a} people={people} disabled={!manager} overlayOptions
+                onSelect={(id) => { set({ a: id }); setError(null); }} onClear={() => { if (form.a) set({ a: "" }); if (error) setError(null); }} />
             </Field>
             <div className={styles.settingsGrid}>
               <Field label="Priority" htmlFor="task-priority"><select id="task-priority" className="input" value={form.prio} onChange={(e) => set({ prio: e.target.value })}>{Object.entries(PRIO).map(([value, label]) => <option key={value} value={value}>{label}</option>)}</select></Field>
