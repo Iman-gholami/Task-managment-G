@@ -29,6 +29,7 @@ only the colours change.
 - **Signature gradient**: the accent runs into a second stop (`--accent`) as one 135° gradient. It marks the brand mark, primary buttons, the active-page bar, checked controls, progress fills and the latest chart bar — never text that has to be read, and never large areas.
 - **Light, not decoration**: a faint ambient glow in the accent colour sits behind the app, at the top of the content sheet and in the corner of KPI cards. It is always behind opaque cards, so it never changes text contrast.
 - **Depth from layering**: in the dark themes each level is a step lighter — app background → content sheet → cards → insets → menus — with a 1px top highlight (`--edge`) on cards. In the light theme cards get a soft two-layer shadow (`--shadow-card`). Menus, toasts and most dialog scrims blur what is behind them. Task creation and assignee handoff use unblurred scrims to keep the workspace clear and responsive.
+- **Task outcome**: a closed task leads with a neutral outcome panel and a success check, showing the recorded review and completion facts. Reopen is secondary to the outcome; approval is shown only after the server confirms the state.
 - **One typeface per script**: Geist (UI) with tabular numbers for all figures; Geist Mono only for IDs, ticket numbers and references. Persian (RTL) screens use Vazirmatn through the same type tokens (see *Persian screens* below). (The earlier display serif was removed: its condensed digits made "11" read as "ll".)
 
 ---

@@ -61,11 +61,11 @@ A fresh install contains **no sample data** — only one administrator account (
 
 | Setting | Default |
 |---|---|
-| `ADMIN_EMAIL` | `admin@local` |
-| `ADMIN_PASSWORD` | `ChangeMe123!` |
+| `ADMIN_EMAIL` | Required when no active Security Manager exists |
+| `ADMIN_PASSWORD` | Required when no active Security Manager exists |
 | `ADMIN_NAME` | `Administrator` |
 
-Set these before the first start (e.g. `ADMIN_EMAIL=you@company ADMIN_PASSWORD='…' npm start`), or change the password on the **Account** page right after signing in.
+Set these before the first start (e.g. `ADMIN_EMAIL=you@company ADMIN_PASSWORD='…' npm start`). They bootstrap an administrator only if no active Security Manager exists; changing them later does not reset an existing account's password.
 
 **Upgrading from an earlier version:** the demo people (`…@corp.local`), their tasks, shift logs and tickets are removed automatically on the first start. Anything you created yourself is kept. If no Security Manager is left, the administrator account above is created.
 
@@ -82,6 +82,8 @@ Set these before the first start (e.g. `ADMIN_EMAIL=you@company ADMIN_PASSWORD='
 | `PORT` | `3000` | HTTP port |
 | `DATABASE_PATH` | `./data/sentinel.db` | SQLite file location. Back up this file and the `uploads/` folder next to it |
 | `ADMIN_EMAIL` / `ADMIN_PASSWORD` / `ADMIN_NAME` | see above | Built-in administrator (created only when no Security Manager exists) |
+
+For a separate preview database at `test-data/sentinel.db`, `scripts/configure-preview-admin.cjs --apply` can configure `admin@local` as a Security Manager. It reads the password from standard input, backs up the database before changing it, and refuses to modify an inactive account or one with another role. It does not act on the application's default database.
 | `COOKIE_SECURE` | `false` | Set to `true` when serving over HTTPS |
 
 ## Run on your server

@@ -20,6 +20,18 @@
 .detail-bar .back { display: inline-flex; align-items: center; gap: 4px; font-size: var(--fs-13); color: var(--text-3); }
 .detail-bar .back:hover { color: var(--text); }
 .detail-bar .actions { margin-left: auto; display: flex; flex-wrap: wrap; justify-content: flex-end; gap: var(--s-2); }
+.task-outcome { margin-bottom: var(--s-4); padding: var(--s-5); border: 1px solid var(--border); border-radius: var(--r-lg); background: var(--surface-card); box-shadow: inset 3px 0 0 var(--success), var(--shadow-card); }
+.task-outcome-header { display: flex; align-items: flex-start; gap: var(--s-4); }
+.task-outcome-mark { width: 42px; height: 42px; flex: none; display: grid; place-items: center; border: 1.5px solid var(--success); border-radius: var(--r-full); color: var(--success); }
+.task-outcome-mark svg { width: 22px; height: 22px; }
+.task-outcome-label { display: block; margin-bottom: 3px; color: var(--success); font: var(--type-overline); letter-spacing: var(--tracking-caps); }
+.task-outcome h2 { margin: 0; color: var(--text); font: var(--fw-semibold) var(--fs-20)/1.35 var(--font-sans); }
+.task-outcome p { margin: 4px 0 0; color: var(--text-2); font: var(--type-body-sm); }
+.task-outcome-facts { display: flex; flex-wrap: wrap; gap: var(--s-3) var(--s-6); margin: var(--s-4) 0 0 58px; padding-top: var(--s-4); border-top: 1px solid var(--divider); }
+.task-outcome-facts > div { display: grid; gap: 4px; min-width: 92px; }
+.task-outcome-facts dt { color: var(--text-3); font: var(--type-caption); }
+.task-outcome-facts dd { color: var(--text); font: var(--type-card-title); overflow-wrap: anywhere; }
+@media (max-width: 640px) { .task-outcome-facts { margin-left: 0; } }
 .detail h1 { margin-bottom: var(--s-3); font: var(--fw-semibold) var(--fs-22)/1.3 var(--font-sans); letter-spacing: var(--tracking-title); color: var(--text); overflow-wrap: anywhere; }
 .detail-edit { display: grid; gap: var(--s-3); margin-bottom: var(--s-5); }
 .detail-edit .input { height: 40px; font: var(--fw-semibold) var(--fs-18)/1 var(--font-sans); }

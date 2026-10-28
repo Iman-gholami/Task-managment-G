@@ -28,7 +28,7 @@ const QUIET = ["cancelled", "blocked"];
 export default function TaskDetail({ id }) {
   const { tasks, updateTask, deleteTask, toast, me, peopleMap, openPopover, members } = useApp();
   const router = useRouter();
-  const { edit, move } = useTaskActions();
+  const { edit, move, isApproving } = useTaskActions();
   const t = tasks.find((x) => x.id === id);
   const { data, loading, error, setData, reload } = useFetch(t ? `/api/tasks/${id}` : null);
   const [editing, setEditing] = useState(null);
@@ -108,11 +108,16 @@ export default function TaskDetail({ id }) {
     catch (error) { setDeleteError(error.message); setDeleting(false); }
   };
 
-  const doMove = (anchor, to) => move(anchor, t, to);
+  const doMove = (anchor, to) => move(anchor, t, to, (result) => {
+    setData((current) => current ? { ...current, details: result.details, transitions: result.transitions } : current);
+  });
   const canDetail = manager && !closed;
   const doneCount = d?.checklist.filter((c) => c.done).length ?? 0;
   const main = transitions.filter((s) => !QUIET.includes(s));
   const quiet = transitions.filter((s) => QUIET.includes(s));
+  const approving = isApproving(t.id);
+  const reviewer = d?.approvedBy ? peopleMap[d.approvedBy] : null;
+  const reviewed = t.reviewRequired && (!!t.quality || !!d?.approvedBy);
 
   return (
     <div className="detail">
@@ -123,18 +128,37 @@ export default function TaskDetail({ id }) {
           <div className="actions">
             {canDeleteOwnTask(me, t) && <button type="button" className="btn btn-ghost btn-sm danger" onClick={() => { setDeleteError(""); setDeleteConfirm(true); }}><Icon name="x" />Delete task</button>}
             {quiet.map((s) => (
-              <button key={s} type="button" className={`btn btn-ghost btn-sm ${s === "cancelled" ? "danger" : ""}`} onClick={(e) => doMove(e.currentTarget, s)}>{actionLabel(t.status, s)}</button>
+              <button key={s} type="button" className={`btn btn-ghost btn-sm ${s === "cancelled" ? "danger" : ""}`} disabled={approving} onClick={(e) => doMove(e.currentTarget, s)}>{actionLabel(t.status, s)}</button>
             ))}
             {manager && !closed && !editingDetails && (
-              <button type="button" className="btn btn-secondary btn-sm" onClick={() => setEditingDetails(true)}><Icon name="edit" />Edit</button>
+              <button type="button" className="btn btn-secondary btn-sm" disabled={approving} onClick={() => setEditingDetails(true)}><Icon name="edit" />Edit</button>
             )}
-            {!isAssignee && [...main.slice(1), ...main.slice(0, 1)].map((s) => (
-              <button key={s} type="button" className={`btn btn-sm ${s === main[0] ? "btn-primary" : "btn-secondary"}`} onClick={(e) => doMove(e.currentTarget, s)}>
-                {actionLabel(t.status, s) ?? STATUS[s]}
+            {(!isAssignee || t.status === "done") && [...main.slice(1), ...main.slice(0, 1)].map((s) => (
+              <button key={s} type="button" className={`btn btn-sm ${s === main[0] && t.status !== "done" ? "btn-primary" : "btn-secondary"}`} disabled={approving} aria-busy={approving && s === "done"} onClick={(e) => doMove(e.currentTarget, s)}>
+                {approving && s === "done" ? "Approving…" : actionLabel(t.status, s) ?? STATUS[s]}
               </button>
             ))}
           </div>
         </div>
+
+        {t.status === "done" && (
+          <section className="task-outcome" role="status" aria-label={reviewed ? "Task approval" : "Task completion"}>
+            <div className="task-outcome-header">
+              <span className="task-outcome-mark"><Icon name="check" /></span>
+              <div>
+                <span className="task-outcome-label">{reviewed ? "REVIEW COMPLETE" : "WORK COMPLETE"}</span>
+                <h2>{reviewed ? "Task approved" : "Task completed"}</h2>
+                <p>{reviewed ? "The review is complete and this task is closed." : t.reviewRequired ? "This task is closed; review details are unavailable." : "Completed · No review required"}</p>
+              </div>
+            </div>
+            <dl className="task-outcome-facts">
+              {t.reviewRequired && t.quality && <div><dt>Quality</dt><dd><Quality q={t.quality} /></dd></div>}
+              {reviewer && <div><dt>Approved by</dt><dd>{reviewer.name}</dd></div>}
+              <div><dt>Total time</dt><dd>{t.hours.toFixed(1)} hrs</dd></div>
+              {d?.completedAt && <div><dt>Completed</dt><dd><time dateTime={`${d.completedAt.replace(" ", "T")}Z`}>{when(d.completedAt)}</time></dd></div>}
+            </dl>
+          </section>
+        )}
 
         {editingDetails ? (
           <TaskBriefEditor task={t} onCancel={() => setEditingDetails(false)} onSave={async (patch) => {
@@ -149,7 +173,7 @@ export default function TaskDetail({ id }) {
           </div>
         )}
 
-        {isAssignee && <TaskWorkPanel key={id} task={t} details={d} transitions={transitions} ready={!!data} onMove={doMove} setData={setData} commentDraftRef={commentDraftRef} editingCommentRef={editingCommentRef} posting={posting} />}
+        {isAssignee && t.status !== "done" && <TaskWorkPanel key={id} task={t} details={d} transitions={transitions} ready={!!data} onMove={doMove} setData={setData} commentDraftRef={commentDraftRef} editingCommentRef={editingCommentRef} posting={posting} />}
 
         {t.status === "review" && !isAssignee && (
           <div className="callout" style={{ "--tone": "var(--violet)" }} role="status">
@@ -163,13 +187,6 @@ export default function TaskDetail({ id }) {
             <span>Check the comments below, then resume work and submit it again.</span>
           </div>
         )}
-        {t.status === "done" && (
-          <div className="callout" style={{ "--tone": "var(--success)" }} role="status">
-            <strong>{t.reviewRequired ? <>Approved · <Quality q={t.quality} /></> : "Completed · No review required"}</strong>
-            <span>This task is closed{d?.completedAt ? ` since ${when(d.completedAt)}` : ""}.{transitions.includes("progress") ? " You can reopen it if more work is needed." : ""}</span>
-          </div>
-        )}
-
         {loading && !d ? <div className="detail-section"><Loading label="Loading task details" rows={5} /></div> : error ? (
           <div className="detail-section panel"><ErrorState error={error} title="Couldn't load task details" onRetry={reload} compact /></div>
         ) : d && (

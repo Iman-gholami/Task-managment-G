@@ -295,7 +295,7 @@ test.describe("task workflow", () => {
     const complexity = page.getByRole("menu", { name: "Confirm complexity" });
     await expect(complexity.getByRole("menuitemradio", { name: /Medium.*current/ })).toBeVisible();
     await complexity.getByRole("menuitemradio", { name: /Complex/ }).click();
-    await expect(page.locator(".callout", { hasText: "Approved ·" })).toBeVisible();
+    await expect(page.getByRole("status", { name: "Task approval" }).getByRole("heading", { name: "Task approved" })).toBeVisible();
     await expect(page.getByTestId("activity")).toContainText("approved it · quality: Excellent · complexity: Medium → Complex");
     await expect(page.getByRole("button", { name: "Approve" })).toHaveCount(0);
     await expect(page.getByRole("button", { name: "Return for changes" })).toHaveCount(0);
