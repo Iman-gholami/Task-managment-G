@@ -1,0 +1,17 @@
+.git
+.github
+node_modules
+.next
+data
+dist
+coverage
+playwright-report
+test-results
+.env
+.env.*
+*.db
+*.db-*
+*.tar
+*.tar.sha256
+README.md
+tests
