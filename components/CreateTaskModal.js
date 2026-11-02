@@ -44,7 +44,7 @@ function CreateTaskDialog({ onClose }) {
   const keepRef = useRef(null);
   const previewRef = useRef(null);
   const set = (patch) => setForm((f) => ({ ...f, ...patch }));
-  const dirty = !!(textDirty || form.due || form.start !== TODAY ||
+  const dirty = !!(textDirty || dateErrors.start || dateErrors.due || form.due || form.start !== TODAY ||
     form.prio !== blank.prio || form.cx !== blank.cx || !form.reviewRequired || (manager && form.a) || files.length);
 
   useEffect(() => { titleRef.current?.focus(); }, []);
