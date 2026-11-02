@@ -15,10 +15,11 @@ import { Bars, CxLegend, Distribution } from "@/components/ui/charts";
 import { EmptyState, ErrorState, Loading } from "@/components/ui/states";
 import { Avatar, Complexity, Quality, Who } from "@/components/ui/indicators";
 import { QUAL, fmtRange, plural } from "@/lib/format";
+import { taskWhen } from "@/lib/task-date";
 import { periodQuery } from "@/lib/period";
 import { ROLE_LABELS, isManager } from "@/lib/roles";
 
-const dt = (s) => (s ? s.replace("T", " ").slice(0, 10) : "—");
+const dt = (s) => taskWhen(s);
 
 function ExportLink({ report, query }) {
   return <a className="btn btn-secondary" href={`/api/reports/${report}?${query}&format=xlsx`} download data-tooltip="Download as an Excel workbook (.xlsx)"><Icon name="download" />Export to Excel</a>;

@@ -17,6 +17,8 @@ function reducer(state, action) {
       return { ...state, tasks: state.tasks.map((t) => (t.id === action.id ? { ...t, ...action.patch } : t)) };
     case "task/add":
       return { ...state, tasks: [action.task, ...state.tasks] };
+    case "tasks/refresh":
+      return { ...state, tasks: action.tasks };
     case "task/remove":
       return { ...state, tasks: state.tasks.filter((t) => t.id !== action.id) };
     case "activity/update":
@@ -35,6 +37,8 @@ function reducer(state, action) {
       return { ...state, users: state.users.map((u) => (u.id === action.user.id ? { ...u, ...action.user } : u)) };
     case "users/deactivate":
       return { ...state, users: state.users.map((u) => (u.id === action.id ? { ...u, active: false } : u)) };
+    case "users/refresh":
+      return { ...state, users: action.users };
     default:
       return state;
   }
@@ -87,7 +91,7 @@ export async function api(url, { method = "GET", body } = {}) {
 const TOAST_MS = { success: 3200, info: 4500, error: 6500 };
 
 export default function AppProvider({ children, initial }) {
-  const [data, dispatch] = useReducer(reducer, {
+  const [data, rawDispatch] = useReducer(reducer, {
     me: initial.me,
     users: initial.users,
     tasks: initial.tasks,
@@ -107,6 +111,14 @@ export default function AppProvider({ children, initial }) {
   const [createOpen, setCreateOpen] = useState(false);
   const toastId = useRef(0);
   const popoverId = useRef(0);
+  const taskRevision = useRef(0);
+  const userRevision = useRef(0);
+  const pendingTaskUpdates = useRef(0);
+  const dispatch = useCallback((action) => {
+    if (action.type.startsWith("task/")) taskRevision.current += 1;
+    if (action.type.startsWith("users/")) userRevision.current += 1;
+    rawDispatch(action);
+  }, []);
 
   // Restore per-viewer preferences after hydration (the theme attribute is set before paint in app/layout.js).
   useEffect(() => {
@@ -143,15 +155,16 @@ export default function AppProvider({ children, initial }) {
     const { task } = await api("/api/tasks", { method: "POST", body: fields });
     dispatch({ type: "task/add", task });
     return task;
-  }, []);
+  }, [dispatch]);
 
   const deleteTask = useCallback(async (id) => {
     await api(`/api/tasks/${encodeURIComponent(id)}`, { method: "DELETE" });
     dispatch({ type: "task/remove", id });
-  }, []);
+  }, [dispatch]);
 
   /** Optimistic task update; reverts and reports on failure. */
   const updateTask = useCallback(async (task, patch) => {
+    pendingTaskUpdates.current += 1;
     dispatch({ type: "task/update", id: task.id, patch: { ...patch, upd: "now" } });
     try {
       const res = await api(`/api/tasks/${task.id}`, { method: "PATCH", body: patch });
@@ -161,8 +174,20 @@ export default function AppProvider({ children, initial }) {
       dispatch({ type: "task/update", id: task.id, patch: task });
       toast(e.message, "error");
       return false;
+    } finally {
+      pendingTaskUpdates.current -= 1;
     }
-  }, [toast]);
+  }, [dispatch, toast]);
+
+  /** Apply a remote snapshot only if no local task mutation raced with it. */
+  const refreshTasks = useCallback(async () => {
+    if (pendingTaskUpdates.current) return;
+    const revision = taskRevision.current;
+    const userVersion = userRevision.current;
+    const [{ tasks }, { users }] = await Promise.all([api("/api/tasks"), api("/api/members")]);
+    if (!pendingTaskUpdates.current && taskRevision.current === revision) rawDispatch({ type: "tasks/refresh", tasks });
+    if (userRevision.current === userVersion) rawDispatch({ type: "users/refresh", users });
+  }, []);
 
   /** Active members enriched with live workload and today's shift status. */
   const members = useMemo(() => data.users.filter((u) => u.active).map((u) => {
@@ -175,8 +200,8 @@ export default function AppProvider({ children, initial }) {
   const peopleMap = useMemo(() => Object.fromEntries(data.users.map((u) => [u.id, u])), [data.users]);
 
   const value = useMemo(
-    () => ({ ...data, dispatch, role, peopleMap, members, theme, setTheme, collapsed, setCollapsed, toast, openPopover, closePopover, createOpen, setCreateOpen, addTask, updateTask, deleteTask }),
-    [data, role, peopleMap, members, theme, setTheme, collapsed, setCollapsed, toast, openPopover, closePopover, createOpen, addTask, updateTask, deleteTask]
+    () => ({ ...data, dispatch, role, peopleMap, members, theme, setTheme, collapsed, setCollapsed, toast, openPopover, closePopover, createOpen, setCreateOpen, addTask, updateTask, deleteTask, refreshTasks }),
+    [data, dispatch, role, peopleMap, members, theme, setTheme, collapsed, setCollapsed, toast, openPopover, closePopover, createOpen, addTask, updateTask, deleteTask, refreshTasks]
   );
 
   // React's special `key` prop must be passed directly, never through a spread object.

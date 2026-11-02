@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import AssigneePicker from "@/components/ui/AssigneePicker";
 import TaskWorkPanel, { TaskReportSummary } from "@/components/screens/TaskWorkPanel";
 import TaskReviewPanel from "@/components/screens/TaskReviewPanel";
+import TaskJourney from "@/components/screens/TaskJourney";
 import { useEffect, useRef, useState } from "react";
 import { api, useApp } from "@/components/AppProvider";
 import { useTaskActions } from "@/components/TaskTable";
@@ -15,7 +16,9 @@ import { FieldError } from "@/components/ui/Field";
 import { SectionHeader } from "@/components/ui/layout";
 import { EmptyState, ErrorState, Loading } from "@/components/ui/states";
 import { Avatar, Complexity, Due, Priority, Quality, Status, Who } from "@/components/ui/indicators";
-import { STATUS, when } from "@/lib/format";
+import { STATUS } from "@/lib/format";
+import { taskWhen as when } from "@/lib/task-date";
+import TaskDateInput from "@/components/ui/TaskDateInput";
 import { cxItems, peopleItems } from "@/components/ui/menus";
 import { canAssignTask, canDeleteOwnTask, isManager } from "@/lib/roles";
 import { actionLabel, allowedTransitions } from "@/lib/workflow";
@@ -203,6 +206,7 @@ export default function TaskDetail({ id }) {
           </div>
         )}
 
+        <TaskJourney task={t} canReview={showReviewPanel} />
         {isAssignee && d && t.status !== "done" && <TaskWorkPanel key={id} task={t} details={d} transitions={transitions} onMove={doMove} setData={setData} commentDraftRef={commentDraftRef} editingCommentRef={editingCommentRef} posting={posting} uploading={uploading} attachments={evidenceInFlow ? evidence : null} onShowComments={showComments} />}
         {showReviewPanel && d && <TaskReviewPanel key={id} task={t} details={d} setData={setData} onApprove={(task, quality, cx) => approve(task, quality, cx, (result) => setData((current) => current ? { ...current, details: result.details, transitions: result.transitions } : current))} approving={approving} attachments={evidence} />}
         {t.status === "returned" && !isAssignee && (
@@ -277,7 +281,7 @@ export default function TaskDetail({ id }) {
           <dt>Priority</dt><dd><span className="cell-edit" role="button" tabIndex={0} aria-label="Change priority" onClick={(e) => edit(e.currentTarget, "prio", t)} onKeyDown={(e) => (e.key === "Enter" || e.key === " ") && (e.preventDefault(), e.currentTarget.click())}><Priority p={t.prio} /></span></dd>
           <dt>Complexity</dt><dd>{canDetail ? <span className="cell-edit" role="button" tabIndex={0} aria-label="Change complexity" onClick={(e) => openPopover(e.currentTarget, { title: "Complexity", items: cxItems(), onPick: (cx) => updateTask(t, { cx }) })} onKeyDown={(e) => (e.key === "Enter" || e.key === " ") && (e.preventDefault(), e.currentTarget.click())}><Complexity c={t.cx} /></span> : <Complexity c={t.cx} />}</dd>
           <dt>Deadline</dt><dd>{canDetail
-            ? <input type="date" className="input" defaultValue={t.due === "—" ? "" : t.due} key={t.due} aria-label="Deadline" onChange={(e) => updateTask(t, { due: e.target.value })} />
+            ? <TaskDateInput id="task-detail-deadline" calendarLabel="Choose deadline" value={t.due === "—" ? "" : t.due} aria-label="Deadline (Solar Hijri)" commitOnBlur onChange={(due) => { if (due !== (t.due === "—" ? "" : t.due)) updateTask(t, { due }); }} />
             : <Due task={t} />}</dd>
           <dt>Actual hours</dt>
           <dd>

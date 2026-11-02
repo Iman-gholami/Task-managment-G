@@ -10,6 +10,7 @@ import Icon from "@/components/ui/Icon";
 import { PageHeader, Panel } from "@/components/ui/layout";
 import { EmptyState, ErrorState, Loading } from "@/components/ui/states";
 import { CX, QUAL, STATUS, fmtRange, plural } from "@/lib/format";
+import { taskWhen } from "@/lib/task-date";
 import { periodQuery } from "@/lib/period";
 import { REPORTS } from "@/lib/reports";
 import { canViewManagementAnalytics } from "@/lib/roles";
@@ -116,7 +117,8 @@ function Sheet({ sheet: s, filtered, onReset }) {
                 {rows.map((r, i) => (
                   <tr key={i}>
                     {s.columns.map((c, j) => {
-                      const v = r[c.key];
+                      const raw = r[c.key];
+                      const v = s.name === "Tasks" && (c.key === "start" || c.key === "end") && raw ? taskWhen(raw) : raw;
                       const empty = v === "" || v == null;
                       return (
                         <td key={c.key} className={`${c.num ? "r" : ""} ${j === 0 ? "title" : ""} ${c.key === "no" || c.key === "ref" ? "mono" : ""} truncate`} style={{ maxWidth: 320 }} title={!empty && String(v).length > 40 ? String(v) : undefined}>

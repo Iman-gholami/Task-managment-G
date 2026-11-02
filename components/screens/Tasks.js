@@ -10,7 +10,8 @@ import Segmented from "@/components/ui/Segmented";
 import { PageHeader } from "@/components/ui/layout";
 import { EmptyState } from "@/components/ui/states";
 import { Avatar, Priority, Status } from "@/components/ui/indicators";
-import { PRIO, STATUS, TODAY, dueLabel, isOpen, plural } from "@/lib/format";
+import { PRIO, STATUS, TODAY, addDays, dueLabel, isOpen, plural } from "@/lib/format";
+import { taskDate } from "@/lib/task-date";
 import { inTeamScope, isManager } from "@/lib/roles";
 
 export { inTeamScope };
@@ -217,7 +218,7 @@ function Board({ list }) {
                 <div className="t">{t.title}</div>
                 <div className="meta">
                   <Priority p={t.prio} />
-                  {t.due !== "—" && isOpen(t) && <span className={`due ${t.due < TODAY ? "overdue" : "muted"}`}>{dueLabel(t.due)}</span>}
+                  {t.due !== "—" && isOpen(t) && <span className={`due ${t.due < TODAY ? "overdue" : "muted"}`}>{taskDate(t.due)}{t.due <= addDays(TODAY, 7) ? ` · ${dueLabel(t.due)}` : ""}</span>}
                 </div>
               </Link>
             ))}

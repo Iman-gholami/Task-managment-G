@@ -1,7 +1,8 @@
 "use client";
 
 import { useApp } from "@/components/AppProvider";
-import { CX, PRIO, QUAL, STATUS, TODAY, addDays, dueLabel, initials, isOpen, longDate } from "@/lib/format";
+import { CX, PRIO, QUAL, STATUS, TODAY, addDays, dueLabel, initials, isOpen } from "@/lib/format";
+import { taskDate } from "@/lib/task-date";
 
 // Status, priority and complexity each use a different shape, so none depends on colour alone.
 
@@ -63,5 +64,6 @@ export function Due({ task }) {
   if (task.due === "—") return <span className="muted">No deadline</span>;
   const open = isOpen(task);
   const cls = open && task.due < TODAY ? "overdue" : open && task.due <= addDays(TODAY, 2) ? "soon" : "num";
-  return <span className={cls} data-tooltip={`Deadline ${longDate(task.due)}`}>{dueLabel(task.due, open)}</span>;
+  const relative = open && task.due <= addDays(TODAY, 7) ? dueLabel(task.due, open) : null;
+  return <span className={`${cls} task-deadline`} data-tooltip={`Deadline ${taskDate(task.due)} (Solar Hijri)`}><span>{taskDate(task.due)}</span>{relative && <small>{relative}</small>}</span>;
 }

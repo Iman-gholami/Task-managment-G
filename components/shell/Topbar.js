@@ -5,6 +5,7 @@ import { Fragment, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { useApp } from "@/components/AppProvider";
 import useFetch from "@/components/useFetch";
+import useTaskAssignmentNotifications from "@/components/useTaskAssignmentNotifications";
 import Icon from "@/components/ui/Icon";
 import { IconButton } from "@/components/ui/layout";
 import { Notice } from "@/components/ui/states";
@@ -22,7 +23,7 @@ const TASK_KINDS = {
   assigned: { label: "New task assigned", icon: "inbox", tone: "var(--info)" },
 };
 
-function useNotifications(shiftRequests = []) {
+function useNotifications(shiftRequests = [], assignments = []) {
   const { tasks, me, peopleMap } = useApp();
   const manager = isManager(me);
   const list = [];
@@ -56,7 +57,7 @@ function useNotifications(shiftRequests = []) {
     else if (manager && t.status === "review" && !mine && (t.createdBy === me.id || inTeamScope(me, peopleMap[t.a]))) kind = "review";
     else if (mine && isOpen(t) && t.due !== "—" && t.due < TODAY) kind = "overdue";
     else if (mine && isOpen(t) && t.due !== "—" && t.due <= addDays(TODAY, 2)) kind = "soon";
-    else if (mine && t.status === "todo" && t.createdBy && t.createdBy !== me.id) kind = "assigned";
+    else if (mine && isOpen(t) && (assignments.some((item) => item.taskId === t.id) || (t.status === "todo" && t.createdBy && t.createdBy !== me.id))) kind = "assigned";
 
     if (kind) {
       const meta = TASK_KINDS[kind];
@@ -79,7 +80,8 @@ export default function Topbar({ crumbs, onToggleNav, navLabel, navExpanded, onS
   const router = useRouter();
   const shiftCapable = isManager(me) || !!me?.keepsShiftLog;
   const { data: shiftData, reload: reloadShiftNotifications } = useFetch(shiftCapable ? "/api/shift/changes" : null);
-  const notifications = useNotifications(shiftData?.requests ?? []);
+  const desktop = useTaskAssignmentNotifications();
+  const notifications = useNotifications(shiftData?.requests ?? [], desktop.assignments);
   const count = notifications.length;
 
   useEffect(() => {
@@ -100,7 +102,11 @@ export default function Topbar({ crumbs, onToggleNav, navLabel, navExpanded, onS
       width: 360,
       align: "end",
       render: (close) =>
-        count === 0 ? (
+        <>
+        {desktop.permission === "default" && <button type="button" className="mi" onClick={() => { close(false); void desktop.enable(); }}><Icon name="bell" /><span>Enable desktop notifications</span></button>}
+        {desktop.permission === "denied" && <Notice icon="info">Desktop notifications are blocked. Allow them in your browser settings.</Notice>}
+        {desktop.permission === "unavailable" && <Notice icon="info">Desktop notifications need HTTPS or localhost and a supported browser.</Notice>}
+        {count === 0 ? (
           <Notice icon="checkCircle">You&apos;re all caught up. Nothing needs your attention.</Notice>
         ) : (
           <div className="notif-list">
@@ -114,7 +120,8 @@ export default function Topbar({ crumbs, onToggleNav, navLabel, navExpanded, onS
               </button>
             ))}
           </div>
-        ),
+        )}
+        </>,
     });
 
   const openThemes = (anchor) =>

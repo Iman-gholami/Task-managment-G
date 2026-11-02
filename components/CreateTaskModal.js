@@ -6,6 +6,8 @@ import Icon from "@/components/ui/Icon";
 import Dialog from "@/components/ui/Dialog";
 import { Field, FormAlert } from "@/components/ui/Field";
 import AssigneePicker from "@/components/ui/AssigneePicker";
+import TaskDateInput from "@/components/ui/TaskDateInput";
+import { taskDate } from "@/lib/task-date";
 import { CX, PRIO, TODAY } from "@/lib/format";
 import { canAssignTask, isManager } from "@/lib/roles";
 import { MAX_UPLOAD, MAX_TASK_FILES, MAX_TASK_UPLOAD_TOTAL } from "@/lib/task-upload";
@@ -27,6 +29,7 @@ function CreateTaskDialog({ onClose }) {
   const [form, setForm] = useState({ ...blank, a: manager ? "" : me.id });
   const [files, setFiles] = useState([]);
   const [error, setError] = useState(null);
+  const [dateErrors, setDateErrors] = useState({ start: "", due: "" });
   const [fileError, setFileError] = useState("");
   const [submitError, setSubmitError] = useState("");
   const [dragOver, setDragOver] = useState(false);
@@ -90,6 +93,9 @@ function CreateTaskDialog({ onClose }) {
   const validate = (title) => {
     if (!title.trim()) { setError("title"); titleRef.current?.focus(); return false; }
     if (!form.a) { setError("assignee"); document.getElementById("task-assignee")?.focus(); return false; }
+    if (dateErrors.start || dateErrors.due) { document.getElementById(dateErrors.start ? "task-start" : "task-deadline")?.focus(); return false; }
+    if (form.due && form.due < (form.start || TODAY)) { setSubmitError("The deadline cannot be before the start date."); document.getElementById("task-deadline")?.focus(); return false; }
+    setSubmitError("");
     return !fileError;
   };
 
@@ -173,8 +179,8 @@ function CreateTaskDialog({ onClose }) {
             <div className={styles.settingsGrid}>
               <Field label="Priority" htmlFor="task-priority"><select id="task-priority" className="input" value={form.prio} onChange={(e) => set({ prio: e.target.value })}>{Object.entries(PRIO).map(([value, label]) => <option key={value} value={value}>{label}</option>)}</select></Field>
               <Field label="Complexity" htmlFor="task-complexity"><select id="task-complexity" className="input" value={form.cx} onChange={(e) => set({ cx: Number(e.target.value) })}>{CX.slice(1).map((label, i) => <option key={label} value={i + 1}>{label}</option>)}</select></Field>
-              <Field label="Start date" htmlFor="task-start"><input id="task-start" className="input" type="date" value={form.start} onChange={(e) => { const start = e.target.value; set({ start, ...(form.due && start && form.due < start ? { due: "" } : {}) }); }} /></Field>
-              <Field label="Deadline" htmlFor="task-deadline"><input id="task-deadline" className="input" type="date" min={form.start || TODAY} value={form.due} onChange={(e) => set({ due: e.target.value })} /></Field>
+              <Field label="Start date (Solar Hijri)" htmlFor="task-start"><TaskDateInput id="task-start" calendarLabel="Choose start date" value={form.start} onValidityChange={(start) => setDateErrors((current) => ({ ...current, start }))} onChange={(start) => { set({ start, ...(form.due && start && form.due < start ? { due: "" } : {}) }); }} /></Field>
+              <Field label="Deadline (Solar Hijri)" htmlFor="task-deadline"><TaskDateInput id="task-deadline" calendarLabel="Choose deadline" min={form.start || TODAY} value={form.due} onValidityChange={(due) => setDateErrors((current) => ({ ...current, due }))} onChange={(due) => set({ due })} /></Field>
             </div>
             <label className={styles.review}>
               <input type="checkbox" className="cb" checked={manager ? form.reviewRequired : true} disabled={!manager}
@@ -199,8 +205,8 @@ function CreateTaskDialog({ onClose }) {
               <div><dt>Assignee</dt><dd dir="auto">{peopleMap[form.a]?.name ?? "—"}</dd></div>
               <div><dt>Priority</dt><dd>{PRIO[form.prio]}</dd></div>
               <div><dt>Complexity</dt><dd>{CX[form.cx]}</dd></div>
-              <div><dt>Start date</dt><dd>{form.start || "Not set"}</dd></div>
-              <div><dt>Deadline</dt><dd>{form.due || "Not set"}</dd></div>
+              <div><dt>Start date</dt><dd>{form.start ? taskDate(form.start) : "Not set"}</dd></div>
+              <div><dt>Deadline</dt><dd>{form.due ? taskDate(form.due) : "Not set"}</dd></div>
               <div><dt>Manager review</dt><dd>{form.reviewRequired ? "Required" : "Not required"}</dd></div>
             </dl>
           </div>
