@@ -76,3 +76,43 @@ test("a new assignment refreshes the recipient's open page and shows one desktop
     await expect.poll(() => recipient.evaluate(() => window.testNotifications.length)).toBe(1);
   } finally { await context.close(); }
 });
+
+test("refreshing while a task creation response is delayed never duplicates the task", async ({ page }) => {
+  await login(page, ADMIN);
+  const member = await page.request.post("/api/members", { data: { name: "Refresh race analyst", email: "refresh-race@example.invalid", password: PASSWORD, role: "analyst", team: "SOC · L1" } });
+  expect(member.status()).toBe(201);
+  await page.goto("/tasks/assigned");
+  await page.getByRole("button", { name: /^Create task/ }).first().click();
+  const dialog = page.getByRole("dialog", { name: "Create task" });
+  await dialog.getByLabel("Task title").fill("Refresh race task");
+  await dialog.getByLabel("Assignee").fill("Refresh race analyst");
+  await dialog.getByRole("option", { name: /Refresh race analyst/ }).click();
+  await dialog.getByRole("button", { name: "Review details" }).click();
+
+  let releaseResponse;
+  let responseReady;
+  const held = new Promise((resolve) => { releaseResponse = resolve; });
+  const ready = new Promise((resolve) => { responseReady = resolve; });
+  await page.route("**/api/tasks", async (route) => {
+    if (route.request().method() !== "POST") return route.continue();
+    const result = await route.fetch();
+    responseReady();
+    await held;
+    await route.fulfill({ response: result });
+  });
+  try {
+    await dialog.getByRole("button", { name: "Create task", exact: true }).click();
+    await ready;
+    // The server has created the task, but the create response is still in flight.
+    const poll = page.waitForResponse((response) => response.url().endsWith("/api/task-assignments"));
+    await page.evaluate(() => window.dispatchEvent(new Event("focus")));
+    await poll;
+    await page.waitForTimeout(300);
+    releaseResponse();
+    await expect(dialog).toBeHidden();
+    await expect(page.locator("tr", { hasText: "Refresh race task" })).toHaveCount(1);
+  } finally {
+    releaseResponse();
+    await page.unroute("**/api/tasks");
+  }
+});

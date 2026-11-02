@@ -16,7 +16,7 @@ function reducer(state, action) {
     case "task/update":
       return { ...state, tasks: state.tasks.map((t) => (t.id === action.id ? { ...t, ...action.patch } : t)) };
     case "task/add":
-      return { ...state, tasks: [action.task, ...state.tasks] };
+      return { ...state, tasks: [action.task, ...state.tasks.filter((task) => task.id !== action.task.id)] };
     case "tasks/refresh":
       return { ...state, tasks: action.tasks };
     case "task/remove":
@@ -32,7 +32,7 @@ function reducer(state, action) {
     case "shift/set":
       return { ...state, activities: action.log.activities, tickets: action.log.tickets, shiftDone: !!action.log.completedAt, shiftDate: action.log.date, shiftChecklist: action.log.checklist ?? null, shiftTeam: action.log.team ?? state.shiftTeam };
     case "users/add":
-      return { ...state, users: [...state.users, action.user].sort((a, b) => a.name.localeCompare(b.name)) };
+      return { ...state, users: [...state.users.filter((user) => user.id !== action.user.id), action.user].sort((a, b) => a.name.localeCompare(b.name)) };
     case "users/update":
       return { ...state, users: state.users.map((u) => (u.id === action.user.id ? { ...u, ...action.user } : u)) };
     case "users/deactivate":
@@ -152,14 +152,24 @@ export default function AppProvider({ children, initial }) {
   const closePopover = useCallback(() => setPopover(null), []);
 
   const addTask = useCallback(async (fields) => {
-    const { task } = await api("/api/tasks", { method: "POST", body: fields });
-    dispatch({ type: "task/add", task });
-    return task;
+    pendingTaskUpdates.current += 1;
+    try {
+      const { task } = await api("/api/tasks", { method: "POST", body: fields });
+      dispatch({ type: "task/add", task });
+      return task;
+    } finally {
+      pendingTaskUpdates.current -= 1;
+    }
   }, [dispatch]);
 
   const deleteTask = useCallback(async (id) => {
-    await api(`/api/tasks/${encodeURIComponent(id)}`, { method: "DELETE" });
-    dispatch({ type: "task/remove", id });
+    pendingTaskUpdates.current += 1;
+    try {
+      await api(`/api/tasks/${encodeURIComponent(id)}`, { method: "DELETE" });
+      dispatch({ type: "task/remove", id });
+    } finally {
+      pendingTaskUpdates.current -= 1;
+    }
   }, [dispatch]);
 
   /** Optimistic task update; reverts and reports on failure. */
