@@ -1,5 +1,7 @@
 "use client";
 
+import { useI18n as useUiI18n } from "@/components/I18nProvider";
+
 import Link from "next/link";
 import { useState } from "react";
 import { useApp } from "@/components/AppProvider";
@@ -20,6 +22,7 @@ const total = (teams, key) => teams.reduce((s, t) => s + t[key], 0);
 
 /** Department-wide view for the Security Manager: output, risk, what needs a decision, who is loaded. */
 export default function SecurityDashboard() {
+  const { t: __uiTr } = useUiI18n();
   const { members, me } = useApp();
   const greeting = useGreeting(me.name);
   const [period, setPeriod] = useState("this");
@@ -47,35 +50,34 @@ export default function SecurityDashboard() {
         actions={
           <>
             <PeriodSelector value={period} onChange={setPeriod} />
-            <a className="btn btn-secondary" href={`/api/reports/team?${query}&format=xlsx`} download data-tooltip="Download the Team Monthly Report for this period (.xlsx)">
-              <Icon name="download" />Export
-            </a>
+            <a className="btn btn-secondary" href={`/api/reports/team?${query}&format=xlsx`} download data-tooltip={__uiTr("Download the Team Monthly Report for this period (.xlsx)")}>
+              <Icon name="download" />{"" + __uiTr("Export") + ""}</a>
           </>
         }
       />
 
-      <MetricGrid label="Department summary">
+      <MetricGrid label={__uiTr("Department summary")}>
         <Metric
-          label="Work completed" icon="checkCircle"
-          hint="Tasks approved in this period, by completion date."
+          label={__uiTr("Work completed")} icon="checkCircle"
+          hint={__uiTr("Tasks approved in this period, by completion date.")}
           value={total(teams, "completed")}
           loading={busy}
           foot={prevTeams ? <Delta now={total(teams, "completed")} before={total(prevTeams, "completed")} label={prev.label} /> : "Approved tasks"}
         />
         <Metric
-          label="Task hours logged" icon="clock"
-          hint="Actual hours recorded on tasks completed in this period."
+          label={__uiTr("Task hours logged")} icon="clock"
+          hint={__uiTr("Actual hours recorded on tasks completed in this period.")}
           value={Math.round(total(teams, "hours"))}
           unit="h"
           loading={busy}
           foot={prevTeams ? <Delta now={Math.round(total(teams, "hours"))} before={Math.round(total(prevTeams, "hours"))} label={prev.label} goodWhen={null} /> : "On completed tasks"}
         />
         <Metric
-          label="Active tasks" icon="tasks"
+          label={__uiTr("Active tasks")} icon="tasks"
           value={total(teams, "active")}
           loading={busy}
           href="/tasks/team"
-          foot={blocked ? <span className="overdue">{blocked} blocked</span> : "None blocked"}
+          foot={blocked ? <span className="overdue">{blocked}{" " + __uiTr("blocked") + ""}</span> : "None blocked"}
         />
         <Metric
           label="Overdue" icon="flag"
@@ -85,7 +87,7 @@ export default function SecurityDashboard() {
           foot={overdue ? `Across ${plural(overdueTeams, "team")}` : "Nothing past its deadline"}
         />
         <Metric
-          label="Awaiting review" icon="review"
+          label={__uiTr("Awaiting review")} icon="review"
           value={reviews}
           href="/tasks/team?tab=review"
           foot={reviews ? "Waiting for approval" : "No reviews waiting"}
@@ -98,8 +100,8 @@ export default function SecurityDashboard() {
         <TeamComparison teams={teams} loading={busy} error={error} onRetry={reload} periodLabel={data ? `${fmtRange(data.period.from, data.period.to)} · trend: last 6 months` : null} />
         <Panel
           title="People"
-          meta="Alphabetical · not a ranking"
-          actions={<Link className="btn btn-ghost btn-sm" href="/performance/overview">Performance overview<Icon name="arrowRight" /></Link>}
+          meta={__uiTr("Alphabetical · not a ranking")}
+          actions={<Link className="btn btn-ghost btn-sm" href="/performance/overview">{"" + __uiTr("Performance overview") + ""}<Icon name="arrowRight" /></Link>}
         >
           <PeopleTable list={members.filter((p) => p.role !== "security_manager")} />
         </Panel>

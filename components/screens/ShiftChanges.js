@@ -1,5 +1,7 @@
 "use client";
 
+import { useI18n as useShiftI18n } from "@/components/I18nProvider";
+
 import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
 import { api, useApp } from "@/components/AppProvider";
@@ -85,6 +87,7 @@ function monthCells(monthStart) {
 }
 
 export default function ShiftChanges() {
+  const { t: __shiftTr, dir } = useShiftI18n();
   const { me, members, toast } = useApp();
   const manager = isManager(me);
   const analysts = useMemo(
@@ -182,19 +185,19 @@ export default function ShiftChanges() {
   };
 
   return (
-    <div className={`page ${styles.page}`} dir="rtl">
+    <div className={`page ${styles.page}`} dir={dir}>
       <header className="page-head">
         <div className="page-head-main">
           <div>
-            <h1>تغییر شیفت</h1>
+            <h1>{"" + __shiftTr("تغییر شیفت") + ""}</h1>
             <div className="page-meta">
-              <span>جابه‌جایی شیفت بین کارشناسان</span>
-              <span>{faNum(openCount)} درخواست در انتظار</span>
+              <span>{"" + __shiftTr("جابه‌جایی شیفت بین کارشناسان") + ""}</span>
+              <span>{faNum(openCount)}{" " + __shiftTr("درخواست در انتظار") + ""}</span>
             </div>
           </div>
         </div>
         <div className="page-actions">
-          <Link className="btn btn-secondary" href="/shift/schedule"><Icon name="cal" /> تقویم شیفت</Link>
+          <Link className="btn btn-secondary" href="/shift/schedule"><Icon name="cal" />{" " + __shiftTr("تقویم شیفت") + ""}</Link>
         </div>
       </header>
 
@@ -202,19 +205,19 @@ export default function ShiftChanges() {
         <section className={`panel ${styles.requestCard}`}>
           <div className="panel-head">
             <div className={styles.headText}>
-              <h2>درخواست جدید</h2>
-              <span className="meta">فقط روزهایی که واقعاً شیفت دارید قابل انتخاب هستند.</span>
+              <h2>{"" + __shiftTr("درخواست جدید") + ""}</h2>
+              <span className="meta">{"" + __shiftTr("فقط روزهایی که واقعاً شیفت دارید قابل انتخاب هستند.") + ""}</span>
             </div>
-            <ol className={styles.flow} aria-label="مراحل تأیید">
-              <li><span>۱</span>ثبت درخواست</li>
-              <li><span>۲</span>تأیید کارشناس</li>
-              <li><span>۳</span>تأیید مدیر</li>
+            <ol className={styles.flow} aria-label={__shiftTr("مراحل تأیید")}>
+              <li><span>۱</span>{"" + __shiftTr("ثبت درخواست") + ""}</li>
+              <li><span>۲</span>{"" + __shiftTr("تأیید کارشناس") + ""}</li>
+              <li><span>۳</span>{"" + __shiftTr("تأیید مدیر") + ""}</li>
             </ol>
           </div>
 
           <div className={`panel-body ${styles.compactForm}`}>
             <ShiftDateField
-              label="شیفت من"
+              label={__shiftTr("شیفت من")}
               rows={ownSchedules}
               value={form.date}
               open={picker === "mine"}
@@ -223,14 +226,14 @@ export default function ShiftChanges() {
             />
 
             <label className="field">
-              <span className={styles.label}>کارشناس مقصد</span>
+              <span className={styles.label}>{"" + __shiftTr("کارشناس مقصد") + ""}</span>
               <select className="input" value={form.targetId} onChange={(e) => changeTarget(e.target.value)}>
                 {targets.map((a) => <option value={a.id} key={a.id}>{a.name} · {a.team}</option>)}
               </select>
             </label>
 
             <ShiftDateField
-              label="شیفت کارشناس مقصد"
+              label={__shiftTr("شیفت کارشناس مقصد")}
               rows={targetSchedules}
               value={form.targetDate}
               open={picker === "target"}
@@ -239,12 +242,12 @@ export default function ShiftChanges() {
             />
 
             <label className="field">
-              <span className={styles.label}>دلیل <em>اختیاری</em></span>
+              <span className={styles.label}>{"" + __shiftTr("دلیل") + " "}<em>{"" + __shiftTr("اختیاری") + ""}</em></span>
               <input
                 className="input"
                 value={form.reason}
                 onChange={(e) => setForm({ ...form, reason: e.target.value })}
-                placeholder="مرخصی، مأموریت یا هماهنگی شخصی"
+                placeholder={__shiftTr("مرخصی، مأموریت یا هماهنگی شخصی")}
               />
             </label>
 
@@ -254,14 +257,12 @@ export default function ShiftChanges() {
               disabled={busy || !form.date || !form.targetId || !form.targetDate}
               onClick={submit}
             >
-              <Icon name="swap" />
-              ثبت درخواست
-            </button>
+              <Icon name="swap" />{"" + __shiftTr("ثبت درخواست") + ""}</button>
           </div>
 
           <div className="panel-foot">
-            {scheduleError && <span className={styles.scheduleError}><Icon name="alert" size="sm" />دریافت تقویم شیفت‌ها ناموفق بود. صفحه را دوباره بارگذاری کنید.</span>}
-            <span className={styles.managerNote}><Icon name="bell" size="sm" />کارشناس مقصد و مدیران از درخواست جدید باخبر می‌شوند. بعد از تأیید کارشناس مقصد، تأیید یکی از مدیران کافی است؛ مدیر می‌تواند مستقیم هم تأیید و اعمال کند.</span>
+            {scheduleError && <span className={styles.scheduleError}><Icon name="alert" size="sm" />{"" + __shiftTr("دریافت تقویم شیفت‌ها ناموفق بود. صفحه را دوباره بارگذاری کنید.") + ""}</span>}
+            <span className={styles.managerNote}><Icon name="bell" size="sm" />{"" + __shiftTr("کارشناس مقصد و مدیران از درخواست جدید باخبر می‌شوند. بعد از تأیید کارشناس مقصد، تأیید یکی از مدیران کافی است؛ مدیر می‌تواند مستقیم هم تأیید و اعمال کند.") + ""}</span>
           </div>
         </section>
       )}
@@ -269,17 +270,17 @@ export default function ShiftChanges() {
       <section className={`panel ${styles.requestsCard}`}>
         <div className="panel-head">
           <h2>{manager ? "درخواست‌های تیم" : "درخواست‌های من"}</h2>
-          <span className="meta">{faNum(requests.length)} درخواست</span>
+          <span className="meta">{faNum(requests.length)}{" " + __shiftTr("درخواست") + ""}</span>
           <div className="right">
             <Segmented
               kind="tabs"
-              label="فیلتر درخواست‌ها"
+              label={__shiftTr("فیلتر درخواست‌ها")}
               value={filter}
               onChange={setFilter}
               options={[
                 { value: "open", label: "در انتظار", count: faNum(openCount) },
                 { value: "resolved", label: "نهایی", count: faNum(resolvedCount) },
-                { value: "all", label: "همه", count: faNum(requests.length) },
+                { value: "all", label: __shiftTr("همه"), count: faNum(requests.length) },
               ]}
             />
           </div>
@@ -288,8 +289,8 @@ export default function ShiftChanges() {
         {error && (
           <div className={styles.errorState}>
             <Icon name="alert" />
-            <span>دریافت درخواست‌ها ناموفق بود.</span>
-            <button className="btn btn-ghost btn-sm" onClick={reload}>تلاش دوباره</button>
+            <span>{"" + __shiftTr("دریافت درخواست‌ها ناموفق بود.") + ""}</span>
+            <button className="btn btn-ghost btn-sm" onClick={reload}>{"" + __shiftTr("تلاش دوباره") + ""}</button>
           </div>
         )}
 
@@ -310,7 +311,7 @@ export default function ShiftChanges() {
               <div className={styles.requestMain}>
                 <div className={styles.people}>
                   <Who id={r.requesterId} />
-                  <span className={styles.peopleArrow} aria-label="جابه‌جایی با"><Icon name="swap" size="sm" /></span>
+                  <span className={styles.peopleArrow} aria-label={__shiftTr("جابه‌جایی با")}><Icon name="swap" size="sm" /></span>
                   <Who id={r.targetId} />
                   <span className={`badge dot ${STATUS_TONE[r.status] || ""}`}>{STATUS_LABEL[r.status] || r.status}</span>
                 </div>
@@ -326,17 +327,17 @@ export default function ShiftChanges() {
 
               <div className={styles.actions}>
                 {r.status === "pending_target" && me.id === r.targetId && <>
-                  <button className="btn btn-secondary btn-sm" disabled={busy} onClick={() => act(r.id, "reject")}>رد</button>
-                  <button className="btn btn-primary btn-sm" disabled={busy} onClick={() => act(r.id, "accept")}><Icon name="check" />تأیید</button>
+                  <button className="btn btn-secondary btn-sm" disabled={busy} onClick={() => act(r.id, "reject")}>{"" + __shiftTr("رد") + ""}</button>
+                  <button className="btn btn-primary btn-sm" disabled={busy} onClick={() => act(r.id, "accept")}><Icon name="check" />{"" + __shiftTr("تأیید") + ""}</button>
                 </>}
                 {OPEN.has(r.status) && me.id === r.requesterId && (
-                  <button className="btn btn-ghost danger btn-sm" disabled={busy} onClick={() => act(r.id, "cancel")}>لغو درخواست</button>
+                  <button className="btn btn-ghost danger btn-sm" disabled={busy} onClick={() => act(r.id, "cancel")}>{"" + __shiftTr("لغو درخواست") + ""}</button>
                 )}
                 {manager && OPEN.has(r.status) && <>
-                  <button className="btn btn-secondary btn-sm" disabled={busy} onClick={() => act(r.id, "reject")}>رد</button>
+                  <button className="btn btn-secondary btn-sm" disabled={busy} onClick={() => act(r.id, "reject")}>{"" + __shiftTr("رد") + ""}</button>
                   <button className="btn btn-primary btn-sm" disabled={busy} onClick={() => act(r.id, "approve")}>
                     <Icon name="check" />
-                    {r.status === "pending_target" ? "تأیید و اعمال" : "اعمال"}
+                    {r.status === "pending_target" ? "تأیید و اعمال" : __shiftTr("اعمال")}
                   </button>
                 </>}
               </div>
@@ -380,6 +381,7 @@ function ShiftDateField({ label, rows, value, open, onToggle, onChange }) {
 }
 
 function MiniShiftCalendar({ monthStart, setMonthStart, rows, value, onChange }) {
+  const { t: __shiftTr } = useShiftI18n();
   const rowMap = useMemo(() => new Map(rows.map((row) => [row.date, row])), [rows]);
   const cells = useMemo(() => monthCells(monthStart), [monthStart]);
   const monthKey = jalaliMonthKey(monthStart);
@@ -388,9 +390,9 @@ function MiniShiftCalendar({ monthStart, setMonthStart, rows, value, onChange })
   return (
     <div className={styles.datePopover}>
       <div className={styles.datePopoverHead}>
-        <button type="button" className="btn btn-ghost icon-btn btn-sm" onClick={() => setMonthStart(shiftJalaliMonth(monthStart, -1))} aria-label="ماه قبل"><Icon name="chev" /></button>
+        <button type="button" className="btn btn-ghost icon-btn btn-sm" onClick={() => setMonthStart(shiftJalaliMonth(monthStart, -1))} aria-label={__shiftTr("ماه قبل")}><Icon name="chev" /></button>
         <b>{PERSIAN_MONTH.format(dateObj(monthStart))}</b>
-        <button type="button" className="btn btn-ghost icon-btn btn-sm" onClick={() => setMonthStart(shiftJalaliMonth(monthStart, 1))} aria-label="ماه بعد"><Icon name="left" /></button>
+        <button type="button" className="btn btn-ghost icon-btn btn-sm" onClick={() => setMonthStart(shiftJalaliMonth(monthStart, 1))} aria-label={__shiftTr("ماه بعد")}><Icon name="left" /></button>
       </div>
       <div className={styles.miniWeekdays}>{WEEKDAYS.map((day) => <span key={day}>{day}</span>)}</div>
       <div className={styles.miniGrid}>
@@ -415,7 +417,7 @@ function MiniShiftCalendar({ monthStart, setMonthStart, rows, value, onChange })
           );
         })}
       </div>
-      {!availableInMonth && <div className={styles.noMonthShift}>در این ماه شیفتی برای انتخاب وجود ندارد.</div>}
+      {!availableInMonth && <div className={styles.noMonthShift}>{"" + __shiftTr("در این ماه شیفتی برای انتخاب وجود ندارد.") + ""}</div>}
     </div>
   );
 }

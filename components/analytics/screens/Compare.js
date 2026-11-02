@@ -1,5 +1,7 @@
 "use client";
 
+import { useI18n as useAnalyticsI18n } from "@/components/I18nProvider";
+
 import { useCallback, useMemo } from "react";
 import AnalyticsFrame from "@/components/analytics/AnalyticsFrame";
 import { useAnalytics } from "@/components/analytics/AnalyticsContext";
@@ -29,14 +31,16 @@ const PERIOD_CHOICES = PRESETS.filter(([k]) => k !== "custom");
 const fmtKind = (kind, v) => (!isNum(v) ? "—" : kind === "rate" ? fmtPct(v) : kind === "days" ? `${fmtNum(v)} روز` : fmtNum(v));
 
 export default function Compare() {
+  const { t: __analyticsTr } = useAnalyticsI18n();
   return (
-    <AnalyticsFrame title="مقایسه و رتبه‌بندی" subtitle={`مقایسه دستی تا ${faDigits(MAX_COMPARE)} مورد + امتیاز وزن‌دار کارشناسان هم‌سطح`}>
+    <AnalyticsFrame title={__analyticsTr("مقایسه و رتبه‌بندی")} subtitle={`مقایسه دستی تا ${faDigits(MAX_COMPARE)} مورد + امتیاز وزن‌دار کارشناسان هم‌سطح`}>
       <CompareBody />
     </AnalyticsFrame>
   );
 }
 
 function CompareBody() {
+  const { t: __analyticsTr } = useAnalyticsI18n();
   const a = useAnalytics();
   const { view, range, gran, params, setParam, setParams } = a;
   const mode = MODES.some((x) => x.value === params.get("mode")) ? params.get("mode") : "people";
@@ -100,8 +104,8 @@ function CompareBody() {
     <>
       <Panel>
         <div className="panel-body an-compare-pick">
-          <Segmented label="نوع مقایسه" value={mode} onChange={(v) => setParams({ mode: v, ids: "" })} options={MODES} />
-          <div className="an-compare-chips" aria-label="موارد انتخاب‌شده">
+          <Segmented label={__analyticsTr("نوع مقایسه")} value={mode} onChange={(v) => setParams({ mode: v, ids: "" })} options={MODES} />
+          <div className="an-compare-chips" aria-label={__analyticsTr("موارد انتخاب‌شده")}>
             {data.map((d) => (
               <span key={d.key} className="an-chip">
                 <i className="an-chip-dot" style={{ background: `var(--cat-${d.color + 1})` }} aria-hidden="true" />
@@ -110,28 +114,28 @@ function CompareBody() {
               </span>
             ))}
             {chosen.length < MAX_COMPARE && remaining.length > 0 && (
-              <select className="input input-sm" style={{ width: 220 }} value="" onChange={(e) => e.target.value && setIds([...chosen, e.target.value])} aria-label="افزودن مورد برای مقایسه" data-testid="compare-add">
-                <option value="">+ افزودن {mode === "people" ? "کارشناس" : mode === "teams" ? "تیم" : "دوره"}…</option>
+              <select className="input input-sm" style={{ width: 220 }} value="" onChange={(e) => e.target.value && setIds([...chosen, e.target.value])} aria-label={__analyticsTr("افزودن مورد برای مقایسه")} data-testid="compare-add">
+                <option value="">{"" + __analyticsTr("+ افزودن") + " "}{mode === "people" ? __analyticsTr("کارشناس") : mode === "teams" ? __analyticsTr("تیم") : "دوره"}…</option>
                 {remaining.map((o) => <option key={o.key} value={o.key}>{o.label}{o.sub ? ` — ${o.sub}` : ""}</option>)}
               </select>
             )}
           </div>
         </div>
         {mode === "people" && roles.size > 1 && (
-          <div className="an-warn" role="note"><Icon name="info" />نقش یا سطح این افراد متفاوت است؛ نوع کارشان فرق دارد و مقایسه مستقیم حجم کار ممکن است گمراه‌کننده باشد.</div>
+          <div className="an-warn" role="note"><Icon name="info" />{"" + __analyticsTr("نقش یا سطح این افراد متفاوت است؛ نوع کارشان فرق دارد و مقایسه مستقیم حجم کار ممکن است گمراه‌کننده باشد.") + ""}</div>
         )}
-        {mode === "teams" && <div className="an-note"><Icon name="info" />تیم‌ها اندازه و نوع کار متفاوتی دارند؛ «سرانه» و نرخ‌ها را مقایسه کنید، نه جمع کل را.</div>}
-        {mode === "periods" && <div className="an-note"><Icon name="info" />دوره‌ها روی همه داده‌های فیلترشده مقایسه می‌شوند؛ دوره جاری تا امروز شمرده می‌شود.</div>}
+        {mode === "teams" && <div className="an-note"><Icon name="info" />{"" + __analyticsTr("تیم‌ها اندازه و نوع کار متفاوتی دارند؛ «سرانه» و نرخ‌ها را مقایسه کنید، نه جمع کل را.") + ""}</div>}
+        {mode === "periods" && <div className="an-note"><Icon name="info" />{"" + __analyticsTr("دوره‌ها روی همه داده‌های فیلترشده مقایسه می‌شوند؛ دوره جاری تا امروز شمرده می‌شود.") + ""}</div>}
       </Panel>
 
       {data.length < 2 ? (
-        <Panel><AnEmpty icon="bars" title="دو مورد یا بیشتر انتخاب کنید">{mode === "people" ? "برای مقایسه، کارشناسان هم‌نقش و هم‌سطح را انتخاب کنید." : "از فهرست «افزودن» موردی اضافه کنید."}</AnEmpty></Panel>
+        <Panel><AnEmpty icon="bars" title={__analyticsTr("دو مورد یا بیشتر انتخاب کنید")}>{mode === "people" ? "برای مقایسه، کارشناسان هم‌نقش و هم‌سطح را انتخاب کنید." : "از فهرست «افزودن» موردی اضافه کنید."}</AnEmpty></Panel>
       ) : (
         <>
           <div className="an-mini-grid" data-testid="compare-grid">
-            {mode === "teams" && <MiniBars title="سرانه تسک تکمیل‌شده" kind="avg" data={data} value={(d) => d.pc} />}
+            {mode === "teams" && <MiniBars title={__analyticsTr("سرانه تسک تکمیل‌شده")} kind="avg" data={data} value={(d) => d.pc} />}
             {keys.map((k) => <MiniBars key={k} title={METRICS[k].label} kind={METRICS[k].kind} data={data} value={(d) => d.s[k]} n={METRICS[k].n ? (d) => d.s[METRICS[k].n] : null} />)}
-            {mode !== "periods" && <MiniBars title="صف کار باز (اکنون)" kind="count" data={data} value={(d) => d.open.open} />}
+            {mode !== "periods" && <MiniBars title={__analyticsTr("صف کار باز (اکنون)")} kind="count" data={data} value={(d) => d.open.open} />}
           </div>
           <ChartPanel
             title={`روند «${METRICS[metric].label}»`}
@@ -139,11 +143,11 @@ function CompareBody() {
             build={trendBuild}
             height={280}
             actions={
-              <select className="input input-sm" style={{ width: 170 }} value={metric} onChange={(e) => setParam("metric", e.target.value)} aria-label="شاخص روند">
+              <select className="input input-sm" style={{ width: 170 }} value={metric} onChange={(e) => setParam("metric", e.target.value)} aria-label={__analyticsTr("شاخص روند")}>
                 {TREND_KEYS.filter((k) => METRICS[k].area !== "soc" || showSoc).map((k) => <option key={k} value={k}>{METRICS[k].label}</option>)}
               </select>
             }
-            table={{ columns: [{ key: "b", label: "بازه", value: (r) => r.label }, ...data.map((d, i) => ({ key: d.key, label: d.label, kind: METRICS[metric].kind, value: (r) => r.v[i] }))], rows: trend.labels.map((label, j) => ({ id: j, label, v: trend.series.map((s) => s[j]) })) }}
+            table={{ columns: [{ key: "b", label: __analyticsTr("بازه"), value: (r) => r.label }, ...data.map((d, i) => ({ key: d.key, label: d.label, kind: METRICS[metric].kind, value: (r) => r.v[i] }))], rows: trend.labels.map((label, j) => ({ id: j, label, v: trend.series.map((s) => s[j]) })) }}
             fileName="compare-trend"
           />
         </>

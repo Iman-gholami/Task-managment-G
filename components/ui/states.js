@@ -1,5 +1,7 @@
 "use client";
 
+import { useI18n as useSharedI18n } from "@/components/I18nProvider";
+
 import Icon from "@/components/ui/Icon";
 
 /**
@@ -39,9 +41,10 @@ export function describeError(error, fallbackTitle = "Couldn't load this") {
 
 /** Inline failure for one region of a page; the rest of the page keeps working. */
 export function ErrorState({ error, title, onRetry, compact }) {
+  const { t: __sharedTr } = useSharedI18n();
   const e = describeError(error, title);
   return (
-    <EmptyState danger icon={e.icon} title={e.title} compact={compact} action={e.retry && onRetry ? <button type="button" className="btn btn-secondary btn-sm" onClick={onRetry}>Try again</button> : null}>
+    <EmptyState danger icon={e.icon} title={e.title} compact={compact} action={e.retry && onRetry ? <button type="button" className="btn btn-secondary btn-sm" onClick={onRetry}>{"" + __sharedTr("Try again") + ""}</button> : null}>
       {e.body}
     </EmptyState>
   );

@@ -1,5 +1,7 @@
 "use client";
 
+import { useI18n as useAnalyticsI18n } from "@/components/I18nProvider";
+
 import { useCallback, useEffect, useMemo, useState } from "react";
 import AnalyticsFrame from "@/components/analytics/AnalyticsFrame";
 import { useAnalytics } from "@/components/analytics/AnalyticsContext";
@@ -39,14 +41,16 @@ function suggestedActions(alerts) {
 }
 
 export default function Report() {
+  const { t: __analyticsTr } = useAnalyticsI18n();
   return (
-    <AnalyticsFrame title="گزارش مدیریتی" className="an-report-page">
+    <AnalyticsFrame title={__analyticsTr("گزارش مدیریتی")} className="an-report-page">
       <ReportBody />
     </AnalyticsFrame>
   );
 }
 
 function ReportBody() {
+  const { t: __analyticsTr } = useAnalyticsI18n();
   const a = useAnalytics();
   const { view, range, cmp, gran, filters, params, setParam } = a;
   const full = params.get("full") === "1";
@@ -91,66 +95,66 @@ function ReportBody() {
   return (
     <>
       <div className="an-report-tools an-no-print">
-        <label className="toggle-label"><input type="checkbox" className="switch" checked={full} onChange={(e) => setParam("full", e.target.checked ? "1" : "")} />گزارش کامل (همراه جدول کارشناسان و SOC)</label>
+        <label className="toggle-label"><input type="checkbox" className="switch" checked={full} onChange={(e) => setParam("full", e.target.checked ? "1" : "")} />{"" + __analyticsTr("گزارش کامل (همراه جدول کارشناسان و SOC)") + ""}</label>
         <span className="spacer" />
-        <button type="button" className="btn btn-primary" onClick={() => window.print()} data-testid="print-report"><Icon name="print" />چاپ یا ذخیره PDF</button>
+        <button type="button" className="btn btn-primary" onClick={() => window.print()} data-testid="print-report"><Icon name="print" />{"" + __analyticsTr("چاپ یا ذخیره PDF") + ""}</button>
       </div>
 
       <article className="an-report" data-testid="report">
         <header className="an-report-head">
           <div>
-            <span className="muted small">Sentinel Ops · واحد امنیت</span>
-            <h2>گزارش مدیریتی {range.label}</h2>
+            <span className="muted small">{"" + __analyticsTr("Sentinel Ops · واحد امنیت") + ""}</span>
+            <h2>{"" + __analyticsTr("گزارش مدیریتی") + " "}{range.label}</h2>
             <p className="muted">{scope}{a.demo ? " · داده نمایشی (ساختگی)" : ""}</p>
           </div>
           <dl>
-            <dt>بازه</dt><dd>{faRange(range.from, range.end)}</dd>
-            <dt>مقایسه با</dt><dd>{cmp ? `${cmp.label} (${faRange(cmp.from, cmp.to)})` : "—"}</dd>
-            <dt>تاریخ تهیه</dt><dd>{faDate(a.today)}</dd>
-            <dt>تهیه‌کننده</dt><dd>{a.me.name}</dd>
+            <dt>{"" + __analyticsTr("بازه") + ""}</dt><dd>{faRange(range.from, range.end)}</dd>
+            <dt>{"" + __analyticsTr("مقایسه با") + ""}</dt><dd>{cmp ? `${cmp.label} (${faRange(cmp.from, cmp.to)})` : "—"}</dd>
+            <dt>{"" + __analyticsTr("تاریخ تهیه") + ""}</dt><dd>{faDate(a.today)}</dd>
+            <dt>{"" + __analyticsTr("تهیه‌کننده") + ""}</dt><dd>{a.me.name}</dd>
           </dl>
         </header>
 
         <StatusBanner status={m.status} compact />
 
-        <MetricGrid label="شاخص‌های اصلی">
-          <Kpi label="تسک‌های تکمیل‌شده" value={fmtInt(cur.completed)} delta={prev && <Delta now={cur.completed} before={prev.completed} label={short} />} />
-          <Kpi label="حجم کار وزن‌دار" value={fmtInt(cur.units)} delta={prev && <Delta now={cur.units} before={prev.units} label={short} />} />
-          <Kpi label="ساعت ثبت‌شده" value={fmtNum(cur.hours, 0)} unit="ساعت" delta={prev && <Delta now={cur.hours} before={prev.hours} label={short} />} />
-          <Kpi label="تحویل به‌موقع" value={fmtPct(cur.onTimeRate)} delta={prev && cur.onTimeRate !== null && <Delta now={cur.onTimeRate} before={prev.onTimeRate} kind="rate" label={short} />} foot={`از ${faDigits(cur.onTimeN)} تسک دارای ددلاین`} />
-          <Kpi label="صف کار باز (اکنون)" value={fmtInt(open.open)} tone={open.overdue ? "alert" : undefined} foot={`${faDigits(open.overdue)} معوق · ${faDigits(open.blocked)} مسدود`} />
+        <MetricGrid label={__analyticsTr("شاخص‌های اصلی")}>
+          <Kpi label={__analyticsTr("تسک‌های تکمیل‌شده")} value={fmtInt(cur.completed)} delta={prev && <Delta now={cur.completed} before={prev.completed} label={short} />} />
+          <Kpi label={__analyticsTr("حجم کار وزن‌دار")} value={fmtInt(cur.units)} delta={prev && <Delta now={cur.units} before={prev.units} label={short} />} />
+          <Kpi label={__analyticsTr("ساعت ثبت‌شده")} value={fmtNum(cur.hours, 0)} unit="ساعت" delta={prev && <Delta now={cur.hours} before={prev.hours} label={short} />} />
+          <Kpi label={__analyticsTr("تحویل به‌موقع")} value={fmtPct(cur.onTimeRate)} delta={prev && cur.onTimeRate !== null && <Delta now={cur.onTimeRate} before={prev.onTimeRate} kind="rate" label={short} />} foot={`از ${faDigits(cur.onTimeN)} تسک دارای ددلاین`} />
+          <Kpi label={__analyticsTr("صف کار باز (اکنون)")} value={fmtInt(open.open)} tone={open.overdue ? "alert" : undefined} foot={`${faDigits(open.overdue)} معوق · ${faDigits(open.blocked)} مسدود`} />
           {soc
-            ? <Kpi label="بسته‌شدن شیفت‌لاگ SOC" value={fmtPct(soc.closureRate)} delta={socPrev && soc.closureRate !== null && <Delta now={soc.closureRate} before={socPrev.closureRate} kind="rate" label={short} />} foot={`تیکت ${faDigits(soc.tickets)} · IOC ${faDigits(soc.iocs)}`} />
-            : <Kpi label="تسک‌های ایجادشده" value={fmtInt(cur.created)} delta={prev && <Delta now={cur.created} before={prev.created} label={short} />} />}
+            ? <Kpi label={__analyticsTr("بسته‌شدن شیفت‌لاگ SOC")} value={fmtPct(soc.closureRate)} delta={socPrev && soc.closureRate !== null && <Delta now={soc.closureRate} before={socPrev.closureRate} kind="rate" label={short} />} foot={`تیکت ${faDigits(soc.tickets)} · IOC ${faDigits(soc.iocs)}`} />
+            : <Kpi label={__analyticsTr("تسک‌های ایجادشده")} value={fmtInt(cur.created)} delta={prev && <Delta now={cur.created} before={prev.created} label={short} />} />}
         </MetricGrid>
 
         <div className="an-row">
           <section>
-            <h3>مهم‌ترین بینش‌ها</h3>
+            <h3>{"" + __analyticsTr("مهم‌ترین بینش‌ها") + ""}</h3>
             <InsightList insights={m.insights} limit={5} />
           </section>
           <section>
-            <h3>موارد نیازمند اقدام</h3>
+            <h3>{"" + __analyticsTr("موارد نیازمند اقدام") + ""}</h3>
             {m.alerts.filter((x) => x.level !== "info").length ? (
               <ul className="an-report-alerts">
                 {m.alerts.filter((x) => x.level !== "info").slice(0, 6).map((x) => (
                   <li key={x.id} data-level={x.level}><b>{LEVELS[x.level].fa}</b><span>{x.title}{x.detail ? ` — ${x.detail}` : ""}</span></li>
                 ))}
               </ul>
-            ) : <p className="muted">موردی برای اقدام فوری نیست.</p>}
+            ) : <p className="muted">{"" + __analyticsTr("موردی برای اقدام فوری نیست.") + ""}</p>}
           </section>
         </div>
 
         <section>
-          <h3>ورودی و خروجی کار</h3>
-          <Chart build={flow} height={220} label="ورودی و خروجی کار" />
+          <h3>{"" + __analyticsTr("ورودی و خروجی کار") + ""}</h3>
+          <Chart build={flow} height={220} label={__analyticsTr("ورودی و خروجی کار")} />
         </section>
 
         <section>
-          <h3>تیم‌ها</h3>
+          <h3>{"" + __analyticsTr("تیم‌ها") + ""}</h3>
           <DataTable dense columns={[
-            { key: "t", label: "تیم", value: (r) => r.fa, sort: false },
-            { key: "n", label: "کارشناسان", kind: "count", value: (r) => r.headcount, sort: false },
+            { key: "t", label: __analyticsTr("تیم"), value: (r) => r.fa, sort: false },
+            { key: "n", label: __analyticsTr("کارشناسان"), kind: "count", value: (r) => r.headcount, sort: false },
             { key: "c", label: "تکمیل‌شده", kind: "count", value: (r) => r.cur.completed, sort: false },
             { key: "d", label: "تغییر", value: () => null, sort: false, render: (r) => (r.prev ? <Delta now={r.cur.completed} before={r.prev.completed} /> : "—") },
             { key: "pc", label: "سرانه", kind: "avg", value: (r) => r.pc.completed, sort: false },
@@ -158,12 +162,12 @@ function ReportBody() {
             { key: "ot", label: "به‌موقع", kind: "rate", value: (r) => r.cur.onTimeRate, sort: false },
             { key: "o", label: "صف باز", kind: "count", value: (r) => r.open.open, sort: false },
             { key: "od", label: "معوق", kind: "count", value: (r) => r.open.overdue, sort: false },
-          ]} rows={m.teams} rowKey={(r) => r.key} caption="تیم‌ها" />
+          ]} rows={m.teams} rowKey={(r) => r.key} caption={__analyticsTr("تیم‌ها")} />
         </section>
 
         {full && (
           <section>
-            <h3>کارشناسان</h3>
+            <h3>{"" + __analyticsTr("کارشناسان") + ""}</h3>
             <DataTable dense columns={[
               { key: "n", label: "نام", value: (r) => r.person.name, render: (r) => <span className="an-person">{r.person.name}<small>{[groupFa(r.person.group), r.person.level, ROLE_FA[r.person.role]].filter(Boolean).join(" · ")}</small></span> },
               { key: "c", label: "تکمیل‌شده", kind: "count", value: (r) => r.cur.completed },
@@ -171,21 +175,21 @@ function ReportBody() {
               { key: "h", label: "ساعت", kind: "count", value: (r) => r.cur.hours },
               { key: "ot", label: "به‌موقع", kind: "rate", value: (r) => r.cur.onTimeRate },
               { key: "o", label: "صف باز", kind: "count", value: (r) => r.open.open },
-              { key: "s", label: "شیفت", kind: "count", value: (r) => (r.person.shift ? r.cur.shifts : null) },
-              { key: "tk", label: "تیکت", kind: "count", value: (r) => (r.person.shift ? r.cur.tickets : null) },
-            ]} rows={m.people.map((r) => ({ ...r, id: r.person.id }))} caption="کارشناسان" />
-            <p className="muted small">الفبایی؛ آماری و بدون امتیاز یا رتبه.</p>
+              { key: "s", label: __analyticsTr("شیفت"), kind: "count", value: (r) => (r.person.shift ? r.cur.shifts : null) },
+              { key: "tk", label: __analyticsTr("تیکت"), kind: "count", value: (r) => (r.person.shift ? r.cur.tickets : null) },
+            ]} rows={m.people.map((r) => ({ ...r, id: r.person.id }))} caption={__analyticsTr("کارشناسان")} />
+            <p className="muted small">{"" + __analyticsTr("الفبایی؛ آماری و بدون امتیاز یا رتبه.") + ""}</p>
           </section>
         )}
 
         <div className="an-row">
           <section>
-            <h3>اقدام‌های پیشنهادی</h3>
-            {actions.length ? <ol className="an-actions-list">{actions.map((x) => <li key={x}>{x}</li>)}</ol> : <p className="muted">پیشنهادی از هشدارها به دست نیامد.</p>}
+            <h3>{"" + __analyticsTr("اقدام‌های پیشنهادی") + ""}</h3>
+            {actions.length ? <ol className="an-actions-list">{actions.map((x) => <li key={x}>{x}</li>)}</ol> : <p className="muted">{"" + __analyticsTr("پیشنهادی از هشدارها به دست نیامد.") + ""}</p>}
           </section>
           <section>
-            <h3>یادداشت مدیر</h3>
-            <textarea className="textarea an-notes an-no-print" value={notes} onChange={(e) => saveNotes(e.target.value)} placeholder="جمع‌بندی، تصمیم‌ها و پیگیری‌ها را اینجا بنویسید؛ در نسخه چاپی و PDF می‌آید. (فقط روی همین مرورگر ذخیره می‌شود.)" aria-label="یادداشت مدیر" data-testid="notes" />
+            <h3>{"" + __analyticsTr("یادداشت مدیر") + ""}</h3>
+            <textarea className="textarea an-notes an-no-print" value={notes} onChange={(e) => saveNotes(e.target.value)} placeholder={__analyticsTr("جمع‌بندی، تصمیم‌ها و پیگیری‌ها را اینجا بنویسید؛ در نسخه چاپی و PDF می‌آید. (فقط روی همین مرورگر ذخیره می‌شود.)")} aria-label={__analyticsTr("یادداشت مدیر")} data-testid="notes" />
             <p className="an-notes-print an-print-only">{notes || "—"}</p>
           </section>
         </div>

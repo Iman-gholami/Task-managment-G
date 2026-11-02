@@ -1,5 +1,7 @@
 "use client";
 
+import { useI18n as useSharedI18n } from "@/components/I18nProvider";
+
 import Link from "next/link";
 import { Children, Fragment } from "react";
 import Icon from "@/components/ui/Icon";
@@ -52,9 +54,10 @@ export function MetricGrid({ children, label }) {
  * `goodWhen="up"` colours an increase as positive; decreases stay neutral (not every drop is a problem).
  */
 export function Delta({ now, before, label, goodWhen = "up" }) {
+  const { t: __sharedTr } = useSharedI18n();
   if (before === null || before === undefined || now === null || now === undefined) return null;
   const d = Math.round((now - before) * 10) / 10;
-  if (d === 0) return <><span className="delta">No change</span><span>{label}</span></>;
+  if (d === 0) return <><span className="delta">{"" + __sharedTr("No change") + ""}</span><span>{label}</span></>;
   const up = d > 0;
   return (
     <>

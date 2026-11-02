@@ -1,5 +1,9 @@
 "use client";
 
+import { useI18n as useSharedI18n } from "@/components/I18nProvider";
+
+import { useI18n as useUiI18n } from "@/components/I18nProvider";
+
 import { useRouter } from "next/navigation";
 import { useId, useMemo, useState } from "react";
 import { useApp } from "@/components/AppProvider";
@@ -18,6 +22,8 @@ const norm = (s) => s.toLowerCase();
  * plus the Create task action. ↑/↓ move, Enter opens, Esc closes.
  */
 export default function CommandMenu({ onClose }) {
+  const { t: __sharedTr } = useSharedI18n();
+  const { t: __uiTr } = useUiI18n();
   const { me, tasks, members, peopleMap, setCreateOpen, theme, setTheme } = useApp();
   const router = useRouter();
   const ref = useFocusTrap(onClose);
@@ -30,7 +36,7 @@ export default function CommandMenu({ onClose }) {
     const term = norm(q.trim());
     const match = (s) => !term || norm(s).includes(term);
     const out = [];
-    const actions = [{ key: "create", label: "Create task", icon: "plus", hint: "C", run: () => setCreateOpen(true) }].filter((a) => match(a.label));
+    const actions = [{ key: "create", label: __sharedTr("Create task"), icon: "plus", hint: "C", run: () => setCreateOpen(true) }].filter((a) => match(a.label));
     if (actions.length) out.push(["Actions", actions]);
     if (term) {
       const visible = tasks.filter((t) => t.a === me.id || t.createdBy === me.id || inTeamScope(me, peopleMap[t.a]));
@@ -55,7 +61,7 @@ export default function CommandMenu({ onClose }) {
     if (themes.length) {
       out.push(["Theme", themes.map((t) => ({
         key: `theme-${t.id}`,
-        label: <span className="title">Theme: {t.name}</span>,
+        label: <span className="title">{"" + __uiTr("Theme:") + " "}{t.name}</span>,
         lead: <ThemeDot theme={t} />,
         hint: t.id === theme ? "Current" : t.note,
         run: () => setTheme(t.id),
@@ -91,7 +97,7 @@ export default function CommandMenu({ onClose }) {
             aria-controls={listId}
             aria-activedescendant={flat.length ? optionId(current) : undefined}
             aria-autocomplete="list"
-            aria-label="Search tasks, people and pages"
+            aria-label={__uiTr("Search tasks, people and pages")}
             placeholder={manager ? "Search tasks, people and pages…" : "Search tasks and pages…"}
             value={q}
             onChange={(e) => { setQ(e.target.value); setActive(0); }}
@@ -99,9 +105,9 @@ export default function CommandMenu({ onClose }) {
           />
           <kbd>Esc</kbd>
         </div>
-        <div className="cmd-list" id={listId} role="listbox" aria-label="Results">
+        <div className="cmd-list" id={listId} role="listbox" aria-label={__uiTr("Results")}>
           {flat.length === 0 && (
-            <div className="empty compact"><h3>No matches for “{q.trim()}”</h3><p>Try a task ID such as T-1001, part of a title, or a page name.</p></div>
+            <div className="empty compact"><h3>{"" + __uiTr("No matches for “") + ""}{q.trim()}”</h3><p>{"" + __uiTr("Try a task ID such as T-1001, part of a title, or a page name.") + ""}</p></div>
           )}
           {groups.map(([name, items]) => (
             <div key={name} role="group" aria-label={name}>
@@ -130,9 +136,9 @@ export default function CommandMenu({ onClose }) {
           ))}
         </div>
         <div className="cmd-foot" aria-hidden="true">
-          <span><kbd>↑</kbd><kbd>↓</kbd>Navigate</span>
+          <span><kbd>↑</kbd><kbd>↓</kbd>{"" + __uiTr("Navigate") + ""}</span>
           <span><kbd>↵</kbd>Open</span>
-          <span><kbd>Esc</kbd>Close</span>
+          <span><kbd>Esc</kbd>{"" + __uiTr("Close") + ""}</span>
         </div>
       </div>
     </div>

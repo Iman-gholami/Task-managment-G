@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
+import { useI18n } from "@/components/I18nProvider";
 import { api, useApp } from "@/components/AppProvider";
 
 const POLL_MS = 30_000;
@@ -8,6 +9,7 @@ const POLL_MS = 30_000;
 /** The browser must remain open. Polling does not renew an idle session. */
 export default function useTaskAssignmentNotifications() {
   const { me, refreshTasks } = useApp();
+  const { t } = useI18n();
   const memoryCursor = useRef(0);
   const [permission, setPermission] = useState("checking");
   const [assignments, setAssignments] = useState([]);
@@ -54,7 +56,7 @@ export default function useTaskAssignmentNotifications() {
           for (const item of notifications) {
             if (item.id <= cursor) continue;
             try {
-              const notice = new Notification("New task assigned", { body: `${item.taskId} · ${item.title}`, tag: `task-assignment-${me.id}-${item.id}`, icon: "/icon.svg" });
+              const notice = new Notification(t("New task assigned"), { body: `${item.taskId} · ${item.title}`, tag: `task-assignment-${me.id}-${item.id}`, icon: "/icon.svg" });
               notice.onclick = () => { window.focus(); window.location.assign(`/tasks/${encodeURIComponent(item.taskId)}`); notice.close(); };
               cursor = item.id;
               memoryCursor.current = cursor;
@@ -77,7 +79,7 @@ export default function useTaskAssignmentNotifications() {
     const timer = window.setInterval(refresh, POLL_MS);
     window.addEventListener("focus", refresh);
     return () => { active = false; window.clearInterval(timer); window.removeEventListener("focus", refresh); };
-  }, [me.id, permissionNow, refreshKey, refreshTasks]);
+  }, [me.id, permissionNow, refreshKey, refreshTasks, t]);
 
   return { permission, enable, assignments };
 }

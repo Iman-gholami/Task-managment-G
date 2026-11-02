@@ -1,5 +1,7 @@
 "use client";
 
+import { useI18n as useUiI18n } from "@/components/I18nProvider";
+
 import { Panel } from "@/components/ui/layout";
 import { Bars, CxLegend, Distribution } from "@/components/ui/charts";
 import { ErrorState, TableSkeleton } from "@/components/ui/states";
@@ -12,27 +14,28 @@ const n = (v) => (v ? v : <span className="zero">0</span>);
  * month for the last six months. All trend bars share one scale so teams compare directly.
  */
 export default function TeamComparison({ teams, loading, error, onRetry, periodLabel }) {
+  const { t: __uiTr } = useUiI18n();
   const months = lastMonths(6);
   const max = Math.max(1, ...teams.flatMap((t) => t.trend));
   return (
     <Panel
-      title="Team comparison"
+      title={__uiTr("Team comparison")}
       meta={periodLabel}
-      footer={<><CxLegend /><span style={{ marginLeft: "auto" }}>Monthly bars use one scale across teams · hover for values</span></>}
+      footer={<><CxLegend /><span style={{ marginLeft: "auto" }}>{"" + __uiTr("Monthly bars use one scale across teams · hover for values") + ""}</span></>}
     >
-      {loading ? <TableSkeleton rows={3} /> : error ? <ErrorState error={error} title="Couldn't load team figures" onRetry={onRetry} compact /> : (
+      {loading ? <TableSkeleton rows={3} /> : error ? <ErrorState error={error} title={__uiTr("Couldn't load team figures")} onRetry={onRetry} compact /> : (
         <div className="table-wrap">
           <table className="dt hover">
             <thead>
               <tr>
                 <th scope="col">Team</th>
                 <th scope="col" className="r">People</th>
-                <th scope="col" className="r">Completed</th>
+                <th scope="col" className="r">{"" + __uiTr("Completed") + ""}</th>
                 <th scope="col" className="r">Hours</th>
-                <th scope="col" className="r">Active</th>
+                <th scope="col" className="r">{"" + __uiTr("Active") + ""}</th>
                 <th scope="col" className="r">Overdue</th>
-                <th scope="col" style={{ width: "22%" }}>Complexity of completed work</th>
-                <th scope="col">Completed per month</th>
+                <th scope="col" style={{ width: "22%" }}>{"" + __uiTr("Complexity of completed work") + ""}</th>
+                <th scope="col">{"" + __uiTr("Completed per month") + ""}</th>
               </tr>
             </thead>
             <tbody>
@@ -44,7 +47,7 @@ export default function TeamComparison({ teams, loading, error, onRetry, periodL
                   <td className="r">{n(t.hours)}</td>
                   <td className="r">{n(t.active)}</td>
                   <td className="r">{t.overdue ? <span className="overdue">{t.overdue}</span> : <span className="zero">0</span>}</td>
-                  <td>{t.complexity.some(Boolean) ? <Distribution parts={t.complexity} /> : <span className="muted">No completed work</span>}</td>
+                  <td>{t.complexity.some(Boolean) ? <Distribution parts={t.complexity} /> : <span className="muted">{"" + __uiTr("No completed work") + ""}</span>}</td>
                   <td><Bars values={t.trend} labels={months} max={max} name={`${t.team}, completed tasks per month`} /></td>
                 </tr>
               ))}

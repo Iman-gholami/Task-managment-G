@@ -1,5 +1,7 @@
 "use client";
 
+import { useI18n as useAnalyticsI18n } from "@/components/I18nProvider";
+
 import { useCallback, useEffect, useMemo, useState } from "react";
 import AnalyticsFrame from "@/components/analytics/AnalyticsFrame";
 import { api, useApp } from "@/components/AppProvider";
@@ -32,13 +34,14 @@ const reviewTime = (at) => {
 };
 
 function ReviewEditor({ analytics, person, month, review, eligible }) {
+  const { t: __analyticsTr } = useAnalyticsI18n();
   const { toast } = useApp();
   const [rating, setRating] = useState(review?.rating ?? "");
   const [note, setNote] = useState(review?.note ?? "");
   const [saving, setSaving] = useState(false);
   useEffect(() => { setRating(review?.rating ?? ""); setNote(review?.note ?? ""); }, [review?.rating, review?.note, month]);
 
-  if (!eligible) return <span className="muted">شیفت‌لاگی با چک‌لیست ندارد</span>;
+  if (!eligible) return <span className="muted">{"" + __analyticsTr("شیفت‌لاگی با چک‌لیست ندارد") + ""}</span>;
   if (analytics.demo) return (
     <span>{review ? QUAL_FA[review.rating] : "—"}{review?.note ? <small className="muted"> · {review.note}</small> : null}</span>
   );
@@ -66,16 +69,17 @@ function ReviewEditor({ analytics, person, month, review, eligible }) {
     <div style={{ minWidth: 430 }}>
       <Segmented label={`کیفیت شیفت‌لاگ ${person.name}`} value={rating || REVIEW_OPTIONS[0].value} onChange={setRating} options={REVIEW_OPTIONS} className={!rating ? "is-unset" : ""} />
       <div className="row" style={{ marginTop: 8, gap: 8 }}>
-        <input className="input input-sm" value={note} onChange={(e) => setNote(e.target.value)} placeholder="یادداشت اختیاری" aria-label={`یادداشت ارزیابی ${person.name}`} />
-        <button type="button" className="btn btn-primary btn-sm" disabled={!rating || saving} onClick={save}>ذخیره</button>
-        <button type="button" className="btn btn-ghost btn-sm" disabled={saving || (!review && !rating && !note)} onClick={clear}>پاک کردن</button>
+        <input className="input input-sm" value={note} onChange={(e) => setNote(e.target.value)} placeholder={__analyticsTr("یادداشت اختیاری")} aria-label={`یادداشت ارزیابی ${person.name}`} />
+        <button type="button" className="btn btn-primary btn-sm" disabled={!rating || saving} onClick={save}>{"" + __analyticsTr("ذخیره") + ""}</button>
+        <button type="button" className="btn btn-ghost btn-sm" disabled={saving || (!review && !rating && !note)} onClick={clear}>{"" + __analyticsTr("پاک کردن") + ""}</button>
       </div>
-      {review && <small className="muted">ثبت‌شده توسط {review.byName ?? "—"} در {reviewTime(review.at)}</small>}
+      {review && <small className="muted">{"" + __analyticsTr("ثبت‌شده توسط") + " "}{review.byName ?? "—"}{" " + __analyticsTr("در") + " "}{reviewTime(review.at)}</small>}
     </div>
   );
 }
 
 function MonthlyShiftReviews({ analytics, analysts }) {
+  const { t: __analyticsTr } = useAnalyticsI18n();
   const { view } = analytics;
   const months = useMemo(() => jalaliMonthsInRange(view.window.from, view.window.to).filter((m) => m.from <= analytics.today), [view.window.from, view.window.to, analytics.today]);
   const currentMonth = jalaliMonthKey(analytics.today);
@@ -96,21 +100,21 @@ function MonthlyShiftReviews({ analytics, analysts }) {
   });
   const columns = [
     { key: "name", label: "تحلیلگر", value: (r) => r.person.name, render: (r) => <span className="an-person">{r.person.name}<small>{r.person.level}</small></span> },
-    { key: "shift", label: "شیفت", kind: "count", value: (r) => r.cur.shifts },
+    { key: "shift", label: __analyticsTr("شیفت"), kind: "count", value: (r) => r.cur.shifts },
     { key: "closure", label: "بسته‌شدن لاگ", value: (r) => r.cur.closureRate, render: (r) => <span>{fmtPct(r.cur.closureRate)} <small className="muted">(n={faDigits(r.cur.past)})</small></span> },
-    { key: "routine", label: "انجام روتین", kind: "rate", value: (r) => r.cur.routineRate },
+    { key: "routine", label: __analyticsTr("انجام روتین"), kind: "rate", value: (r) => r.cur.routineRate },
     { key: "missed", label: "جامانده", kind: "count", value: (r) => r.cur.missed },
     { key: "review", label: "ارزیابی ماهانه", sort: false, value: () => null, render: (r) => <ReviewEditor analytics={analytics} person={r.person} month={month} review={r.review} eligible={r.eligible} /> },
   ];
 
   return (
     <Panel
-      title="ارزیابی ماهانه شیفت‌لاگ"
-      meta="یک ارزیابی کیفیت برای هر تحلیلگر در هر ماه شمسی؛ شیفت‌لاگ‌های روزانه امتیاز ندارند."
-      actions={<select className="input input-sm" style={{ width: 180 }} value={month} onChange={(e) => setMonth(e.target.value)} aria-label="ماه ارزیابی شیفت‌لاگ">{months.map((m) => <option key={m.month} value={m.month}>{faMonthLabel(m.from)}</option>)}</select>}
+      title={__analyticsTr("ارزیابی ماهانه شیفت‌لاگ")}
+      meta={__analyticsTr("یک ارزیابی کیفیت برای هر تحلیلگر در هر ماه شمسی؛ شیفت‌لاگ‌های روزانه امتیاز ندارند.")}
+      actions={<select className="input input-sm" style={{ width: 180 }} value={month} onChange={(e) => setMonth(e.target.value)} aria-label={__analyticsTr("ماه ارزیابی شیفت‌لاگ")}>{months.map((m) => <option key={m.month} value={m.month}>{faMonthLabel(m.from)}</option>)}</select>}
     >
-      {analytics.demo && <div className="an-note" role="note"><Icon name="info" />داده نمایشی فقط‌خواندنی است؛ ارزیابی‌ها برای نمایش نحوه امتیازدهی ساخته شده‌اند.</div>}
-      {month === currentMonth && <div className="an-note" role="note"><Icon name="info" />ماه هنوز تمام نشده است؛ ثبت ارزیابی ماه جاری مجاز است.</div>}
+      {analytics.demo && <div className="an-note" role="note"><Icon name="info" />{"" + __analyticsTr("داده نمایشی فقط‌خواندنی است؛ ارزیابی‌ها برای نمایش نحوه امتیازدهی ساخته شده‌اند.") + ""}</div>}
+      {month === currentMonth && <div className="an-note" role="note"><Icon name="info" />{"" + __analyticsTr("ماه هنوز تمام نشده است؛ ثبت ارزیابی ماه جاری مجاز است.") + ""}</div>}
       {["L1", "L2", "L3"].map((level) => {
         const levelRows = rows.filter((r) => r.person.level === level).sort((a, b) => a.person.name.localeCompare(b.person.name, "fa"));
         return levelRows.length ? <div key={level} style={{ marginTop: 14 }}><div className="panel-head"><h3>SOC · {level}</h3></div><DataTable columns={columns} rows={levelRows} caption={`ارزیابی ماهانه SOC ${level}`} /></div> : null;
@@ -120,14 +124,16 @@ function MonthlyShiftReviews({ analytics, analysts }) {
 }
 
 export default function Soc() {
+  const { t: __analyticsTr } = useAnalyticsI18n();
   return (
-    <AnalyticsFrame title="عملیات شیفت SOC" subtitle="شیفت‌های عملیاتی SOC شامل کارشناسان طراحی و خودکارسازی">
+    <AnalyticsFrame title={__analyticsTr("عملیات شیفت SOC")} subtitle="شیفت‌های عملیاتی SOC شامل کارشناسان طراحی و خودکارسازی">
       <SocBody />
     </AnalyticsFrame>
   );
 }
 
 function SocBody() {
+  const { t: __analyticsTr } = useAnalyticsI18n();
   const a = useAnalytics();
   const { view, range, cmp, gran } = a;
   const [person, setPerson] = useState(null);
@@ -165,42 +171,42 @@ function SocBody() {
   const ticketBuild = useCallback(daily("tickets", "تیکت"), [m]); // eslint-disable-line react-hooks/exhaustive-deps
   const acts = useCallback((t) => hbarOption(t, { rows: ACTIVITIES_FA.map((label, i) => ({ label, value: cur.activityRates[i], note: `${faDigits(cur.activityN[i])} شیفت` })).filter((r) => r.value !== null), kind: "rate", max: 1, labelWidth: 260 }), [cur]);
 
-  if (!m.ids.length) return <Panel><AnEmpty icon="shift" title="تحلیلگر SOC در این دامنه نیست">شیفت‌لاگ برای نیروی برنامه‌ریزی‌شده SOC ثبت می‌شود؛ مرخصی و تعطیل شیفت نیاز به شیفت‌لاگ ندارند.</AnEmpty></Panel>;
+  if (!m.ids.length) return <Panel><AnEmpty icon="shift" title={__analyticsTr("تحلیلگر SOC در این دامنه نیست")}>{"" + __analyticsTr("شیفت‌لاگ برای نیروی برنامه‌ریزی‌شده SOC ثبت می‌شود؛ مرخصی و تعطیل شیفت نیاز به شیفت‌لاگ ندارند.") + ""}</AnEmpty></Panel>;
 
   const typeCounts = SHIFT_KEYS.map((k) => cur.shiftTypes[k]);
   const columns = [
     { key: "n", label: "تحلیلگر", value: (r) => r.person.name, render: (r) => <span className="an-person">{r.person.name}<small>{r.person.level}</small></span> },
-    { key: "s", label: "شیفت", kind: "count", value: (r) => r.cur.shifts },
-    { key: "off", label: "تعطیل شیفت", kind: "count", value: (r) => r.cur.offDays },
-    { key: "leave", label: "مرخصی", kind: "count", value: (r) => r.cur.leaveDays },
+    { key: "s", label: __analyticsTr("شیفت"), kind: "count", value: (r) => r.cur.shifts },
+    { key: "off", label: __analyticsTr("تعطیل شیفت"), kind: "count", value: (r) => r.cur.offDays },
+    { key: "leave", label: __analyticsTr("مرخصی"), kind: "count", value: (r) => r.cur.leaveDays },
     ...SHIFT_KEYS.map((k) => ({ key: k, label: SHIFT_FA[k], kind: "count", value: (r) => r.cur.shiftTypes[k] })),
     { key: "h", label: "ساعت شیفت", kind: "count", value: (r) => r.cur.shiftHours },
     { key: "c", label: "بسته‌شدن لاگ", kind: "rate", value: (r) => r.cur.closureRate },
     { key: "m", label: "جامانده", kind: "count", value: (r) => r.cur.missed },
     { key: "r", label: "روتین", kind: "rate", value: (r) => r.cur.routineRate },
     { key: "i", label: "IOC", kind: "count", value: (r) => r.cur.iocs },
-    { key: "t", label: "تیکت", kind: "count", value: (r) => r.cur.tickets },
-    { key: "rp", label: "گزارش ترافیک", kind: "count", value: (r) => r.cur.reports },
+    { key: "t", label: __analyticsTr("تیکت"), kind: "count", value: (r) => r.cur.tickets },
+    { key: "rp", label: __analyticsTr("گزارش ترافیک"), kind: "count", value: (r) => r.cur.reports },
     { key: "is", label: "Issue", kind: "count", value: (r) => r.cur.issues },
   ];
 
   return (
     <>
-      <MetricGrid label="شاخص‌های شیفت SOC">
-        <Kpi label="شیفت‌ها" icon="cal" value={fmtInt(cur.shifts)} foot={SHIFT_KEYS.map((k, i) => `${SHIFT_FA[k]} ${faDigits(typeCounts[i])}`).join(" · ")} delta={prev && <Delta now={cur.shifts} before={prev.shifts} label={short} />} />
-        <Kpi label="تعطیل شیفت" icon="cal" value={fmtInt(cur.offDays)} foot="بدون شیفت‌لاگ؛ جزو شیفت کاری نیست" />
-        <Kpi label="مرخصی" icon="cal" value={fmtInt(cur.leaveDays)} foot="بدون شیفت‌لاگ؛ جزو شیفت کاری نیست" />
-        <Kpi label="بسته‌شدن شیفت‌لاگ" icon="shift" value={fmtPct(cur.closureRate)} tone={cur.missed ? "alert" : undefined} delta={prev && cur.closureRate !== null && <Delta now={cur.closureRate} before={prev.closureRate} kind="rate" label={short} />} foot={cur.missed ? `${faDigits(cur.missed)} شیفت‌لاگ جامانده` : "بدون شیفت‌لاگ جامانده"} />
-        <Kpi label="انجام روتین" icon="checkCircle" value={fmtPct(cur.routineRate)} delta={prev && cur.routineRate !== null && <Delta now={cur.routineRate} before={prev.routineRate} kind="rate" label={short} />} spark={<Sparkline values={m.series.map((x) => x.routineRate)} />} />
-        <Kpi label="IOC ثبت‌شده" icon="shield" value={fmtInt(cur.iocs)} delta={prev && <Delta now={cur.iocs} before={prev.iocs} label={short} />} foot={`${fmtNum(cur.iocPerShift)} به ازای هر شیفت‌لاگ`} spark={<Sparkline values={m.series.map((x) => x.iocs)} />} />
-        <Kpi label="تیکت (تعداد)" icon="inbox" value={fmtInt(cur.tickets)} delta={prev && <Delta now={cur.tickets} before={prev.tickets} label={short} />} foot={`${fmtNum(cur.ticketsPerShift)} به ازای هر شیفت‌لاگ`} spark={<Sparkline values={m.series.map((x) => x.tickets)} />} />
-        <Kpi label="گزارش ترافیک و Issue" icon="report" value={fmtInt(cur.reports)} unit="گزارش" foot={`${faDigits(cur.issues)} Issue گزارش‌شده`} />
+      <MetricGrid label={__analyticsTr("شاخص‌های شیفت SOC")}>
+        <Kpi label={__analyticsTr("شیفت‌ها")} icon="cal" value={fmtInt(cur.shifts)} foot={SHIFT_KEYS.map((k, i) => `${SHIFT_FA[k]} ${faDigits(typeCounts[i])}`).join(" · ")} delta={prev && <Delta now={cur.shifts} before={prev.shifts} label={short} />} />
+        <Kpi label={__analyticsTr("تعطیل شیفت")} icon="cal" value={fmtInt(cur.offDays)} foot="بدون شیفت‌لاگ؛ جزو شیفت کاری نیست" />
+        <Kpi label={__analyticsTr("مرخصی")} icon="cal" value={fmtInt(cur.leaveDays)} foot="بدون شیفت‌لاگ؛ جزو شیفت کاری نیست" />
+        <Kpi label={__analyticsTr("بسته‌شدن شیفت‌لاگ")} icon="shift" value={fmtPct(cur.closureRate)} tone={cur.missed ? "alert" : undefined} delta={prev && cur.closureRate !== null && <Delta now={cur.closureRate} before={prev.closureRate} kind="rate" label={short} />} foot={cur.missed ? `${faDigits(cur.missed)} شیفت‌لاگ جامانده` : "بدون شیفت‌لاگ جامانده"} />
+        <Kpi label={__analyticsTr("انجام روتین")} icon="checkCircle" value={fmtPct(cur.routineRate)} delta={prev && cur.routineRate !== null && <Delta now={cur.routineRate} before={prev.routineRate} kind="rate" label={short} />} spark={<Sparkline values={m.series.map((x) => x.routineRate)} />} />
+        <Kpi label={__analyticsTr("IOC ثبت‌شده")} icon="shield" value={fmtInt(cur.iocs)} delta={prev && <Delta now={cur.iocs} before={prev.iocs} label={short} />} foot={`${fmtNum(cur.iocPerShift)} به ازای هر شیفت‌لاگ`} spark={<Sparkline values={m.series.map((x) => x.iocs)} />} />
+        <Kpi label={__analyticsTr("تیکت (تعداد)")} icon="inbox" value={fmtInt(cur.tickets)} delta={prev && <Delta now={cur.tickets} before={prev.tickets} label={short} />} foot={`${fmtNum(cur.ticketsPerShift)} به ازای هر شیفت‌لاگ`} spark={<Sparkline values={m.series.map((x) => x.tickets)} />} />
+        <Kpi label={__analyticsTr("گزارش ترافیک و Issue")} icon="report" value={fmtInt(cur.reports)} unit="گزارش" foot={`${faDigits(cur.issues)} Issue گزارش‌شده`} />
       </MetricGrid>
 
-      {m.shiftAlert && <Panel title="شیفت‌لاگ‌های کامل‌نشده" meta="۳ روز گذشته"><AlertCard alert={m.shiftAlert} open /></Panel>}
+      {m.shiftAlert && <Panel title={__analyticsTr("شیفت‌لاگ‌های کامل‌نشده")} meta={__analyticsTr("۳ روز گذشته")}><AlertCard alert={m.shiftAlert} open /></Panel>}
 
       <ChartPanel
-        title="انجام هر فعالیت روتین به تفکیک تحلیلگر"
+        title={__analyticsTr("انجام هر فعالیت روتین به تفکیک تحلیلگر")}
         question="کدام فعالیت، نزد چه کسی، مدام جا می‌ماند؟ تیره‌تر یعنی درصد انجام بیشتر؛ خانه خالی یعنی آن فعالیت در شیفت‌های او نبوده."
         build={heat}
         height={90 + 30 * m.rows.length}
@@ -211,22 +217,22 @@ function SocBody() {
       />
 
       <div className="an-row">
-        <ChartPanel title="درصد انجام هر فعالیت (کل SOC)" question="کدام فعالیت روتین بیشتر جا می‌ماند؟" build={acts} height={300}
-          table={{ columns: [{ key: "l", label: "فعالیت", value: (r) => r.label }, { key: "v", label: "درصد انجام", kind: "rate", value: (r) => r.v }, { key: "n", label: "شیفت", kind: "count", value: (r) => r.n }], rows: ACTIVITIES_FA.map((label, i) => ({ id: i, label, v: cur.activityRates[i], n: cur.activityN[i] })) }}
+        <ChartPanel title={__analyticsTr("درصد انجام هر فعالیت (کل SOC)")} question="کدام فعالیت روتین بیشتر جا می‌ماند؟" build={acts} height={300}
+          table={{ columns: [{ key: "l", label: "فعالیت", value: (r) => r.label }, { key: "v", label: "درصد انجام", kind: "rate", value: (r) => r.v }, { key: "n", label: __analyticsTr("شیفت"), kind: "count", value: (r) => r.n }], rows: ACTIVITIES_FA.map((label, i) => ({ id: i, label, v: cur.activityRates[i], n: cur.activityN[i] })) }}
           fileName="activity-completion" />
-        <ChartPanel title="توزیع نوع شیفت هر تحلیلگر" question="شیفت‌های شب و تا ساعت ۲۰ منصفانه تقسیم شده‌اند؟" build={types} height={70 + 30 * m.rows.length}
+        <ChartPanel title={__analyticsTr("توزیع نوع شیفت هر تحلیلگر")} question="شیفت‌های شب و تا ساعت ۲۰ منصفانه تقسیم شده‌اند؟" build={types} height={70 + 30 * m.rows.length}
           table={{ columns: [{ key: "n", label: "تحلیلگر", value: (r) => r.person.name }, ...SHIFT_KEYS.map((k) => ({ key: k, label: SHIFT_FA[k], kind: "count", value: (r) => r.cur.shiftTypes[k] }))], rows: m.rows }}
           fileName="shift-types" />
       </div>
 
       <div className="an-row">
-        <ChartPanel title="IOC ثبت‌شده در هر روز" build={iocBuild} height={220} fileName="ioc-daily"
+        <ChartPanel title={__analyticsTr("IOC ثبت‌شده در هر روز")} build={iocBuild} height={220} fileName="ioc-daily"
           table={{ columns: [{ key: "d", label: "روز", value: (r) => faDate(r[0]) }, { key: "v", label: "IOC", kind: "count", value: (r) => r[1] }], rows: m.iocs }} />
-        <ChartPanel title="تیکت ثبت‌شده در هر روز (تعداد)" build={ticketBuild} height={220} fileName="tickets-daily"
-          table={{ columns: [{ key: "d", label: "روز", value: (r) => faDate(r[0]) }, { key: "v", label: "تیکت", kind: "count", value: (r) => r[1] }], rows: m.tickets }} />
+        <ChartPanel title={__analyticsTr("تیکت ثبت‌شده در هر روز (تعداد)")} build={ticketBuild} height={220} fileName="tickets-daily"
+          table={{ columns: [{ key: "d", label: "روز", value: (r) => faDate(r[0]) }, { key: "v", label: __analyticsTr("تیکت"), kind: "count", value: (r) => r[1] }], rows: m.tickets }} />
       </div>
 
-      <Panel title="تحلیلگران" meta="الفبایی · برای خلاصه روی ردیف کلیک کنید">
+      <Panel title={__analyticsTr("تحلیلگران")} meta={__analyticsTr("الفبایی · برای خلاصه روی ردیف کلیک کنید")}>
         <DataTable columns={columns} rows={m.rows} onRowClick={(r) => setPerson(r.id)} caption="آمار شیفت تحلیلگران" testId="soc-table" />
       </Panel>
       <MonthlyShiftReviews analytics={a} analysts={m.rows.map((r) => r.person)} />

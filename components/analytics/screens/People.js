@@ -1,5 +1,7 @@
 "use client";
 
+import { useI18n as useAnalyticsI18n } from "@/components/I18nProvider";
+
 import { memo, useCallback, useDeferredValue, useMemo, useState } from "react";
 import AnalyticsFrame from "@/components/analytics/AnalyticsFrame";
 import { useAnalytics } from "@/components/analytics/AnalyticsContext";
@@ -17,14 +19,16 @@ import { buckets } from "@/lib/analytics/periods";
 const DIST_METRICS = ["completed", "units", "hours", "hoursPerTask", "onTimeRate", "cycleMedian", "created", "tickets", "iocs", "routineRate"];
 
 export default function People() {
+  const { t: __analyticsTr } = useAnalyticsI18n();
   return (
-    <AnalyticsFrame title="کارشناسان" subtitle="آماری، بدون امتیاز و رتبه">
+    <AnalyticsFrame title={__analyticsTr("کارشناسان")} subtitle="آماری، بدون امتیاز و رتبه">
       <PeopleBody />
     </AnalyticsFrame>
   );
 }
 
 function PeopleBody() {
+  const { t: __analyticsTr } = useAnalyticsI18n();
   const a = useAnalytics();
   const { view, range, cmp, gran, params, setParam } = a;
   const person = params.get("person");
@@ -48,17 +52,17 @@ function PeopleBody() {
 
 
 
-  if (!m.rows.length) return <Panel><AnEmpty title="کارشناسی در این دامنه نیست">فیلترها را تغییر دهید یا اعضای تیم را از صفحه Team اضافه کنید.</AnEmpty></Panel>;
+  if (!m.rows.length) return <Panel><AnEmpty title={__analyticsTr("کارشناسی در این دامنه نیست")}>{"" + __analyticsTr("فیلترها را تغییر دهید یا اعضای تیم را از صفحه Team اضافه کنید.") + ""}</AnEmpty></Panel>;
 
   return (
     <>
       <PeopleSearchTable m={m} setParam={setParam} />
 
-      <Panel title="سوابق ارزیابی ماهانه شیفت‌لاگ" meta="جدیدترین ارزیابی‌ها در ابتدا نمایش داده می‌شوند">
-        {!reviews.length ? <p className="panel-body muted">برای این استان و دوره، ارزیابی ماهانه ثبت نشده است.</p> : (
+      <Panel title={__analyticsTr("سوابق ارزیابی ماهانه شیفت‌لاگ")} meta={__analyticsTr("جدیدترین ارزیابی‌ها در ابتدا نمایش داده می‌شوند")}>
+        {!reviews.length ? <p className="panel-body muted">{"" + __analyticsTr("برای این استان و دوره، ارزیابی ماهانه ثبت نشده است.") + ""}</p> : (
           <DataTable dense columns={[
             { key: "month", label: "ماه ارزیابی", value: (r) => r.month },
-            { key: "name", label: "کارشناس", value: (r) => m.rows.find((p) => p.person.id === r.a)?.person.name ?? "—" },
+            { key: "name", label: __analyticsTr("کارشناس"), value: (r) => m.rows.find((p) => p.person.id === r.a)?.person.name ?? "—" },
             { key: "rating", label: "نتیجه", value: (r) => QUAL_FA[r.rating] ?? r.rating },
             { key: "note", label: "توضیحات ارزیابی", value: (r) => r.note || "—" },
           ]} rows={reviews.map((r, i) => ({ ...r, id: `${r.a}-${r.month}-${i}` }))} caption="سوابق ارزیابی کارشناسان" />
@@ -72,11 +76,11 @@ function PeopleBody() {
         height={80 + 56 * Math.max(1, m.groups.length)}
         onChartClick={(e) => e.data?.id && setParam("person", e.data.id)}
         actions={
-          <select className="input input-sm" style={{ width: 170 }} value={metric} onChange={(e) => setParam("metric", e.target.value)} aria-label="شاخص توزیع">
+          <select className="input input-sm" style={{ width: 170 }} value={metric} onChange={(e) => setParam("metric", e.target.value)} aria-label={__analyticsTr("شاخص توزیع")}>
             {DIST_METRICS.filter((k) => METRICS[k].area !== "soc" || m.shift).map((k) => <option key={k} value={k}>{METRICS[k].label}</option>)}
           </select>
         }
-        table={{ columns: [{ key: "n", label: "کارشناس", value: (r) => r.person.name }, { key: "t", label: "تیم", value: (r) => groupFa(r.person.group) }, { key: "v", label: def.label, kind: def.kind, value: (r) => r.cur[metric] }], rows: distRows }}
+        table={{ columns: [{ key: "n", label: __analyticsTr("کارشناس"), value: (r) => r.person.name }, { key: "t", label: __analyticsTr("تیم"), value: (r) => groupFa(r.person.group) }, { key: "v", label: def.label, kind: def.kind, value: (r) => r.cur[metric] }], rows: distRows }}
         fileName={`distribution-${metric}`}
       />
       {person && m.rows.some((r) => r.person.id === person) && <PersonDrawer id={person} onClose={() => setParam("person", "")} />}
@@ -87,6 +91,7 @@ function PeopleBody() {
 // Search input state belongs to this small table subtree. ECharts, detailed
 // employee metrics, and the province's history do not rerender per keystroke.
 const PeopleSearchTable = memo(function PeopleSearchTable({ m, setParam }) {
+  const { t: __analyticsTr } = useAnalyticsI18n();
   const [q, setQ] = useState("");
   const deferredQ = useDeferredValue(q);
   const shown = useMemo(() => {
@@ -95,7 +100,7 @@ const PeopleSearchTable = memo(function PeopleSearchTable({ m, setParam }) {
   }, [deferredQ, m.rows]);
 
   const columns = [
-    { key: "name", label: "کارشناس", value: (r) => r.person.name, render: (r) => <span className="an-person">{r.person.name}<small>{[r.person.province || "استان تعیین‌نشده", groupFa(r.person.group), r.person.level, ROLE_FA[r.person.role], r.person.active ? null : "غیرفعال"].filter(Boolean).join(" · ")}</small></span> },
+    { key: "name", label: __analyticsTr("کارشناس"), value: (r) => r.person.name, render: (r) => <span className="an-person">{r.person.name}<small>{[r.person.province || "استان تعیین‌نشده", groupFa(r.person.group), r.person.level, ROLE_FA[r.person.role], r.person.active ? null : "غیرفعال"].filter(Boolean).join(" · ")}</small></span> },
     { key: "c", label: "تکمیل‌شده", kind: "count", value: (r) => r.cur.completed },
     { key: "good", label: "عالی/خوب", kind: "count", value: (r) => r.cur.quality[0] + r.cur.quality[1] },
     { key: "needs", label: "نیاز بهبود", kind: "count", value: (r) => r.cur.quality[3] },
@@ -109,24 +114,24 @@ const PeopleSearchTable = memo(function PeopleSearchTable({ m, setParam }) {
     { key: "o", label: "صف باز", kind: "count", value: (r) => r.open.open },
     { key: "od", label: "معوق", kind: "count", value: (r) => r.open.overdue },
     ...(m.shift ? [
-      { key: "s", label: "شیفت", kind: "count", value: (r) => (r.person.shift ? r.cur.shifts : null) },
-      { key: "off", label: "تعطیل شیفت", kind: "count", value: (r) => (r.person.shift ? r.cur.offDays : null) },
-      { key: "leave", label: "مرخصی", kind: "count", value: (r) => (r.person.shift ? r.cur.leaveDays : null) },
+      { key: "s", label: __analyticsTr("شیفت"), kind: "count", value: (r) => (r.person.shift ? r.cur.shifts : null) },
+      { key: "off", label: __analyticsTr("تعطیل شیفت"), kind: "count", value: (r) => (r.person.shift ? r.cur.offDays : null) },
+      { key: "leave", label: __analyticsTr("مرخصی"), kind: "count", value: (r) => (r.person.shift ? r.cur.leaveDays : null) },
       { key: "cl", label: "بسته‌شدن لاگ", kind: "rate", value: (r) => (r.person.shift ? r.cur.closureRate : null) },
       { key: "rn", label: "روتین", kind: "rate", value: (r) => (r.person.shift ? r.cur.routineRate : null) },
       { key: "io", label: "IOC", kind: "count", value: (r) => (r.person.shift ? r.cur.iocs : null) },
-      { key: "tk", label: "تیکت", kind: "count", value: (r) => (r.person.shift ? r.cur.tickets : null) },
+      { key: "tk", label: __analyticsTr("تیکت"), kind: "count", value: (r) => (r.person.shift ? r.cur.tickets : null) },
     ] : []),
     { key: "sp", label: "روند", sort: false, value: () => null, render: (r) => <Sparkline values={r.spark} width={76} height={22} /> },
   ];
   return (
       <Panel
-        title="همه کارشناسان"
+        title={__analyticsTr("همه کارشناسان")}
         meta={`${faDigits(shown.length)} نفر · الفبایی؛ مرتب‌سازی با کلیک روی سرستون`}
         actions={
           <div className="search an-no-print" style={{ width: 220 }}>
             <Icon name="search" />
-            <input type="search" className="input" placeholder="جست‌وجوی نام" aria-label="جست‌وجوی کارشناس" value={q} onChange={(e) => setQ(e.target.value)} />
+            <input type="search" className="input" placeholder={__analyticsTr("جست‌وجوی نام")} aria-label={__analyticsTr("جست‌وجوی کارشناس")} value={q} onChange={(e) => setQ(e.target.value)} />
           </div>
         }
       >
@@ -136,7 +141,7 @@ const PeopleSearchTable = memo(function PeopleSearchTable({ m, setParam }) {
           onRowClick={(r) => setParam("person", r.person.id)}
           caption="آمار کارشناسان"
           testId="people-table"
-          empty={<AnEmpty icon="search" title="کسی پیدا نشد">نامی شبیه «{q}» در این فهرست نیست.</AnEmpty>}
+          empty={<AnEmpty icon="search" title={__analyticsTr("کسی پیدا نشد")}>{"" + __analyticsTr("نامی شبیه «") + ""}{q}{"" + __analyticsTr("» در این فهرست نیست.") + ""}</AnEmpty>}
         />
       </Panel>
   );

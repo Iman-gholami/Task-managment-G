@@ -1,5 +1,7 @@
 "use client";
 
+import { useI18n as useAnalyticsI18n } from "@/components/I18nProvider";
+
 import { useCallback, useMemo, useState } from "react";
 import AnalyticsFrame from "@/components/analytics/AnalyticsFrame";
 import { useAnalytics } from "@/components/analytics/AnalyticsContext";
@@ -35,6 +37,7 @@ const PC_METRICS = [
 ];
 
 function TeamsOverview() {
+  const { t: __analyticsTr } = useAnalyticsI18n();
   const a = useAnalytics();
   const { view, range, cmp, gran } = a;
   const [metric, setMetric] = useState("completed");
@@ -72,19 +75,19 @@ function TeamsOverview() {
   const cxBuild = useCallback((t) => stackedOption(t, { rows: mixRows("cx"), parts: CX_FA.map((name, i) => ({ name, color: t.ramp[i] })) }), [m]); // eslint-disable-line react-hooks/exhaustive-deps
   const qBuild = useCallback((t) => stackedOption(t, { rows: mixRows("quality"), parts: QUAL_KEYS.map((k, i) => ({ name: QUAL_FA[k], color: t.ramp[3 - i] })) }), [m]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  if (!m.rows.length) return <Panel><AnEmpty title="تیمی در این دامنه نیست">با این فیلترها کارشناسی پیدا نشد.</AnEmpty></Panel>;
+  if (!m.rows.length) return <Panel><AnEmpty title={__analyticsTr("تیمی در این دامنه نیست")}>{"" + __analyticsTr("با این فیلترها کارشناسی پیدا نشد.") + ""}</AnEmpty></Panel>;
 
   const tableColumns = [
-    { key: "team", label: "تیم", value: (r) => r.fa, render: (r) => <b>{r.fa}</b> },
-    { key: "n", label: "کارشناسان", kind: "count", value: (r) => r.headcount },
+    { key: "team", label: __analyticsTr("تیم"), value: (r) => r.fa, render: (r) => <b>{r.fa}</b> },
+    { key: "n", label: __analyticsTr("کارشناسان"), kind: "count", value: (r) => r.headcount },
     { key: "c", label: "تکمیل‌شده", kind: "count", value: (r) => r.cur.completed },
-    { key: "pc", label: "سرانه تکمیل‌شده", kind: "avg", value: (r) => r.pc.completed },
+    { key: "pc", label: __analyticsTr("سرانه تکمیل‌شده"), kind: "avg", value: (r) => r.pc.completed },
     { key: "u", label: "حجم وزن‌دار", kind: "count", value: (r) => r.cur.units },
     { key: "pcu", label: "سرانه حجم", kind: "avg", value: (r) => r.pc.units },
     { key: "h", label: "ساعت", kind: "count", value: (r) => r.cur.hours },
     { key: "cr", label: "ایجادشده", kind: "count", value: (r) => r.cur.created },
-    { key: "ot", label: "تحویل به‌موقع", kind: "rate", value: (r) => r.cur.onTimeRate },
-    { key: "cy", label: "میانه زمان انجام", kind: "days", value: (r) => r.cur.cycleMedian },
+    { key: "ot", label: __analyticsTr("تحویل به‌موقع"), kind: "rate", value: (r) => r.cur.onTimeRate },
+    { key: "cy", label: __analyticsTr("میانه زمان انجام"), kind: "days", value: (r) => r.cur.cycleMedian },
     { key: "rs", label: "سهم برگشتی", kind: "rate", value: (r) => r.cur.returnShare },
     { key: "hq", label: "عالی و خوب", kind: "rate", value: (r) => r.cur.highQualityShare },
     { key: "o", label: "صف باز", kind: "count", value: (r) => r.open.open },
@@ -93,12 +96,12 @@ function TeamsOverview() {
 
   return (
     <>
-      <MetricGrid label="تیم‌ها">
+      <MetricGrid label={__analyticsTr("تیم‌ها")}>
         {m.rows.map((r, i) => (
           <Kpi
             key={r.key}
-            label={<><Key color={`var(--cat-${i + 1})`} />{r.fa} · {faDigits(r.headcount)} کارشناس</>}
-            value={fmtInt(r.cur.completed)} unit="تسک تکمیل‌شده"
+            label={<><Key color={`var(--cat-${i + 1})`} />{r.fa} · {faDigits(r.headcount)}{" " + __analyticsTr("کارشناس") + ""}</>}
+            value={fmtInt(r.cur.completed)} unit={__analyticsTr("تسک تکمیل‌شده")}
             delta={r.prev && <Delta now={r.cur.completed} before={r.prev.completed} label={cmp?.short} />}
             foot={`سرانه ${fmtNum(r.pc.completed)} · به‌موقع ${fmtPct(r.cur.onTimeRate)} · صف باز ${faDigits(r.open.open)}${r.open.overdue ? ` (${faDigits(r.open.overdue)} معوق)` : ""}`}
             spark={<Sparkline values={r.spark} />}
@@ -110,44 +113,44 @@ function TeamsOverview() {
 
       <div className="an-row">
         <ChartPanel
-          title="مقایسه سرانه تیم‌ها"
+          title={__analyticsTr("مقایسه سرانه تیم‌ها")}
           question="با در نظر گرفتن اندازه تیم، هر تیم چقدر کار انجام داده است؟ خط عمودی: مقدار کل واحد."
           build={pcBuild}
           height={70 + 46 * m.rows.length}
-          actions={<Segmented label="شاخص" value={metric} onChange={setMetric} options={PC_METRICS.map(({ value, label }) => ({ value, label }))} />}
-          table={{ columns: [{ key: "t", label: "تیم", value: (r) => r.fa }, { key: "v", label: def.label, kind: def.kind, value: valueOf }], rows: m.rows }}
+          actions={<Segmented label={__analyticsTr("شاخص")} value={metric} onChange={setMetric} options={PC_METRICS.map(({ value, label }) => ({ value, label }))} />}
+          table={{ columns: [{ key: "t", label: __analyticsTr("تیم"), value: (r) => r.fa }, { key: "v", label: def.label, kind: def.kind, value: valueOf }], rows: m.rows }}
           fileName="team-per-capita"
         />
         <ChartPanel
-          title="روند سرانه تسک‌های تکمیل‌شده"
+          title={__analyticsTr("روند سرانه تسک‌های تکمیل‌شده")}
           question="کدام تیم روند متفاوتی دارد؟"
           build={trendBuild}
           height={250}
-          table={{ columns: [{ key: "b", label: "بازه", value: (r) => r.label }, ...m.rows.map((r) => ({ key: r.key, label: r.fa, kind: "avg", value: (x) => x[r.key] }))], rows: m.b.map((x, i) => ({ id: x.from, label: x.label, ...Object.fromEntries(m.rows.map((r) => [r.key, r.headcount ? r.series[i].completed / r.headcount : null])) })) }}
+          table={{ columns: [{ key: "b", label: __analyticsTr("بازه"), value: (r) => r.label }, ...m.rows.map((r) => ({ key: r.key, label: r.fa, kind: "avg", value: (x) => x[r.key] }))], rows: m.b.map((x, i) => ({ id: x.from, label: x.label, ...Object.fromEntries(m.rows.map((r) => [r.key, r.headcount ? r.series[i].completed / r.headcount : null])) })) }}
           fileName="team-per-capita-trend"
         />
       </div>
 
       <ChartPanel
-        title="بار کار باز هر کارشناس"
+        title={__analyticsTr("بار کار باز هر کارشناس")}
         question="کار باز متوازن پخش شده یا روی چند نفر جمع شده است؟ هر نقطه یک کارشناس است؛ روی نقطه کلیک کنید."
         build={loadBuild}
         height={80 + 56 * m.rows.length}
         onChartClick={(e) => e.data?.id && setPerson(e.data.id)}
-        table={{ columns: [{ key: "n", label: "کارشناس", value: (r) => r.name }, { key: "t", label: "تیم", value: (r) => GROUP_BY_KEY[m.rows.find((x) => x.group === r.group)?.key]?.fa }, { key: "v", label: "تسک باز", kind: "count", value: (r) => r.value }], rows: m.load }}
+        table={{ columns: [{ key: "n", label: __analyticsTr("کارشناس"), value: (r) => r.name }, { key: "t", label: __analyticsTr("تیم"), value: (r) => GROUP_BY_KEY[m.rows.find((x) => x.group === r.group)?.key]?.fa }, { key: "v", label: "تسک باز", kind: "count", value: (r) => r.value }], rows: m.load }}
         fileName="open-work-per-person"
-        empty={m.load.length ? null : <AnEmpty title="کارشناس فعالی نیست" />}
+        empty={m.load.length ? null : <AnEmpty title={__analyticsTr("کارشناس فعالی نیست")} />}
       />
 
       <div className="an-row">
-        <ChartPanel title="ترکیب پیچیدگی" question="نوع کار تیم‌ها چه فرقی دارد؟" build={cxBuild} height={60 + 46 * m.rows.length}
-          table={{ columns: [{ key: "t", label: "تیم", value: (r) => r.label }, ...CX_FA.map((c, i) => ({ key: `c${i}`, label: c, kind: "count", value: (r) => r.parts[i] }))], rows: mixRows("cx") }} fileName="team-complexity-mix" />
-        <ChartPanel title="توزیع کیفیت" question="کیفیت ثبت‌شده هنگام تأیید در تیم‌ها چطور پخش شده است؟" build={qBuild} height={60 + 46 * m.rows.length}
-          table={{ columns: [{ key: "t", label: "تیم", value: (r) => r.label }, ...QUAL_KEYS.map((k, i) => ({ key: k, label: QUAL_FA[k], kind: "count", value: (r) => r.parts[i] }))], rows: mixRows("quality") }} fileName="team-quality" />
+        <ChartPanel title={__analyticsTr("ترکیب پیچیدگی")} question="نوع کار تیم‌ها چه فرقی دارد؟" build={cxBuild} height={60 + 46 * m.rows.length}
+          table={{ columns: [{ key: "t", label: __analyticsTr("تیم"), value: (r) => r.label }, ...CX_FA.map((c, i) => ({ key: `c${i}`, label: c, kind: "count", value: (r) => r.parts[i] }))], rows: mixRows("cx") }} fileName="team-complexity-mix" />
+        <ChartPanel title={__analyticsTr("توزیع کیفیت")} question="کیفیت ثبت‌شده هنگام تأیید در تیم‌ها چطور پخش شده است؟" build={qBuild} height={60 + 46 * m.rows.length}
+          table={{ columns: [{ key: "t", label: __analyticsTr("تیم"), value: (r) => r.label }, ...QUAL_KEYS.map((k, i) => ({ key: k, label: QUAL_FA[k], kind: "count", value: (r) => r.parts[i] }))], rows: mixRows("quality") }} fileName="team-quality" />
       </div>
 
-      <Panel title="جدول کامل تیم‌ها" meta="همه شاخص‌ها؛ برای مرتب‌سازی روی سرستون کلیک کنید">
-        <DataTable columns={tableColumns} rows={m.rows} rowKey={(r) => r.key} rowHref={(r) => a.href("/analytics/teams", { team: r.key })} caption="جدول کامل تیم‌ها" />
+      <Panel title={__analyticsTr("جدول کامل تیم‌ها")} meta={__analyticsTr("همه شاخص‌ها؛ برای مرتب‌سازی روی سرستون کلیک کنید")}>
+        <DataTable columns={tableColumns} rows={m.rows} rowKey={(r) => r.key} rowHref={(r) => a.href("/analytics/teams", { team: r.key })} caption={__analyticsTr("جدول کامل تیم‌ها")} />
       </Panel>
       {person && <PersonDrawer id={person} onClose={() => setPerson(null)} />}
     </>
@@ -155,6 +158,7 @@ function TeamsOverview() {
 }
 
 function TeamDetail({ team }) {
+  const { t: __analyticsTr } = useAnalyticsI18n();
   const a = useAnalytics();
   const { view, range, cmp, gran, setFilters } = a;
   const [person, setPerson] = useState(null);
@@ -186,7 +190,7 @@ function TeamDetail({ team }) {
   }), [m]);
 
   const columns = [
-    { key: "name", label: "کارشناس", value: (r) => r.person.name, render: (r) => <span className="an-person">{r.person.name}<small>{[r.person.level, ROLE_FA[r.person.role], r.person.active ? null : "غیرفعال"].filter(Boolean).join(" · ")}</small></span> },
+    { key: "name", label: __analyticsTr("کارشناس"), value: (r) => r.person.name, render: (r) => <span className="an-person">{r.person.name}<small>{[r.person.level, ROLE_FA[r.person.role], r.person.active ? null : "غیرفعال"].filter(Boolean).join(" · ")}</small></span> },
     { key: "c", label: "تکمیل‌شده", kind: "count", value: (r) => r.cur.completed },
     { key: "d", label: "تغییر", value: (r) => (r.prev ? r.cur.completed - r.prev.completed : null), render: (r) => (r.prev ? <Delta now={r.cur.completed} before={r.prev.completed} /> : "—") },
     { key: "u", label: "حجم وزن‌دار", kind: "count", value: (r) => r.cur.units },
@@ -195,9 +199,9 @@ function TeamDetail({ team }) {
     { key: "o", label: "صف باز", kind: "count", value: (r) => r.open.open },
     { key: "od", label: "معوق", kind: "count", value: (r) => r.open.overdue },
     ...(m.shift ? [
-      { key: "s", label: "شیفت", kind: "count", value: (r) => (r.person.shift ? r.cur.shifts : null) },
+      { key: "s", label: __analyticsTr("شیفت"), kind: "count", value: (r) => (r.person.shift ? r.cur.shifts : null) },
       { key: "rt", label: "روتین", kind: "rate", value: (r) => (r.person.shift ? r.cur.routineRate : null) },
-      { key: "tk", label: "تیکت", kind: "count", value: (r) => (r.person.shift ? r.cur.tickets : null) },
+      { key: "tk", label: __analyticsTr("تیکت"), kind: "count", value: (r) => (r.person.shift ? r.cur.tickets : null) },
     ] : []),
   ];
 
@@ -205,34 +209,34 @@ function TeamDetail({ team }) {
     <>
       <Trail items={[{ label: "کل واحد", onClick: () => setFilters({ team: "", level: "" }) }, ...(a.filters.level ? [{ label: team.fa, onClick: () => setFilters({ level: "" }) }, { label: a.filters.level }] : [{ label: team.fa }])]} />
       <MetricGrid label={`شاخص‌های ${team.fa}`}>
-        <Kpi label="تسک‌های تکمیل‌شده" icon="checkCircle" value={fmtInt(cur.completed)} delta={prev && <Delta now={cur.completed} before={prev.completed} label={cmp?.short} />} spark={<Sparkline values={m.bs.map((x) => x.completed)} />} />
-        <Kpi label="سرانه تکمیل‌شده" icon="team" value={fmtNum(m.n ? cur.completed / m.n : null)} foot={`${faDigits(m.n)} کارشناس در دوره`} />
-        <Kpi label="حجم کار وزن‌دار" icon="bars" value={fmtInt(cur.units)} delta={prev && <Delta now={cur.units} before={prev.units} label={cmp?.short} />} />
-        <Kpi label="ساعت ثبت‌شده" icon="clock" value={fmtNum(cur.hours, 0)} unit="ساعت" delta={prev && <Delta now={cur.hours} before={prev.hours} label={cmp?.short} />} />
-        <Kpi label="تحویل به‌موقع" icon="cal" value={fmtPct(cur.onTimeRate)} delta={prev && cur.onTimeRate !== null && <Delta now={cur.onTimeRate} before={prev.onTimeRate} kind="rate" label={cmp?.short} />} foot={`از ${faDigits(cur.onTimeN)} تسک دارای ددلاین`} />
-        <Kpi label="صف کار باز (اکنون)" icon="tasks" value={fmtInt(m.open.open)} tone={m.open.overdue ? "alert" : undefined} foot={`${faDigits(m.open.overdue)} معوق · ${faDigits(m.open.blocked)} مسدود`} />
+        <Kpi label={__analyticsTr("تسک‌های تکمیل‌شده")} icon="checkCircle" value={fmtInt(cur.completed)} delta={prev && <Delta now={cur.completed} before={prev.completed} label={cmp?.short} />} spark={<Sparkline values={m.bs.map((x) => x.completed)} />} />
+        <Kpi label={__analyticsTr("سرانه تکمیل‌شده")} icon="team" value={fmtNum(m.n ? cur.completed / m.n : null)} foot={`${faDigits(m.n)} کارشناس در دوره`} />
+        <Kpi label={__analyticsTr("حجم کار وزن‌دار")} icon="bars" value={fmtInt(cur.units)} delta={prev && <Delta now={cur.units} before={prev.units} label={cmp?.short} />} />
+        <Kpi label={__analyticsTr("ساعت ثبت‌شده")} icon="clock" value={fmtNum(cur.hours, 0)} unit="ساعت" delta={prev && <Delta now={cur.hours} before={prev.hours} label={cmp?.short} />} />
+        <Kpi label={__analyticsTr("تحویل به‌موقع")} icon="cal" value={fmtPct(cur.onTimeRate)} delta={prev && cur.onTimeRate !== null && <Delta now={cur.onTimeRate} before={prev.onTimeRate} kind="rate" label={cmp?.short} />} foot={`از ${faDigits(cur.onTimeN)} تسک دارای ددلاین`} />
+        <Kpi label={__analyticsTr("صف کار باز (اکنون)")} icon="tasks" value={fmtInt(m.open.open)} tone={m.open.overdue ? "alert" : undefined} foot={`${faDigits(m.open.overdue)} معوق · ${faDigits(m.open.blocked)} مسدود`} />
       </MetricGrid>
 
       <div className={m.levels.length ? "an-row wide-first" : "an-grid"}>
-        <ChartPanel title="ورودی و خروجی کار تیم" question="صف کار این تیم رشد می‌کند یا کوچک می‌شود؟" build={trend} height={260}
-          table={{ columns: [{ key: "b", label: "بازه", value: (r) => r.label }, { key: "c", label: "تکمیل‌شده", kind: "count", value: (r) => r.c }, { key: "n", label: "ایجادشده", kind: "count", value: (r) => r.n }], rows: m.b.map((x, i) => ({ id: x.from, label: x.label, c: m.bs[i].completed, n: m.bs[i].created })) }}
+        <ChartPanel title={__analyticsTr("ورودی و خروجی کار تیم")} question="صف کار این تیم رشد می‌کند یا کوچک می‌شود؟" build={trend} height={260}
+          table={{ columns: [{ key: "b", label: __analyticsTr("بازه"), value: (r) => r.label }, { key: "c", label: "تکمیل‌شده", kind: "count", value: (r) => r.c }, { key: "n", label: "ایجادشده", kind: "count", value: (r) => r.n }], rows: m.b.map((x, i) => ({ id: x.from, label: x.label, c: m.bs[i].completed, n: m.bs[i].created })) }}
           fileName={`team-flow-${team.key}`} />
         {m.levels.length > 0 && (
-          <ChartPanel title="سرانه تکمیل‌شده به تفکیک سطح" question="حجم کار L1، L2 و L3 چه نسبتی دارد؟ (سطح‌ها کار متفاوتی دارند؛ برای مقایسه مستقیم نیست.)" build={levelBuild} height={200}
-            table={{ columns: [{ key: "l", label: "سطح", value: (r) => r.level }, { key: "n", label: "کارشناسان", kind: "count", value: (r) => r.headcount }, { key: "c", label: "تکمیل‌شده", kind: "count", value: (r) => r.cur.completed }, { key: "pc", label: "سرانه", kind: "avg", value: (r) => r.pc.completed }, { key: "o", label: "صف باز", kind: "count", value: (r) => r.open.open }], rows: m.levels.map((l) => ({ ...l, id: l.level })) }}
+          <ChartPanel title={__analyticsTr("سرانه تکمیل‌شده به تفکیک سطح")} question="حجم کار L1، L2 و L3 چه نسبتی دارد؟ (سطح‌ها کار متفاوتی دارند؛ برای مقایسه مستقیم نیست.)" build={levelBuild} height={200}
+            table={{ columns: [{ key: "l", label: __analyticsTr("سطح"), value: (r) => r.level }, { key: "n", label: __analyticsTr("کارشناسان"), kind: "count", value: (r) => r.headcount }, { key: "c", label: "تکمیل‌شده", kind: "count", value: (r) => r.cur.completed }, { key: "pc", label: "سرانه", kind: "avg", value: (r) => r.pc.completed }, { key: "o", label: "صف باز", kind: "count", value: (r) => r.open.open }], rows: m.levels.map((l) => ({ ...l, id: l.level })) }}
             fileName={`team-levels-${team.key}`}
-            footer={m.levels.map((l) => <button key={l.level} type="button" className="btn btn-ghost btn-sm" onClick={() => setFilters({ level: l.level })}>فقط {l.level}</button>)} />
+            footer={m.levels.map((l) => <button key={l.level} type="button" className="btn btn-ghost btn-sm" onClick={() => setFilters({ level: l.level })}>{"" + __analyticsTr("فقط") + " "}{l.level}</button>)} />
         )}
       </div>
 
-      <Panel title="اعضای تیم" meta="الفبایی · برای خلاصه هر نفر روی ردیف کلیک کنید">
+      <Panel title={__analyticsTr("اعضای تیم")} meta={__analyticsTr("الفبایی · برای خلاصه هر نفر روی ردیف کلیک کنید")}>
         <DataTable columns={columns} rows={m.people} rowKey={(r) => r.person.id} onRowClick={(r) => setPerson(r.person.id)} caption={`اعضای ${team.fa}`} testId="member-table" />
       </Panel>
 
-      <ChartPanel title="حجم و ترکیب کار هر کارشناس" question="هر نفر چه مقدار و چه نوع کاری تکمیل کرده است؟" build={mixBuild} height={60 + 34 * Math.max(1, m.people.length)}
-        table={{ columns: [{ key: "n", label: "کارشناس", value: (r) => r.person.name }, ...CX_FA.map((c, i) => ({ key: `c${i}`, label: c, kind: "count", value: (r) => r.cur.cx[i] }))], rows: m.people.map((r) => ({ ...r, id: r.person.id })) }}
+      <ChartPanel title={__analyticsTr("حجم و ترکیب کار هر کارشناس")} question="هر نفر چه مقدار و چه نوع کاری تکمیل کرده است؟" build={mixBuild} height={60 + 34 * Math.max(1, m.people.length)}
+        table={{ columns: [{ key: "n", label: __analyticsTr("کارشناس"), value: (r) => r.person.name }, ...CX_FA.map((c, i) => ({ key: `c${i}`, label: c, kind: "count", value: (r) => r.cur.cx[i] }))], rows: m.people.map((r) => ({ ...r, id: r.person.id })) }}
         fileName={`member-work-mix-${team.key}`}
-        empty={cur.completed ? null : <AnEmpty title="تسکی تکمیل نشده">در این بازه تسک تکمیل‌شده‌ای در این تیم نیست.</AnEmpty>} />
+        empty={cur.completed ? null : <AnEmpty title={__analyticsTr("تسکی تکمیل نشده")}>{"" + __analyticsTr("در این بازه تسک تکمیل‌شده‌ای در این تیم نیست.") + ""}</AnEmpty>} />
       {person && <PersonDrawer id={person} onClose={() => setPerson(null)} />}
     </>
   );

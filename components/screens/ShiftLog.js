@@ -1,5 +1,9 @@
 "use client";
 
+import { useI18n as useEngShiftI18n } from "@/components/I18nProvider";
+
+import { useI18n as useShiftI18n } from "@/components/I18nProvider";
+
 import Link from "next/link";
 import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
@@ -41,6 +45,7 @@ export default function ShiftLog({ initialLog }) {
 }
 
 function Layer2ShiftLog({ initialLog }) {
+  const { t: __shiftFaTr } = useEngShiftI18n();
   const { me, shiftDone, dispatch, toast } = useApp();
   const [tickets, setTickets] = useState(initialLog?.analyzedTickets ?? []);
   const [submitting, setSubmitting] = useState(false);
@@ -70,27 +75,27 @@ function Layer2ShiftLog({ initialLog }) {
         <div className="shift-head">
           <dl className="facts">
             <div><dt><small>Analyst</small></dt><dd><Who id={me.id} /></dd></div>
-            <div><dt><small>Shift</small></dt><dd>{initialLog.shift?.label ?? initialLog.shiftType}</dd></div>
-            <div><dt><small>Date</small></dt><dd>{longDate(initialLog.date)}</dd></div>
-            <div><dt><small>Status</small></dt><dd><span className={`badge dot ${completed ? "success" : "info"}`}>{completed ? "Submitted" : "In progress"}</span></dd></div>
+            <div><dt><small>{"" + __shiftFaTr("Shift") + ""}</small></dt><dd>{initialLog.shift?.label ?? initialLog.shiftType}</dd></div>
+            <div><dt><small>{"" + __shiftFaTr("Date") + ""}</small></dt><dd>{longDate(initialLog.date)}</dd></div>
+            <div><dt><small>{"" + __shiftFaTr("Status") + ""}</small></dt><dd><span className={`badge dot ${completed ? "success" : "info"}`}>{completed ? "Submitted" : __shiftFaTr("In progress")}</span></dd></div>
           </dl>
         </div>
       </div>
       {initialLog.date !== TODAY && <div className="panel" style={{ padding: "var(--s-3)", marginBottom: "var(--s-3)" }}>
-        <span className="badge dot info">Manager-authorized backfill · {fmtDate(initialLog.date)}</span>
-        <p className="muted small">Entries are saved to the original shift date and remain auditable.</p>
+        <span className="badge dot info">{"" + __shiftFaTr("Manager-authorized backfill ·") + " "}{fmtDate(initialLog.date)}</span>
+        <p className="muted small">{"" + __shiftFaTr("Entries are saved to the original shift date and remain auditable.") + ""}</p>
       </div>}
       <L2AnalyzedTickets initialItems={tickets} readOnly={completed}
         backfillDate={initialLog.date !== TODAY ? initialLog.date : null} onChange={setTickets} />
-      <div className="summary" role="region" aria-label="L2 shift summary">
-        <span className="s"><b>{tickets.length}</b>tickets analyzed</span>
-        <span className="remain">Only rostered shift days have an editable L2 log.</span>
+      <div className="summary" role="region" aria-label={__shiftFaTr("L2 shift summary")}>
+        <span className="s"><b>{tickets.length}</b>{"" + __shiftFaTr("tickets analyzed") + ""}</span>
+        <span className="remain">{"" + __shiftFaTr("Only rostered shift days have an editable L2 log.") + ""}</span>
         {completed ? <>
-          <span className="muted small">Submitted — manager correction only</span>
-          {initialLog.date !== TODAY && <Link className="btn btn-secondary" href="/dashboard">Back to dashboard</Link>}
+          <span className="muted small">{"" + __shiftFaTr("Submitted — manager correction only") + ""}</span>
+          {initialLog.date !== TODAY && <Link className="btn btn-secondary" href="/dashboard">{"" + __shiftFaTr("Back to dashboard") + ""}</Link>}
         </> :
           <button type="button" className="btn btn-primary" onClick={submit} disabled={submitting}>
-            {submitting ? "Submitting…" : "Complete shift"}
+            {submitting ? "Submitting…" : __shiftFaTr("Complete shift")}
           </button>}
       </div>
     </div>
@@ -98,6 +103,7 @@ function Layer2ShiftLog({ initialLog }) {
 }
 
 function RoutineShiftLog({ initialLog }) {
+  const { t: __shiftFaTr } = useEngShiftI18n();
   const { dispatch, toast, me, activities, tickets, shiftDone, shiftDate, shiftChecklist, shiftTeam } = useApp();
   const logDate = initialLog?.date ?? shiftDate;
   const backfill = logDate !== TODAY;
@@ -194,17 +200,17 @@ function RoutineShiftLog({ initialLog }) {
       />
 
       {backfill && <div className="panel" style={{ padding: "var(--s-3)", marginBottom: "var(--s-3)" }}>
-        <span className="badge dot info">Manager-authorized backfill · {fmtDate(logDate)}</span>
+        <span className="badge dot info">{"" + __shiftFaTr("Manager-authorized backfill ·") + " "}{fmtDate(logDate)}</span>
       </div>}
       <div className="panel" style={{ marginBottom: "var(--s-4)" }}>
         <div className="shift-head">
           <div className="ring" style={{ "--v": pct }} role="img" aria-label={`${pct}% complete`} />
           <dl className="facts">
             <div><dt><small>Analyst</small></dt><dd><Who id={me.id} /></dd></div>
-            <div><dt><small>Checklist</small></dt><dd dir="auto" data-testid="shift-checklist">{checklistLabel(displayChecklist)}</dd></div>
-            <div><dt><small>Status</small></dt><dd>{readOnly ? <span className="badge dot success">Submitted & locked</span> : done ? <span className="badge dot info">In progress</span> : <span className="badge dot">Not started</span>}</dd></div>
-            <div><dt><small>Completion</small></dt><dd className="num">{done} of {displayActivities.length} · {pct}%</dd></div>
-            <div><dt><small>Last change</small></dt><dd className="num" style={saved === "failed" ? { color: "var(--danger)" } : undefined} aria-live="polite">{SAVE_LABEL[saved]}</dd></div>
+            <div><dt><small>{"" + __shiftFaTr("Checklist") + ""}</small></dt><dd dir="auto" data-testid="shift-checklist">{checklistLabel(displayChecklist)}</dd></div>
+            <div><dt><small>{"" + __shiftFaTr("Status") + ""}</small></dt><dd>{readOnly ? <span className="badge dot success">{"" + __shiftFaTr("Submitted & locked") + ""}</span> : done ? <span className="badge dot info">{"" + __shiftFaTr("In progress") + ""}</span> : <span className="badge dot">{"" + __shiftFaTr("Not started") + ""}</span>}</dd></div>
+            <div><dt><small>{"" + __shiftFaTr("Completion") + ""}</small></dt><dd className="num">{done}{" " + __shiftFaTr("of") + " "}{displayActivities.length} · {pct}%</dd></div>
+            <div><dt><small>{"" + __shiftFaTr("Last change") + ""}</small></dt><dd className="num" style={saved === "failed" ? { color: "var(--danger)" } : undefined} aria-live="polite">{SAVE_LABEL[saved]}</dd></div>
           </dl>
         </div>
       </div>
@@ -229,7 +235,7 @@ function RoutineShiftLog({ initialLog }) {
                 <div className="t" dir="auto">{a.title}{hint && <small>{hint}</small>}</div>
                 <div className="act-tools">
                   {a.kind === "monitor" && !a.issue && !readOnly && (
-                    <button type="button" className="btn btn-ghost btn-sm" aria-expanded={issueOpen === a.n} onClick={() => setIssueOpen(issueOpen === a.n ? null : a.n)}><Icon name="alert" />Report an issue</button>
+                    <button type="button" className="btn btn-ghost btn-sm" aria-expanded={issueOpen === a.n} onClick={() => setIssueOpen(issueOpen === a.n ? null : a.n)}><Icon name="alert" />{"" + __shiftFaTr("Report an issue") + ""}</button>
                   )}
                   <button type="button" className={`toggle-done ${a.done ? "on" : ""}`} disabled={readOnly} aria-pressed={a.done} onClick={() => update(a.n, { done: !a.done })}>
                     <Icon name="check" />{a.kind === "monitor" && !a.issue ? "Completed — no issue" : a.done ? "Done" : "Mark done"}
@@ -240,19 +246,18 @@ function RoutineShiftLog({ initialLog }) {
               {a.kind === "misp" && (
                 <div className="act-extra">
                   <div className="line">
-                    <label htmlFor={`ioc-${a.n}`} className="sec small">IOC count</label>
+                    <label htmlFor={`ioc-${a.n}`} className="sec small">{"" + __shiftFaTr("IOC count") + ""}</label>
                     <span className="stepper">
-                      <button type="button" aria-label="Decrease IOC count" disabled={readOnly} onClick={() => update(a.n, { iocs: Math.max(0, a.iocs - 1) })}>−</button>
-                      <BufferedShiftInput id={`ioc-${a.n}`} aria-label="IOC count" inputMode="numeric"
+                      <button type="button" aria-label={__shiftFaTr("Decrease IOC count")} disabled={readOnly} onClick={() => update(a.n, { iocs: Math.max(0, a.iocs - 1) })}>−</button>
+                      <BufferedShiftInput id={`ioc-${a.n}`} aria-label={__shiftFaTr("IOC count")} inputMode="numeric"
                         value={a.iocs ?? 0} numeric readOnly={readOnly}
                         onCommit={(iocs) => update(a.n, { iocs })} />
-                      <button type="button" aria-label="Increase IOC count" disabled={readOnly} onClick={() => update(a.n, { iocs: a.iocs + 1 })}>+</button>
+                      <button type="button" aria-label={__shiftFaTr("Increase IOC count")} disabled={readOnly} onClick={() => update(a.n, { iocs: a.iocs + 1 })}>+</button>
                     </span>
                     <label className="toggle-label">
-                      <input type="checkbox" role="switch" className="switch" checked={a.bale} disabled={readOnly} onChange={(e) => update(a.n, { bale: e.target.checked })} />Shared via Bale
-                    </label>
-                    <BufferedShiftInput className="input input-sm mono" placeholder="MISP event ID"
-                      value={a.mispRef ?? ""} readOnly={readOnly} aria-label="MISP event reference"
+                      <input type="checkbox" role="switch" className="switch" checked={a.bale} disabled={readOnly} onChange={(e) => update(a.n, { bale: e.target.checked })} />{"" + __shiftFaTr("Shared via Bale") + ""}</label>
+                    <BufferedShiftInput className="input input-sm mono" placeholder={__shiftFaTr("MISP event ID")}
+                      value={a.mispRef ?? ""} readOnly={readOnly} aria-label={__shiftFaTr("MISP event reference")}
                       onCommit={(mispRef) => update(a.n, { mispRef })} />
                   </div>
                 </div>
@@ -261,9 +266,9 @@ function RoutineShiftLog({ initialLog }) {
               {a.issue && (
                 <div className="act-extra">
                   <div className="issue">
-                    <div className="head"><Icon name="alert" />Issue reported: {a.issue.summary}</div>
+                    <div className="head"><Icon name="alert" />{"" + __shiftFaTr("Issue reported:") + " "}{a.issue.summary}</div>
                     {a.issue.description && <div className="sec small">{a.issue.description}</div>}
-                    {a.issue.ref && <div className="muted small">Reference <span className="mono" style={{ color: "var(--text-2)" }}>{a.issue.ref}</span></div>}
+                    {a.issue.ref && <div className="muted small">{"" + __shiftFaTr("Reference") + " "}<span className="mono" style={{ color: "var(--text-2)" }}>{a.issue.ref}</span></div>}
                   </div>
                 </div>
               )}
@@ -277,10 +282,10 @@ function RoutineShiftLog({ initialLog }) {
       {!technical && <Tickets readOnly={readOnly} list={displayTickets} date={backfill ? logDate : null}
         onUpdate={backfill ? setHistoricalTickets : null} />}
 
-      <div className="summary" role="region" aria-label="Shift summary">
-        <span className="s"><b>{done}/{displayActivities.length}</b>activities</span>
+      <div className="summary" role="region" aria-label={__shiftFaTr("Shift summary")}>
+        <span className="s"><b>{done}/{displayActivities.length}</b>{"" + __shiftFaTr("activities") + ""}</span>
         {!technical && <>
-          <span className="s"><b>{iocs}</b>IOCs added</span>
+          <span className="s"><b>{iocs}</b>{"" + __shiftFaTr("IOCs added") + ""}</span>
           <span className="s"><b>{displayTickets.length}</b>{displayTickets.length === 1 ? "ticket" : "tickets"}</span>
           <span className="s"><b>{issues}</b>{issues === 1 ? "issue" : "issues"}</span>
         </>}
@@ -289,10 +294,10 @@ function RoutineShiftLog({ initialLog }) {
         </span>
         {readOnly
           ? <>
-            <span className="muted small">Submitted — manager correction only</span>
-            {backfill && <Link className="btn btn-secondary" href="/dashboard">Back to dashboard</Link>}
+            <span className="muted small">{"" + __shiftFaTr("Submitted — manager correction only") + ""}</span>
+            {backfill && <Link className="btn btn-secondary" href="/dashboard">{"" + __shiftFaTr("Back to dashboard") + ""}</Link>}
           </>
-          : <button type="button" className="btn btn-primary" onClick={completeShift}>Complete shift</button>}
+          : <button type="button" className="btn btn-primary" onClick={completeShift}>{"" + __shiftFaTr("Complete shift") + ""}</button>}
       </div>
     </div>
   );
@@ -330,6 +335,7 @@ function BufferedShiftInput({ value, onCommit, numeric = false, readOnly, ...pro
 }
 
 function IssueForm({ onSave, onCancel }) {
+  const { t: __shiftFaTr } = useEngShiftI18n();
   const [summary, setSummary] = useState("");
   const [description, setDescription] = useState("");
   const [ref, setRef] = useState("");
@@ -338,14 +344,14 @@ function IssueForm({ onSave, onCancel }) {
   return (
     <div className="act-extra">
       <div className="issue-form">
-        <input className="input" placeholder="What went wrong? e.g. login page returned 502" autoFocus value={summary} onChange={(e) => { setSummary(e.target.value); setError(false); }} aria-label="Issue summary" aria-invalid={error || undefined} aria-describedby={error ? "issue-error" : undefined} />
-        {error && <FieldError id="issue-error">Add a short summary of the issue.</FieldError>}
-        <textarea className="textarea" placeholder="Details (optional)" aria-label="Issue details" value={description} onChange={(e) => setDescription(e.target.value)} />
+        <input className="input" placeholder={__shiftFaTr("What went wrong? e.g. login page returned 502")} autoFocus value={summary} onChange={(e) => { setSummary(e.target.value); setError(false); }} aria-label={__shiftFaTr("Issue summary")} aria-invalid={error || undefined} aria-describedby={error ? "issue-error" : undefined} />
+        {error && <FieldError id="issue-error">{"" + __shiftFaTr("Add a short summary of the issue.") + ""}</FieldError>}
+        <textarea className="textarea" placeholder={__shiftFaTr("Details (optional)")} aria-label={__shiftFaTr("Issue details")} value={description} onChange={(e) => setDescription(e.target.value)} />
         <div className="line">
-          <input className="input input-sm mono" style={{ width: 220 }} placeholder="External reference (optional)" aria-label="External reference" value={ref} onChange={(e) => setRef(e.target.value)} />
+          <input className="input input-sm mono" style={{ width: 220 }} placeholder={__shiftFaTr("External reference (optional)")} aria-label={__shiftFaTr("External reference")} value={ref} onChange={(e) => setRef(e.target.value)} />
           <span className="spacer" />
-          <button type="button" className="btn btn-ghost btn-sm" onClick={onCancel}>Cancel</button>
-          <button type="button" className="btn btn-primary btn-sm" onClick={save}>Save issue</button>
+          <button type="button" className="btn btn-ghost btn-sm" onClick={onCancel}>{"" + __shiftFaTr("Cancel") + ""}</button>
+          <button type="button" className="btn btn-primary btn-sm" onClick={save}>{"" + __shiftFaTr("Save issue") + ""}</button>
         </div>
       </div>
     </div>
@@ -353,6 +359,7 @@ function IssueForm({ onSave, onCancel }) {
 }
 
 function Tickets({ readOnly, list: tickets, date = null, onUpdate = null }) {
+  const { t: __shiftFaTr } = useEngShiftI18n();
   const { dispatch, toast } = useApp();
   const [adding, setAdding] = useState(false);
   const [row, setRow] = useState({ no: "", ref: "", desc: "" });
@@ -382,16 +389,16 @@ function Tickets({ readOnly, list: tickets, date = null, onUpdate = null }) {
 
   return (
     <Panel
-      title="Created tickets"
+      title={__shiftFaTr("Created tickets")}
       meta={<span data-testid="ticket-count">{plural(tickets.length, "ticket")}</span>}
-      actions={!readOnly && !adding && <button type="button" className="btn btn-secondary btn-sm" onClick={() => { setAdding(true); setError(false); }}><Icon name="plus" />Add ticket</button>}
+      actions={!readOnly && !adding && <button type="button" className="btn btn-secondary btn-sm" onClick={() => { setAdding(true); setError(false); }}><Icon name="plus" />{"" + __shiftFaTr("Add ticket") + ""}</button>}
       style={{ marginTop: "var(--s-4)" }}
     >
       {tickets.length === 0 && !adding ? (
-        <p className="panel-body muted small">No tickets registered today.{readOnly ? "" : " Add each ticket you create so it counts in reports."}</p>
+        <p className="panel-body muted small">{"" + __shiftFaTr("No tickets registered today.") + ""}{readOnly ? "" : " Add each ticket you create so it counts in reports."}</p>
       ) : (
-        <div role="table" aria-label="Tickets">
-          <div className="ticket head" role="row"><span role="columnheader">Ticket number</span><span role="columnheader">Related reference</span><span role="columnheader">Description</span></div>
+        <div role="table" aria-label={__shiftFaTr("Tickets")}>
+          <div className="ticket head" role="row"><span role="columnheader">{"" + __shiftFaTr("Ticket number") + ""}</span><span role="columnheader">{"" + __shiftFaTr("Related reference") + ""}</span><span role="columnheader">{"" + __shiftFaTr("Description") + ""}</span></div>
           {tickets.map((tk) => (
             <div key={tk.no} className="ticket" role="row">
               <span className="mono" role="cell" style={{ color: "var(--text)" }}>{tk.no}</span>
@@ -403,14 +410,14 @@ function Tickets({ readOnly, list: tickets, date = null, onUpdate = null }) {
       )}
       {adding && (
         <div className="ticket edit" onKeyDown={onKey}>
-          <input ref={numberRef} autoFocus className="input mono" placeholder="INC-2026-…" value={row.no} onChange={(e) => { setRow({ ...row, no: e.target.value }); setError(false); }} aria-label="Ticket number" aria-invalid={error || undefined} aria-describedby={error ? "ticket-error" : undefined} />
-          <input className="input mono" placeholder="Reference (optional)" value={row.ref} onChange={(e) => setRow({ ...row, ref: e.target.value })} aria-label="Related reference" />
-          <input className="input" placeholder="Short description" value={row.desc} onChange={(e) => setRow({ ...row, desc: e.target.value })} aria-label="Description" />
+          <input ref={numberRef} autoFocus className="input mono" placeholder="INC-2026-…" value={row.no} onChange={(e) => { setRow({ ...row, no: e.target.value }); setError(false); }} aria-label={__shiftFaTr("Ticket number")} aria-invalid={error || undefined} aria-describedby={error ? "ticket-error" : undefined} />
+          <input className="input mono" placeholder={__shiftFaTr("Reference (optional)")} value={row.ref} onChange={(e) => setRow({ ...row, ref: e.target.value })} aria-label={__shiftFaTr("Related reference")} />
+          <input className="input" placeholder={__shiftFaTr("Short description")} value={row.desc} onChange={(e) => setRow({ ...row, desc: e.target.value })} aria-label={__shiftFaTr("Description")} />
           <span className="row">
-            <button type="button" className="btn btn-ghost btn-sm" onClick={cancel}>Cancel</button>
-            <button type="button" className="btn btn-primary btn-sm" onClick={save} disabled={busy} aria-busy={busy}>Save</button>
+            <button type="button" className="btn btn-ghost btn-sm" onClick={cancel}>{"" + __shiftFaTr("Cancel") + ""}</button>
+            <button type="button" className="btn btn-primary btn-sm" onClick={save} disabled={busy} aria-busy={busy}>{"" + __shiftFaTr("Save") + ""}</button>
           </span>
-          {error && <span style={{ gridColumn: "1 / -1" }}><FieldError id="ticket-error">Ticket number is required.</FieldError></span>}
+          {error && <span style={{ gridColumn: "1 / -1" }}><FieldError id="ticket-error">{"" + __shiftFaTr("Ticket number is required.") + ""}</FieldError></span>}
         </div>
       )}
     </Panel>
@@ -419,6 +426,8 @@ function Tickets({ readOnly, list: tickets, date = null, onUpdate = null }) {
 
 /** The analyst's own shift logs for a period. Today's log opens the editable Shift Log. */
 export function ShiftHistory() {
+  const { t: __shiftFaTr } = useEngShiftI18n();
+  const { t: __shiftTr } = useShiftI18n();
   const { me } = useApp();
   const router = useRouter();
   const l2 = me.team === "SOC · L2";
@@ -428,26 +437,26 @@ export function ShiftHistory() {
   return (
     <div className="page">
       <PageHeader
-        title="Shift Log history"
+        title={__shiftFaTr("Shift Log history")}
         meta={[me.name, data ? fmtRange(data.period.from, data.period.to) : null]}
-        actions={<Link className="btn btn-primary" href="/shift">Open today&apos;s log</Link>}
+        actions={<Link className="btn btn-primary" href="/shift">{"" + __shiftFaTr("Open today's log") + ""}</Link>}
       />
       <div className="page-toolbar"><PeriodSelector value={period} onChange={setPeriod} /></div>
       <div className="panel">
-        {loading && !data ? <Loading label="Loading shift logs" rows={8} /> : error ? (
-          <ErrorState error={error} title="Couldn't load shift logs" onRetry={reload} />
+        {loading && !data ? <Loading label={__shiftFaTr("Loading shift logs")} rows={8} /> : error ? (
+          <ErrorState error={error} title={__shiftFaTr("Couldn't load shift logs")} onRetry={reload} />
         ) : !data?.logs.length ? (
-          <EmptyState icon="shift" title="No shift logs in this period" action={<Link className="btn btn-secondary btn-sm" href="/shift">Open today&apos;s log</Link>}>Logs appear here once you record activity. Try another period.</EmptyState>
+          <EmptyState icon="shift" title={__shiftFaTr("No shift logs in this period")} action={<Link className="btn btn-secondary btn-sm" href="/shift">{"" + __shiftFaTr("Open today's log") + ""}</Link>}>{"" + __shiftFaTr("Logs appear here once you record activity. Try another period.") + ""}</EmptyState>
         ) : (
           <div className="table-wrap">
             {l2 ? (
-              <table className="dt" aria-label="Layer 2 shift log history">
+              <table className="dt" aria-label={__shiftFaTr("Layer 2 shift log history")}>
                 <thead><tr>
-                  <th scope="col">Date</th>
-                  <th scope="col">Shift</th>
-                  <th scope="col">Status</th>
-                  <th scope="col" className="r">Tickets analyzed</th>
-                  <th scope="col" className="r">SOC tasks</th>
+                  <th scope="col">{"" + __shiftFaTr("Date") + ""}</th>
+                  <th scope="col">{"" + __shiftFaTr("Shift") + ""}</th>
+                  <th scope="col">{"" + __shiftFaTr("Status") + ""}</th>
+                  <th scope="col" className="r">{"" + __shiftFaTr("Tickets analyzed") + ""}</th>
+                  <th scope="col" className="r">{"" + __shiftFaTr("SOC tasks") + ""}</th>
                 </tr></thead>
                 <tbody>
                   {data.logs.map((entry) => {
@@ -457,12 +466,12 @@ export function ShiftHistory() {
                       <tr key={entry.date} className={accessible ? "is-link" : ""}
                         onClick={() => accessible && router.push(isToday ? "/shift" : `/shift?date=${entry.date}`)}>
                         <td className="title">{isToday ? <Link href="/shift">Today</Link> : entry.backfill
-                          ? <Link href={`/shift?date=${entry.date}`}>{fmtDate(entry.date)} · Enter missed log</Link>
+                          ? <Link href={`/shift?date=${entry.date}`}>{fmtDate(entry.date)}{" " + __shiftFaTr("· Enter missed log") + ""}</Link>
                           : fmtDate(entry.date)} <span className="muted">· {weekday(entry.date)}</span></td>
                         <td>{entry.absence ? "—" : entry.shiftType === "night" ? "Night" : entry.shiftType === "evening" ? "Until 20:00" : "Morning"}</td>
                         <td>{entry.absence ? <span className="badge">{entry.shiftType === "off" ? "Day off" : "Leave"}</span> :
-                          entry.completed ? <Status s="done" label="Completed" /> :
-                          isToday ? <Status s="progress" label="In progress" /> : <Status s="returned" label="Incomplete" />}</td>
+                          entry.completed ? <Status s="done" label={__shiftFaTr("Completed")} /> :
+                          isToday ? <Status s="progress" label={__shiftFaTr("In progress")} /> : <Status s="returned" label={__shiftFaTr("Incomplete")} />}</td>
                         <td className="r">{entry.absence ? "—" : entry.mode === "ticket_analysis" ? entry.analyzedTickets ?? 0 : "—"}</td>
                         <td className="r">{entry.absence ? "—" : entry.mode === "operational" ? `${entry.done}/${entry.total}` : "—"}</td>
                       </tr>
@@ -472,7 +481,7 @@ export function ShiftHistory() {
               </table>
             ) : (
             <table className="dt">
-              <thead><tr><th scope="col">Date</th><th scope="col">Status</th><th scope="col">Checklist</th><th scope="col">Activities</th><th scope="col" className="r">IOCs</th><th scope="col" className="r">Tickets</th>{me.team === "SOC · L2" && <th scope="col" className="r">تیکت تحلیل‌شده</th>}<th scope="col" className="r">Issues</th><th scope="col">Traffic report</th></tr></thead>
+              <thead><tr><th scope="col">{"" + __shiftFaTr("Date") + ""}</th><th scope="col">{"" + __shiftFaTr("Status") + ""}</th><th scope="col">{"" + __shiftFaTr("Checklist") + ""}</th><th scope="col">{"" + __shiftFaTr("Activities") + ""}</th><th scope="col" className="r">{"" + __shiftFaTr("IOCs") + ""}</th><th scope="col" className="r">{"" + __shiftFaTr("Tickets") + ""}</th>{me.team === "SOC · L2" && <th scope="col" className="r">{"" + __shiftTr("تیکت تحلیل‌شده") + ""}</th>}<th scope="col" className="r">{"" + __shiftFaTr("Issues") + ""}</th><th scope="col">{"" + __shiftFaTr("Traffic report") + ""}</th></tr></thead>
               <tbody>
                 {data.logs.map((r) => {
                   const today = r.date === TODAY && !r.absence;
@@ -480,16 +489,16 @@ export function ShiftHistory() {
                     <tr key={r.date} className={today || r.backfill ? "is-link" : ""}
                       onClick={() => (today || r.backfill) && router.push(today ? "/shift" : `/shift?date=${r.date}`)}>
                       <td className="title">{today ? <Link href="/shift">Today</Link> : r.backfill
-                        ? <Link href={`/shift?date=${r.date}`}>{fmtDate(r.date)} · Enter missed log</Link>
+                        ? <Link href={`/shift?date=${r.date}`}>{fmtDate(r.date)}{" " + __shiftFaTr("· Enter missed log") + ""}</Link>
                         : fmtDate(r.date)} <span className="muted" style={{ fontWeight: 400 }}>· {weekday(r.date)}</span></td>
-                      <td>{r.absence ? <span className="badge">{r.shiftType === "off" ? "تعطیل شیفت" : "مرخصی"}</span> : r.completed ? <Status s="done" label="Completed" /> : today ? <Status s="progress" label="In progress" /> : <Status s="returned" label="Incomplete" />}</td>
-                      <td className="sec" dir="auto">{r.checklist ?? <span className="muted">None</span>}{r.checklistVersion ? <span className="muted"> · v{r.checklistVersion}</span> : null}</td>
+                      <td>{r.absence ? <span className="badge">{r.shiftType === "off" ? __shiftTr("تعطیل شیفت") : __shiftTr("مرخصی")}</span> : r.completed ? <Status s="done" label={__shiftFaTr("Completed")} /> : today ? <Status s="progress" label={__shiftFaTr("In progress")} /> : <Status s="returned" label={__shiftFaTr("Incomplete")} />}</td>
+                      <td className="sec" dir="auto">{r.checklist ?? <span className="muted">{"" + __shiftFaTr("None") + ""}</span>}{r.checklistVersion ? <span className="muted"> · v{r.checklistVersion}</span> : null}</td>
                       <td>{r.absence ? <span className="muted">—</span> : <Meter value={r.done} max={r.total} label={`Activities done on ${fmtDate(r.date)}`} tone="ok" readout={`${r.done}/${r.total}`} />}</td>
                       <td className="r">{r.iocs}</td>
                       <td className="r">{r.tickets || <span className="zero">0</span>}</td>
                       {me.team === "SOC · L2" && <td className="r">{r.analyzedTickets ?? 0}</td>}
                       <td className="r">{r.issues || <span className="zero">0</span>}</td>
-                      <td>{r.absence ? <span className="muted">—</span> : r.report ? <span className="sec">Done</span> : <span className="muted">Not done</span>}</td>
+                      <td>{r.absence ? <span className="muted">—</span> : r.report ? <span className="sec">Done</span> : <span className="muted">{"" + __shiftFaTr("Not done") + ""}</span>}</td>
                     </tr>
                   );
                 })}

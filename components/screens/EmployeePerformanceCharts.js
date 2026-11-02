@@ -1,5 +1,7 @@
 "use client";
 
+import { useI18n as useSharedI18n } from "@/components/I18nProvider";
+
 import { Panel } from "@/components/ui/layout";
 import { CompareBars, DonutBreakdown, Meter } from "@/components/ui/charts";
 import { CX, QUAL, fmtDate } from "@/lib/format";
@@ -35,6 +37,7 @@ function deliveryRows(tasks, period) {
 }
 
 export default function EmployeePerformanceCharts({ data }) {
+  const { t: __sharedTr } = useSharedI18n();
   if (!data) return null;
 
   const complexityRows = CX.slice(1).map((label, i) => ({ label, value: data.complexity?.[i] ?? 0 }));
@@ -47,63 +50,63 @@ export default function EmployeePerformanceCharts({ data }) {
   const miniStatStyle = { display: "grid", gap: 8, padding: "12px 14px", border: "1px solid var(--divider)", borderRadius: "var(--r-md)", background: "var(--surface-inset)" };
 
   return (
-    <section className={styles.managerCharts} aria-label="Employee performance charts">
-      <Panel title="Work profile" meta="Completed work in the selected reporting period">
+    <section className={styles.managerCharts} aria-label={__sharedTr("Employee performance charts")}>
+      <Panel title={__sharedTr("Work profile")} meta={__sharedTr("Completed work in the selected reporting period")}>
         <div className={`${styles.chartBody} ${styles.chartSplit}`}>
           <div className={styles.chartSection}>
-            <div className={styles.chartLabel}><span>Complexity mix</span><small>{complexityTotal} completed</small></div>
+            <div className={styles.chartLabel}><span>{"" + __sharedTr("Complexity mix") + ""}</span><small>{complexityTotal}{" " + __sharedTr("completed") + ""}</small></div>
             {complexityTotal ? (
               <DonutBreakdown rows={complexityRows} name="Completed work by complexity" unit=" tasks" />
             ) : (
-              <div className="muted small">No completed tasks in this period.</div>
+              <div className="muted small">{"" + __sharedTr("No completed tasks in this period.") + ""}</div>
             )}
           </div>
 
           <div className={styles.chartSection}>
-            <div className={styles.chartLabel}><span>Quality mix</span><small>Manager review outcomes</small></div>
+            <div className={styles.chartLabel}><span>{"" + __sharedTr("Quality mix") + ""}</span><small>{"" + __sharedTr("Manager review outcomes") + ""}</small></div>
             {qualityTotal ? (
               <DonutBreakdown rows={qualityRows} name="Completed work by quality" unit=" ratings" />
             ) : (
-              <div className="muted small">No quality ratings in this period.</div>
+              <div className="muted small">{"" + __sharedTr("No quality ratings in this period.") + ""}</div>
             )}
           </div>
         </div>
       </Panel>
 
-      <Panel title="Delivery cadence" meta="Completed tasks distributed across the selected period">
+      <Panel title={__sharedTr("Delivery cadence")} meta={__sharedTr("Completed tasks distributed across the selected period")}>
         <div className={styles.chartBody}>
           {cadence.length ? (
             <CompareBars rows={cadence} name="Completed tasks across the selected period" />
           ) : (
-            <div className="muted small">No delivery data for this period.</div>
+            <div className="muted small">{"" + __sharedTr("No delivery data for this period.") + ""}</div>
           )}
         </div>
       </Panel>
 
       {routine && (
-        <Panel title="Routine performance" meta="Shift activity for this analyst in the selected period">
+        <Panel title={__sharedTr("Routine performance")} meta={__sharedTr("Shift activity for this analyst in the selected period")}>
           <div className={`${styles.chartBody} ${styles.chartSplit}`}>
             <div className={styles.chartSection}>
-              <div className={styles.chartLabel}><span>Completion</span><small>Shift discipline</small></div>
+              <div className={styles.chartLabel}><span>{"" + __sharedTr("Completion") + ""}</span><small>{"" + __sharedTr("Shift discipline") + ""}</small></div>
               <div style={miniStatsStyle}>
                 <div style={miniStatStyle}>
-                  <span className="muted small">Routine completion</span>
-                  <Meter value={routine.completion ?? 0} max={100} label="Routine completion" readout={`${routine.completion ?? 0}%`} />
+                  <span className="muted small">{"" + __sharedTr("Routine completion") + ""}</span>
+                  <Meter value={routine.completion ?? 0} max={100} label={__sharedTr("Routine completion")} readout={`${routine.completion ?? 0}%`} />
                 </div>
                 <div style={miniStatStyle}>
-                  <span className="muted small">Shift logs completed</span>
-                  <Meter value={routine.completed ?? 0} max={Math.max(1, routine.logs ?? 0)} label="Shift logs completed" readout={`${routine.completed ?? 0} / ${routine.logs ?? 0}`} />
+                  <span className="muted small">{"" + __sharedTr("Shift logs completed") + ""}</span>
+                  <Meter value={routine.completed ?? 0} max={Math.max(1, routine.logs ?? 0)} label={__sharedTr("Shift logs completed")} readout={`${routine.completed ?? 0} / ${routine.logs ?? 0}`} />
                 </div>
               </div>
             </div>
 
             <div className={styles.chartSection}>
-              <div className={styles.chartLabel}><span>Routine volume</span><small>Recorded shift output</small></div>
+              <div className={styles.chartLabel}><span>{"" + __sharedTr("Routine volume") + ""}</span><small>{"" + __sharedTr("Recorded shift output") + ""}</small></div>
               <CompareBars
                 name="Routine activity volume"
                 rows={[
-                  { label: "MISP IOCs", value: routine.iocs ?? 0 },
-                  { label: "Tickets", value: routine.tickets ?? 0 },
+                  { label: __sharedTr("MISP IOCs"), value: routine.iocs ?? 0 },
+                  { label: __sharedTr("Tickets"), value: routine.tickets ?? 0 },
                   { label: "Traffic reports", value: routine.reports ?? 0 },
                   { label: "Issues reported", value: routine.issues ?? 0 },
                 ]}

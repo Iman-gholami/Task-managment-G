@@ -1,5 +1,7 @@
 "use client";
 
+import { useI18n as useSharedI18n } from "@/components/I18nProvider";
+
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import { useState } from "react";
@@ -27,6 +29,7 @@ const TEAMS = ["SOC", "Design & Automation", "Threat Intelligence"];
 const PAGE_SIZE = 100;
 
 export default function Reports({ report }) {
+  const { t: __sharedTr } = useSharedI18n();
   const { me, members } = useApp();
   const params = useSearchParams();
   const manager = canViewManagementAnalytics(me);
@@ -61,29 +64,28 @@ export default function Reports({ report }) {
           title={cur[1]}
           meta={[cur[2], data ? fmtRange(data.period.from, data.period.to) : null]}
           actions={
-            <a className="btn btn-primary" href={`/api/reports/${key}?${qs}&format=xlsx`} download data-testid="export" data-tooltip="Same filters and period as the preview below">
-              <Icon name="download" />Export to Excel
-            </a>
+            <a className="btn btn-primary" href={`/api/reports/${key}?${qs}&format=xlsx`} download data-testid="export" data-tooltip={__sharedTr("Same filters and period as the preview below")}>
+              <Icon name="download" />{"" + __sharedTr("Export to Excel") + ""}</a>
           }
         />
-        <div className="toolbar" role="search" aria-label="Report filters">
+        <div className="toolbar" role="search" aria-label={__sharedTr("Report filters")}>
           <PeriodSelector value={period} onChange={setPeriod} custom range={range} onRange={setRange} />
           {show("user") && (
             <select className={sel("user", f.user && key !== "employee")} style={{ width: 190 }} value={f.user} onChange={set("user")} aria-label="Employee">
-              {key !== "employee" && <option value="">All employees</option>}
+              {key !== "employee" && <option value="">{"" + __sharedTr("All employees") + ""}</option>}
               {people.map((m) => <option key={m.id} value={m.id}>{m.name}</option>)}
             </select>
           )}
-          {show("team") && <select className={sel("team", f.team)} style={{ width: 180 }} value={f.team} onChange={set("team")} aria-label="Team"><option value="">All teams</option>{TEAMS.map((t) => <option key={t}>{t}</option>)}</select>}
-          {show("status") && <select className={sel("status", f.status)} style={{ width: 150 }} value={f.status} onChange={set("status")} aria-label="Task status"><option value="">Any status</option>{Object.entries(STATUS).map(([k, l]) => <option key={k} value={k}>{l}</option>)}</select>}
-          {show("cx") && <select className={sel("cx", f.cx)} style={{ width: 160 }} value={f.cx} onChange={set("cx")} aria-label="Complexity"><option value="">Any complexity</option>{CX.slice(1).map((c, i) => <option key={c} value={i + 1}>{c}</option>)}</select>}
-          {show("quality") && <select className={sel("quality", f.quality)} style={{ width: 180 }} value={f.quality} onChange={set("quality")} aria-label="Quality"><option value="">Any quality</option>{Object.entries(QUAL).map(([k, l]) => <option key={k} value={k}>{l}</option>)}</select>}
-          {show("q") && <div className="search"><Icon name="search" /><input type="search" className="input" placeholder="Ticket number or description" aria-label="Search tickets" value={f.q} onChange={set("q")} /></div>}
-          {activeFilters > 0 && <button type="button" className="btn btn-ghost btn-sm" onClick={reset}><Icon name="x" />Reset filters ({activeFilters})</button>}
+          {show("team") && <select className={sel("team", f.team)} style={{ width: 180 }} value={f.team} onChange={set("team")} aria-label="Team"><option value="">{"" + __sharedTr("All teams") + ""}</option>{TEAMS.map((t) => <option key={t}>{t}</option>)}</select>}
+          {show("status") && <select className={sel("status", f.status)} style={{ width: 150 }} value={f.status} onChange={set("status")} aria-label={__sharedTr("Task status")}><option value="">{"" + __sharedTr("Any status") + ""}</option>{Object.entries(STATUS).map(([k, l]) => <option key={k} value={k}>{l}</option>)}</select>}
+          {show("cx") && <select className={sel("cx", f.cx)} style={{ width: 160 }} value={f.cx} onChange={set("cx")} aria-label={__sharedTr("Complexity")}><option value="">{"" + __sharedTr("Any complexity") + ""}</option>{CX.slice(1).map((c, i) => <option key={c} value={i + 1}>{c}</option>)}</select>}
+          {show("quality") && <select className={sel("quality", f.quality)} style={{ width: 180 }} value={f.quality} onChange={set("quality")} aria-label={__sharedTr("Quality")}><option value="">{"" + __sharedTr("Any quality") + ""}</option>{Object.entries(QUAL).map(([k, l]) => <option key={k} value={k}>{l}</option>)}</select>}
+          {show("q") && <div className="search"><Icon name="search" /><input type="search" className="input" placeholder={__sharedTr("Ticket number or description")} aria-label={__sharedTr("Search tickets")} value={f.q} onChange={set("q")} /></div>}
+          {activeFilters > 0 && <button type="button" className="btn btn-ghost btn-sm" onClick={reset}><Icon name="x" />{"" + __sharedTr("Reset filters (") + ""}{activeFilters})</button>}
         </div>
 
-        {loading && !data ? <div className="panel"><Loading label="Loading report" rows={8} /></div> : error ? (
-          <div className="panel"><ErrorState error={error} title="Couldn't load the report" onRetry={reload} /></div>
+        {loading && !data ? <div className="panel"><Loading label={__sharedTr("Loading report")} rows={8} /></div> : error ? (
+          <div className="panel"><ErrorState error={error} title={__sharedTr("Couldn't load the report")} onRetry={reload} /></div>
         ) : (
           <div className="stack-lg">
             {data?.sheets.map((s) => <Sheet key={s.name} sheet={s} filtered={activeFilters > 0} onReset={reset} />)}
@@ -96,6 +98,7 @@ export default function Reports({ report }) {
 
 /** One report sheet: the same columns as the Excel export, paginated above 100 rows. */
 function Sheet({ sheet: s, filtered, onReset }) {
+  const { t: __sharedTr } = useSharedI18n();
   const [page, setPage] = useState(0);
   const pages = Math.max(1, Math.ceil(s.rows.length / PAGE_SIZE));
   const at = Math.min(page, pages - 1);
@@ -105,7 +108,7 @@ function Sheet({ sheet: s, filtered, onReset }) {
   return (
     <Panel title={s.name} meta={plural(s.rows.length, "row")} footer={s.rows.length > 0 && summary}>
       {s.rows.length === 0 ? (
-        <EmptyState compact icon="report" title="Nothing to report" action={filtered ? <button type="button" className="btn btn-secondary btn-sm" onClick={onReset}>Reset filters</button> : null}>
+        <EmptyState compact icon="report" title={__sharedTr("Nothing to report")} action={filtered ? <button type="button" className="btn btn-secondary btn-sm" onClick={onReset}>{"" + __sharedTr("Reset filters") + ""}</button> : null}>
           {filtered ? "No rows match these filters in this period." : "No activity was recorded in this period. Try a longer period."}
         </EmptyState>
       ) : (
@@ -133,11 +136,11 @@ function Sheet({ sheet: s, filtered, onReset }) {
           </div>
           {pages > 1 && (
             <div className="table-foot">
-              <span>{at * PAGE_SIZE + 1}–{Math.min(s.rows.length, (at + 1) * PAGE_SIZE)} of {s.rows.length}</span>
+              <span>{at * PAGE_SIZE + 1}–{Math.min(s.rows.length, (at + 1) * PAGE_SIZE)}{" " + __sharedTr("of") + " "}{s.rows.length}</span>
               <span className="pager">
-                <button type="button" className="btn btn-ghost icon-btn btn-sm" aria-label="Previous page" data-tooltip="Previous page" disabled={at === 0} onClick={() => setPage(at - 1)}><Icon name="left" /></button>
-                <span className="num">Page {at + 1} of {pages}</span>
-                <button type="button" className="btn btn-ghost icon-btn btn-sm" aria-label="Next page" data-tooltip="Next page" disabled={at >= pages - 1} onClick={() => setPage(at + 1)}><Icon name="chev" /></button>
+                <button type="button" className="btn btn-ghost icon-btn btn-sm" aria-label={__sharedTr("Previous page")} data-tooltip={__sharedTr("Previous page")} disabled={at === 0} onClick={() => setPage(at - 1)}><Icon name="left" /></button>
+                <span className="num">{"" + __sharedTr("Page") + " "}{at + 1}{" " + __sharedTr("of") + " "}{pages}</span>
+                <button type="button" className="btn btn-ghost icon-btn btn-sm" aria-label={__sharedTr("Next page")} data-tooltip={__sharedTr("Next page")} disabled={at >= pages - 1} onClick={() => setPage(at + 1)}><Icon name="chev" /></button>
               </span>
             </div>
           )}

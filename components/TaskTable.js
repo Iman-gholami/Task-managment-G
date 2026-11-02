@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { useI18n } from "@/components/I18nProvider";
 import { useRouter } from "next/navigation";
 import { Fragment, useRef, useState } from "react";
 import { api, useApp } from "@/components/AppProvider";
@@ -23,6 +24,7 @@ const PRIMARY = new Set(["title", "status", "prio", "due", "a"]);
  * Only transitions the current user is allowed to make are offered; approving asks for quality.
  */
 export function useTaskActions() {
+  const { t, locale } = useI18n();
   const { openPopover, updateTask, toast, me, dispatch } = useApp();
   const router = useRouter();
   const pendingRef = useRef(new Set());
@@ -73,15 +75,15 @@ export function useTaskActions() {
     if (field === "prio") {
       if (["done", "cancelled"].includes(task.status)) return toast("Closed tasks can't be changed.", "info");
       if (task.a !== me.id && !isManager(me)) return toast("You can only edit your own tasks.", "info");
-      return openPopover(anchor, { title: "Priority", items: prioItems(), onPick: async (v) => { if (await updateTask(task, { prio: v })) toast(`${task.id} priority set to ${PRIO[v]}`); } });
+      return openPopover(anchor, { title: t("Priority"), items: prioItems(), onPick: async (v) => { if (await updateTask(task, { prio: v })) toast(`${task.id} priority set to ${PRIO[v]}`); } });
     }
     const next = allowedTransitions(me, task);
     if (!next.length) {
       return toast(task.status === "done" ? "Approved tasks are closed. A manager can reopen them." : task.status === "review" ? "Waiting for a reviewer." : "No status changes are available to you.", "info");
     }
     openPopover(anchor, {
-      title: "Move task",
-      items: next.map((s, i) => ({ value: s, label: <Status s={s} />, hint: actionLabel(task.status, s), kbd: String(i + 1) })),
+      title: t("Move task"),
+      items: next.map((s, i) => ({ value: s, label: <Status s={s} />, hint: t(actionLabel(task.status, s)), kbd: String(i + 1) })),
       onPick: (to) => move(anchor, task, to),
     });
   };
@@ -97,11 +99,12 @@ export const useInlineEdit = () => useTaskActions().edit;
  * Sortable when `onSort` is given. Rows open the task on click; the title is a real link for keyboard users.
  */
 export default function TaskTable({ list, groups, cols, kb = -1, sort, onSort, empty }) {
+  const { t } = useI18n();
   const router = useRouter();
   const { edit } = useTaskActions();
 
   const editable = (field, task, node) => (
-    <span className="cell-edit" data-edit={field} role="button" tabIndex={-1} aria-label={`Change ${field === "prio" ? "priority" : "status"}`} onClick={(e) => { e.stopPropagation(); edit(e.currentTarget, field, task); }}>
+    <span className="cell-edit" data-edit={field} role="button" tabIndex={-1} aria-label={t(field === "prio" ? "Change priority" : "Change status")} onClick={(e) => { e.stopPropagation(); edit(e.currentTarget, field, task); }}>
       {node}
     </span>
   );
@@ -132,7 +135,7 @@ export default function TaskTable({ list, groups, cols, kb = -1, sort, onSort, e
 
   const header = (c) => {
     const sorted = sort?.k === c;
-    const label = HEAD[c];
+    const label = t(HEAD[c]);
     return (
       <th key={c} scope="col" className={c === "hours" ? "r" : ""} aria-sort={sorted ? (sort.dir > 0 ? "ascending" : "descending") : undefined}>
         {onSort ? (
@@ -163,7 +166,7 @@ export default function TaskTable({ list, groups, cols, kb = -1, sort, onSort, e
           {!hasRows && (
             <tr>
               <td colSpan={cols.length} style={{ height: "auto", whiteSpace: "normal" }}>
-                <EmptyState compact icon="checkCircle" title={empty?.title ?? "No tasks here"}>{empty?.body ?? "No tasks match this view."}</EmptyState>
+                <EmptyState compact icon="checkCircle" title={empty?.title ?? t("No tasks here")}>{empty?.body ?? t("No tasks match this view.")}</EmptyState>
               </td>
             </tr>
           )}

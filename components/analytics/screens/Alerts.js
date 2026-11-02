@@ -1,5 +1,7 @@
 "use client";
 
+import { useI18n as useAnalyticsI18n } from "@/components/I18nProvider";
+
 import { useMemo, useState } from "react";
 import AnalyticsFrame from "@/components/analytics/AnalyticsFrame";
 import { useAnalytics } from "@/components/analytics/AnalyticsContext";
@@ -20,14 +22,16 @@ const RULES = [
 ];
 
 export default function Alerts() {
+  const { t: __analyticsTr } = useAnalyticsI18n();
   return (
-    <AnalyticsFrame title="هشدارها و بینش‌ها">
+    <AnalyticsFrame title={__analyticsTr("هشدارها و بینش‌ها")}>
       <AlertsBody />
     </AnalyticsFrame>
   );
 }
 
 function AlertsBody() {
+  const { t: __analyticsTr } = useAnalyticsI18n();
   const { view, range, cmp } = useAnalytics();
   const [level, setLevel] = useState("all");
   const m = useMemo(() => {
@@ -42,16 +46,16 @@ function AlertsBody() {
       <StatusBanner status={m.status} compact />
       <div className="an-row wide-first">
         <Panel
-          title="هشدارها"
-          meta="وضعیت اکنون، مستقل از بازه (به جز افت IOC)"
+          title={__analyticsTr("هشدارها")}
+          meta={__analyticsTr("وضعیت اکنون، مستقل از بازه (به جز افت IOC)")}
           actions={
             <Segmented
-              label="سطح هشدار"
+              label={__analyticsTr("سطح هشدار")}
               kind="tabs"
               value={level}
               onChange={setLevel}
               options={[
-                { value: "all", label: "همه", count: n(m.alerts.length) },
+                { value: "all", label: __analyticsTr("همه"), count: n(m.alerts.length) },
                 { value: "critical", label: "بحرانی", count: n(count("critical")) },
                 { value: "warning", label: "نیازمند توجه", count: n(count("warning")) },
                 { value: "info", label: "اطلاع", count: n(count("info")) },
@@ -61,14 +65,14 @@ function AlertsBody() {
         >
           <AlertList alerts={shown} emptyText={level === "all" ? "موردی برای پیگیری نیست." : "هشداری در این سطح نیست."} />
         </Panel>
-        <Panel title="بینش‌های خودکار" meta={cmp ? `${range.label} نسبت به ${cmp.label}` : range.label}>
+        <Panel title={__analyticsTr("بینش‌های خودکار")} meta={cmp ? `${range.label} نسبت به ${cmp.label}` : range.label}>
           <InsightList insights={m.insights} />
         </Panel>
       </div>
-      <Panel title="قواعد هشدار" meta="هشدار و بینش با قاعده‌های ثابت و قابل بررسی ساخته می‌شوند، نه با حدس">
+      <Panel title={__analyticsTr("قواعد هشدار")} meta={__analyticsTr("هشدار و بینش با قاعده‌های ثابت و قابل بررسی ساخته می‌شوند، نه با حدس")}>
         <dl className="an-rules">
           {RULES.map(([k, v]) => (<div key={k}><dt>{k}</dt><dd>{v}</dd></div>))}
-          <div><dt>بینش</dt><dd>تغییر محسوس نسبت به دوره مقایسه (با حداقل نمونه)، روند سه‌هفته‌ای پیوسته، حجم بیشتر با کیفیت کمتر، تمرکز صف کار روی یک نفر، فعالیت روتینی که کمتر انجام می‌شود، روز غیرعادی تیکت. ارزیابی افراد در آن نیست.</dd></div>
+          <div><dt>{"" + __analyticsTr("بینش") + ""}</dt><dd>{"" + __analyticsTr("تغییر محسوس نسبت به دوره مقایسه (با حداقل نمونه)، روند سه‌هفته‌ای پیوسته، حجم بیشتر با کیفیت کمتر، تمرکز صف کار روی یک نفر، فعالیت روتینی که کمتر انجام می‌شود، روز غیرعادی تیکت. ارزیابی افراد در آن نیست.") + ""}</dd></div>
         </dl>
       </Panel>
     </>

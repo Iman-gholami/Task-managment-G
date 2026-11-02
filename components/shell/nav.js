@@ -91,7 +91,7 @@ export function crumbsFor(path, peopleMap, me) {
   const [a, b, c] = path.split("/").filter(Boolean);
   switch (a) {
     case "tasks":
-      return [{ label: "Tasks", href: "/tasks" }, { label: TASK_VIEWS[b] ?? b }];
+      return [{ label: "Tasks", href: "/tasks" }, { label: TASK_VIEWS[b] ?? b, userContent: !TASK_VIEWS[b] }];
     case "shift":
       if (b === "schedule") return [{ label: "Shift Schedule" }];
       if (b === "changes") return [{ label: "Shift Schedule", href: "/shift/schedule" }, { label: "Shift changes" }];
@@ -102,12 +102,12 @@ export function crumbsFor(path, peopleMap, me) {
       return [{ label: "Team" }];
     case "performance":
       return b === "employees"
-        ? [{ label: "Performance", href: canViewManagementAnalytics(me) ? "/performance/overview" : undefined }, { label: peopleMap[c]?.name ?? "Employee" }]
+        ? [{ label: "Performance", href: canViewManagementAnalytics(me) ? "/performance/overview" : undefined }, { label: peopleMap[c]?.name ?? "Employee", userContent: !!peopleMap[c]?.name }]
         : [{ label: "Performance" }, { label: "Overview" }];
     case "analytics": {
       if (b === "people" && c) {
         const name = peopleMap[decodeURIComponent(c)]?.name;
-        return canViewManagementAnalytics(me) ? [{ label: "Analytics", href: "/analytics" }, { label: "People", href: "/analytics/people" }, { label: name ?? "Person" }] : [{ label: "My statistics" }];
+        return canViewManagementAnalytics(me) ? [{ label: "Analytics", href: "/analytics" }, { label: "People", href: "/analytics/people" }, { label: name ?? "Person", userContent: !!name }] : [{ label: "My statistics" }];
       }
       return [{ label: "Analytics", href: b ? "/analytics" : undefined }, { label: ANALYTICS_PAGES.find(([k]) => k === (b ?? ""))?.[1] ?? "Overview" }];
     }

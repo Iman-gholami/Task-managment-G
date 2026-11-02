@@ -1,5 +1,7 @@
 "use client";
 
+import { useI18n as useSharedI18n } from "@/components/I18nProvider";
+
 import { createContext, useCallback, useContext, useEffect, useMemo, useReducer, useRef, useState } from "react";
 import { isShiftEligible, dashboardFor } from "@/lib/roles";
 import { isOpen } from "@/lib/format";
@@ -91,6 +93,7 @@ export async function api(url, { method = "GET", body } = {}) {
 const TOAST_MS = { success: 3200, info: 4500, error: 6500 };
 
 export default function AppProvider({ children, initial }) {
+  const { t: __sharedTr } = useSharedI18n();
   const [data, rawDispatch] = useReducer(reducer, {
     me: initial.me,
     users: initial.users,
@@ -227,7 +230,7 @@ export default function AppProvider({ children, initial }) {
           <div key={t.id} className="toast" data-tone={t.tone} role={t.tone === "error" ? "alert" : "status"}>
             <span className="t-icon"><Icon name={t.tone === "error" ? "alert" : t.tone === "info" ? "info" : "checkCircle"} /></span>
             <span>{t.message}</span>
-            <button type="button" className="btn btn-ghost icon-btn btn-sm" aria-label="Dismiss notification" onClick={() => dismissToast(t.id)}><Icon name="x" size="sm" /></button>
+            <button type="button" className="btn btn-ghost icon-btn btn-sm" aria-label={__sharedTr("Dismiss notification")} onClick={() => dismissToast(t.id)}><Icon name="x" size="sm" /></button>
           </div>
         ))}
       </div>

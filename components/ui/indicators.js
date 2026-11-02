@@ -1,5 +1,7 @@
 "use client";
 
+import { useI18n as useTaskI18n } from "@/components/I18nProvider";
+
 import { useApp } from "@/components/AppProvider";
 import { CX, PRIO, QUAL, STATUS, TODAY, addDays, dueLabel, initials, isOpen } from "@/lib/format";
 import { taskDate } from "@/lib/task-date";
@@ -7,29 +9,33 @@ import { taskDate } from "@/lib/task-date";
 // Status, priority and complexity each use a different shape, so none depends on colour alone.
 
 export function Status({ s, label }) {
-  return <span className="status" data-s={s}>{label ?? STATUS[s]}</span>;
+  const { t: __taskTr } = useTaskI18n();
+  return <span className="status" data-s={s}>{label ?? __taskTr(STATUS[s])}</span>;
 }
 
 export function Priority({ p }) {
+  const { t: __taskTr } = useTaskI18n();
   return (
     <span className="prio" data-p={p}>
       <i aria-hidden="true">{p === "critical" ? "!" : <><b /><b /><b /></>}</i>
-      {PRIO[p]}
+      {__taskTr(PRIO[p])}
     </span>
   );
 }
 
 export function Complexity({ c }) {
+  const { t: __taskTr } = useTaskI18n();
   return (
     <span className="cx" data-c={c}>
       <i aria-hidden="true"><b /><b /><b /><b /></i>
-      {CX[c]}
+      {__taskTr(CX[c])}
     </span>
   );
 }
 
 export function Quality({ q }) {
-  return q ? <span className="q" data-q={q}>{QUAL[q]}</span> : <span className="muted">—</span>;
+  const { t: __taskTr } = useTaskI18n();
+  return q ? <span className="q" data-q={q}>{__taskTr(QUAL[q])}</span> : <span className="muted">—</span>;
 }
 
 const FALLBACK = { name: "Unknown", color: "#7F8790" };
@@ -61,9 +67,11 @@ export function Who({ id, short, size }) {
 
 /** Deadline in words; amber within 48h, red when overdue (open tasks only). Full date on hover. */
 export function Due({ task }) {
-  if (task.due === "—") return <span className="muted">No deadline</span>;
+  const { t: __taskTr, locale } = useTaskI18n();
+  if (task.due === "—") return <span className="muted">{"" + __taskTr("No deadline") + ""}</span>;
   const open = isOpen(task);
   const cls = open && task.due < TODAY ? "overdue" : open && task.due <= addDays(TODAY, 2) ? "soon" : "num";
-  const relative = open && task.due <= addDays(TODAY, 7) ? dueLabel(task.due, open) : null;
-  return <span className={`${cls} task-deadline`} data-tooltip={`Deadline ${taskDate(task.due)} (Solar Hijri)`}><span>{taskDate(task.due)}</span>{relative && <small>{relative}</small>}</span>;
+  const days = Math.round((Date.parse(task.due + "T00:00:00Z") - Date.parse(TODAY + "T00:00:00Z")) / 864e5);
+  const relative = open && days <= 7 ? (locale === "fa" ? days < 0 ? `${-days} روز از سررسید گذشته` : days === 0 ? "سررسید امروز" : days === 1 ? "سررسید فردا" : `${days} روز دیگر` : dueLabel(task.due, open)) : null;
+  return <span className={`${cls} task-deadline`} data-tooltip={`${__taskTr("Deadline")} ${taskDate(task.due, locale)}`}><span>{taskDate(task.due, locale)}</span>{relative && <small>{relative}</small>}</span>;
 }

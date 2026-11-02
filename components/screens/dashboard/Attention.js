@@ -1,5 +1,7 @@
 "use client";
 
+import { useI18n as useUiI18n } from "@/components/I18nProvider";
+
 import Link from "next/link";
 import { useMemo, useState } from "react";
 import { useApp } from "@/components/AppProvider";
@@ -50,6 +52,7 @@ export const countReason = (items, reason) => items.filter((e) => e.reasons.incl
 
 /** Operational priority list. Compact one-line state when nothing needs attention. */
 export function AttentionList({ items, limit = 6 }) {
+  const { t: __uiTr } = useUiI18n();
   const [filter, setFilter] = useState("all");
   const [expanded, setExpanded] = useState(false);
   const available = Object.keys(REASONS).filter((r) => countReason(items, r) > 0);
@@ -59,11 +62,11 @@ export function AttentionList({ items, limit = 6 }) {
 
   return (
     <Panel
-      title="Needs your attention"
+      title={__uiTr("Needs your attention")}
       meta={items.length ? plural(items.length, "task") : null}
       actions={available.length > 1 && (
         <Segmented
-          label="Filter attention items"
+          label={__uiTr("Filter attention items")}
           value={current}
           onChange={(v) => { setFilter(v); setExpanded(false); }}
           options={[{ value: "all", label: "All", count: items.length }, ...available.map((r) => ({ value: r, label: REASONS[r].filter, count: countReason(items, r) }))]}
@@ -72,7 +75,7 @@ export function AttentionList({ items, limit = 6 }) {
       className="attn-list"
     >
       {items.length === 0 ? (
-        <Notice><b>All clear.</b> No reviews waiting, nothing overdue or blocked.</Notice>
+        <Notice><b>{"" + __uiTr("All clear.") + ""}</b>{" " + __uiTr("No reviews waiting, nothing overdue or blocked.") + ""}</Notice>
       ) : (
         <>
           <div role="list">

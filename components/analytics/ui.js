@@ -1,5 +1,7 @@
 "use client";
 
+import { useI18n as useAnalyticsI18n } from "@/components/I18nProvider";
+
 import Link from "next/link";
 import { useCallback, useId, useMemo, useRef, useState } from "react";
 import { createPortal } from "react-dom";
@@ -61,13 +63,14 @@ export function Sparkline({ values, width = 96, height = 30 }) {
  * statistics and does not colour a rise or fall as good or bad.
  */
 export function Delta({ now, before, kind = "count", label }) {
+  const { t: __analyticsTr } = useAnalyticsI18n();
   const c = change(now, before, kind);
   if (!c) return label ? <span className="muted">{label}</span> : null;
   return (
     <span className="an-delta" data-dir={c.dir}>
       {c.dir !== "flat" && <Icon name={c.dir === "up" ? "arrowUp" : "arrowDown"} />}
       <b>{c.text}</b>
-      {label && <span>نسبت به {label}</span>}
+      {label && <span>{"" + __analyticsTr("نسبت به") + " "}{label}</span>}
     </span>
   );
 }
@@ -110,6 +113,7 @@ export function AnEmpty({ icon = "report", title, children, action }) {
 
 /** Failure of one region, in Persian; the rest of the page keeps working. */
 export function AnError({ error, onRetry }) {
+  const { t: __analyticsTr } = useAnalyticsI18n();
   const status = error?.status ?? 0;
   const e = error?.kind === "network"
     ? { icon: "offline", title: "اتصال به سرور برقرار نشد", body: "اتصال شبکه را بررسی کنید و دوباره تلاش کنید." }
@@ -121,7 +125,7 @@ export function AnError({ error, onRetry }) {
       <div className="glyph" aria-hidden="true"><Icon name={e.icon} /></div>
       <h3>{e.title}</h3>
       <p>{e.body}</p>
-      {onRetry && status !== 403 && <div className="actions"><button type="button" className="btn btn-secondary btn-sm" onClick={onRetry}>تلاش دوباره</button></div>}
+      {onRetry && status !== 403 && <div className="actions"><button type="button" className="btn btn-secondary btn-sm" onClick={onRetry}>{"" + __analyticsTr("تلاش دوباره") + ""}</button></div>}
     </div>
   );
 }
@@ -138,6 +142,7 @@ export function PanelSkeleton({ height = 260 }) {
  * table: { columns: [{ key, label, kind?, value(row), render?(row) }], rows }
  */
 export function ChartPanel({ title, question, meta, build, height = 260, table, fileName, actions, footer, empty, onChartClick, className = "", testId }) {
+  const { t: __analyticsTr } = useAnalyticsI18n();
   const [mode, setMode] = useState("chart");
   const chart = useRef(null);
   const id = useId();
@@ -156,7 +161,7 @@ export function ChartPanel({ title, question, meta, build, height = 260, table, 
           {actions}
           {!empty && table && (
             <Segmented
-              label="نمایش"
+              label={__analyticsTr("نمایش")}
               value={mode}
               onChange={setMode}
               iconOnly
@@ -164,12 +169,12 @@ export function ChartPanel({ title, question, meta, build, height = 260, table, 
             />
           )}
           {!empty && table && (
-            <button type="button" className="btn btn-ghost icon-btn btn-sm" aria-label="دانلود CSV" data-tooltip="دانلود داده (CSV)" onClick={() => downloadCsv(name, table.columns, table.rows)}>
+            <button type="button" className="btn btn-ghost icon-btn btn-sm" aria-label={__analyticsTr("دانلود CSV")} data-tooltip={__analyticsTr("دانلود داده (CSV)")} onClick={() => downloadCsv(name, table.columns, table.rows)}>
               <Icon name="download" />
             </button>
           )}
           {!empty && build && mode === "chart" && (
-            <button type="button" className="btn btn-ghost icon-btn btn-sm" aria-label="ذخیره تصویر نمودار" data-tooltip="تصویر نمودار (PNG)" onClick={() => chart.current?.png(`${name}.png`)}>
+            <button type="button" className="btn btn-ghost icon-btn btn-sm" aria-label={__analyticsTr("ذخیره تصویر نمودار")} data-tooltip={__analyticsTr("تصویر نمودار (PNG)")} onClick={() => chart.current?.png(`${name}.png`)}>
               <Icon name="image" />
             </button>
           )}
@@ -194,6 +199,7 @@ export function ChartPanel({ title, question, meta, build, height = 260, table, 
  * the reader chooses, not a ranking. columns: [{ key, label, kind?, value(row), render?(row), sort?, title? }].
  */
 export function DataTable({ columns, rows, rowKey = (r, i) => r.id ?? i, onRowClick, rowHref, maxHeight, dense, empty, caption, testId }) {
+  const { t: __analyticsTr } = useAnalyticsI18n();
   const [sort, setSort] = useState(null);
   const sorted = useMemo(() => {
     if (!sort) return rows;
@@ -208,7 +214,7 @@ export function DataTable({ columns, rows, rowKey = (r, i) => r.id ?? i, onRowCl
     });
   }, [rows, columns, sort]);
   const toggle = (key) => setSort((s) => (s?.key !== key ? { key, dir: "desc" } : s.dir === "desc" ? { key, dir: "asc" } : null));
-  if (!rows.length) return empty ?? <AnEmpty title="داده‌ای نیست">در این بازه و با این فیلترها رکوردی ثبت نشده است.</AnEmpty>;
+  if (!rows.length) return empty ?? <AnEmpty title={__analyticsTr("داده‌ای نیست")}>{"" + __analyticsTr("در این بازه و با این فیلترها رکوردی ثبت نشده است.") + ""}</AnEmpty>;
   return (
     <div className="table-wrap an-table-wrap" style={maxHeight ? { maxHeight, overflowY: "auto" } : undefined} data-testid={testId}>
       <table className={`dt an-dt ${dense ? "dense" : ""}`}>
@@ -259,18 +265,19 @@ export function DataTable({ columns, rows, rowKey = (r, i) => r.id ?? i, onRowCl
 
 /** Side panel for a quick look (a person, a team, all filters). Esc and the scrim close it. */
 export function Drawer({ title, subtitle, onClose, children, footer, width = 460, label }) {
+  const { t: __analyticsTr, locale, dir } = useAnalyticsI18n();
   const ref = useFocusTrap(onClose);
   const id = useId();
   // Portalled to <body> so no transformed or sticky ancestor can trap the fixed panel.
   return createPortal(
-    <div className="an-scrim" dir="rtl" lang="fa" onMouseDown={(e) => e.target === e.currentTarget && onClose()}>
+    <div className="an-scrim" dir={dir} lang={locale} onMouseDown={(e) => e.target === e.currentTarget && onClose()}>
       <aside ref={ref} className="an-drawer" role="dialog" aria-modal="true" aria-labelledby={id} aria-label={label} style={{ width: `min(${width}px, 100vw)` }}>
         <header className="an-drawer-head">
           <div>
             <h2 id={id}>{title}</h2>
             {subtitle && <p>{subtitle}</p>}
           </div>
-          <button type="button" className="btn btn-ghost icon-btn btn-sm" aria-label="بستن" data-tooltip="بستن (Esc)" onClick={onClose}><Icon name="x" /></button>
+          <button type="button" className="btn btn-ghost icon-btn btn-sm" aria-label={__analyticsTr("بستن")} data-tooltip={__analyticsTr("بستن (Esc)")} onClick={onClose}><Icon name="x" /></button>
         </header>
         <div className="an-drawer-body">{children}</div>
         {footer && <footer className="an-drawer-foot">{footer}</footer>}

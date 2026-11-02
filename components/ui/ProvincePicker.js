@@ -1,5 +1,7 @@
 "use client";
 
+import { useI18n as useSharedI18n } from "@/components/I18nProvider";
+
 import { useEffect, useId, useMemo, useRef, useState } from "react";
 import Icon from "@/components/ui/Icon";
 import { IRAN_PROVINCES } from "@/lib/roles";
@@ -11,6 +13,7 @@ const normalize = (value) => String(value ?? "").normalize("NFKC")
   .trim().toLocaleLowerCase("fa");
 
 export default function ProvincePicker({ id, value = "", onChange, placeholder = "Search provinces…", className = "", ...inputProps }) {
+  const { t: __sharedTr } = useSharedI18n();
   const [open, setOpen] = useState(false);
   const [query, setQuery] = useState("");
   const [active, setActive] = useState(0);
@@ -68,14 +71,14 @@ export default function ProvincePicker({ id, value = "", onChange, placeholder =
           onKeyDown={keys}
         />
         {value && !open ? (
-          <button type="button" className={styles.chevron} aria-label="Clear province" title="Clear province"
+          <button type="button" className={styles.chevron} aria-label={__sharedTr("Clear province")} title={__sharedTr("Clear province")}
             onMouseDown={(event) => event.preventDefault()} onClick={() => { onChange?.(""); input.current?.focus(); }}>
             <Icon name="x" size="sm" />
           </button>
         ) : <Icon name="down" size="sm" />}
       </div>
       {open && (
-        <div id={listId} className={styles.menu} role="listbox" aria-label="Provinces">
+        <div id={listId} className={styles.menu} role="listbox" aria-label={__sharedTr("Provinces")}>
           <div className={styles.hint}>{matches.length} {matches.length === 1 ? "province" : "provinces"}</div>
           {matches.length ? matches.map((province, index) => (
             <button type="button" role="option" id={`${listId}-${IRAN_PROVINCES.indexOf(province)}`} key={province}
@@ -87,7 +90,7 @@ export default function ProvincePicker({ id, value = "", onChange, placeholder =
               <span>{province}</span>
               {province === value && <Icon name="check" size="sm" />}
             </button>
-          )) : <p className={styles.empty}>No matching province</p>}
+          )) : <p className={styles.empty}>{"" + __sharedTr("No matching province") + ""}</p>}
         </div>
       )}
     </div>

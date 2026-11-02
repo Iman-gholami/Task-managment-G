@@ -13,6 +13,7 @@ import { themeMenuItems } from "@/components/ThemePicker";
 import { centerOf } from "@/components/theme";
 import { TODAY, addDays, isOpen } from "@/lib/format";
 import { inTeamScope, isManager } from "@/lib/roles";
+import { LanguageSwitcher, useI18n } from "@/components/I18nProvider";
 
 const OPEN_SHIFT = new Set(["pending_target", "pending_manager"]);
 const TASK_KINDS = {
@@ -24,6 +25,7 @@ const TASK_KINDS = {
 };
 
 function useNotifications(shiftRequests = [], assignments = []) {
+  const { t: translate, locale } = useI18n();
   const { tasks, me, peopleMap } = useApp();
   const manager = isManager(me);
   const list = [];
@@ -32,8 +34,8 @@ function useNotifications(shiftRequests = [], assignments = []) {
     if (r.status === "pending_target" && r.targetId === me.id) {
       list.push({
         key: `shift-target-${r.id}`,
-        label: "درخواست تغییر شیفت",
-        detail: `${r.requesterName} درخواست جابه‌جایی شیفت داده است`,
+        label: translate("درخواست تغییر شیفت"),
+        detail: locale === "fa" ? `${r.requesterName} درخواست جابه‌جایی شیفت داده است` : `${r.requesterName} requested a shift swap`,
         icon: "cal",
         tone: "var(--primary)",
         href: "/shift/changes",
@@ -41,7 +43,7 @@ function useNotifications(shiftRequests = [], assignments = []) {
     } else if (manager && OPEN_SHIFT.has(r.status)) {
       list.push({
         key: `shift-manager-${r.id}`,
-        label: r.status === "pending_target" ? "درخواست تغییر شیفت جدید" : "تغییر شیفت آماده تأیید",
+        label: translate(r.status === "pending_target" ? "درخواست تغییر شیفت جدید" : "تغییر شیفت آماده تأیید"),
         detail: `${r.requesterName} ↔ ${r.targetName}`,
         icon: "cal",
         tone: "var(--primary)",
@@ -63,7 +65,7 @@ function useNotifications(shiftRequests = [], assignments = []) {
       const meta = TASK_KINDS[kind];
       list.push({
         key: `${kind}-${t.id}`,
-        label: meta.label,
+        label: translate(meta.label),
         detail: `${t.id} · ${t.title}`,
         icon: meta.icon,
         tone: meta.tone,
@@ -76,6 +78,7 @@ function useNotifications(shiftRequests = [], assignments = []) {
 }
 
 export default function Topbar({ crumbs, onToggleNav, navLabel, navExpanded, onSearch }) {
+  const { t } = useI18n();
   const { theme, setTheme, openPopover, me } = useApp();
   const router = useRouter();
   const shiftCapable = isManager(me) || !!me?.keepsShiftLog;
@@ -97,17 +100,17 @@ export default function Topbar({ crumbs, onToggleNav, navLabel, navExpanded, onS
 
   const openNotifications = (anchor) =>
     openPopover(anchor, {
-      label: "Notifications",
-      title: count ? `Notifications · ${count}` : "Notifications",
+      label: t("Notifications"),
+      title: count ? `${t("Notifications")} · ${count}` : t("Notifications"),
       width: 360,
       align: "end",
       render: (close) =>
         <>
-        {desktop.permission === "default" && <button type="button" className="mi" onClick={() => { close(false); void desktop.enable(); }}><Icon name="bell" /><span>Enable desktop notifications</span></button>}
-        {desktop.permission === "denied" && <Notice icon="info">Desktop notifications are blocked. Allow them in your browser settings.</Notice>}
-        {desktop.permission === "unavailable" && <Notice icon="info">Desktop notifications need HTTPS or localhost and a supported browser.</Notice>}
+        {desktop.permission === "default" && <button type="button" className="mi" onClick={() => { close(false); void desktop.enable(); }}><Icon name="bell" /><span>{t("Enable desktop notifications")}</span></button>}
+        {desktop.permission === "denied" && <Notice icon="info">{t("Desktop notifications are blocked. Allow them in your browser settings.")}</Notice>}
+        {desktop.permission === "unavailable" && <Notice icon="info">{t("Desktop notifications need HTTPS or localhost and a supported browser.")}</Notice>}
         {count === 0 ? (
-          <Notice icon="checkCircle">You&apos;re all caught up. Nothing needs your attention.</Notice>
+          <Notice icon="checkCircle">{t("You're all caught up. Nothing needs your attention.")}</Notice>
         ) : (
           <div className="notif-list">
             {notifications.map((item) => (
@@ -126,8 +129,8 @@ export default function Topbar({ crumbs, onToggleNav, navLabel, navExpanded, onS
 
   const openThemes = (anchor) =>
     openPopover(anchor, {
-      label: "Theme",
-      title: "Theme",
+      label: t("Theme"),
+      title: t("Theme"),
       width: 288,
       align: "end",
       items: themeMenuItems(theme),
@@ -137,7 +140,7 @@ export default function Topbar({ crumbs, onToggleNav, navLabel, navExpanded, onS
   return (
     <header className="header">
       <IconButton icon="side" label={navLabel} aria-controls="sidebar" aria-expanded={navExpanded} onClick={onToggleNav} side="bottom" />
-      <nav aria-label="Breadcrumb">
+      <nav aria-label={t("Breadcrumb")}>
         <ol className="crumbs">
           {crumbs.map((c, i) => {
             const last = i === crumbs.length - 1;
@@ -151,16 +154,17 @@ export default function Topbar({ crumbs, onToggleNav, navLabel, navExpanded, onS
         </ol>
       </nav>
       <div className="header-actions">
-        <button type="button" className="cmdk" onClick={onSearch} aria-label="Search and commands" aria-keyshortcuts="Meta+K Control+K">
+        <LanguageSwitcher />
+        <button type="button" className="cmdk" onClick={onSearch} aria-label={t("Search and commands")} aria-keyshortcuts="Meta+K Control+K">
           <Icon name="search" />
-          <span className="cmdk-label">Search tasks, people, pages…</span>
+          <span className="cmdk-label">{t("Search tasks, people, pages…")}</span>
           <kbd>⌘K</kbd>
         </button>
-        <button type="button" className="btn btn-ghost icon-btn" style={{ position: "relative" }} aria-label={count ? `Notifications (${count})` : "Notifications"} aria-haspopup="dialog" data-tooltip="Notifications" data-tooltip-side="bottom" onClick={(e) => openNotifications(e.currentTarget)}>
+        <button type="button" className="btn btn-ghost icon-btn" style={{ position: "relative" }} aria-label={count ? `${t("Notifications")} (${count})` : t("Notifications")} aria-haspopup="dialog" data-tooltip={t("Notifications")} data-tooltip-side="bottom" onClick={(e) => openNotifications(e.currentTarget)}>
           <Icon name="bell" />
           {count > 0 && <span className="notif-dot" aria-hidden="true" />}
         </button>
-        <IconButton icon="palette" label="Theme" tooltip="Theme" aria-haspopup="menu" side="bottom" onClick={(e) => openThemes(e.currentTarget)} />
+        <IconButton icon="palette" label={t("Theme")} tooltip={t("Theme")} aria-haspopup="menu" side="bottom" onClick={(e) => openThemes(e.currentTarget)} />
       </div>
     </header>
   );

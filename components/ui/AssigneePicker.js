@@ -1,5 +1,7 @@
 "use client";
 
+import { useI18n as useSharedI18n } from "@/components/I18nProvider";
+
 import { useEffect, useId, useMemo, useRef, useState } from "react";
 import styles from "./AssigneePicker.module.css";
 
@@ -10,6 +12,7 @@ const nameCollator = new Intl.Collator("fa");
  * Free text is not an assignee: an explicit result must be chosen.
  */
 export default function AssigneePicker({ id, value, people, onSelect, onClear, disabled = false, autoFocus = false, overlayOptions = false, ...inputProps }) {
+  const { t: __sharedTr } = useSharedI18n();
   const selected = people.find((person) => person.id === value);
   const [search, setSearch] = useState(() => selected?.name ?? "");
   const [open, setOpen] = useState(false);
@@ -92,9 +95,9 @@ export default function AssigneePicker({ id, value, people, onSelect, onClear, d
         onKeyDown={keyDown}
       />
       {open && !disabled && (
-        <div className={styles.options} id={listId} role="listbox" aria-label="Matching assignees">
+        <div className={styles.options} id={listId} role="listbox" aria-label={__sharedTr("Matching assignees")}>
           {filtered.length === 0 ? (
-            <div className={styles.empty} role="status">No matching team members</div>
+            <div className={styles.empty} role="status">{"" + __sharedTr("No matching team members") + ""}</div>
           ) : filtered.map((person, index) => (
             <button
               key={person.id}

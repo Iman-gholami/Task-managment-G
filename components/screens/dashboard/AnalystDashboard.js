@@ -1,5 +1,9 @@
 "use client";
 
+import { useI18n as useSharedI18n } from "@/components/I18nProvider";
+
+import { useI18n as useUiI18n } from "@/components/I18nProvider";
+
 import Link from "next/link";
 import { useApp } from "@/components/AppProvider";
 import TaskTable from "@/components/TaskTable";
@@ -12,6 +16,8 @@ import { TODAY, addDays, isOpen, longDate, monthName, weekday } from "@/lib/form
 
 /** Analyst / engineer: my queue first; SOC analysts also get today's Shift Log status. */
 export default function AnalystDashboard() {
+  const { t: __sharedTr } = useSharedI18n();
+  const { t: __uiTr } = useUiI18n();
   const { tasks, activities, tickets, me, stats, shiftDone, setCreateOpen } = useApp();
   const mine = tasks.filter((t) => t.a === me.id && isOpen(t)).sort((a, b) => (a.due > b.due ? 1 : -1));
   const overdue = mine.filter((t) => t.due < TODAY).length;
@@ -31,7 +37,7 @@ export default function AnalystDashboard() {
         meta={[`${weekday(TODAY)}, ${longDate(TODAY)}`, me.team]}
         actions={
           <>
-            <button type="button" className={`btn ${shift ? "btn-secondary" : "btn-primary"}`} onClick={() => setCreateOpen(true)}><Icon name="plus" />Create task</button>
+            <button type="button" className={`btn ${shift ? "btn-secondary" : "btn-primary"}`} onClick={() => setCreateOpen(true)}><Icon name="plus" />{"" + __uiTr("Create task") + ""}</button>
             {shift && <Link className="btn btn-primary" href="/shift">{shiftLabel}</Link>}
           </>
         }
@@ -39,9 +45,9 @@ export default function AnalystDashboard() {
 
       <ReturnedShiftAlerts />
 
-      <MetricGrid label="My summary">
-        <Metric label="Assigned to me" icon="tasks" value={mine.length} href="/tasks/my" foot={inReview ? `${inReview} awaiting review` : "Open tasks"} />
-        <Metric label="Due within 48h" icon="cal" value={dueSoon} foot={dueSoon ? "Due in the next 2 days" : "Nothing due soon"} />
+      <MetricGrid label={__uiTr("My summary")}>
+        <Metric label={__uiTr("Assigned to me")} icon="tasks" value={mine.length} href="/tasks/my" foot={inReview ? `${inReview} awaiting review` : "Open tasks"} />
+        <Metric label={__uiTr("Due within 48h")} icon="cal" value={dueSoon} foot={dueSoon ? "Due in the next 2 days" : "Nothing due soon"} />
         <Metric label="Overdue" icon="flag" value={overdue} tone={overdue ? "alert" : undefined} foot={overdue ? "Past their deadline" : "All on schedule"} />
         <Metric label={`Completed · ${month}`} icon="checkCircle" value={stats.my.completed} href={`/performance/employees/${me.id}`} foot="Approved this month" />
         {shift && <Metric label={`MISP IOCs · ${month}`} icon="shield" value={stats.my.iocs} foot="From your shift logs" />}
@@ -50,9 +56,9 @@ export default function AnalystDashboard() {
 
       <div className={shift ? "grid-main" : ""}>
         <Panel
-          title="My work queue"
-          meta="Open tasks · soonest deadline first"
-          actions={<Link className="btn btn-ghost btn-sm" href="/tasks/my">All my tasks<Icon name="arrowRight" /></Link>}
+          title={__uiTr("My work queue")}
+          meta={__uiTr("Open tasks · soonest deadline first")}
+          actions={<Link className="btn btn-ghost btn-sm" href="/tasks/my">{"" + __uiTr("All my tasks") + ""}<Icon name="arrowRight" /></Link>}
         >
           <TaskTable
             list={mine}
@@ -62,27 +68,27 @@ export default function AnalystDashboard() {
         </Panel>
         {shift && (
           <Panel
-            title="Today's Shift Log"
-            actions={<span className={`badge dot ${shiftDone ? "success" : done ? "info" : ""}`}>{shiftDone ? "Completed" : done ? "In progress" : "Not started"}</span>}
+            title={__uiTr("Today's Shift Log")}
+            actions={<span className={`badge dot ${shiftDone ? "success" : done ? "info" : ""}`}>{shiftDone ? __uiTr("Completed") : done ? __sharedTr("In progress") : __sharedTr("Not started")}</span>}
             footer={<Link className="btn btn-secondary btn-block" href="/shift">{shiftLabel}</Link>}
           >
             <div className="panel-body shift-card">
               {activities.length === 0 && !shiftDone ? (
-                <p className="sec">No checklist is assigned to {me.team} for today&apos;s shift. You can still record tickets in the Shift Log.</p>
+                <p className="sec">{"" + __uiTr("No checklist is assigned to") + " "}{me.team}{" " + __uiTr("for today's shift. You can still record tickets in the Shift Log.") + ""}</p>
               ) : done === 0 && !shiftDone ? (
-                <p className="sec">Nothing has been recorded for today yet. Start with the first routine activity.</p>
+                <p className="sec">{"" + __uiTr("Nothing has been recorded for today yet. Start with the first routine activity.") + ""}</p>
               ) : (
                 <>
                   <div className="shift-card-top">
                     <span className="big num">{done}<span className="muted">/{activities.length}</span></span>
-                    <span className="sec">activities done</span>
+                    <span className="sec">{"" + __uiTr("activities done") + ""}</span>
                   </div>
-                  <Meter value={done} max={activities.length} label="Shift Log progress" tone={shiftDone ? "ok" : undefined} />
+                  <Meter value={done} max={activities.length} label={__uiTr("Shift Log progress")} tone={shiftDone ? "ok" : undefined} />
                   <dl className="kv compact">
-                    <dt>Next</dt>
-                    <dd>{remaining.length ? <span className="truncate">{remaining[0].title}{remaining.length > 1 && <span className="muted"> +{remaining.length - 1} more</span>}</span> : "All done"}</dd>
-                    <dt>IOCs added</dt><dd className="num">{iocs}</dd>
-                    <dt>Tickets</dt><dd className="num">{tickets.length}</dd>
+                    <dt>{"" + __uiTr("Next") + ""}</dt>
+                    <dd>{remaining.length ? <span className="truncate">{remaining[0].title}{remaining.length > 1 && <span className="muted"> +{remaining.length - 1}{" " + __uiTr("more") + ""}</span>}</span> : "All done"}</dd>
+                    <dt>{"" + __uiTr("IOCs added") + ""}</dt><dd className="num">{iocs}</dd>
+                    <dt>{"" + __uiTr("Tickets") + ""}</dt><dd className="num">{tickets.length}</dd>
                   </dl>
                 </>
               )}

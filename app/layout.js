@@ -1,6 +1,9 @@
 import localFont from "next/font/local";
 import ThemeBootstrap from "@/components/ThemeBootstrap";
 import { Vazirmatn } from "next/font/google";
+import { cookies } from "next/headers";
+import I18nProvider from "@/components/I18nProvider";
+import { normalizeLocale } from "@/lib/i18n/messages";
 import "@/styles/tokens.css";
 import "@/styles/base.css";
 import "@/styles/shell.css";
@@ -37,12 +40,13 @@ export const viewport = {
   ],
 };
 
-export default function RootLayout({ children }) {
+export default async function RootLayout({ children }) {
+  const locale = normalizeLocale((await cookies()).get("so.locale")?.value);
   return (
-    <html lang="en" className={`${geist.variable} ${geistMono.variable} ${vazirmatn.variable}`} suppressHydrationWarning>
+    <html lang={locale} dir={locale === "fa" ? "rtl" : "ltr"} className={`${geist.variable} ${geistMono.variable} ${vazirmatn.variable}`} suppressHydrationWarning>
       <body>
         <ThemeBootstrap />
-        {children}
+        <I18nProvider initialLocale={locale}>{children}</I18nProvider>
       </body>
     </html>
   );

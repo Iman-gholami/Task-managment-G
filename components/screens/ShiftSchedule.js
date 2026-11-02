@@ -1,5 +1,7 @@
 "use client";
 
+import { useI18n as useShiftI18n } from "@/components/I18nProvider";
+
 import Link from "next/link";
 import { useMemo, useState } from "react";
 import { api, useApp } from "@/components/AppProvider";
@@ -75,6 +77,10 @@ function formatDate(iso) {
 }
 
 export default function ShiftSchedule() {
+  const { t: __shiftTr, dir, locale } = useShiftI18n();
+  const faNum = (value) => new Intl.NumberFormat(locale === "fa" ? "fa-IR" : "en-US", { useGrouping: false, maximumFractionDigits: 2 }).format(value ?? 0);
+  const monthLabel = (iso) => new Intl.DateTimeFormat(locale === "fa" ? "fa-IR-u-ca-persian" : "en-US-u-ca-persian", { year: "numeric", month: "long", timeZone: "UTC" }).format(dateObj(iso));
+  const dateLabel = (iso) => new Intl.DateTimeFormat(locale === "fa" ? "fa-IR-u-ca-persian" : "en-US-u-ca-persian", { weekday: "long", year: "numeric", month: "long", day: "numeric", timeZone: "UTC" }).format(dateObj(iso));
   const { me, members, toast } = useApp();
   const manager = isManager(me);
   const analysts = useMemo(
@@ -233,50 +239,50 @@ export default function ShiftSchedule() {
   };
 
   return (
-    <div className={`page ${styles.page}`} dir="rtl">
+    <div className={`page ${styles.page}`} dir={dir}>
       <header className="page-head">
         <div className="page-head-main">
           <div>
-            <h1>مدیریت شیفت نیروها</h1>
+            <h1>{"" + __shiftTr("مدیریت شیفت نیروها") + ""}</h1>
             <div className="page-meta">
-              <span>{PERSIAN_MONTH.format(dateObj(monthStart))}</span>
+              <span>{monthLabel(monthStart)}</span>
               <span>{data ? `${faNum(stats.total)} شیفت کاری · ${faNum(stats.off)} تعطیل · ${faNum(stats.leave)} مرخصی` : error ? "برنامه دریافت نشد" : "در حال دریافت برنامه"}</span>
-              <span>{faNum(analysts.length)} کارشناس</span>
+              <span>{faNum(analysts.length)}{" " + __shiftTr("کارشناس") + ""}</span>
             </div>
           </div>
         </div>
         <div className="page-actions">
-          <Link className="btn btn-secondary" href="/shift/changes"><Icon name="swap" /> تغییر شیفت</Link>
-          {manager && <button className="btn btn-secondary" onClick={() => setExcelEditor(true)}><Icon name="plus" /> ورود از اکسل</button>}
-          {manager && <button className="btn btn-primary" disabled={!data} title={!data ? "ابتدا برنامه شیفت باید دریافت شود" : undefined} onClick={() => openComposer()}><Icon name="plus" /> ثبت شیفت</button>}
+          <Link className="btn btn-secondary" href="/shift/changes"><Icon name="swap" />{" " + __shiftTr("تغییر شیفت") + ""}</Link>
+          {manager && <button className="btn btn-secondary" onClick={() => setExcelEditor(true)}><Icon name="plus" />{" " + __shiftTr("ورود از اکسل") + ""}</button>}
+          {manager && <button className="btn btn-primary" disabled={!data} title={!data ? "ابتدا برنامه شیفت باید دریافت شود" : undefined} onClick={() => openComposer()}><Icon name="plus" />{" " + __shiftTr("ثبت شیفت") + ""}</button>}
         </div>
       </header>
 
       <div className={styles.workspace}>
-        <section className={`panel ${styles.calendarCard}`} aria-label="تقویم ماهانه">
+        <section className={`panel ${styles.calendarCard}`} aria-label={__shiftTr("تقویم ماهانه")}>
           <div className={styles.calendarHeader}>
             <div className={styles.monthHeading}>
-              <span>تقویم شیفت‌ها</span>
-              <h2 className={styles.monthTitle}>{PERSIAN_MONTH.format(dateObj(monthStart))}</h2>
+              <span>{"" + __shiftTr("تقویم شیفت‌ها") + ""}</span>
+              <h2 className={styles.monthTitle}>{monthLabel(monthStart)}</h2>
             </div>
             <div className={styles.monthNav}>
-              <button className="btn btn-ghost icon-btn btn-sm" aria-label="ماه قبل" data-tooltip="ماه قبل" onClick={() => changeMonth(-1)}><Icon name="chev" /></button>
-              <button className="btn btn-ghost btn-sm" onClick={goToday}>امروز</button>
-              <button className="btn btn-ghost icon-btn btn-sm" aria-label="ماه بعد" data-tooltip="ماه بعد" onClick={() => changeMonth(1)}><Icon name="left" /></button>
+              <button className="btn btn-ghost icon-btn btn-sm" aria-label={__shiftTr("ماه قبل")} data-tooltip={__shiftTr("ماه قبل")} onClick={() => changeMonth(-1)}><Icon name="chev" /></button>
+              <button className="btn btn-ghost btn-sm" onClick={goToday}>{"" + __shiftTr("امروز") + ""}</button>
+              <button className="btn btn-ghost icon-btn btn-sm" aria-label={__shiftTr("ماه بعد")} data-tooltip={__shiftTr("ماه بعد")} onClick={() => changeMonth(1)}><Icon name="left" /></button>
             </div>
 
             <label className={styles.analystSelect}>
-              <span>آمار و شیفت کارشناس</span>
-              <select className={`input input-sm ${selectedUser ? "is-set" : ""}`} value={selectedUser} onChange={(e) => setSelectedUser(e.target.value)} title="با انتخاب کارشناس، آمار ماه به او محدود و شیفت‌هایش برجسته می‌شود.">
-                <option value="">همه کارشناسان</option>
+              <span>{"" + __shiftTr("آمار و شیفت کارشناس") + ""}</span>
+              <select className={`input input-sm ${selectedUser ? "is-set" : ""}`} value={selectedUser} onChange={(e) => setSelectedUser(e.target.value)} title={__shiftTr("با انتخاب کارشناس، آمار ماه به او محدود و شیفت‌هایش برجسته می‌شود.")}>
+                <option value="">{"" + __shiftTr("همه کارشناسان") + ""}</option>
                 {analysts.map((a) => <option key={a.id} value={a.id}>{a.name}</option>)}
               </select>
             </label>
           </div>
 
-          {error && <div className={styles.errorBar}><Icon name="alert" /><span>دریافت برنامه شیفت ناموفق بود.</span><button className="btn btn-ghost btn-sm" onClick={reload}>تلاش دوباره</button></div>}
+          {error && <div className={styles.errorBar}><Icon name="alert" /><span>{"" + __shiftTr("دریافت برنامه شیفت ناموفق بود.") + ""}</span><button className="btn btn-ghost btn-sm" onClick={reload}>{"" + __shiftTr("تلاش دوباره") + ""}</button></div>}
 
-          <div className={styles.weekdays}>{WEEKDAYS.map((day) => <div key={day}>{day}</div>)}</div>
+          <div className={styles.weekdays}>{WEEKDAYS.map((day) => <div key={day}>{__shiftTr(day)}</div>)}</div>
           <div className={`${styles.grid} ${loading && !data ? styles.loading : ""}`}>
             {cells.map((date) => {
               const parts = jalaliParts(date);
@@ -300,15 +306,15 @@ export default function ShiftSchedule() {
                       setSelectedDate(date);
                     }
                   }}
-                  aria-label={`${formatDate(date)}${holidayByDate[date] ? " · تعطیلی مرکز" : ""}`}
+                  aria-label={`${dateLabel(date)}${holidayByDate[date] ? " · تعطیلی مرکز" : ""}`}
                 >
                   <div className={styles.dayTop}>
                     <b>{faNum(parts.day)}</b>
-                    {date === TODAY && <span>امروز</span>}
+                    {date === TODAY && <span>{"" + __shiftTr("امروز") + ""}</span>}
                   </div>
 
                   <div className={styles.shiftBands}>
-                    {holidayByDate[date] && <span className={styles.calendarHoliday}><Icon name="info" size="sm" /> تعطیلی مرکز</span>}
+                    {holidayByDate[date] && <span className={styles.calendarHoliday}><Icon name="info" size="sm" />{" " + __shiftTr("تعطیلی مرکز") + ""}</span>}
                     {SHIFT_KEYS.map((shiftType) => {
                       const shiftRows = rows.filter((row) => row.shiftType === shiftType);
                       if (!shiftRows.length) return null;
@@ -326,10 +332,10 @@ export default function ShiftSchedule() {
                             setSelectedDate(date);
                             setSelectedShift(shiftType);
                           }}
-                          data-tooltip={`${SHIFT_META[shiftType].label} · ${faNum(shiftRows.length)} نفر`}
+                          data-tooltip={`${__shiftTr(SHIFT_META[shiftType].label)} · ${faNum(shiftRows.length)} نفر`}
                         >
                           <i />
-                          <span>{SHIFT_META[shiftType].short}</span>
+                          <span>{__shiftTr(SHIFT_META[shiftType].short)}</span>
                           <strong>{faNum(shiftRows.length)}</strong>
                         </button>
                       );
@@ -341,46 +347,45 @@ export default function ShiftSchedule() {
           </div>
 
           <div className={styles.legend}>
-            <span className={styles.holidayLegend}><Icon name="info" size="sm" /> تعطیلی مرکز</span>
-            {SHIFT_KEYS.map((key) => <span key={key} data-shift={key}><i />{SHIFT_META[key].label}</span>)}
-            {selectedUser && <span className={styles.legendHint}>شیفت‌های {selectedPerson?.name || "کارشناس انتخاب‌شده"} برجسته شده‌اند.</span>}
+            <span className={styles.holidayLegend}><Icon name="info" size="sm" />{" " + __shiftTr("تعطیلی مرکز") + ""}</span>
+            {SHIFT_KEYS.map((key) => <span key={key} data-shift={key}><i />{__shiftTr(SHIFT_META[key].label)}</span>)}
+            {selectedUser && <span className={styles.legendHint}>{"" + __shiftTr("شیفت‌های") + " "}{selectedPerson?.name || "کارشناس انتخاب‌شده"}{" " + __shiftTr("برجسته شده‌اند.") + ""}</span>}
           </div>
         </section>
 
-        <aside className={`panel ${styles.detailsCard}`} aria-label="نمای کلی روز">
+        <aside className={`panel ${styles.detailsCard}`} aria-label={__shiftTr("نمای کلی روز")}>
           <div className={styles.detailsHead}>
             <div>
               <span className="eyebrow">{selectedDate === TODAY ? "برنامه امروز" : "برنامه روز انتخاب‌شده"}</span>
-              <h2>{formatDate(selectedDate)}</h2>
+              <h2>{dateLabel(selectedDate)}</h2>
             </div>
             {manager && (
               <button type="button" className="btn btn-primary btn-sm" disabled={!data} title={!data ? "ابتدا برنامه شیفت باید دریافت شود" : undefined} onClick={() => openComposer(selectedDate, "morning")}>
-                <Icon name="plus" /> چیدن شیفت
-              </button>
+                <Icon name="plus" />{" " + __shiftTr("چیدن شیفت") + ""}</button>
             )}
           </div>
 
           {selectedHoliday && (
             <div className={styles.holidayNotice} role="status">
-              <b><Icon name="info" size="sm" /> تعطیلی مرکز</b>
+              <b><Icon name="info" size="sm" />{" " + __shiftTr("تعطیلی مرکز") + ""}</b>
               {selectedHoliday.note && <p>{selectedHoliday.note}</p>}
-              <span>شیفت نیروهای کشیک نیز برای همین روز نمایش داده می‌شود.</span>
+              <span>{"" + __shiftTr("شیفت نیروهای کشیک نیز برای همین روز نمایش داده می‌شود.") + ""}</span>
             </div>
           )}
-          {data ? <div className={styles.dayOverview} aria-label="خلاصه شیفت‌های روز">
+          {data ? <div className={styles.dayOverview} aria-label={__shiftTr("خلاصه شیفت‌های روز")}>
               {["morning", "evening", "night"].map((type) => {
                 const rows = selectedRows.filter((row) => row.shiftType === type);
                 return (
-                  <section key={type} className={styles.overviewShift} data-shift={type} aria-label={SHIFT_META[type].label}>
+                  <section key={type} className={styles.overviewShift} data-shift={type} aria-label={__shiftTr(SHIFT_META[type].label)}>
                     <header className={styles.overviewHead}>
-                      <span className={styles.overviewTitle}><i /> <b>{SHIFT_META[type].short}</b> <small>{SHIFT_META[type].time}</small></span>
-                      {rows.length > 0 && <span className={styles.overviewCount}>{faNum(rows.length)} نفر</span>}
+                      <span className={styles.overviewTitle}><i /> <b>{__shiftTr(SHIFT_META[type].short)}</b> <small>{__shiftTr(SHIFT_META[type].time)}</small></span>
+                      {rows.length > 0 && <span className={styles.overviewCount}>{faNum(rows.length)}{" " + __shiftTr("نفر") + ""}</span>}
                     </header>
                     <div className={styles.overviewNames}>
-                      {rows.length === 0 ? <span className={styles.overviewEmpty}>ثبت نشده</span> : rows.map((row) => (
+                      {rows.length === 0 ? <span className={styles.overviewEmpty}>{"" + __shiftTr("ثبت نشده") + ""}</span> : rows.map((row) => (
                         <span className={styles.overviewPerson} key={row.userId}>
                           <button type="button" className={styles.overviewPersonName} onClick={() => setSelectedUser(row.userId)}><Who id={row.userId} /></button>
-                          {manager && <button type="button" className={styles.removeMini} aria-label="حذف از شیفت" title={`حذف ${row.name} از شیفت`} disabled={saving} onClick={() => remove(row)}><Icon name="x" size="sm" /></button>}
+                          {manager && <button type="button" className={styles.removeMini} aria-label={__shiftTr("حذف از شیفت")} title={`حذف ${row.name} از شیفت`} disabled={saving} onClick={() => remove(row)}><Icon name="x" size="sm" /></button>}
                         </span>
                       ))}
                     </div>
@@ -391,18 +396,18 @@ export default function ShiftSchedule() {
 
 
           {data && <details className={styles.extraDetails}>
-            <summary>تعطیلی نیروها و مرخصی <span>{faNum(selectedRows.filter((r) => r.shiftType === "off").length + selectedRows.filter((r) => r.shiftType === "leave").length)} نفر</span></summary>
+            <summary>{"" + __shiftTr("تعطیلی نیروها و مرخصی") + " "}<span>{faNum(selectedRows.filter((r) => r.shiftType === "off").length + selectedRows.filter((r) => r.shiftType === "leave").length)}{" " + __shiftTr("نفر") + ""}</span></summary>
             <div className={styles.absenceGroups}>
               {["off", "leave"].map((type) => (
                 <section key={type} className={styles.absenceGroup} data-shift={type}>
-                  <b>{SHIFT_META[type].label}</b>
+                  <b>{__shiftTr(SHIFT_META[type].label)}</b>
                   <div className={styles.overviewNames}>
                     {selectedRows.filter((r) => r.shiftType === type).length === 0
-                      ? <span className={styles.overviewEmpty}>ثبت نشده</span>
+                      ? <span className={styles.overviewEmpty}>{"" + __shiftTr("ثبت نشده") + ""}</span>
                       : selectedRows.filter((r) => r.shiftType === type).map((row) => (
                         <span className={styles.overviewPerson} key={row.userId}>
                           <button type="button" className={styles.overviewPersonName} onClick={() => setSelectedUser(row.userId)}><Who id={row.userId} /></button>
-                          {manager && <button type="button" className={styles.removeMini} aria-label="حذف از شیفت" disabled={saving} onClick={() => remove(row)}><Icon name="x" size="sm" /></button>}
+                          {manager && <button type="button" className={styles.removeMini} aria-label={__shiftTr("حذف از شیفت")} disabled={saving} onClick={() => remove(row)}><Icon name="x" size="sm" /></button>}
                         </span>
                       ))}
                   </div>
@@ -420,21 +425,21 @@ export default function ShiftSchedule() {
           )}
 
           {data && <details className={styles.extraDetails}>
-            <summary>آمار ماهانه <span>{selectedPerson?.name || "همه کارشناسان"}</span></summary>
+            <summary>{"" + __shiftTr("آمار ماهانه") + " "}<span>{selectedPerson?.name || "همه کارشناسان"}</span></summary>
             <div className={styles.statsDetails}>
-              {selectedUser && <button className="btn btn-ghost btn-sm" onClick={() => setSelectedUser("")}>نمایش همه کارشناسان</button>}
+              {selectedUser && <button className="btn btn-ghost btn-sm" onClick={() => setSelectedUser("")}>{"" + __shiftTr("نمایش همه کارشناسان") + ""}</button>}
               <div className={styles.analystPrimary}>
-                <div><strong>{faNum(stats.hours)}</strong><span>ساعت</span></div>
-                <div><strong>{faNum(stats.total)}</strong><span>شیفت</span></div>
+                <div><strong>{faNum(stats.hours)}</strong><span>{"" + __shiftTr("ساعت") + ""}</span></div>
+                <div><strong>{faNum(stats.total)}</strong><span>{"" + __shiftTr("شیفت") + ""}</span></div>
               </div>
               <div className={styles.analystMiniGrid}>
-                <MiniStat label="صبح" value={stats.morning} tone="morning" />
-                <MiniStat label="تا ۸" value={stats.evening} tone="evening" />
-                <MiniStat label="شب" value={stats.night} tone="night" />
-                <MiniStat label="تعطیل شیفت" value={stats.off} tone="off" />
-                <MiniStat label="مرخصی" value={stats.leave} tone="leave" />
-                <MiniStat label="پنجشنبه" value={stats.thursdays} />
-                <MiniStat label="جمعه" value={stats.fridays} />
+                <MiniStat label={__shiftTr("صبح")} value={stats.morning} tone="morning" />
+                <MiniStat label={__shiftTr("تا ۸")} value={stats.evening} tone="evening" />
+                <MiniStat label={__shiftTr("شب")} value={stats.night} tone="night" />
+                <MiniStat label={__shiftTr("تعطیل شیفت")} value={stats.off} tone="off" />
+                <MiniStat label={__shiftTr("مرخصی")} value={stats.leave} tone="leave" />
+                <MiniStat label={__shiftTr("پنجشنبه")} value={stats.thursdays} />
+                <MiniStat label={__shiftTr("جمعه")} value={stats.fridays} />
               </div>
             </div>
           </details>}
@@ -453,23 +458,23 @@ export default function ShiftSchedule() {
 
       {holidayEditor && (
         <Dialog
-          label="تعطیلی مرکز"
-          title={`تعطیلی مرکز · ${formatDate(holidayEditor.date)}`}
-          description="این علامت وضعیت تعطیلی مرکز را نشان می‌دهد؛ حتی در این روز هم می‌توان برای نیروهای کشیک شیفت ثبت کرد."
+          label={__shiftTr("تعطیلی مرکز")}
+          title={`تعطیلی مرکز · ${dateLabel(holidayEditor.date)}`}
+          description={__shiftTr("این علامت وضعیت تعطیلی مرکز را نشان می‌دهد؛ حتی در این روز هم می‌توان برای نیروهای کشیک شیفت ثبت کرد.")}
           onClose={() => setHolidayEditor(null)}
           width={500}
         >
           <div className="modal-body">
             {!holidayEditor.closed && (
               <>
-                <label className={styles.holidayNoteLabel} htmlFor="holiday-reason">علت تعطیلی (اختیاری)</label>
-                <input id="holiday-reason" className="input" maxLength={240} value={holidayEditor.note} onChange={(e) => setHolidayEditor((v) => ({ ...v, note: e.target.value }))} placeholder="مثلاً تعطیلی اعلام‌شده از طرف مرکز" />
-                <p className={styles.holidayWarning}>این تاریخ در تقویم قرمز می‌شود؛ شیفت‌ها، مرخصی‌ها و گزارش‌های قبلی بدون تغییر باقی می‌مانند.</p>
+                <label className={styles.holidayNoteLabel} htmlFor="holiday-reason">{"" + __shiftTr("علت تعطیلی (اختیاری)") + ""}</label>
+                <input id="holiday-reason" className="input" maxLength={240} value={holidayEditor.note} onChange={(e) => setHolidayEditor((v) => ({ ...v, note: e.target.value }))} placeholder={__shiftTr("مثلاً تعطیلی اعلام‌شده از طرف مرکز")} />
+                <p className={styles.holidayWarning}>{"" + __shiftTr("این تاریخ در تقویم قرمز می‌شود؛ شیفت‌ها، مرخصی‌ها و گزارش‌های قبلی بدون تغییر باقی می‌مانند.") + ""}</p>
               </>
             )}
           </div>
           <div className="modal-foot">
-            <button type="button" className="btn btn-ghost" onClick={() => setHolidayEditor(null)}>انصراف</button>
+            <button type="button" className="btn btn-ghost" onClick={() => setHolidayEditor(null)}>{"" + __shiftTr("انصراف") + ""}</button>
             <button type="button" className="btn btn-primary" disabled={saving} onClick={saveHoliday}>
               {holidayEditor.closed ? "برداشتن تعطیلی" : "تأیید تعطیلی مرکز"}
             </button>
@@ -479,34 +484,34 @@ export default function ShiftSchedule() {
 
       {editor && (
         <Dialog
-          label="ثبت شیفت"
-          title={`ثبت شیفت · ${formatDate(editor.date)}`}
-          description="شیفت‌های کاری، تعطیل شیفت و مرخصی را در همین پنجره ثبت کنید. انتخاب‌ها هنگام تغییر تب باقی می‌مانند. هر نفر در هر روز فقط یک وضعیت می‌تواند داشته باشد؛ برای تعطیل یا مرخصی شیفت‌لاگ ایجاد نمی‌شود."
+          label={__shiftTr("ثبت شیفت")}
+          title={`ثبت شیفت · ${dateLabel(editor.date)}`}
+          description={__shiftTr("شیفت‌های کاری، تعطیل شیفت و مرخصی را در همین پنجره ثبت کنید. انتخاب‌ها هنگام تغییر تب باقی می‌مانند. هر نفر در هر روز فقط یک وضعیت می‌تواند داشته باشد؛ برای تعطیل یا مرخصی شیفت‌لاگ ایجاد نمی‌شود.")}
           onClose={closeComposer}
           width={640}
           className={styles.composer}
         >
           <div className={`modal-body ${styles.modalBody}`}>
-            <div className={styles.shiftPicker} role="radiogroup" aria-label="نوع شیفت">
+            <div className={styles.shiftPicker} role="radiogroup" aria-label={__shiftTr("نوع شیفت")}>
               {SHIFT_KEYS.map((key) => (
                 <button key={key} type="button" role="radio" aria-checked={editor.shiftType === key} data-shift={key} className={editor.shiftType === key ? styles.shiftChoiceActive : ""} onClick={() => changeEditorShift(key)}>
-                  <i /><span><b>{SHIFT_META[key].label}</b><small>{SHIFT_META[key].time}</small></span>
+                  <i /><span><b>{__shiftTr(SHIFT_META[key].label)}</b><small>{__shiftTr(SHIFT_META[key].time)}</small></span>
                 </button>
               ))}
             </div>
 
-            <div className={`search ${styles.searchBox}`}><Icon name="search" /><input className="input" type="search" value={query} onChange={(e) => setQuery(e.target.value)} placeholder="جستجوی کارشناس..." aria-label="جستجوی کارشناس" /></div>
+            <div className={`search ${styles.searchBox}`}><Icon name="search" /><input className="input" type="search" value={query} onChange={(e) => setQuery(e.target.value)} placeholder={__shiftTr("جستجوی کارشناس...")} aria-label={__shiftTr("جستجوی کارشناس")} /></div>
 
             <div className={styles.bulkToolbar}>
-              <span>مرتب‌سازی: انتخاب‌شده و آزاد، سپس سایر شیفت‌ها، شب، تعطیل، مرخصی</span>
+              <span>{"" + __shiftTr("مرتب‌سازی: انتخاب‌شده و آزاد، سپس سایر شیفت‌ها، شب، تعطیل، مرخصی") + ""}</span>
               <div className={styles.bulkActions}>
-                <button type="button" className="btn btn-secondary btn-sm" disabled={saving || unselectedCount === 0} onClick={() => changeBulk(true)}>انتخاب همه ({faNum(unselectedCount)})</button>
-                <button type="button" className="btn btn-ghost btn-sm" disabled={saving || !availableAnalysts.some((person) => draftIds.includes(person.id))} onClick={() => changeBulk(false)}>لغو انتخاب‌های فهرست</button>
+                <button type="button" className="btn btn-secondary btn-sm" disabled={saving || unselectedCount === 0} onClick={() => changeBulk(true)}>{"" + __shiftTr("انتخاب همه (") + ""}{faNum(unselectedCount)})</button>
+                <button type="button" className="btn btn-ghost btn-sm" disabled={saving || !availableAnalysts.some((person) => draftIds.includes(person.id))} onClick={() => changeBulk(false)}>{"" + __shiftTr("لغو انتخاب‌های فهرست") + ""}</button>
               </div>
-              <small>فقط افراد آزادِ همین فهرست انتخاب می‌شوند؛ وضعیت بقیه تغییر نمی‌کند.</small>
+              <small>{"" + __shiftTr("فقط افراد آزادِ همین فهرست انتخاب می‌شوند؛ وضعیت بقیه تغییر نمی‌کند.") + ""}</small>
             </div>
             <div className={styles.memberList}>
-              {visibleAnalysts.length === 0 && <div className={styles.emptyPeople}>کارشناسی با این نام پیدا نشد.</div>}
+              {visibleAnalysts.length === 0 && <div className={styles.emptyPeople}>{"" + __shiftTr("کارشناسی با این نام پیدا نشد.") + ""}</div>}
               {visibleAnalysts.map((person) => {
                 const checked = draftIds.includes(person.id);
                 const currentShift = draftAssignment(draftByShift, person.id);
@@ -515,16 +520,16 @@ export default function ShiftSchedule() {
                     <input className="cb" type="checkbox" checked={checked} onChange={() => toggleDraft(person.id)} />
                     <Who id={person.id} />
                     <span className={styles.memberTeam}>{person.team === "Design & Automation" ? "طراحی و خودکارسازی · شیفت لایه ۳" : shiftChecklistTeam(person)}</span>
-                    {currentShift && <span className={styles.currentShift} data-shift={currentShift}>{SHIFT_META[currentShift].short}</span>}
+                    {currentShift && <span className={styles.currentShift} data-shift={currentShift}>{__shiftTr(SHIFT_META[currentShift].short)}</span>}
                   </label>
                 );
               })}
             </div>
           </div>
           <div className="modal-foot">
-            <span className={`lead ${styles.selectedCount}`}>صبح: {faNum(draftByShift.morning.length)} · تا ۸: {faNum(draftByShift.evening.length)} · شب: {faNum(draftByShift.night.length)} · تعطیل: {faNum(draftByShift.off.length)} · مرخصی: {faNum(draftByShift.leave.length)}</span>
-            <button className="btn btn-ghost" onClick={closeComposer}>انصراف</button>
-            <button className="btn btn-primary" aria-busy={saving || undefined} disabled={saving} onClick={save}>ذخیره برنامه روز</button>
+            <span className={`lead ${styles.selectedCount}`}>{"" + __shiftTr("صبح:") + " "}{faNum(draftByShift.morning.length)}{" " + __shiftTr("· تا ۸:") + " "}{faNum(draftByShift.evening.length)}{" " + __shiftTr("· شب:") + " "}{faNum(draftByShift.night.length)}{" " + __shiftTr("· تعطیل:") + " "}{faNum(draftByShift.off.length)}{" " + __shiftTr("· مرخصی:") + " "}{faNum(draftByShift.leave.length)}</span>
+            <button className="btn btn-ghost" onClick={closeComposer}>{"" + __shiftTr("انصراف") + ""}</button>
+            <button className="btn btn-primary" aria-busy={saving || undefined} disabled={saving} onClick={save}>{"" + __shiftTr("ذخیره برنامه روز") + ""}</button>
           </div>
         </Dialog>
       )}

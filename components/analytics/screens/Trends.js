@@ -1,5 +1,7 @@
 "use client";
 
+import { useI18n as useAnalyticsI18n } from "@/components/I18nProvider";
+
 import { useCallback, useMemo } from "react";
 import AnalyticsFrame from "@/components/analytics/AnalyticsFrame";
 import { useAnalytics } from "@/components/analytics/AnalyticsContext";
@@ -18,14 +20,16 @@ const BY = [
 ];
 
 export default function Trends() {
+  const { t: __analyticsTr } = useAnalyticsI18n();
   return (
-    <AnalyticsFrame title="روندها و تحلیل زمانی">
+    <AnalyticsFrame title={__analyticsTr("روندها و تحلیل زمانی")}>
       <TrendsBody />
     </AnalyticsFrame>
   );
 }
 
 function TrendsBody() {
+  const { t: __analyticsTr } = useAnalyticsI18n();
   const a = useAnalytics();
   const { view, range, cmp, gran, params, setParam, today } = a;
   const hasShift = view.people.some((p) => p.shift);
@@ -77,7 +81,7 @@ function TrendsBody() {
     const cells = m.year.map(([d, v]) => ({ week: Math.floor(diffDays(start, d) / 7), day: weekdayIndex(d), date: d, value: v, label: `${WEEKDAYS[weekdayIndex(d)]} ${faDate(d)}` }));
     return { weekLabels, cells, cell: Math.max(11, Math.min(20, Math.floor(1050 / weeks))) };
   }, [m, today]);
-  const calendar = useCallback((t) => calendarOption(t, { cells: cal.cells, weekLabels: cal.weekLabels, dayLabels: WEEKDAYS, name: "تسک تکمیل‌شده", cell: cal.cell }), [cal]);
+  const calendar = useCallback((t) => calendarOption(t, { cells: cal.cells, weekLabels: cal.weekLabels, dayLabels: WEEKDAYS, name: __analyticsTr("تسک تکمیل‌شده"), cell: cal.cell }), [cal]);
   const weekday = useCallback((t) => hbarOption(t, { rows: WEEKDAYS.map((label, i) => ({ label, value: m.weekday[i] })), kind: def.kind === "count" ? "avg" : def.kind }), [m, def]);
 
   return (
@@ -89,14 +93,14 @@ function TrendsBody() {
         height={320}
         actions={
           <>
-            <select className="input input-sm" style={{ width: 190 }} value={metric} onChange={(e) => setParam("metric", e.target.value)} aria-label="شاخص" data-testid="trend-metric">
+            <select className="input input-sm" style={{ width: 190 }} value={metric} onChange={(e) => setParam("metric", e.target.value)} aria-label={__analyticsTr("شاخص")} data-testid="trend-metric">
               {keys.map((k) => <option key={k} value={k}>{METRICS[k].label}</option>)}
             </select>
-            {byOptions.length > 1 && <Segmented label="تفکیک" value={by} onChange={(v) => setParam("by", v === "all" ? "" : v)} options={byOptions} />}
+            {byOptions.length > 1 && <Segmented label={__analyticsTr("تفکیک")} value={by} onChange={(v) => setParam("by", v === "all" ? "" : v)} options={byOptions} />}
           </>
         }
         table={{
-          columns: [{ key: "b", label: "بازه", value: (r) => r.label }, ...m.parts.map((p, i) => ({ key: `s${i}`, label: p.name, kind: def.kind, value: (r) => r.v[i] })), ...(m.prev ? [{ key: "p", label: cmp.label, kind: def.kind, value: (r) => r.p }] : [])],
+          columns: [{ key: "b", label: __analyticsTr("بازه"), value: (r) => r.label }, ...m.parts.map((p, i) => ({ key: `s${i}`, label: p.name, kind: def.kind, value: (r) => r.v[i] })), ...(m.prev ? [{ key: "p", label: cmp.label, kind: def.kind, value: (r) => r.p }] : [])],
           rows: m.b.map((x, j) => ({ id: x.from, label: x.label, v: m.series.map((s) => s[j]), p: m.prev?.[j] ?? null })),
         }}
         fileName={`trend-${metric}`}
@@ -104,8 +108,8 @@ function TrendsBody() {
       />
 
       <div className="an-row">
-        <ChartPanel title="صف کار باز در طول زمان" question="کار انجام‌نشده (همه وضعیت‌های باز) در پایان هر بازه؛ از تاریخ ایجاد و بسته‌شدن تسک‌ها بازسازی شده." build={backlog} height={240}
-          table={{ columns: [{ key: "b", label: "بازه", value: (r) => r.label }, { key: "v", label: "صف باز", kind: "count", value: (r) => r.v }], rows: m.b.map((x, i) => ({ id: x.from, label: x.label, v: m.backlog[i] })) }}
+        <ChartPanel title={__analyticsTr("صف کار باز در طول زمان")} question="کار انجام‌نشده (همه وضعیت‌های باز) در پایان هر بازه؛ از تاریخ ایجاد و بسته‌شدن تسک‌ها بازسازی شده." build={backlog} height={240}
+          table={{ columns: [{ key: "b", label: __analyticsTr("بازه"), value: (r) => r.label }, { key: "v", label: "صف باز", kind: "count", value: (r) => r.v }], rows: m.b.map((x, i) => ({ id: x.from, label: x.label, v: m.backlog[i] })) }}
           fileName="backlog-over-time" />
         <ChartPanel title={`میانگین «${def.label}» در روزهای هفته`} question="کدام روزهای هفته پرکارترند؟ (میانگین در بازه انتخاب‌شده)" build={weekday} height={240}
           table={{ columns: [{ key: "d", label: "روز", value: (r) => r.label }, { key: "v", label: "میانگین", kind: "avg", value: (r) => r.v }], rows: WEEKDAYS.map((label, i) => ({ id: i, label, v: m.weekday[i] })) }}
@@ -113,13 +117,13 @@ function TrendsBody() {
       </div>
 
       <ChartPanel
-        title="الگوی روزانه تسک‌های تکمیل‌شده — ۱۲ ماه اخیر"
+        title={__analyticsTr("الگوی روزانه تسک‌های تکمیل‌شده — ۱۲ ماه اخیر")}
         question="ماه‌ها و روزهای پرکار و کم‌کار در یک نگاه؛ هر خانه یک روز است."
         build={calendar}
         height={7 * cal.cell + 76}
-        table={{ columns: [{ key: "d", label: "روز", value: (r) => r.label }, { key: "v", label: "تسک تکمیل‌شده", kind: "count", value: (r) => r.value }], rows: cal.cells.filter((c) => c.value).map((c) => ({ ...c, id: c.date })) }}
+        table={{ columns: [{ key: "d", label: "روز", value: (r) => r.label }, { key: "v", label: __analyticsTr("تسک تکمیل‌شده"), kind: "count", value: (r) => r.value }], rows: cal.cells.filter((c) => c.value).map((c) => ({ ...c, id: c.date })) }}
         fileName="daily-calendar"
-        footer={<span>جمع ۱۲ ماه: {fmtNum(m.year.reduce((s, [, v]) => s + (v || 0), 0), 0)} تسک</span>}
+        footer={<span>{"" + __analyticsTr("جمع ۱۲ ماه:") + " "}{fmtNum(m.year.reduce((s, [, v]) => s + (v || 0), 0), 0)}{" " + __analyticsTr("تسک") + ""}</span>}
       />
     </>
   );

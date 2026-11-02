@@ -1,5 +1,7 @@
 "use client";
 
+import { useI18n as useAnalyticsI18n } from "@/components/I18nProvider";
+
 import Link from "next/link";
 import { useCallback, useMemo } from "react";
 import { useRouter } from "next/navigation";
@@ -20,8 +22,9 @@ import { backlogSeries, bucketStats, idsOf, openStats, stats, teamRows } from "@
 import { buckets } from "@/lib/analytics/periods";
 
 export default function Overview() {
+  const { t: __analyticsTr } = useAnalyticsI18n();
   return (
-    <AnalyticsFrame title="داشبورد مدیریتی">
+    <AnalyticsFrame title={__analyticsTr("داشبورد مدیریتی")}>
       <OverviewBody />
     </AnalyticsFrame>
   );
@@ -56,6 +59,7 @@ function useOverview() {
 }
 
 function OverviewBody() {
+  const { t: __analyticsTr } = useAnalyticsI18n();
   const a = useAnalytics();
   const router = useRouter();
   const { cmp } = a;
@@ -88,24 +92,22 @@ function OverviewBody() {
       <Panel>
         <AnEmpty
           icon="perf"
-          title="هنوز داده‌ای برای گزارش ثبت نشده است"
-          action={a.manager && <button type="button" className="btn btn-primary" onClick={() => a.setFilters({ demo: "1" })}>نمایش با داده نمایشی</button>}
-        >
-          آمار از تسک‌ها، شیفت‌لاگ‌ها و تیکت‌های ثبت‌شده در سیستم ساخته می‌شود. برای آشنایی با داشبورد پیش از ثبت داده واقعی، داده نمایشی را روشن کنید.
-        </AnEmpty>
+          title={__analyticsTr("هنوز داده‌ای برای گزارش ثبت نشده است")}
+          action={a.manager && <button type="button" className="btn btn-primary" onClick={() => a.setFilters({ demo: "1" })}>{"" + __analyticsTr("نمایش با داده نمایشی") + ""}</button>}
+        >{"" + __analyticsTr("آمار از تسک‌ها، شیفت‌لاگ‌ها و تیکت‌های ثبت‌شده در سیستم ساخته می‌شود. برای آشنایی با داشبورد پیش از ثبت داده واقعی، داده نمایشی را روشن کنید.") + ""}</AnEmpty>
       </Panel>
     );
   }
 
   const teamColumns = [
-    { key: "team", label: "تیم", value: (r) => r.fa, render: (r) => <span className="an-person"><b>{r.fa}</b></span> },
-    { key: "n", label: "کارشناسان", kind: "count", value: (r) => r.headcount },
+    { key: "team", label: __analyticsTr("تیم"), value: (r) => r.fa, render: (r) => <span className="an-person"><b>{r.fa}</b></span> },
+    { key: "n", label: __analyticsTr("کارشناسان"), kind: "count", value: (r) => r.headcount },
     { key: "done", label: "تکمیل‌شده", kind: "count", value: (r) => r.cur.completed },
     { key: "chg", label: "تغییر", value: (r) => (r.prev ? r.cur.completed - r.prev.completed : null), render: (r) => (r.prev ? <Delta now={r.cur.completed} before={r.prev.completed} /> : "—") },
-    { key: "pc", label: "سرانه تکمیل‌شده", kind: "avg", value: (r) => r.pc.completed },
+    { key: "pc", label: __analyticsTr("سرانه تکمیل‌شده"), kind: "avg", value: (r) => r.pc.completed },
     { key: "units", label: "حجم وزن‌دار", kind: "count", value: (r) => r.cur.units },
     { key: "hours", label: "ساعت", kind: "count", value: (r) => r.cur.hours },
-    { key: "ot", label: "تحویل به‌موقع", kind: "rate", value: (r) => r.cur.onTimeRate },
+    { key: "ot", label: __analyticsTr("تحویل به‌موقع"), kind: "rate", value: (r) => r.cur.onTimeRate },
     { key: "open", label: "صف باز", kind: "count", value: (r) => r.open.open },
     { key: "od", label: "معوق", kind: "count", value: (r) => r.open.overdue, render: (r) => (r.open.overdue ? <span className="overdue">{fmtInt(r.open.overdue)}</span> : <span className="zero">۰</span>) },
     { key: "trend", label: "روند تکمیل‌شده", sort: false, value: () => null, render: (r) => <Sparkline values={r.spark} width={84} height={24} /> },
@@ -113,7 +115,7 @@ function OverviewBody() {
 
   const flowTable = {
     columns: [
-      { key: "b", label: "بازه", value: (r) => r.label },
+      { key: "b", label: __analyticsTr("بازه"), value: (r) => r.label },
       { key: "c", label: "تکمیل‌شده", kind: "count", value: (r) => r.completed },
       { key: "n", label: "ایجادشده", kind: "count", value: (r) => r.created },
       { key: "q", label: "صف باز در پایان بازه", kind: "count", value: (r) => r.backlog },
@@ -122,7 +124,7 @@ function OverviewBody() {
     rows: m.b.map((x, i) => ({ id: x.from, label: x.label, completed: m.bs[i].completed, created: m.bs[i].created, backlog: m.backlog[i], prev: m.pbs[i]?.completed ?? null })),
   };
   const mixTable = (key, labels) => ({
-    columns: [{ key: "l", label: "تیم", value: (r) => r.label }, ...labels.map((l, i) => ({ key: `v${i}`, label: l, kind: "count", value: (r) => r.parts[i] }))],
+    columns: [{ key: "l", label: __analyticsTr("تیم"), value: (r) => r.label }, ...labels.map((l, i) => ({ key: `v${i}`, label: l, kind: "count", value: (r) => r.parts[i] }))],
     rows: [{ id: "all", label: "کل واحد", parts: cur[key] }, ...m.teams.map((x) => ({ id: x.key, label: x.fa, parts: x.cur[key] }))],
   });
 
@@ -130,18 +132,18 @@ function OverviewBody() {
     <>
       <StatusBanner status={m.status} />
 
-      <MetricGrid label="شاخص‌های اصلی">
+      <MetricGrid label={__analyticsTr("شاخص‌های اصلی")}>
         <Kpi
-          label="تسک‌های تکمیل‌شده" icon="checkCircle" testId="kpi-completed"
-          hint="تسک‌هایی که تاریخ تأییدشان در این دوره است"
+          label={__analyticsTr("تسک‌های تکمیل‌شده")} icon="checkCircle" testId="kpi-completed"
+          hint={__analyticsTr("تسک‌هایی که تاریخ تأییدشان در این دوره است")}
           value={fmtInt(cur.completed)}
           delta={prev && <Delta now={cur.completed} before={prev.completed} label={cmpLabel} />}
           spark={<Sparkline values={m.bs.map((x) => x.completed)} />}
           href={a.href("/analytics/trends", { metric: "completed" })}
         />
         <Kpi
-          label="حجم کار وزن‌دار" icon="bars"
-          hint="جمع سطح پیچیدگی تسک‌های تکمیل‌شده: ساده ۱، متوسط ۲، پیچیده ۳، پیشرفته ۴"
+          label={__analyticsTr("حجم کار وزن‌دار")} icon="bars"
+          hint={__analyticsTr("جمع سطح پیچیدگی تسک‌های تکمیل‌شده: ساده ۱، متوسط ۲، پیچیده ۳، پیشرفته ۴")}
           value={fmtInt(cur.units)}
           delta={prev && <Delta now={cur.units} before={prev.units} label={cmpLabel} />}
           foot={cur.complexShare !== null ? `${fmtPct(cur.complexShare)} پیچیده و پیشرفته` : null}
@@ -149,8 +151,8 @@ function OverviewBody() {
           href={a.href("/analytics/trends", { metric: "units" })}
         />
         <Kpi
-          label="ساعت ثبت‌شده" icon="clock"
-          hint="جمع ساعت تسک‌های تکمیل‌شده. ساعت دستی وارد می‌شود؛ آن را کنار تعداد تسک بخوانید."
+          label={__analyticsTr("ساعت ثبت‌شده")} icon="clock"
+          hint={__analyticsTr("جمع ساعت تسک‌های تکمیل‌شده. ساعت دستی وارد می‌شود؛ آن را کنار تعداد تسک بخوانید.")}
           value={fmtNum(cur.hours, 0)} unit="ساعت"
           delta={prev && <Delta now={cur.hours} before={prev.hours} label={cmpLabel} />}
           foot={cur.hoursPerTask !== null ? `${fmtNum(cur.hoursPerTask)} ساعت به ازای هر تسک` : null}
@@ -158,16 +160,16 @@ function OverviewBody() {
           href={a.href("/analytics/trends", { metric: "hours" })}
         />
         <Kpi
-          label="تحویل به‌موقع" icon="cal"
-          hint="درصد تسک‌های تکمیل‌شده‌ای که تا ددلاین تأیید شده‌اند (فقط تسک‌های دارای ددلاین)"
+          label={__analyticsTr("تحویل به‌موقع")} icon="cal"
+          hint={__analyticsTr("درصد تسک‌های تکمیل‌شده‌ای که تا ددلاین تأیید شده‌اند (فقط تسک‌های دارای ددلاین)")}
           value={cur.onTimeRate === null ? "—" : fmtPct(cur.onTimeRate)}
           delta={prev && cur.onTimeRate !== null && <Delta now={cur.onTimeRate} before={prev.onTimeRate} kind="rate" label={cmpLabel} />}
           foot={`از ${faDigits(cur.onTimeN)} تسک دارای ددلاین`}
           href={a.href("/analytics/trends", { metric: "onTimeRate" })}
         />
         <Kpi
-          label="صف کار باز (اکنون)" icon="tasks" testId="kpi-open"
-          hint="همه تسک‌های انجام‌نشده و لغونشده در همین لحظه، مستقل از بازه"
+          label={__analyticsTr("صف کار باز (اکنون)")} icon="tasks" testId="kpi-open"
+          hint={__analyticsTr("همه تسک‌های انجام‌نشده و لغونشده در همین لحظه، مستقل از بازه")}
           value={fmtInt(open.open)}
           tone={open.overdue ? "alert" : undefined}
           foot={`${faDigits(open.overdue)} معوق · ${faDigits(open.blocked)} مسدود · ${faDigits(open.review)} در بازبینی`}
@@ -175,8 +177,8 @@ function OverviewBody() {
         />
         {soc ? (
           <Kpi
-            label="بسته‌شدن شیفت‌لاگ SOC" icon="shift"
-            hint="شیفت‌لاگ‌های کامل‌شده از میان شیفت‌های گذشته در این دوره"
+            label={__analyticsTr("بسته‌شدن شیفت‌لاگ SOC")} icon="shift"
+            hint={__analyticsTr("شیفت‌لاگ‌های کامل‌شده از میان شیفت‌های گذشته در این دوره")}
             value={soc.closureRate === null ? "—" : fmtPct(soc.closureRate)}
             tone={soc.missed > 0 && soc.closureRate < 0.9 ? "alert" : undefined}
             delta={socPrev && soc.closureRate !== null && <Delta now={soc.closureRate} before={socPrev.closureRate} kind="rate" label={cmpLabel} />}
@@ -185,7 +187,7 @@ function OverviewBody() {
           />
         ) : (
           <Kpi
-            label="تسک‌های ایجادشده" icon="plus"
+            label={__analyticsTr("تسک‌های ایجادشده")} icon="plus"
             value={fmtInt(cur.created)}
             delta={prev && <Delta now={cur.created} before={prev.created} label={cmpLabel} />}
             foot={`خالص صف: ${cur.net > 0 ? "+" : ""}${faDigits(cur.net)}`}
@@ -195,16 +197,16 @@ function OverviewBody() {
       </MetricGrid>
 
       <div className="an-row">
-        <Panel title="هشدارها" meta="وضعیت اکنون" actions={<Link className="btn btn-ghost btn-sm an-no-print" href={a.href("/analytics/alerts")}>همه</Link>}>
+        <Panel title={__analyticsTr("هشدارها")} meta={__analyticsTr("وضعیت اکنون")} actions={<Link className="btn btn-ghost btn-sm an-no-print" href={a.href("/analytics/alerts")}>{"" + __analyticsTr("همه") + ""}</Link>}>
           <AlertList alerts={m.alerts} limit={5} />
         </Panel>
-        <Panel title="بینش‌های خودکار" meta={cmp ? `نسبت به ${cmp.label}` : "این دوره"} actions={<Link className="btn btn-ghost btn-sm an-no-print" href={a.href("/analytics/alerts")}>همه</Link>}>
+        <Panel title={__analyticsTr("بینش‌های خودکار")} meta={cmp ? `نسبت به ${cmp.label}` : "این دوره"} actions={<Link className="btn btn-ghost btn-sm an-no-print" href={a.href("/analytics/alerts")}>{"" + __analyticsTr("همه") + ""}</Link>}>
           <InsightList insights={m.insights} limit={INSIGHTS.maxOnOverview} />
         </Panel>
       </div>
 
       <ChartPanel
-        title="ورودی و خروجی کار"
+        title={__analyticsTr("ورودی و خروجی کار")}
         question="صف کار بزرگ می‌شود یا کوچک؟ اگر خط ایجادشده بالاتر از تکمیل‌شده بماند، صف رشد می‌کند."
         build={flow}
         height={280}
@@ -212,41 +214,41 @@ function OverviewBody() {
         fileName="work-flow"
         testId="chart-flow"
         footer={<>
-          <span>صف باز در پایان دوره: <b className="strong">{fmtInt(m.backlog.at(-1))}</b> (ابتدای دوره: {fmtInt(m.backlog[0])})</span>
-          <span>خالص دوره: {cur.net > 0 ? "+" : ""}{faDigits(cur.net)} تسک</span>
+          <span>{"" + __analyticsTr("صف باز در پایان دوره:") + " "}<b className="strong">{fmtInt(m.backlog.at(-1))}</b>{" " + __analyticsTr("(ابتدای دوره:") + " "}{fmtInt(m.backlog[0])})</span>
+          <span>{"" + __analyticsTr("خالص دوره:") + " "}{cur.net > 0 ? "+" : ""}{faDigits(cur.net)}{" " + __analyticsTr("تسک") + ""}</span>
         </>}
       />
 
-      <Panel title="مقایسه تیم‌ها" meta="سرانه = جمع ÷ کارشناسان تیم در دوره · برای جزئیات روی تیم کلیک کنید">
+      <Panel title={__analyticsTr("مقایسه تیم‌ها")} meta={__analyticsTr("سرانه = جمع ÷ کارشناسان تیم در دوره · برای جزئیات روی تیم کلیک کنید")}>
         <DataTable
           columns={teamColumns}
           rows={m.teams}
           rowKey={(r) => r.key}
           onRowClick={(r) => router.push(a.href("/analytics/teams", { team: r.key }))}
-          caption="مقایسه تیم‌ها"
+          caption={__analyticsTr("مقایسه تیم‌ها")}
           testId="team-table"
         />
       </Panel>
 
       <div className="an-row">
         <ChartPanel
-          title="ترکیب پیچیدگی کار تکمیل‌شده"
+          title={__analyticsTr("ترکیب پیچیدگی کار تکمیل‌شده")}
           question="حجم کار از کار ساده آمده یا پیچیده؟"
           build={cxMix}
           height={60 + 44 * (m.teams.length + 1)}
           table={mixTable("cx", CX_FA)}
           fileName="complexity-mix"
-          empty={cur.completed === 0 ? <AnEmpty title="تسکی تکمیل نشده">در این بازه تسک تکمیل‌شده‌ای نیست.</AnEmpty> : null}
+          empty={cur.completed === 0 ? <AnEmpty title={__analyticsTr("تسکی تکمیل نشده")}>{"" + __analyticsTr("در این بازه تسک تکمیل‌شده‌ای نیست.") + ""}</AnEmpty> : null}
         />
         <ChartPanel
-          title="توزیع کیفیت کار تأییدشده"
+          title={__analyticsTr("توزیع کیفیت کار تأییدشده")}
           question="کیفیت ثبت‌شده هنگام تأیید در تیم‌ها چگونه پخش شده است؟"
           build={qualityMix}
           height={60 + 44 * (m.teams.length + 1)}
           table={mixTable("quality", QUAL_KEYS.map((k) => QUAL_FA[k]))}
           fileName="quality-mix"
-          empty={cur.qualityN === 0 ? <AnEmpty title="کیفیتی ثبت نشده">کیفیت هنگام تأیید تسک ثبت می‌شود.</AnEmpty> : null}
-          footer={<Key color="var(--viz-4)">تیره‌تر = کیفیت بالاتر</Key>}
+          empty={cur.qualityN === 0 ? <AnEmpty title={__analyticsTr("کیفیتی ثبت نشده")}>{"" + __analyticsTr("کیفیت هنگام تأیید تسک ثبت می‌شود.") + ""}</AnEmpty> : null}
+          footer={<Key color="var(--viz-4)">{"" + __analyticsTr("تیره‌تر = کیفیت بالاتر") + ""}</Key>}
         />
       </div>
     </>

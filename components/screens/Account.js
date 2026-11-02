@@ -1,5 +1,7 @@
 "use client";
 
+import { useI18n as useUiI18n } from "@/components/I18nProvider";
+
 import { useState } from "react";
 import { api, useApp } from "@/components/AppProvider";
 import { Field, FormAlert } from "@/components/ui/Field";
@@ -9,6 +11,7 @@ import { ThemeChooser } from "@/components/ThemePicker";
 import { ROLE_LABELS } from "@/lib/roles";
 
 export default function Account() {
+  const { t: __uiTr } = useUiI18n();
   const { me, toast, theme, setTheme } = useApp();
   const [form, setForm] = useState({ current: "", next: "", confirm: "" });
   const [errors, setErrors] = useState({});
@@ -42,31 +45,31 @@ export default function Account() {
     <div className="page narrow">
       <PageHeader leading={<Avatar id={me.id} size="lg" />} title={me.name} meta={[ROLE_LABELS[me.role], me.team]} />
       <div className="stack-lg">
-        <Panel title="Profile" meta="Your role and team are managed by your manager">
+        <Panel title={__uiTr("Profile")} meta={__uiTr("Your role and team are managed by your manager")}>
           <dl className="kv panel-body">
-            <dt>Email</dt><dd>{me.email}</dd>
-            <dt>Role</dt><dd>{ROLE_LABELS[me.role]}</dd>
-            <dt>Primary team</dt><dd>{me.team}</dd>
+            <dt>{"" + __uiTr("Email") + ""}</dt><dd>{me.email}</dd>
+            <dt>{"" + __uiTr("Role") + ""}</dt><dd>{ROLE_LABELS[me.role]}</dd>
+            <dt>{"" + __uiTr("Primary team") + ""}</dt><dd>{me.team}</dd>
           </dl>
         </Panel>
-        <Panel title="Appearance" meta="Saved on this device · also in the top bar">
+        <Panel title={__uiTr("Appearance")} meta={__uiTr("Saved on this device · also in the top bar")}>
           <div className="panel-body">
             <ThemeChooser value={theme} onChange={setTheme} />
           </div>
         </Panel>
-        <Panel title="Change password" meta="Changing it signs you out on your other devices">
+        <Panel title={__uiTr("Change password")} meta={__uiTr("Changing it signs you out on your other devices")}>
           <form onSubmit={submit} noValidate className="panel-body form-narrow">
-            <Field label="Current password" htmlFor="pw-current" error={errors.current}>
+            <Field label={__uiTr("Current password")} htmlFor="pw-current" error={errors.current}>
               <input id="pw-current" type="password" className="input" value={form.current} onChange={set("current")} autoComplete="current-password" />
             </Field>
-            <Field label="New password" htmlFor="pw-next" hint="At least 8 characters." error={errors.next}>
+            <Field label={__uiTr("New password")} htmlFor="pw-next" hint={__uiTr("At least 8 characters.")} error={errors.next}>
               <input id="pw-next" type="password" className="input" value={form.next} onChange={set("next")} autoComplete="new-password" />
             </Field>
-            <Field label="Confirm new password" htmlFor="pw-confirm" error={errors.confirm}>
+            <Field label={__uiTr("Confirm new password")} htmlFor="pw-confirm" error={errors.confirm}>
               <input id="pw-confirm" type="password" className="input" value={form.confirm} onChange={set("confirm")} autoComplete="new-password" />
             </Field>
             <FormAlert>{serverError}</FormAlert>
-            <div><button type="submit" className="btn btn-primary" disabled={busy} aria-busy={busy}>Change password</button></div>
+            <div><button type="submit" className="btn btn-primary" disabled={busy} aria-busy={busy}>{"" + __uiTr("Change password") + ""}</button></div>
           </form>
         </Panel>
       </div>

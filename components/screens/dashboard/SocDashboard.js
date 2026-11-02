@@ -1,5 +1,7 @@
 "use client";
 
+import { useI18n as useUiI18n } from "@/components/I18nProvider";
+
 import Link from "next/link";
 import { useApp } from "@/components/AppProvider";
 import useGreeting from "@/components/useGreeting";
@@ -17,6 +19,7 @@ const FULL_LOAD = 6; // open tasks that count as a full workload (see AppProvide
 
 /** SOC Manager: team risk and review queue on the left, who is loaded on the right. */
 export default function SocDashboard() {
+  const { t: __uiTr } = useUiI18n();
   const { members, tasks, stats, peopleMap, me, setCreateOpen } = useApp();
   const greeting = useGreeting(me.name);
   const soc = members.filter((p) => p.team.startsWith("SOC ·") || p.assist?.startsWith("SOC"));
@@ -33,21 +36,21 @@ export default function SocDashboard() {
     <div className="page">
       <PageHeader
         eyebrow={greeting}
-        title="SOC overview"
+        title={__uiTr("SOC overview")}
         meta={[`${weekday(TODAY)}, ${longDate(TODAY)}`, plural(soc.length, "person", "people")]}
         actions={
           <>
             <Link className="btn btn-secondary" href="/tasks/assigned">Assigned by me</Link>
-            <button type="button" className="btn btn-primary" onClick={() => setCreateOpen(true)}><Icon name="plus" />Create task<kbd>C</kbd></button>
+            <button type="button" className="btn btn-primary" onClick={() => setCreateOpen(true)}><Icon name="plus" />{"" + __uiTr("Create task") + ""}<kbd>C</kbd></button>
           </>
         }
       />
 
-      <MetricGrid label="SOC summary">
-        <Metric label="Active team tasks" icon="tasks" value={active} href="/tasks/team" foot="Excluding backlog" />
+      <MetricGrid label={__uiTr("SOC summary")}>
+        <Metric label={__uiTr("Active team tasks")} icon="tasks" value={active} href="/tasks/team" foot="Excluding backlog" />
         <Metric label="Assigned by me" icon="user" value={assignedOpen} href="/tasks/assigned" foot="Still open" />
         <Metric label="Overdue" icon="flag" value={overdue} tone={overdue ? "alert" : undefined} foot={overdue ? "Past their deadline" : "Nothing past its deadline"} />
-        <Metric label="Awaiting your review" icon="review" value={reviews} href="/tasks/team?tab=review" foot={reviews ? "Approve or return" : "No reviews waiting"} />
+        <Metric label={__uiTr("Awaiting your review")} icon="review" value={reviews} href="/tasks/team?tab=review" foot={reviews ? "Approve or return" : "No reviews waiting"} />
         <Metric
           label={`MISP IOCs · ${month}`} icon="shield"
           value={stats.soc.iocs}
@@ -66,11 +69,9 @@ export default function SocDashboard() {
 
       <div className="grid-2">
         <AttentionList items={attention} />
-        <Panel title="Team workload" meta={`Open tasks per person · ${FULL_LOAD} = full`}>
+        <Panel title={__uiTr("Team workload")} meta={`Open tasks per person · ${FULL_LOAD} = full`}>
           {soc.length === 0 ? (
-            <EmptyState compact icon="team" title="No SOC members yet" action={<Link className="btn btn-secondary btn-sm" href="/team">Go to Team</Link>}>
-              Add analysts to SOC · L1, L2 or L3 on the Team page.
-            </EmptyState>
+            <EmptyState compact icon="team" title={__uiTr("No SOC members yet")} action={<Link className="btn btn-secondary btn-sm" href="/team">{"" + __uiTr("Go to Team") + ""}</Link>}>{"" + __uiTr("Add analysts to SOC · L1, L2 or L3 on the Team page.") + ""}</EmptyState>
           ) : (
             <div role="list">
               {soc.map((p) => (
@@ -78,7 +79,7 @@ export default function SocDashboard() {
                   <Link href={`/performance/employees/${p.id}`} className="who">
                     <Avatar id={p.id} />
                     <span>{p.name}</span>
-                    {p.assist && <span className="badge" data-tooltip={`Primary team: ${p.team}`}>Assisting</span>}
+                    {p.assist && <span className="badge" data-tooltip={`Primary team: ${p.team}`}>{"" + __uiTr("Assisting") + ""}</span>}
                   </Link>
                   <span className="track" role="img" aria-label={`${p.open} open of ${FULL_LOAD}`}>
                     <span className={p.load > 90 ? "full" : ""} style={{ width: `${p.load}%` }} />
