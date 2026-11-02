@@ -15,12 +15,12 @@ import { Meter } from "@/components/ui/charts";
 import { EmptyState } from "@/components/ui/states";
 import { Who } from "@/components/ui/indicators";
 import { plural } from "@/lib/format";
-import { ROLE_LABELS, assignableFor, canManageMember, canViewManagementAnalytics } from "@/lib/roles";
+import { assignableFor, canManageMember, canViewManagementAnalytics } from "@/lib/roles";
 import ProvincePicker from "@/components/ui/ProvincePicker";
 
 /** People with role, team and live workload (open tasks; 6 = full). Rows open the person's performance. */
 export function PeopleTable({ list, onRemove, onEdit }) {
-  const { t: __uiTr } = useUiI18n();
+  const { t: __uiTr, locale, role: roleText, team: teamText, province: provinceText } = useUiI18n();
   const router = useRouter();
   const { me } = useApp();
   const canView = (p) => p.id === me.id || canViewManagementAnalytics(me);
@@ -43,17 +43,17 @@ export function PeopleTable({ list, onRemove, onEdit }) {
           {list.map((p) => (
             <tr key={p.id} data-member={p.id} className={canView(p) ? "is-link" : ""} onClick={(e) => canView(p) && !e.target.closest("a, button") && router.push(`/performance/employees/${p.id}`)}>
               <td className="title">{canView(p) ? <Link href={`/performance/employees/${p.id}`}><Who id={p.id} /></Link> : <Who id={p.id} />}</td>
-              <td>{ROLE_LABELS[p.role] ?? p.role}</td>
-              <td>{p.team}{p.assist && <span className="muted"> · assisting {p.assist}</span>}</td>
-              <td>{p.province || <span className="muted">{"" + __uiTr("تعیین‌نشده") + ""}</span>}</td>
-              <td><Meter value={p.open} max={6} label={`${p.name}'s workload`} tone={p.load > 90 ? "warn" : undefined} /></td>
+              <td>{roleText(p.role)}</td>
+              <td>{teamText(p.team)}{p.assist && <span className="muted"> · {locale === "fa" ? "همکاری با" : "assisting"} {teamText(p.assist)}</span>}</td>
+              <td>{p.province ? provinceText(p.province) : <span className="muted">{__uiTr("تعیین‌نشده")}</span>}</td>
+              <td><Meter value={p.open} max={6} label={locale === "fa" ? `حجم کار ${p.name}` : `${p.name}'s workload`} tone={p.load > 90 ? "warn" : undefined} /></td>
               <td className="r">{p.open || <span className="zero">0</span>}</td>
               {hasActions && (
                 <td className="actions">
                   <span>
-                    {canView(p) && <Link className="btn btn-ghost btn-sm" href={`/performance/employees/${p.id}`}>Performance</Link>}
-                    {onEdit && canManageMember(me, p) && <button type="button" className="btn btn-ghost btn-sm" onClick={() => onEdit(p)} aria-label={`Edit ${p.name}`}>{"" + __uiTr("Edit") + ""}</button>}
-                    {onRemove && canManageMember(me, p) && <button type="button" className="btn btn-ghost btn-sm danger" onClick={() => onRemove(p)} aria-label={`Remove ${p.name}`}>{"" + __uiTr("Remove") + ""}</button>}
+                    {canView(p) && <Link className="btn btn-ghost btn-sm" href={`/performance/employees/${p.id}`}>{__uiTr("Performance")}</Link>}
+                    {onEdit && canManageMember(me, p) && <button type="button" className="btn btn-ghost btn-sm" onClick={() => onEdit(p)} aria-label={locale === "fa" ? `ویرایش ${p.name}` : `Edit ${p.name}`}>{__uiTr("Edit")}</button>}
+                    {onRemove && canManageMember(me, p) && <button type="button" className="btn btn-ghost btn-sm danger" onClick={() => onRemove(p)} aria-label={locale === "fa" ? `حذف ${p.name}` : `Remove ${p.name}`}>{__uiTr("Remove")}</button>}
                   </span>
                 </td>
               )}
@@ -69,7 +69,7 @@ const TEAM_FILTERS = ["All", "SOC", "Design & Automation", "Threat Intelligence"
 const inTeam = (p, team) => team === "All" || p.team.startsWith(team) || (team === "SOC" && p.assist?.startsWith("SOC"));
 
 export default function Team() {
-  const { t: __uiTr } = useUiI18n();
+  const { t: __uiTr, locale, team: teamText } = useUiI18n();
   const { members, me, dispatch, toast } = useApp();
   const [team, setTeam] = useState("All");
   const [q, setQ] = useState("");
@@ -87,7 +87,7 @@ export default function Team() {
     try {
       await api(`/api/members/${p.id}`, { method: "DELETE" });
       dispatch({ type: "users/deactivate", id: p.id });
-      toast(`${p.name} was removed from the team`);
+      toast(locale === "fa" ? `${p.name} از تیم حذف شد` : `${p.name} was removed from the team`);
       setRemoving(null);
     } catch (e) {
       toast(e.message, "error");
@@ -99,14 +99,14 @@ export default function Team() {
   return (
     <div className="page">
       <PageHeader
-        title="Team"
-        meta={[plural(members.length, "person", "people"), "Security Department"]}
+        title={__uiTr("Team")}
+        meta={[locale === "fa" ? `${members.length} نفر` : plural(members.length, "person", "people"), teamText("Security Department")]}
         actions={canAdd && <button type="button" className="btn btn-primary" onClick={() => setAdding(true)}><Icon name="plus" />{"" + __uiTr("Add member") + ""}</button>}
       />
       <div className="toolbar" role="search" aria-label={__uiTr("Filter people")}>
         <div className="search"><Icon name="search" /><input type="search" className="input" placeholder={__uiTr("Search by name")} aria-label={__uiTr("Search people")} value={q} onChange={(e) => setQ(e.target.value)} /></div>
-        <Segmented label="Team" value={team} onChange={setTeam} options={TEAM_FILTERS.map((t) => ({ value: t, label: t, count: members.filter((p) => inTeam(p, t)).length }))} />
-        <div className="end"><span className="result-count">{list.length === members.length ? plural(list.length, "person", "people") : `${list.length} of ${members.length}`}</span></div>
+        <Segmented label={__uiTr("Team")} value={team} onChange={setTeam} options={TEAM_FILTERS.map((item) => ({ value: item, label: item === "All" ? __uiTr(item) : teamText(item), count: members.filter((p) => inTeam(p, item)).length }))} />
+        <div className="end"><span className="result-count">{locale === "fa" ? `${list.length} از ${members.length} نفر` : list.length === members.length ? plural(list.length, "person", "people") : `${list.length} of ${members.length}`}</span></div>
       </div>
       <div className="panel">
         {list.length ? <PeopleTable list={list} onRemove={setRemoving} onEdit={setEditingMember} /> : (
@@ -117,7 +117,7 @@ export default function Team() {
       {adding && <AddMemberModal onClose={() => setAdding(false)} />}
       {editingMember && <EditMemberModal member={editingMember} onClose={() => setEditingMember(null)} />}
       {removing && (
-        <Dialog label={__uiTr("Remove member")} title={`Remove ${removing.name}?`} description={__uiTr("They lose access immediately and are signed out on every device.")} onClose={() => setRemoving(null)} width={460}>
+        <Dialog label={__uiTr("Remove member")} title={locale === "fa" ? `${removing.name} حذف شود؟` : `Remove ${removing.name}?`} description={__uiTr("They lose access immediately and are signed out on every device.")} onClose={() => setRemoving(null)} width={460}>
           <div className="modal-body">
             <p className="sec">{"" + __uiTr("Their tasks, shift logs and tickets are kept, so reports for past periods stay complete.") + ""}</p>
           </div>
@@ -134,7 +134,7 @@ export default function Team() {
 const EMAIL = /^\S+@\S+\.\S+$/;
 
 function AddMemberModal({ onClose }) {
-  const { t: __uiTr } = useUiI18n();
+  const { t: __uiTr, locale, role: roleText, team: teamText } = useUiI18n();
   const { me, dispatch, toast } = useApp();
   const { roles, teams } = assignableFor(me);
   const [form, setForm] = useState({ name: "", email: "", role: roles[0], team: teams[0], province: "", password: "" });
@@ -159,7 +159,7 @@ function AddMemberModal({ onClose }) {
     try {
       const { user } = await api("/api/members", { method: "POST", body: form });
       dispatch({ type: "users/add", user: { ...user, active: true } });
-      toast(`${user.name} was added to ${user.team}`);
+      toast(locale === "fa" ? `${user.name} به ${teamText(user.team)} اضافه شد` : `${user.name} was added to ${teamText(user.team)}`);
       onClose();
     } catch (err) {
       setServerError(err.message);
@@ -175,15 +175,15 @@ function AddMemberModal({ onClose }) {
           <Field label={__uiTr("Full name")} htmlFor="m-name" error={errors.name}>
             <input id="m-name" className="input" value={form.name} onChange={set("name")} autoComplete="off" data-autofocus />
           </Field>
-          <Field label="Work email" htmlFor="m-email" error={errors.email}>
+          <Field label={__uiTr("Work email")} htmlFor="m-email" error={errors.email}>
             <input id="m-email" type="email" className="input" value={form.email} onChange={set("email")} autoComplete="off" />
           </Field>
           <div className="field-row">
             <Field label={__uiTr("Role")} htmlFor="m-role">
-              <select id="m-role" className="input" value={form.role} onChange={set("role")}>{roles.map((r) => <option key={r} value={r}>{ROLE_LABELS[r]}</option>)}</select>
+              <select id="m-role" className="input" value={form.role} onChange={set("role")}>{roles.map((r) => <option key={r} value={r}>{roleText(r)}</option>)}</select>
             </Field>
             <Field label={__uiTr("Primary team")} htmlFor="m-team">
-              <select id="m-team" className="input" value={form.team} onChange={set("team")}>{teams.map((t) => <option key={t}>{t}</option>)}</select>
+              <select id="m-team" className="input" value={form.team} onChange={set("team")}>{teams.map((item) => <option key={item} value={item}>{teamText(item)}</option>)}</select>
             </Field>
           </div>
           <Field label={__uiTr("استان")} htmlFor="m-province" error={errors.province}>
@@ -205,7 +205,7 @@ function AddMemberModal({ onClose }) {
 }
 
 function EditMemberModal({ member, onClose }) {
-  const { t: __uiTr } = useUiI18n();
+  const { t: __uiTr, locale, role: roleText, team: teamText } = useUiI18n();
   const { me, dispatch, toast } = useApp();
   const { roles, teams } = assignableFor(me);
   const [form, setForm] = useState({ role: member.role, team: member.team, province: member.province ?? "", password: "" });
@@ -228,7 +228,7 @@ function EditMemberModal({ member, onClose }) {
       const body = { role: form.role, team: form.team, province: form.province, ...(form.password ? { password: form.password } : {}) };
       const { user } = await api(`/api/members/${member.id}`, { method: "PATCH", body });
       dispatch({ type: "users/update", user });
-      toast(`${member.name} updated${form.password ? " · password reset" : ""}`);
+      toast(locale === "fa" ? `${member.name} به‌روزرسانی شد${form.password ? " · رمز عبور بازنشانی شد" : ""}` : `${member.name} updated${form.password ? " · password reset" : ""}`);
       onClose();
     } catch (err) {
       setError(err.message);
@@ -238,15 +238,15 @@ function EditMemberModal({ member, onClose }) {
   };
 
   return (
-    <Dialog label={__uiTr("Edit member")} title={`Edit ${member.name}`} description={member.email} onClose={onClose} width={520} dismissible={!changed}>
+    <Dialog label={__uiTr("Edit member")} title={locale === "fa" ? `ویرایش ${member.name}` : `Edit ${member.name}`} description={member.email} onClose={onClose} width={520} dismissible={!changed}>
       <form onSubmit={submit} noValidate>
         <div className="modal-body form">
           <div className="field-row">
             <Field label={__uiTr("Role")} htmlFor="e-role">
-              <select id="e-role" className="input" value={form.role} onChange={set("role")}>{roleOptions.map((r) => <option key={r} value={r}>{ROLE_LABELS[r]}</option>)}</select>
+              <select id="e-role" className="input" value={form.role} onChange={set("role")}>{roleOptions.map((r) => <option key={r} value={r}>{roleText(r)}</option>)}</select>
             </Field>
             <Field label={__uiTr("Primary team")} htmlFor="e-team">
-              <select id="e-team" className="input" value={form.team} onChange={set("team")}>{teamOptions.map((t) => <option key={t}>{t}</option>)}</select>
+              <select id="e-team" className="input" value={form.team} onChange={set("team")}>{teamOptions.map((item) => <option key={item} value={item}>{teamText(item)}</option>)}</select>
             </Field>
           </div>
           <Field label={__uiTr("استان")} htmlFor="e-province">

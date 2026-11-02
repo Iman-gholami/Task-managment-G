@@ -1,5 +1,9 @@
 "use client";
 
+import { useI18n as useExtraI18n } from "@/components/I18nProvider";
+
+import useAnalyticsFormat from "@/components/analytics/useAnalyticsFormat";
+
 import { useI18n as useAnalyticsI18n } from "@/components/I18nProvider";
 
 import { useCallback, useMemo, useState } from "react";
@@ -37,13 +41,15 @@ const PC_METRICS = [
 ];
 
 function TeamsOverview() {
+  const { t: __extraTr } = useExtraI18n();
+  const { fmtInt, fmtNum, fmtPct } = useAnalyticsFormat();
   const { t: __analyticsTr } = useAnalyticsI18n();
   const a = useAnalytics();
   const { view, range, cmp, gran } = a;
   const [metric, setMetric] = useState("completed");
   const [person, setPerson] = useState(null);
   const m = useMemo(() => {
-    const b = buckets(range.from, range.end, gran);
+    const b = buckets(range.from, range.end, gran, a.locale);
     const rows = teamRows(view, range, cmp).map((t) => {
       const series = bucketStats(view, idsOf(t.people), b);
       return { ...t, series, spark: series.map((x) => x.completed) };
@@ -80,18 +86,18 @@ function TeamsOverview() {
   const tableColumns = [
     { key: "team", label: __analyticsTr("تیم"), value: (r) => r.fa, render: (r) => <b>{r.fa}</b> },
     { key: "n", label: __analyticsTr("کارشناسان"), kind: "count", value: (r) => r.headcount },
-    { key: "c", label: "تکمیل‌شده", kind: "count", value: (r) => r.cur.completed },
+    { key: "c", label: __extraTr("تکمیل‌شده"), kind: "count", value: (r) => r.cur.completed },
     { key: "pc", label: __analyticsTr("سرانه تکمیل‌شده"), kind: "avg", value: (r) => r.pc.completed },
-    { key: "u", label: "حجم وزن‌دار", kind: "count", value: (r) => r.cur.units },
-    { key: "pcu", label: "سرانه حجم", kind: "avg", value: (r) => r.pc.units },
-    { key: "h", label: "ساعت", kind: "count", value: (r) => r.cur.hours },
-    { key: "cr", label: "ایجادشده", kind: "count", value: (r) => r.cur.created },
+    { key: "u", label: __extraTr("حجم وزن‌دار"), kind: "count", value: (r) => r.cur.units },
+    { key: "pcu", label: __extraTr("سرانه حجم"), kind: "avg", value: (r) => r.pc.units },
+    { key: "h", label: __extraTr("ساعت"), kind: "count", value: (r) => r.cur.hours },
+    { key: "cr", label: __extraTr("ایجادشده"), kind: "count", value: (r) => r.cur.created },
     { key: "ot", label: __analyticsTr("تحویل به‌موقع"), kind: "rate", value: (r) => r.cur.onTimeRate },
     { key: "cy", label: __analyticsTr("میانه زمان انجام"), kind: "days", value: (r) => r.cur.cycleMedian },
-    { key: "rs", label: "سهم برگشتی", kind: "rate", value: (r) => r.cur.returnShare },
-    { key: "hq", label: "عالی و خوب", kind: "rate", value: (r) => r.cur.highQualityShare },
-    { key: "o", label: "صف باز", kind: "count", value: (r) => r.open.open },
-    { key: "od", label: "معوق", kind: "count", value: (r) => r.open.overdue },
+    { key: "rs", label: __extraTr("سهم برگشتی"), kind: "rate", value: (r) => r.cur.returnShare },
+    { key: "hq", label: __extraTr("عالی و خوب"), kind: "rate", value: (r) => r.cur.highQualityShare },
+    { key: "o", label: __extraTr("صف باز"), kind: "count", value: (r) => r.open.open },
+    { key: "od", label: __extraTr("معوق"), kind: "count", value: (r) => r.open.overdue },
   ];
 
   return (
@@ -137,7 +143,7 @@ function TeamsOverview() {
         build={loadBuild}
         height={80 + 56 * m.rows.length}
         onChartClick={(e) => e.data?.id && setPerson(e.data.id)}
-        table={{ columns: [{ key: "n", label: __analyticsTr("کارشناس"), value: (r) => r.name }, { key: "t", label: __analyticsTr("تیم"), value: (r) => GROUP_BY_KEY[m.rows.find((x) => x.group === r.group)?.key]?.fa }, { key: "v", label: "تسک باز", kind: "count", value: (r) => r.value }], rows: m.load }}
+        table={{ columns: [{ key: "n", label: __analyticsTr("کارشناس"), value: (r) => r.name }, { key: "t", label: __analyticsTr("تیم"), value: (r) => GROUP_BY_KEY[m.rows.find((x) => x.group === r.group)?.key]?.fa }, { key: "v", label: __extraTr("تسک باز"), kind: "count", value: (r) => r.value }], rows: m.load }}
         fileName="open-work-per-person"
         empty={m.load.length ? null : <AnEmpty title={__analyticsTr("کارشناس فعالی نیست")} />}
       />
@@ -158,13 +164,15 @@ function TeamsOverview() {
 }
 
 function TeamDetail({ team }) {
+  const { t: __extraTr } = useExtraI18n();
+  const { fmtInt, fmtNum, fmtPct } = useAnalyticsFormat();
   const { t: __analyticsTr } = useAnalyticsI18n();
   const a = useAnalytics();
   const { view, range, cmp, gran, setFilters } = a;
   const [person, setPerson] = useState(null);
   const m = useMemo(() => {
-    const b = buckets(range.from, range.end, gran);
-    const pb = cmp ? buckets(cmp.from, cmp.to, gran) : [];
+    const b = buckets(range.from, range.end, gran, a.locale);
+    const pb = cmp ? buckets(cmp.from, cmp.to, gran, a.locale) : [];
     const cur = stats(view, null, range);
     const people = peopleRows(view, range, cmp);
     const n = people.filter((r) => r.person.active || r.activeInPeriod).length;
@@ -180,8 +188,8 @@ function TeamDetail({ team }) {
   const { cur, prev } = m;
   const trend = useCallback((t) => lineOption(t, {
     labels: m.b.map((x) => x.label), partial: m.b.map((x) => x.partial),
-    series: [{ name: "تکمیل‌شده", data: m.bs.map((x) => x.completed), color: t["cat-1"], area: true }, { name: "ایجادشده", data: m.bs.map((x) => x.created), color: t["cat-2"] }],
-    prev: cmp ? { name: "تکمیل‌شده در دوره مقایسه", data: m.pbs.map((x) => x.completed), labels: m.pb.map((x) => x.label) } : null,
+    series: [{ name: __extraTr("تکمیل‌شده"), data: m.bs.map((x) => x.completed), color: t["cat-1"], area: true }, { name: __extraTr("ایجادشده"), data: m.bs.map((x) => x.created), color: t["cat-2"] }],
+    prev: cmp ? { name: __extraTr("تکمیل‌شده در دوره مقایسه"), data: m.pbs.map((x) => x.completed), labels: m.pb.map((x) => x.label) } : null,
   }), [m, cmp]);
   const levelBuild = useCallback((t) => hbarOption(t, { rows: m.levels.map((l) => ({ label: l.level, value: l.pc.completed, note: `${faDigits(l.headcount)} کارشناس · ${faDigits(l.cur.completed)} تسک` })), kind: "avg" }), [m]);
   const mixBuild = useCallback((t) => stackedOption(t, {
@@ -191,39 +199,39 @@ function TeamDetail({ team }) {
 
   const columns = [
     { key: "name", label: __analyticsTr("کارشناس"), value: (r) => r.person.name, render: (r) => <span className="an-person">{r.person.name}<small>{[r.person.level, ROLE_FA[r.person.role], r.person.active ? null : "غیرفعال"].filter(Boolean).join(" · ")}</small></span> },
-    { key: "c", label: "تکمیل‌شده", kind: "count", value: (r) => r.cur.completed },
-    { key: "d", label: "تغییر", value: (r) => (r.prev ? r.cur.completed - r.prev.completed : null), render: (r) => (r.prev ? <Delta now={r.cur.completed} before={r.prev.completed} /> : "—") },
-    { key: "u", label: "حجم وزن‌دار", kind: "count", value: (r) => r.cur.units },
-    { key: "h", label: "ساعت", kind: "count", value: (r) => r.cur.hours },
-    { key: "ot", label: "به‌موقع", kind: "rate", value: (r) => r.cur.onTimeRate },
-    { key: "o", label: "صف باز", kind: "count", value: (r) => r.open.open },
-    { key: "od", label: "معوق", kind: "count", value: (r) => r.open.overdue },
+    { key: "c", label: __extraTr("تکمیل‌شده"), kind: "count", value: (r) => r.cur.completed },
+    { key: "d", label: __extraTr("تغییر"), value: (r) => (r.prev ? r.cur.completed - r.prev.completed : null), render: (r) => (r.prev ? <Delta now={r.cur.completed} before={r.prev.completed} /> : "—") },
+    { key: "u", label: __extraTr("حجم وزن‌دار"), kind: "count", value: (r) => r.cur.units },
+    { key: "h", label: __extraTr("ساعت"), kind: "count", value: (r) => r.cur.hours },
+    { key: "ot", label: __extraTr("به‌موقع"), kind: "rate", value: (r) => r.cur.onTimeRate },
+    { key: "o", label: __extraTr("صف باز"), kind: "count", value: (r) => r.open.open },
+    { key: "od", label: __extraTr("معوق"), kind: "count", value: (r) => r.open.overdue },
     ...(m.shift ? [
       { key: "s", label: __analyticsTr("شیفت"), kind: "count", value: (r) => (r.person.shift ? r.cur.shifts : null) },
-      { key: "rt", label: "روتین", kind: "rate", value: (r) => (r.person.shift ? r.cur.routineRate : null) },
+      { key: "rt", label: __extraTr("روتین"), kind: "rate", value: (r) => (r.person.shift ? r.cur.routineRate : null) },
       { key: "tk", label: __analyticsTr("تیکت"), kind: "count", value: (r) => (r.person.shift ? r.cur.tickets : null) },
     ] : []),
   ];
 
   return (
     <>
-      <Trail items={[{ label: "کل واحد", onClick: () => setFilters({ team: "", level: "" }) }, ...(a.filters.level ? [{ label: team.fa, onClick: () => setFilters({ level: "" }) }, { label: a.filters.level }] : [{ label: team.fa }])]} />
+      <Trail items={[{ label: __extraTr("کل واحد"), onClick: () => setFilters({ team: "", level: "" }) }, ...(a.filters.level ? [{ label: team.fa, onClick: () => setFilters({ level: "" }) }, { label: a.filters.level }] : [{ label: team.fa }])]} />
       <MetricGrid label={`شاخص‌های ${team.fa}`}>
         <Kpi label={__analyticsTr("تسک‌های تکمیل‌شده")} icon="checkCircle" value={fmtInt(cur.completed)} delta={prev && <Delta now={cur.completed} before={prev.completed} label={cmp?.short} />} spark={<Sparkline values={m.bs.map((x) => x.completed)} />} />
         <Kpi label={__analyticsTr("سرانه تکمیل‌شده")} icon="team" value={fmtNum(m.n ? cur.completed / m.n : null)} foot={`${faDigits(m.n)} کارشناس در دوره`} />
         <Kpi label={__analyticsTr("حجم کار وزن‌دار")} icon="bars" value={fmtInt(cur.units)} delta={prev && <Delta now={cur.units} before={prev.units} label={cmp?.short} />} />
-        <Kpi label={__analyticsTr("ساعت ثبت‌شده")} icon="clock" value={fmtNum(cur.hours, 0)} unit="ساعت" delta={prev && <Delta now={cur.hours} before={prev.hours} label={cmp?.short} />} />
+        <Kpi label={__analyticsTr("ساعت ثبت‌شده")} icon="clock" value={fmtNum(cur.hours, 0)} unit={__extraTr("ساعت")} delta={prev && <Delta now={cur.hours} before={prev.hours} label={cmp?.short} />} />
         <Kpi label={__analyticsTr("تحویل به‌موقع")} icon="cal" value={fmtPct(cur.onTimeRate)} delta={prev && cur.onTimeRate !== null && <Delta now={cur.onTimeRate} before={prev.onTimeRate} kind="rate" label={cmp?.short} />} foot={`از ${faDigits(cur.onTimeN)} تسک دارای ددلاین`} />
         <Kpi label={__analyticsTr("صف کار باز (اکنون)")} icon="tasks" value={fmtInt(m.open.open)} tone={m.open.overdue ? "alert" : undefined} foot={`${faDigits(m.open.overdue)} معوق · ${faDigits(m.open.blocked)} مسدود`} />
       </MetricGrid>
 
       <div className={m.levels.length ? "an-row wide-first" : "an-grid"}>
         <ChartPanel title={__analyticsTr("ورودی و خروجی کار تیم")} question="صف کار این تیم رشد می‌کند یا کوچک می‌شود؟" build={trend} height={260}
-          table={{ columns: [{ key: "b", label: __analyticsTr("بازه"), value: (r) => r.label }, { key: "c", label: "تکمیل‌شده", kind: "count", value: (r) => r.c }, { key: "n", label: "ایجادشده", kind: "count", value: (r) => r.n }], rows: m.b.map((x, i) => ({ id: x.from, label: x.label, c: m.bs[i].completed, n: m.bs[i].created })) }}
+          table={{ columns: [{ key: "b", label: __analyticsTr("بازه"), value: (r) => r.label }, { key: "c", label: __extraTr("تکمیل‌شده"), kind: "count", value: (r) => r.c }, { key: "n", label: __extraTr("ایجادشده"), kind: "count", value: (r) => r.n }], rows: m.b.map((x, i) => ({ id: x.from, label: x.label, c: m.bs[i].completed, n: m.bs[i].created })) }}
           fileName={`team-flow-${team.key}`} />
         {m.levels.length > 0 && (
           <ChartPanel title={__analyticsTr("سرانه تکمیل‌شده به تفکیک سطح")} question="حجم کار L1، L2 و L3 چه نسبتی دارد؟ (سطح‌ها کار متفاوتی دارند؛ برای مقایسه مستقیم نیست.)" build={levelBuild} height={200}
-            table={{ columns: [{ key: "l", label: __analyticsTr("سطح"), value: (r) => r.level }, { key: "n", label: __analyticsTr("کارشناسان"), kind: "count", value: (r) => r.headcount }, { key: "c", label: "تکمیل‌شده", kind: "count", value: (r) => r.cur.completed }, { key: "pc", label: "سرانه", kind: "avg", value: (r) => r.pc.completed }, { key: "o", label: "صف باز", kind: "count", value: (r) => r.open.open }], rows: m.levels.map((l) => ({ ...l, id: l.level })) }}
+            table={{ columns: [{ key: "l", label: __analyticsTr("سطح"), value: (r) => r.level }, { key: "n", label: __analyticsTr("کارشناسان"), kind: "count", value: (r) => r.headcount }, { key: "c", label: __extraTr("تکمیل‌شده"), kind: "count", value: (r) => r.cur.completed }, { key: "pc", label: __extraTr("سرانه"), kind: "avg", value: (r) => r.pc.completed }, { key: "o", label: __extraTr("صف باز"), kind: "count", value: (r) => r.open.open }], rows: m.levels.map((l) => ({ ...l, id: l.level })) }}
             fileName={`team-levels-${team.key}`}
             footer={m.levels.map((l) => <button key={l.level} type="button" className="btn btn-ghost btn-sm" onClick={() => setFilters({ level: l.level })}>{"" + __analyticsTr("فقط") + " "}{l.level}</button>)} />
         )}

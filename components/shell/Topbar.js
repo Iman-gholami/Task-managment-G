@@ -133,7 +133,7 @@ export default function Topbar({ crumbs, onToggleNav, navLabel, navExpanded, onS
       title: t("Theme"),
       width: 288,
       align: "end",
-      items: themeMenuItems(theme),
+      items: themeMenuItems(theme, t),
       onPick: (id) => setTheme(id, centerOf(anchor)),
     });
 

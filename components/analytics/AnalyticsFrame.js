@@ -12,7 +12,7 @@ import { currentTokens, lightTokens } from "@/components/analytics/chartTheme";
 import FilterBar from "@/components/analytics/FilterBar";
 import { AnError, PanelSkeleton } from "@/components/analytics/ui";
 import Icon from "@/components/ui/Icon";
-import { faDigits, faRange } from "@/lib/analytics/calendar";
+import { faDigits, localRange } from "@/lib/analytics/calendar";
 
 export const TABS = [
   ["/analytics", "نمای کلی", "home"],
@@ -70,7 +70,11 @@ function usePresentation() {
   return [on, toggle];
 }
 
-const time = (iso) => (iso ? faDigits(new Date(iso).toLocaleTimeString("en-GB", { timeZone: "Asia/Tehran", hour: "2-digit", minute: "2-digit" })) : "");
+const time = (iso, locale) => {
+  if (!iso) return "";
+  const value = new Date(iso).toLocaleTimeString("en-GB", { timeZone: "Asia/Tehran", hour: "2-digit", minute: "2-digit" });
+  return locale === "fa" ? faDigits(value) : value;
+};
 
 /**
  * Chrome shared by every analytics page: header, actions, demo banner, tabs and the sticky filter bar.
@@ -90,11 +94,11 @@ export default function AnalyticsFrame({ title, subtitle, actions, exportKind = 
   const openExport = (e) => openPopover(e.currentTarget, {
     label: __analyticsTr("خروجی"), width: 280, align: "end", dir,
     items: [
-      ...(exportKind ? [{ value: "xlsx", label: exportKind === "person" ? "Excel همین کارشناس" : "Excel کامل (با همین فیلترها)", icon: <Icon name="sheet" /> }] : []),
-      ...(a.manager && exportKind !== "teams" ? [{ value: "teams", label: "Excel تیم‌ها و اعضا", icon: <Icon name="team" /> }] : []),
+      ...(exportKind ? [{ value: "xlsx", label: __analyticsTr(exportKind === "person" ? "Excel همین کارشناس" : "Excel کامل (با همین فیلترها)"), icon: <Icon name="sheet" /> }] : []),
+      ...(a.manager && exportKind !== "teams" ? [{ value: "teams", label: __analyticsTr("Excel تیم‌ها و اعضا"), icon: <Icon name="team" /> }] : []),
       { separator: true },
       { value: "print", label: __analyticsTr("چاپ یا ذخیره PDF"), icon: <Icon name="print" />, hint: "Ctrl+P" },
-      ...(a.manager ? [{ value: "report", label: "گزارش مدیریتی یک‌صفحه‌ای", icon: <Icon name="report" /> }] : []),
+      ...(a.manager ? [{ value: "report", label: __analyticsTr("گزارش مدیریتی یک‌صفحه‌ای"), icon: <Icon name="report" /> }] : []),
     ],
     onPick: (v) => {
       if (v === "print") setTimeout(() => window.print(), 50);
@@ -127,9 +131,9 @@ export default function AnalyticsFrame({ title, subtitle, actions, exportKind = 
             <span className="page-eyebrow">{crumbs ?? (scope ? __analyticsTr(SCOPE_FA[scope]) : "")}</span>
             <h1>{title}</h1>
             <p className="page-meta">
-              <span>{a.range.label}{a.range.unit ? ` (${faRange(a.range.from, a.range.end)})` : ""}</span>
+              <span>{a.range.label}{a.range.unit ? ` (${localRange(a.range.from, a.range.end, locale)})` : ""}</span>
               {a.cmp && <span>{"" + __analyticsTr("مقایسه با") + " "}{a.cmp.label}</span>}
-              {a.facts && <span>{"" + __analyticsTr("به‌روزرسانی") + " "}{time(a.facts.generatedAt)}</span>}
+              {a.facts && <span>{__analyticsTr("به‌روزرسانی")} {time(a.facts.generatedAt, locale)}</span>}
               {subtitle && <span>{subtitle}</span>}
             </p>
           </div>
@@ -141,7 +145,7 @@ export default function AnalyticsFrame({ title, subtitle, actions, exportKind = 
             <button type="button" className={`btn btn-ghost ${a.demo ? "is-on" : ""}`} aria-pressed={a.demo} onClick={() => a.setFilters({ demo: a.demo ? "" : "1" })} data-tooltip={__analyticsTr("داده ساختگی برای ارائه و آشنایی")} data-testid="demo-toggle">
               <Icon name="sparkle" />{"" + __analyticsTr("داده نمایشی") + ""}</button>
           )}
-          <button type="button" className="btn btn-ghost icon-btn" aria-label={presenting ? "پایان حالت ارائه" : "حالت ارائه"} data-tooltip={presenting ? "پایان حالت ارائه (Esc)" : "حالت ارائه (تمام‌صفحه)"} aria-pressed={presenting} onClick={togglePresent}><Icon name="present" /></button>
+          <button type="button" className="btn btn-ghost icon-btn" aria-label={__analyticsTr(presenting ? "پایان حالت ارائه" : "حالت ارائه")} data-tooltip={__analyticsTr(presenting ? "پایان حالت ارائه (Esc)" : "حالت ارائه (تمام‌صفحه)")} aria-pressed={presenting} onClick={togglePresent}><Icon name="present" /></button>
           <button type="button" className="btn btn-primary" aria-haspopup="menu" onClick={openExport} data-testid="export-menu"><Icon name="download" />{"" + __analyticsTr("خروجی") + ""}</button>
         </div>
       </header>
@@ -176,7 +180,7 @@ export default function AnalyticsFrame({ title, subtitle, actions, exportKind = 
         </div>
       )}
       <p className="an-print-foot an-print-only">
-        Sentinel Ops · {title} · {a.range.label} ({faRange(a.range.from, a.range.end)}) · {a.cmp ? `مقایسه با ${a.cmp.label}` : "بدون مقایسه"}{a.demo ? " · داده نمایشی" : ""}
+        Sentinel Ops · {title} · {a.range.label} ({localRange(a.range.from, a.range.end, locale)}) · {a.cmp ? `${__analyticsTr("مقایسه با")} ${a.cmp.label}` : __analyticsTr("بدون مقایسه")}{a.demo ? ` · ${__analyticsTr("داده نمایشی")}` : ""}
       </p>
     </div>
   );

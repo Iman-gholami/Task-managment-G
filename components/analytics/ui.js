@@ -1,5 +1,9 @@
 "use client";
 
+import { useI18n as useExtraI18n } from "@/components/I18nProvider";
+
+import useAnalyticsFormat from "@/components/analytics/useAnalyticsFormat";
+
 import { useI18n as useAnalyticsI18n } from "@/components/I18nProvider";
 
 import Link from "next/link";
@@ -63,6 +67,7 @@ export function Sparkline({ values, width = 96, height = 30 }) {
  * statistics and does not colour a rise or fall as good or bad.
  */
 export function Delta({ now, before, kind = "count", label }) {
+  const { change } = useAnalyticsFormat();
   const { t: __analyticsTr } = useAnalyticsI18n();
   const c = change(now, before, kind);
   if (!c) return label ? <span className="muted">{label}</span> : null;
@@ -113,13 +118,14 @@ export function AnEmpty({ icon = "report", title, children, action }) {
 
 /** Failure of one region, in Persian; the rest of the page keeps working. */
 export function AnError({ error, onRetry }) {
+  const { t: __extraTr } = useExtraI18n();
   const { t: __analyticsTr } = useAnalyticsI18n();
   const status = error?.status ?? 0;
   const e = error?.kind === "network"
-    ? { icon: "offline", title: "اتصال به سرور برقرار نشد", body: "اتصال شبکه را بررسی کنید و دوباره تلاش کنید." }
-    : status === 403 ? { icon: "lock", title: "به این بخش دسترسی ندارید", body: "اگر لازم دارید، با مدیر سیستم تماس بگیرید." }
-      : status >= 500 ? { icon: "server", title: "سرور با خطا روبه‌رو شد", body: "داده‌ها سالم است. چند لحظه بعد دوباره تلاش کنید." }
-        : { icon: "alert", title: "داده بارگذاری نشد", body: error?.message || "دوباره تلاش کنید." };
+    ? { icon: "offline", title: __extraTr("اتصال به سرور برقرار نشد"), body: "اتصال شبکه را بررسی کنید و دوباره تلاش کنید." }
+    : status === 403 ? { icon: "lock", title: __extraTr("به این بخش دسترسی ندارید"), body: "اگر لازم دارید، با مدیر سیستم تماس بگیرید." }
+      : status >= 500 ? { icon: "server", title: __extraTr("سرور با خطا روبه‌رو شد"), body: "داده‌ها سالم است. چند لحظه بعد دوباره تلاش کنید." }
+        : { icon: "alert", title: __extraTr("داده بارگذاری نشد"), body: error?.message || "دوباره تلاش کنید." };
   return (
     <div className="empty danger" role="alert">
       <div className="glyph" aria-hidden="true"><Icon name={e.icon} /></div>
@@ -199,7 +205,7 @@ export function ChartPanel({ title, question, meta, build, height = 260, table, 
  * the reader chooses, not a ranking. columns: [{ key, label, kind?, value(row), render?(row), sort?, title? }].
  */
 export function DataTable({ columns, rows, rowKey = (r, i) => r.id ?? i, onRowClick, rowHref, maxHeight, dense, empty, caption, testId }) {
-  const { t: __analyticsTr } = useAnalyticsI18n();
+  const { t: __analyticsTr, locale } = useAnalyticsI18n();
   const [sort, setSort] = useState(null);
   const sorted = useMemo(() => {
     if (!sort) return rows;
@@ -245,7 +251,7 @@ export function DataTable({ columns, rows, rowKey = (r, i) => r.id ?? i, onRowCl
                 {columns.map((c, j) => {
                   const v = c.value(r);
                   const num = c.kind && c.kind !== "text";
-                  const content = c.render ? c.render(r) : num ? (isNum(v) ? fmtBy(c.kind)(v) : <span className="muted">—</span>) : (v ?? <span className="muted">—</span>);
+                  const content = c.render ? c.render(r) : num ? (isNum(v) ? fmtBy(c.kind, locale)(v) : <span className="muted">—</span>) : (v ?? <span className="muted">—</span>);
                   return (
                     <td key={c.key} className={`${num ? "n" : ""} ${j === 0 ? "title" : ""} ${num && v === 0 ? "zero" : ""}`}>
                       {j === 0 && link ? <Link href={link}>{content}</Link> : content}

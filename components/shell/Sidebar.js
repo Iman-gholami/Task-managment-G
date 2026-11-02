@@ -5,7 +5,6 @@ import { useI18n as useSharedI18n } from "@/components/I18nProvider";
 import Link from "next/link";
 import { useApp } from "@/components/AppProvider";
 import Icon from "@/components/ui/Icon";
-import { ROLE_LABELS } from "@/lib/roles";
 import { initials } from "@/lib/format";
 import { useI18n } from "@/components/I18nProvider";
 
@@ -17,7 +16,7 @@ const isOn = (path, prefix) => path === prefix || path.startsWith(prefix + "/");
  */
 export default function Sidebar({ groups, path, collapsed, inert, onProfile, onBrand }) {
   const { t: __sharedTr } = useSharedI18n();
-  const { t, locale } = useI18n();
+  const { t, locale, role, team } = useI18n();
   const { me } = useApp();
   const tip = (label) => (collapsed ? { "data-tooltip": label, "data-tooltip-side": "right" } : {});
 
@@ -76,13 +75,13 @@ export default function Sidebar({ groups, path, collapsed, inert, onProfile, onB
           onClick={(e) => onProfile(e.currentTarget)}
           aria-haspopup="menu"
           aria-label={locale === "fa" ? `منوی حساب ${me.name}` : `Account menu for ${me.name}`}
-          title={`${t(ROLE_LABELS[me.role])} · ${me.team}`}
+          title={`${role(me.role)} · ${team(me.team)}`}
           {...tip(me.name)}
         >
           <span className="profile-avatar" aria-hidden="true">{initials(me.name).slice(0, 2)}</span>
           <span className="profile-meta">
             <b>{me.name}</b>
-            <small>{t(ROLE_LABELS[me.role])}</small>
+            <small>{role(me.role)}</small>
           </span>
           <Icon name="sort" />
         </button>

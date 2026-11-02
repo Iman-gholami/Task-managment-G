@@ -10,14 +10,14 @@ import { useAnalytics } from "@/components/analytics/AnalyticsContext";
 import ProvincePicker from "@/components/ui/ProvincePicker";
 import { Drawer } from "@/components/analytics/ui";
 import Icon from "@/components/ui/Icon";
-import { WEEKDAYS_SHORT, addDays, faDate, faDigits, faRange, fromJalali, jalaliMonthLength, toJalali, weekdayIndex } from "@/lib/analytics/calendar";
+import { WEEKDAYS_SHORT, addDays, localDate, localRange, fromJalali, jalaliMonthLength, toJalali, weekdayIndex } from "@/lib/analytics/calendar";
 import { ADVANCED_FILTERS, activeDataFilters } from "@/lib/analytics/filters";
 import { CX_FA, GROUPS, LEVELS, PRIO_FA, PRIO_KEYS, QUAL_FA, QUAL_KEYS, ROLE_FA, SHIFT_FA, ROSTER_KEYS } from "@/lib/analytics/labels";
 import { COMPARISONS, GRANULARITIES, PRESETS, PRESET_LABEL, monthTitle } from "@/lib/analytics/periods";
 
 /** Month grid on the Jalali calendar for choosing a custom range. Saturday first; days after `max` are disabled. */
 function RangeCalendar({ from, to, max, onApply, onCancel }) {
-  const { t: __analyticsTr, dir } = useAnalyticsI18n();
+  const { t: __analyticsTr, dir, locale, number } = useAnalyticsI18n();
   const start = toJalali(from || max);
   const [view, setView] = useState({ jy: start.jy, jm: start.jm });
   const [a, setA] = useState(from || "");
@@ -37,11 +37,11 @@ function RangeCalendar({ from, to, max, onApply, onCancel }) {
     <div className="an-cal" dir={dir}>
       <div className="an-cal-head">
         <button type="button" className="btn btn-ghost icon-btn btn-sm" aria-label={__analyticsTr("ماه قبل")} onClick={() => step(-1)}><Icon name="chev" /></button>
-        <b>{monthTitle(view.jy, view.jm)}</b>
+        <b>{monthTitle(view.jy, view.jm, locale)}</b>
         <button type="button" className="btn btn-ghost icon-btn btn-sm" aria-label={__analyticsTr("ماه بعد")} onClick={() => step(1)} disabled={fromJalali(view.jy, view.jm, days) >= max}><Icon name="left" /></button>
       </div>
-      <div className="an-cal-grid" role="grid" aria-label={monthTitle(view.jy, view.jm)}>
-        {WEEKDAYS_SHORT.map((d) => <span key={d} className="an-cal-dow" aria-hidden="true">{d}</span>)}
+      <div className="an-cal-grid" role="grid" aria-label={monthTitle(view.jy, view.jm, locale)}>
+        {(locale === "fa" ? WEEKDAYS_SHORT : ["Sa", "Su", "Mo", "Tu", "We", "Th", "Fr"]).map((d) => <span key={d} className="an-cal-dow" aria-hidden="true">{d}</span>)}
         {Array.from({ length: lead }, (_, i) => <span key={`b${i}`} />)}
         {Array.from({ length: days }, (_, i) => {
           const iso = addDays(first, i);
@@ -54,17 +54,17 @@ function RangeCalendar({ from, to, max, onApply, onCancel }) {
               className={`an-cal-day ${inRange(iso) ? "in" : ""} ${edge ? "edge" : ""} ${iso === max ? "today" : ""}`}
               disabled={off}
               aria-pressed={edge}
-              aria-label={faDate(iso)}
+              aria-label={localDate(iso, locale)}
               onClick={() => pick(iso)}
               onMouseEnter={() => setHover(iso)}
             >
-              {faDigits(i + 1)}
+              {number(i + 1)}
             </button>
           );
         })}
       </div>
       <div className="an-cal-foot">
-        <span className="muted">{a ? (b ? faRange(a, b) : `از ${faDate(a)} — روز پایان را انتخاب کنید`) : "روز شروع را انتخاب کنید"}</span>
+        <span className="muted">{a ? (b ? localRange(a, b, locale) : locale === "fa" ? `از ${localDate(a, locale)} — روز پایان را انتخاب کنید` : `From ${localDate(a, locale)} — select an end date`) : __analyticsTr("روز شروع را انتخاب کنید")}</span>
         <span className="row">
           <button type="button" className="btn btn-ghost btn-sm" onClick={onCancel}>{"" + __analyticsTr("انصراف") + ""}</button>
           <button type="button" className="btn btn-primary btn-sm" disabled={!a || !b} onClick={() => onApply(a, b)}>{"" + __analyticsTr("اعمال") + ""}</button>
@@ -88,7 +88,7 @@ function PeriodMenu({ close, filters, setFilters, today }) {
     <div dir={dir} className="an-period-menu" role="group" aria-label={__analyticsTr("بازه زمانی")}>
       {PRESETS.filter(([k]) => k !== "custom").map(([k, label]) => (
         <button key={k} type="button" aria-pressed={filters.p === k} className={`mi ${filters.p === k ? "checked" : ""}`} onClick={() => { setFilters({ p: k }); close(); }}>
-          {label}
+          {__analyticsTr(label)}
           {filters.p === k && <Icon name="check" className="i mi-check" />}
         </button>
       ))}
@@ -117,7 +117,7 @@ function MoreFilters({ onClose }) {
   return (
     <Drawer
       title={__analyticsTr("فیلترهای بیشتر")}
-      subtitle="این فیلترها همه نمودارها، جدول‌ها و خروجی‌ها را محدود می‌کنند."
+      subtitle={__analyticsTr("این فیلترها همه نمودارها، جدول‌ها و خروجی‌ها را محدود می‌کنند.")}
       onClose={onClose}
       width={380}
       footer={
@@ -132,10 +132,10 @@ function MoreFilters({ onClose }) {
       <div className="stack">
         {ADVANCED_FILTERS.map((k) => (
           <div key={k} className="field">
-            <label htmlFor={`f-${k}`}>{ADV_LABEL[k]} {ADV_NOTE[k] && <span className="muted small">({ADV_NOTE[k]})</span>}</label>
+            <label htmlFor={`f-${k}`}>{__analyticsTr(ADV_LABEL[k])} {ADV_NOTE[k] && <span className="muted small">({__analyticsTr(ADV_NOTE[k])})</span>}</label>
             <select id={`f-${k}`} className={`input ${draft[k] ? "is-set" : ""}`} value={draft[k]} onChange={(e) => setDraft((d) => ({ ...d, [k]: e.target.value }))}>
               <option value="">{"" + __analyticsTr("همه") + ""}</option>
-              {ADV_OPTIONS[k].map(([v, l]) => <option key={v} value={v}>{l}</option>)}
+              {ADV_OPTIONS[k].map(([v, l]) => <option key={v} value={v}>{__analyticsTr(l)}</option>)}
             </select>
           </div>
         ))}
@@ -147,7 +147,7 @@ function MoreFilters({ onClose }) {
 /** One row of filters above everything they scope. Sticky while the page scrolls. */
 export default function FilterBar({ hideTeam = false }) {
   const { t: __sharedTr } = useSharedI18n();
-  const { t: __analyticsTr, dir } = useAnalyticsI18n();
+  const { t: __analyticsTr, dir, locale, number, team: teamText } = useAnalyticsI18n();
   const { openPopover } = useApp();
   const { filters, setFilters, range, cmp, facts, manager, today } = useAnalytics();
   const [more, setMore] = useState(false);
@@ -168,15 +168,15 @@ export default function FilterBar({ hideTeam = false }) {
         data-testid="period"
       >
         <Icon name="cal" />
-        <span className="an-period-label">{PRESET_LABEL[range.preset]}</span>
-        <span className="muted">{faRange(range.from, range.end)}</span>
+        <span className="an-period-label">{__analyticsTr(PRESET_LABEL[range.preset])}</span>
+        <span className="muted">{localRange(range.from, range.end, locale)}</span>
         <Icon name="down" size="sm" />
       </button>
 
       <label className="an-select">
         <span>{"" + __analyticsTr("مقایسه با") + ""}</span>
         <select className="input" value={filters.cmp} onChange={(e) => setFilters({ cmp: e.target.value })} aria-label={__analyticsTr("مقایسه با")}>
-          {COMPARISONS.map(([k, l]) => <option key={k} value={k}>{l}</option>)}
+          {COMPARISONS.map(([k, l]) => <option key={k} value={k}>{__analyticsTr(l)}</option>)}
         </select>
       </label>
 
@@ -185,7 +185,7 @@ export default function FilterBar({ hideTeam = false }) {
           <span>{"" + __analyticsTr("تیم") + ""}</span>
           <select className={`input ${filters.team ? "is-set" : ""}`} value={filters.team} onChange={(e) => setFilters({ team: e.target.value })} aria-label={__analyticsTr("تیم")}>
             <option value="">{"" + __analyticsTr("همه تیم‌ها") + ""}</option>
-            {groups.map((g) => <option key={g.key} value={g.key}>{g.fa}</option>)}
+            {groups.map((g) => <option key={g.key} value={g.key}>{teamText(g.name)}</option>)}
           </select>
         </label>
       )}
@@ -208,27 +208,27 @@ export default function FilterBar({ hideTeam = false }) {
       <label className="an-select">
         <span>{"" + __analyticsTr("واحد زمانی") + ""}</span>
         <select className="input" value={filters.g} onChange={(e) => setFilters({ g: e.target.value })} aria-label={__analyticsTr("واحد زمانی نمودارها")}>
-          {GRANULARITIES.map(([k, l]) => <option key={k} value={k}>{l}</option>)}
+          {GRANULARITIES.map(([k, l]) => <option key={k} value={k}>{__analyticsTr(l)}</option>)}
         </select>
       </label>
 
       {manager && (
         <button type="button" className={`btn btn-ghost ${adv.length ? "is-on" : ""}`} onClick={() => setMore(true)} aria-haspopup="dialog">
-          <Icon name="filter" />{"" + __analyticsTr("فیلترهای بیشتر") + ""}{adv.length > 0 && <span className="an-count">{faDigits(adv.length)}</span>}
+          <Icon name="filter" />{__analyticsTr("فیلترهای بیشتر")}{adv.length > 0 && <span className="an-count">{number(adv.length)}</span>}
         </button>
       )}
       {adv.map((k) => (
         <span key={k} className="an-chip">
-          {ADV_LABEL[k]}: {optionLabel(k, filters[k])}
-          <button type="button" aria-label={`حذف فیلتر ${ADV_LABEL[k]}`} onClick={() => setFilters({ [k]: "" })}><Icon name="x" size="sm" /></button>
+          {__analyticsTr(ADV_LABEL[k])}: {__analyticsTr(optionLabel(k, filters[k]))}
+          <button type="button" aria-label={locale === "fa" ? `حذف فیلتر ${ADV_LABEL[k]}` : `Remove ${__analyticsTr(ADV_LABEL[k])} filter`} onClick={() => setFilters({ [k]: "" })}><Icon name="x" size="sm" /></button>
         </span>
       ))}
       {active > 0 && (
         <button type="button" className="btn btn-ghost btn-sm" onClick={() => setFilters({ team: "", level: "", province: "", role: "", prio: "", cx: "", q: "", shift: "" })}>
-          <Icon name="x" />{"" + __analyticsTr("پاک کردن فیلترها (") + ""}{faDigits(active)})
+          <Icon name="x" />{__analyticsTr("پاک کردن فیلترها (")}{number(active)})
         </button>
       )}
-      <span className="an-filters-meta">{cmp ? `مقایسه: ${cmp.label}` : "بدون مقایسه"}</span>
+      <span className="an-filters-meta">{cmp ? `${locale === "fa" ? "مقایسه" : "Comparison"}: ${cmp.label}` : __analyticsTr("بدون مقایسه")}</span>
       {more && <MoreFilters onClose={() => setMore(false)} />}
     </div>
   );

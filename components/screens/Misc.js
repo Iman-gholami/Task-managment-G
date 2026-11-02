@@ -6,7 +6,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import { api, useApp } from "@/components/AppProvider";
-import { ROLE_LABELS, TEAMS } from "@/lib/roles";
+import { TEAMS } from "@/lib/roles";
 import Icon from "@/components/ui/Icon";
 import { Field, FormAlert } from "@/components/ui/Field";
 import { PageHeader, Panel } from "@/components/ui/layout";
@@ -33,7 +33,7 @@ const PERMISSIONS = [
 ];
 
 export function Admin() {
-  const { t: __sharedTr } = useSharedI18n();
+  const { t: __sharedTr, locale, role: roleText, team: teamText, province: provinceText } = useSharedI18n();
   const { members } = useApp();
   const [q, setQ] = useState("");
   const [role, setRole] = useState("");
@@ -46,7 +46,7 @@ export function Admin() {
     <div className="page">
       <PageHeader
         title={__sharedTr("Users & roles")}
-        meta={[plural(members.length, "active user"), "Access is granted by role"]}
+        meta={[locale === "fa" ? `${members.length} کاربر فعال` : plural(members.length, "active user"), __sharedTr("Access is granted by role")]}
         actions={<Link className="btn btn-secondary" href="/team"><Icon name="team" />{"" + __sharedTr("Manage members") + ""}</Link>}
       />
       <div className="stack-lg">
@@ -55,14 +55,14 @@ export function Admin() {
             <div className="search"><Icon name="search" /><input type="search" className="input" placeholder={__sharedTr("Search name or email")} aria-label={__sharedTr("Search users")} value={q} onChange={(e) => setQ(e.target.value)} /></div>
             <select className={`input ${role ? "is-set" : ""}`} style={{ width: 180 }} value={role} onChange={(e) => setRole(e.target.value)} aria-label={__sharedTr("Role")}>
               <option value="">{"" + __sharedTr("All roles") + ""}</option>
-              {ROLES.map((r) => <option key={r} value={r}>{ROLE_LABELS[r]}</option>)}
+              {ROLES.map((r) => <option key={r} value={r}>{roleText(r)}</option>)}
             </select>
-            <select className={`input ${team ? "is-set" : ""}`} style={{ width: 200 }} value={team} onChange={(e) => setTeam(e.target.value)} aria-label="Team">
+            <select className={`input ${team ? "is-set" : ""}`} style={{ width: 200 }} value={team} onChange={(e) => setTeam(e.target.value)} aria-label={__sharedTr("Team")}>
               <option value="">{"" + __sharedTr("All teams") + ""}</option>
-              {teams.map((t) => <option key={t}>{t}</option>)}
+              {teams.map((t) => <option key={t} value={t}>{teamText(t)}</option>)}
             </select>
             {active > 0 && <button type="button" className="btn btn-ghost btn-sm" onClick={() => { setQ(""); setRole(""); setTeam(""); }}><Icon name="x" />{"" + __sharedTr("Reset filters (") + ""}{active})</button>}
-            <div className="end"><span className="result-count">{list.length === members.length ? plural(list.length, "user") : `${list.length} of ${members.length}`}</span></div>
+            <div className="end"><span className="result-count">{locale === "fa" ? `${list.length} از ${members.length} کاربر` : list.length === members.length ? plural(list.length, "user") : `${list.length} of ${members.length}`}</span></div>
           </div>
           <div className="panel">
             {list.length === 0 ? <EmptyState compact icon="search" title={__sharedTr("No users match")}>{"" + __sharedTr("Try another name, role or team.") + ""}</EmptyState> : (
@@ -73,9 +73,9 @@ export function Admin() {
                     {list.map((p) => (
                       <tr key={p.id}>
                         <td className="title"><Who id={p.id} /></td>
-                        <td>{ROLE_LABELS[p.role]}</td>
-                        <td>{p.team}</td><td>{p.province || "تعیین‌نشده"}</td>
-                        <td>{p.assist ?? <span className="muted">—</span>}</td>
+                        <td>{roleText(p.role)}</td>
+                        <td>{teamText(p.team)}</td><td>{p.province ? provinceText(p.province) : __sharedTr("تعیین‌نشده")}</td>
+                        <td>{p.assist ? teamText(p.assist) : <span className="muted">—</span>}</td>
                         <td className="muted">{p.email}</td>
                         <td><span className="badge dot success">{"" + __sharedTr("Active") + ""}</span></td>
                       </tr>
@@ -90,13 +90,13 @@ export function Admin() {
         <Panel title={__sharedTr("Role permissions")} meta={__sharedTr("Enforced by the server; the interface only offers allowed actions")}>
           <div className="table-wrap">
             <table className="dt hover perm">
-              <thead><tr><th scope="col">{"" + __sharedTr("Capability") + ""}</th>{ROLES.map((r) => <th key={r} scope="col">{ROLE_LABELS[r]}</th>)}</tr></thead>
+              <thead><tr><th scope="col">{"" + __sharedTr("Capability") + ""}</th>{ROLES.map((r) => <th key={r} scope="col">{roleText(r)}</th>)}</tr></thead>
               <tbody>
                 {PERMISSIONS.map(([cap, ...cells]) => (
                   <tr key={cap}>
-                    <th scope="row" className="title">{cap}</th>
+                    <th scope="row" className="title">{__sharedTr(cap)}</th>
                     {cells.map((c, i) => (
-                      <td key={i}>{c ? <span className="perm-yes"><Icon name="check" size="sm" />{c}</span> : <span className="muted" aria-label={__sharedTr("Not allowed")}>—</span>}</td>
+                      <td key={i}>{c ? <span className="perm-yes"><Icon name="check" size="sm" />{__sharedTr(c)}</span> : <span className="muted" aria-label={__sharedTr("Not allowed")}>—</span>}</td>
                     ))}
                   </tr>
                 ))}

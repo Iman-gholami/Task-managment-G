@@ -8,10 +8,9 @@ import { Field, FormAlert } from "@/components/ui/Field";
 import { PageHeader, Panel } from "@/components/ui/layout";
 import { Avatar } from "@/components/ui/indicators";
 import { ThemeChooser } from "@/components/ThemePicker";
-import { ROLE_LABELS } from "@/lib/roles";
 
 export default function Account() {
-  const { t: __uiTr } = useUiI18n();
+  const { t: __uiTr, role: roleText, team: teamText } = useUiI18n();
   const { me, toast, theme, setTheme } = useApp();
   const [form, setForm] = useState({ current: "", next: "", confirm: "" });
   const [errors, setErrors] = useState({});
@@ -43,13 +42,13 @@ export default function Account() {
 
   return (
     <div className="page narrow">
-      <PageHeader leading={<Avatar id={me.id} size="lg" />} title={me.name} meta={[ROLE_LABELS[me.role], me.team]} />
+      <PageHeader leading={<Avatar id={me.id} size="lg" />} title={me.name} meta={[roleText(me.role), teamText(me.team)]} />
       <div className="stack-lg">
         <Panel title={__uiTr("Profile")} meta={__uiTr("Your role and team are managed by your manager")}>
           <dl className="kv panel-body">
             <dt>{"" + __uiTr("Email") + ""}</dt><dd>{me.email}</dd>
-            <dt>{"" + __uiTr("Role") + ""}</dt><dd>{ROLE_LABELS[me.role]}</dd>
-            <dt>{"" + __uiTr("Primary team") + ""}</dt><dd>{me.team}</dd>
+            <dt>{"" + __uiTr("Role") + ""}</dt><dd>{roleText(me.role)}</dd>
+            <dt>{"" + __uiTr("Primary team") + ""}</dt><dd>{teamText(me.team)}</dd>
           </dl>
         </Panel>
         <Panel title={__uiTr("Appearance")} meta={__uiTr("Saved on this device · also in the top bar")}>

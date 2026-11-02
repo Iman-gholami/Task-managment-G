@@ -1,5 +1,9 @@
 "use client";
 
+import { useI18n as useExtraI18n } from "@/components/I18nProvider";
+
+import useAnalyticsFormat from "@/components/analytics/useAnalyticsFormat";
+
 import { useI18n as useAnalyticsI18n } from "@/components/I18nProvider";
 
 import { useCallback, useMemo } from "react";
@@ -29,6 +33,8 @@ export default function Trends() {
 }
 
 function TrendsBody() {
+  const { t: __extraTr } = useExtraI18n();
+  const { fmtNum } = useAnalyticsFormat();
   const { t: __analyticsTr } = useAnalyticsI18n();
   const a = useAnalytics();
   const { view, range, cmp, gran, params, setParam, today } = a;
@@ -42,8 +48,8 @@ function TrendsBody() {
   const by = byOptions.some((b) => b.value === params.get("by")) ? params.get("by") : "all";
 
   const m = useMemo(() => {
-    const b = buckets(range.from, range.end, gran);
-    const pb = cmp ? buckets(cmp.from, cmp.to, gran) : [];
+    const b = buckets(range.from, range.end, gran, a.locale);
+    const pb = cmp ? buckets(cmp.from, cmp.to, gran, a.locale) : [];
     const parts = by === "team"
       ? groups.map((g) => ({ name: g.fa, ids: idsOf(view.people.filter((p) => p.group === g.name)) }))
       : by === "level" ? levels.map((l) => ({ name: l, ids: idsOf(view.people.filter((p) => p.level === l)) }))
@@ -67,7 +73,7 @@ function TrendsBody() {
     prev: m.prev ? { name: `${def.label} — ${cmp.label}`, data: m.prev, labels: m.pb.map((x) => x.label) } : null,
   }), [m, by, def, asBars, cmp]);
   const backlog = useCallback((t) => lineOption(t, {
-    labels: m.b.map((x) => x.label), series: [{ name: "صف باز در پایان بازه", data: m.backlog, color: t["cat-2"], area: true }],
+    labels: m.b.map((x) => x.label), series: [{ name: __extraTr("صف باز در پایان بازه"), data: m.backlog, color: t["cat-2"], area: true }],
   }), [m]);
 
   const cal = useMemo(() => {
@@ -109,10 +115,10 @@ function TrendsBody() {
 
       <div className="an-row">
         <ChartPanel title={__analyticsTr("صف کار باز در طول زمان")} question="کار انجام‌نشده (همه وضعیت‌های باز) در پایان هر بازه؛ از تاریخ ایجاد و بسته‌شدن تسک‌ها بازسازی شده." build={backlog} height={240}
-          table={{ columns: [{ key: "b", label: __analyticsTr("بازه"), value: (r) => r.label }, { key: "v", label: "صف باز", kind: "count", value: (r) => r.v }], rows: m.b.map((x, i) => ({ id: x.from, label: x.label, v: m.backlog[i] })) }}
+          table={{ columns: [{ key: "b", label: __analyticsTr("بازه"), value: (r) => r.label }, { key: "v", label: __extraTr("صف باز"), kind: "count", value: (r) => r.v }], rows: m.b.map((x, i) => ({ id: x.from, label: x.label, v: m.backlog[i] })) }}
           fileName="backlog-over-time" />
         <ChartPanel title={`میانگین «${def.label}» در روزهای هفته`} question="کدام روزهای هفته پرکارترند؟ (میانگین در بازه انتخاب‌شده)" build={weekday} height={240}
-          table={{ columns: [{ key: "d", label: "روز", value: (r) => r.label }, { key: "v", label: "میانگین", kind: "avg", value: (r) => r.v }], rows: WEEKDAYS.map((label, i) => ({ id: i, label, v: m.weekday[i] })) }}
+          table={{ columns: [{ key: "d", label: __extraTr("روز"), value: (r) => r.label }, { key: "v", label: __extraTr("میانگین"), kind: "avg", value: (r) => r.v }], rows: WEEKDAYS.map((label, i) => ({ id: i, label, v: m.weekday[i] })) }}
           fileName="weekday-average" />
       </div>
 
@@ -121,7 +127,7 @@ function TrendsBody() {
         question="ماه‌ها و روزهای پرکار و کم‌کار در یک نگاه؛ هر خانه یک روز است."
         build={calendar}
         height={7 * cal.cell + 76}
-        table={{ columns: [{ key: "d", label: "روز", value: (r) => r.label }, { key: "v", label: __analyticsTr("تسک تکمیل‌شده"), kind: "count", value: (r) => r.value }], rows: cal.cells.filter((c) => c.value).map((c) => ({ ...c, id: c.date })) }}
+        table={{ columns: [{ key: "d", label: __extraTr("روز"), value: (r) => r.label }, { key: "v", label: __analyticsTr("تسک تکمیل‌شده"), kind: "count", value: (r) => r.value }], rows: cal.cells.filter((c) => c.value).map((c) => ({ ...c, id: c.date })) }}
         fileName="daily-calendar"
         footer={<span>{"" + __analyticsTr("جمع ۱۲ ماه:") + " "}{fmtNum(m.year.reduce((s, [, v]) => s + (v || 0), 0), 0)}{" " + __analyticsTr("تسک") + ""}</span>}
       />

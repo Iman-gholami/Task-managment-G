@@ -52,7 +52,7 @@ const PERSIAN_CAL = new Intl.DateTimeFormat("fa-IR-u-ca-persian", {
 const FA_NUM = new Intl.NumberFormat("fa-IR", { useGrouping: false });
 
 const dateObj = (iso) => new Date(`${iso}T00:00:00Z`);
-const longFa = (iso) => (iso ? PERSIAN_LONG.format(dateObj(iso)).replace(",", "،") : "—");
+const longFa = (iso, locale = "fa") => (iso ? (locale === "fa" ? PERSIAN_LONG.format(dateObj(iso)).replace(",", "،") : new Intl.DateTimeFormat("en-US-u-ca-persian", { weekday: "long", year: "numeric", month: "long", day: "numeric", timeZone: "UTC" }).format(dateObj(iso))) : "—");
 const faNum = (n) => FA_NUM.format(n);
 const toEnglishDigits = (value) => String(value).replace(/[۰-۹]/g, (d) => "۰۱۲۳۴۵۶۷۸۹".indexOf(d));
 
@@ -87,7 +87,7 @@ function monthCells(monthStart) {
 }
 
 export default function ShiftChanges() {
-  const { t: __shiftTr, dir } = useShiftI18n();
+  const { t: __shiftTr, dir, locale, number, team: teamText } = useShiftI18n();
   const { me, members, toast } = useApp();
   const manager = isManager(me);
   const analysts = useMemo(
@@ -192,7 +192,7 @@ export default function ShiftChanges() {
             <h1>{"" + __shiftTr("تغییر شیفت") + ""}</h1>
             <div className="page-meta">
               <span>{"" + __shiftTr("جابه‌جایی شیفت بین کارشناسان") + ""}</span>
-              <span>{faNum(openCount)}{" " + __shiftTr("درخواست در انتظار") + ""}</span>
+              <span>{number(openCount)} {__shiftTr("درخواست در انتظار")}</span>
             </div>
           </div>
         </div>
@@ -209,9 +209,9 @@ export default function ShiftChanges() {
               <span className="meta">{"" + __shiftTr("فقط روزهایی که واقعاً شیفت دارید قابل انتخاب هستند.") + ""}</span>
             </div>
             <ol className={styles.flow} aria-label={__shiftTr("مراحل تأیید")}>
-              <li><span>۱</span>{"" + __shiftTr("ثبت درخواست") + ""}</li>
-              <li><span>۲</span>{"" + __shiftTr("تأیید کارشناس") + ""}</li>
-              <li><span>۳</span>{"" + __shiftTr("تأیید مدیر") + ""}</li>
+              <li><span>{number(1)}</span>{__shiftTr("ثبت درخواست")}</li>
+              <li><span>{number(2)}</span>{__shiftTr("تأیید کارشناس")}</li>
+              <li><span>{number(3)}</span>{__shiftTr("تأیید مدیر")}</li>
             </ol>
           </div>
 
@@ -228,7 +228,7 @@ export default function ShiftChanges() {
             <label className="field">
               <span className={styles.label}>{"" + __shiftTr("کارشناس مقصد") + ""}</span>
               <select className="input" value={form.targetId} onChange={(e) => changeTarget(e.target.value)}>
-                {targets.map((a) => <option value={a.id} key={a.id}>{a.name} · {a.team}</option>)}
+                {targets.map((a) => <option value={a.id} key={a.id}>{a.name} · {teamText(a.team)}</option>)}
               </select>
             </label>
 
@@ -269,8 +269,8 @@ export default function ShiftChanges() {
 
       <section className={`panel ${styles.requestsCard}`}>
         <div className="panel-head">
-          <h2>{manager ? "درخواست‌های تیم" : "درخواست‌های من"}</h2>
-          <span className="meta">{faNum(requests.length)}{" " + __shiftTr("درخواست") + ""}</span>
+          <h2>{__shiftTr(manager ? "درخواست‌های تیم" : "درخواست‌های من")}</h2>
+          <span className="meta">{number(requests.length)} {__shiftTr("درخواست")}</span>
           <div className="right">
             <Segmented
               kind="tabs"
@@ -278,9 +278,9 @@ export default function ShiftChanges() {
               value={filter}
               onChange={setFilter}
               options={[
-                { value: "open", label: "در انتظار", count: faNum(openCount) },
-                { value: "resolved", label: "نهایی", count: faNum(resolvedCount) },
-                { value: "all", label: __shiftTr("همه"), count: faNum(requests.length) },
+                { value: "open", label: __shiftTr("در انتظار"), count: number(openCount) },
+                { value: "resolved", label: __shiftTr("نهایی"), count: number(resolvedCount) },
+                { value: "all", label: __shiftTr("همه"), count: number(requests.length) },
               ]}
             />
           </div>
@@ -301,8 +301,8 @@ export default function ShiftChanges() {
           {!loading && !error && visibleRequests.length === 0 && (
             <div className="empty compact">
               <span className="glyph"><Icon name="swap" /></span>
-              <h3>{filter === "open" ? "درخواست بازی وجود ندارد" : "درخواستی در این بخش نیست"}</h3>
-              <p>{me.keepsShiftLog && filter === "open" ? "از فرم بالا یک درخواست جدید ثبت کنید." : "فیلتر دیگری را انتخاب کنید."}</p>
+              <h3>{__shiftTr(filter === "open" ? "درخواست بازی وجود ندارد" : "درخواستی در این بخش نیست")}</h3>
+              <p>{__shiftTr(me.keepsShiftLog && filter === "open" ? "از فرم بالا یک درخواست جدید ثبت کنید." : "فیلتر دیگری را انتخاب کنید.")}</p>
             </div>
           )}
 
@@ -313,7 +313,7 @@ export default function ShiftChanges() {
                   <Who id={r.requesterId} />
                   <span className={styles.peopleArrow} aria-label={__shiftTr("جابه‌جایی با")}><Icon name="swap" size="sm" /></span>
                   <Who id={r.targetId} />
-                  <span className={`badge dot ${STATUS_TONE[r.status] || ""}`}>{STATUS_LABEL[r.status] || r.status}</span>
+                  <span className={`badge dot ${STATUS_TONE[r.status] || ""}`}>{__shiftTr(STATUS_LABEL[r.status] || r.status)}</span>
                 </div>
 
                 <div className={styles.swapLine}>
@@ -337,7 +337,7 @@ export default function ShiftChanges() {
                   <button className="btn btn-secondary btn-sm" disabled={busy} onClick={() => act(r.id, "reject")}>{"" + __shiftTr("رد") + ""}</button>
                   <button className="btn btn-primary btn-sm" disabled={busy} onClick={() => act(r.id, "approve")}>
                     <Icon name="check" />
-                    {r.status === "pending_target" ? "تأیید و اعمال" : __shiftTr("اعمال")}
+                    {__shiftTr(r.status === "pending_target" ? "تأیید و اعمال" : "اعمال")}
                   </button>
                 </>}
               </div>
@@ -350,6 +350,7 @@ export default function ShiftChanges() {
 }
 
 function ShiftDateField({ label, rows, value, open, onToggle, onChange }) {
+  const { t, locale } = useShiftI18n();
   const rowMap = useMemo(() => new Map(rows.map((row) => [row.date, row])), [rows]);
   const selectedRow = rowMap.get(value);
   const [monthStart, setMonthStart] = useState(() => firstOfJalaliMonth(value || rows[0]?.date || TODAY));
@@ -364,8 +365,8 @@ function ShiftDateField({ label, rows, value, open, onToggle, onChange }) {
       <span className={styles.label}>{label}</span>
       <button type="button" className={`input ${styles.dateTrigger}`} onClick={onToggle} disabled={!rows.length} aria-expanded={open} aria-haspopup="dialog">
         <Icon name="cal" />
-        <span>{value ? longFa(value) : "شیفت آینده‌ای ثبت نشده"}</span>
-        {selectedRow && <small data-shift={selectedRow.shiftType}>{SHIFT_FA[selectedRow.shiftType] || selectedRow.shiftType}</small>}
+        <span>{value ? longFa(value, locale) : t("شیفت آینده‌ای ثبت نشده")}</span>
+        {selectedRow && <small data-shift={selectedRow.shiftType}>{t(SHIFT_FA[selectedRow.shiftType] || selectedRow.shiftType)}</small>}
       </button>
       {open && rows.length > 0 && (
         <MiniShiftCalendar
@@ -381,7 +382,7 @@ function ShiftDateField({ label, rows, value, open, onToggle, onChange }) {
 }
 
 function MiniShiftCalendar({ monthStart, setMonthStart, rows, value, onChange }) {
-  const { t: __shiftTr } = useShiftI18n();
+  const { t: __shiftTr, locale, number } = useShiftI18n();
   const rowMap = useMemo(() => new Map(rows.map((row) => [row.date, row])), [rows]);
   const cells = useMemo(() => monthCells(monthStart), [monthStart]);
   const monthKey = jalaliMonthKey(monthStart);
@@ -391,10 +392,10 @@ function MiniShiftCalendar({ monthStart, setMonthStart, rows, value, onChange })
     <div className={styles.datePopover}>
       <div className={styles.datePopoverHead}>
         <button type="button" className="btn btn-ghost icon-btn btn-sm" onClick={() => setMonthStart(shiftJalaliMonth(monthStart, -1))} aria-label={__shiftTr("ماه قبل")}><Icon name="chev" /></button>
-        <b>{PERSIAN_MONTH.format(dateObj(monthStart))}</b>
+        <b>{locale === "fa" ? PERSIAN_MONTH.format(dateObj(monthStart)) : new Intl.DateTimeFormat("en-US-u-ca-persian", { year: "numeric", month: "long", timeZone: "UTC" }).format(dateObj(monthStart))}</b>
         <button type="button" className="btn btn-ghost icon-btn btn-sm" onClick={() => setMonthStart(shiftJalaliMonth(monthStart, 1))} aria-label={__shiftTr("ماه بعد")}><Icon name="left" /></button>
       </div>
-      <div className={styles.miniWeekdays}>{WEEKDAYS.map((day) => <span key={day}>{day}</span>)}</div>
+      <div className={styles.miniWeekdays}>{(locale === "fa" ? WEEKDAYS : ["Sa", "Su", "Mo", "Tu", "We", "Th", "Fr"]).map((day) => <span key={day}>{day}</span>)}</div>
       <div className={styles.miniGrid}>
         {cells.map((date) => {
           const row = rowMap.get(date);
@@ -409,9 +410,9 @@ function MiniShiftCalendar({ monthStart, setMonthStart, rows, value, onChange })
               data-outside={!currentMonth || undefined}
               disabled={!row || !currentMonth}
               onClick={() => onChange(date)}
-              title={row ? `${longFa(date)} · ${SHIFT_FA[row.shiftType]}` : undefined}
+              title={row ? `${longFa(date, locale)} · ${__shiftTr(SHIFT_FA[row.shiftType])}` : undefined}
             >
-              <span>{faNum(jalaliParts(date).day)}</span>
+              <span>{number(jalaliParts(date).day)}</span>
               {row && currentMonth && <i />}
             </button>
           );
@@ -423,12 +424,13 @@ function MiniShiftCalendar({ monthStart, setMonthStart, rows, value, onChange })
 }
 
 function ShiftInline({ date, type }) {
+  const { t, locale } = useShiftI18n();
   const shift = SHIFT_TYPES[type];
   return (
     <span className={styles.shiftInline} data-shift={type}>
       <i />
-      <b>{longFa(date)}</b>
-      <small>{shift ? `${SHIFT_FA[type] || shift.label} · ${shift.start}–${shift.end}` : "شیفت نامشخص"}</small>
+      <b>{longFa(date, locale)}</b>
+      <small>{shift ? `${t(SHIFT_FA[type] || shift.label)} · ${shift.start}–${shift.end}` : t("شیفت نامشخص")}</small>
     </span>
   );
 }

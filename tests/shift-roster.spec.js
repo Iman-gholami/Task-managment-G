@@ -5,6 +5,10 @@ const ExcelJS = require("exceljs");
 const ADMIN = { email: "test-admin@local.invalid", password: "E2E-Only-Admin-2026!" };
 const USER_PASSWORD = "Shift-Roster-2026!";
 
+test.beforeEach(async ({ context, baseURL }) => {
+  await context.addCookies([{ name: "so.locale", value: "fa", url: baseURL }]);
+});
+
 function tehranDate() {
   const parts = new Intl.DateTimeFormat("en-CA", {
     timeZone: "Asia/Tehran", year: "numeric", month: "2-digit", day: "2-digit",
@@ -71,7 +75,7 @@ test("a manager sets all three shifts with one save, including a Design engineer
   // Any scheduled Design engineer on extended duty follows shared SOC cover.
   expect(log.activities.length).toBeGreaterThan(0);
   await page.goto("/shift");
-  await expect(page.getByText(/Shift Log —/)).toBeVisible();
+  await expect(page.getByText(/گزارش شیفت —/)).toBeVisible();
 
   // Re-open the same date and replace work assignments with off/leave,
   // while retaining the unrelated night shift.

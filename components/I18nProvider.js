@@ -3,6 +3,7 @@
 import { useRouter } from "next/navigation";
 import { createContext, useCallback, useContext, useMemo, useState } from "react";
 import { normalizeLocale, translate } from "@/lib/i18n/messages";
+import { provinceLabel, roleLabel, teamLabel } from "@/lib/i18n/labels";
 
 const LocaleContext = createContext(null);
 
@@ -17,7 +18,14 @@ export default function I18nProvider({ initialLocale, children }) {
     setLocale(next);
     router.refresh();
   }, [router]);
-  const value = useMemo(() => ({ locale, dir: locale === "fa" ? "rtl" : "ltr", setLocale: changeLocale, t: (text) => translate(locale, text) }), [locale, changeLocale]);
+  const value = useMemo(() => ({
+    locale, dir: locale === "fa" ? "rtl" : "ltr", setLocale: changeLocale,
+    t: (text) => translate(locale, text),
+    role: (code) => roleLabel(code, locale),
+    team: (name) => teamLabel(name, locale),
+    province: (name) => provinceLabel(name, locale),
+    number: (value, options) => new Intl.NumberFormat(locale === "fa" ? "fa-IR" : "en-US", options).format(value),
+  }), [locale, changeLocale]);
   return <LocaleContext.Provider value={value}>{children}</LocaleContext.Provider>;
 }
 

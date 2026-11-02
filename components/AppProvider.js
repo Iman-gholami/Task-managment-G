@@ -229,7 +229,7 @@ export default function AppProvider({ children, initial }) {
         {toasts.map((t) => (
           <div key={t.id} className="toast" data-tone={t.tone} role={t.tone === "error" ? "alert" : "status"}>
             <span className="t-icon"><Icon name={t.tone === "error" ? "alert" : t.tone === "info" ? "info" : "checkCircle"} /></span>
-            <span>{t.message}</span>
+            <span>{__sharedTr(t.message)}</span>
             <button type="button" className="btn btn-ghost icon-btn btn-sm" aria-label={__sharedTr("Dismiss notification")} onClick={() => dismissToast(t.id)}><Icon name="x" size="sm" /></button>
           </div>
         ))}

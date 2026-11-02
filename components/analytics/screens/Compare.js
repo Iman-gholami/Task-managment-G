@@ -82,11 +82,11 @@ function CompareBody() {
   // Trend: same buckets for people and teams; periods are aligned by position (day 1, week 1…).
   const trend = useMemo(() => {
     if (mode !== "periods") {
-      const b = buckets(range.from, range.end, gran);
+      const b = buckets(range.from, range.end, gran, a.locale);
       return { labels: b.map((x) => x.label), series: data.map((d) => bucketStats(view, d.ids, b).map((x) => x[metric])) };
     }
     const g = gran === "auto" ? "day" : gran;
-    const lists = data.map((d) => buckets(d.range.from, d.range.end, g));
+    const lists = data.map((d) => buckets(d.range.from, d.range.end, g, a.locale));
     const len = Math.max(0, ...lists.map((l) => l.length));
     const unit = { day: "روز", week: "هفته", month: "ماه", season: "فصل", year: "سال" }[g];
     return { labels: Array.from({ length: len }, (_, i) => `${unit} ${faDigits(i + 1)}`), series: lists.map((l) => bucketStats(view, null, l).map((x) => x[metric])) };

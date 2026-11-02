@@ -15,7 +15,7 @@ export default function PeriodSelector({ value = "this", onChange, custom, range
   const invalid = value === "custom" && range?.from && range?.to && range.from > range.to;
   return (
     <div className="period">
-      <Segmented label={__sharedTr("Period")} value={value} onChange={onChange} options={custom ? WITH_CUSTOM : OPTIONS} />
+      <Segmented label={__sharedTr("Period")} value={value} onChange={onChange} options={(custom ? WITH_CUSTOM : OPTIONS).map((option) => ({ ...option, label: __sharedTr(option.label) }))} />
       {custom && value === "custom" && (
         <span className="range">
           <input type="date" className="input" value={range?.from ?? ""} max={range?.to || undefined} onChange={(e) => onRange?.({ ...range, from: e.target.value })} aria-label={__sharedTr("From")} aria-invalid={invalid || undefined} />

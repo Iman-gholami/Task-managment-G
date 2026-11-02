@@ -110,8 +110,8 @@ test.describe("fresh install", () => {
       await dialog.getByLabel("Work email").fill(u.email);
       await dialog.getByLabel("Role").selectOption(u.role);
       await dialog.getByLabel("Primary team").selectOption(u.team);
-      await dialog.getByLabel("استان").fill("قم");
-      await dialog.getByRole("option", { name: "قم", exact: true }).click();
+      await dialog.getByLabel("Province").fill("قم");
+      await dialog.getByRole("option", { name: "Qom", exact: true }).click();
       await dialog.getByLabel("Initial password").fill(PW);
       await dialog.getByRole("button", { name: "Add Member" }).click();
       await expect(dialog).toBeHidden();

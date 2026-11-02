@@ -1,5 +1,9 @@
 "use client";
 
+import { useI18n as useExtraI18n } from "@/components/I18nProvider";
+
+import useAnalyticsFormat from "@/components/analytics/useAnalyticsFormat";
+
 import { useI18n as useAnalyticsI18n } from "@/components/I18nProvider";
 
 import { useCallback, useMemo } from "react";
@@ -37,27 +41,29 @@ export default function Person({ id }) {
 }
 
 function PersonBody({ id }) {
+  const { t: __extraTr } = useExtraI18n();
+  const { fmtPct, fmtDays, fmtNum, fmtInt } = useAnalyticsFormat();
   const { t: __analyticsTr } = useAnalyticsI18n();
   const a = useAnalytics();
   const { range, cmp, gran, setFilters } = a;
   // The profile ignores team/level filters (they would hide the person); task filters still apply.
-  const m = useMemo(() => personModel(a.view.people.some((x) => x.id === id) ? a.view : a.facts, id, range, cmp, gran), [a.view, a.facts, id, range, cmp, gran]);
+  const m = useMemo(() => personModel(a.view.people.some((x) => x.id === id) ? a.view : a.facts, id, range, cmp, gran, a.locale), [a.view, a.facts, id, range, cmp, gran]);
 
   const trend = useCallback((t) => lineOption(t, {
     labels: m.b.map((x) => x.label), partial: m.b.map((x) => x.partial), bars: true,
     series: [{ name: __analyticsTr("تسک تکمیل‌شده"), data: m.bs.map((x) => x.completed) }],
-    prev: cmp ? { name: "دوره مقایسه", data: m.pbs.map((x) => x.completed), labels: m.pb.map((x) => x.label) } : null,
+    prev: cmp ? { name: __extraTr("دوره مقایسه"), data: m.pbs.map((x) => x.completed), labels: m.pb.map((x) => x.label) } : null,
   }), [m, cmp]);
   const hours = useCallback((t) => lineOption(t, {
     labels: m.b.map((x) => x.label), partial: m.b.map((x) => x.partial), bars: true, kind: "count",
     series: [{ name: __analyticsTr("ساعت ثبت‌شده"), data: m.bs.map((x) => x.hours) }],
   }), [m]);
   const mix = useCallback((t) => stackedOption(t, {
-    rows: [{ label: "پیچیدگی", parts: m.cur.cx }],
+    rows: [{ label: __extraTr("پیچیدگی"), parts: m.cur.cx }],
     parts: CX_FA.map((name, i) => ({ name, color: t.ramp[i] })),
   }), [m]);
   const quality = useCallback((t) => stackedOption(t, {
-    rows: [{ label: "کیفیت", parts: m.cur.quality }],
+    rows: [{ label: __extraTr("کیفیت"), parts: m.cur.quality }],
     parts: QUAL_KEYS.map((k, i) => ({ name: QUAL_FA[k], color: t.ramp[3 - i] })),
   }), [m]);
 
@@ -78,7 +84,7 @@ function PersonBody({ id }) {
     <>
       {a.manager && (
         <Trail items={[
-          { label: "کل واحد", href: a.href("/analytics/people", { team: "", level: "" }) },
+          { label: __extraTr("کل واحد"), href: a.href("/analytics/people", { team: "", level: "" }) },
           ...(group ? [{ label: group.fa, href: a.href("/analytics/teams", { team: group.key }) }] : []),
           ...(p.level ? [{ label: p.level, href: a.href("/analytics/teams", { team: "soc", level: p.level }) }] : []),
           { label: p.name },
@@ -91,7 +97,7 @@ function PersonBody({ id }) {
       <MetricGrid label={`شاخص‌های ${p.name}`}>
         <Kpi label={__analyticsTr("تسک‌های تکمیل‌شده")} icon="checkCircle" value={fmtInt(cur.completed)} delta={prev && <Delta now={cur.completed} before={prev.completed} label={short} />} foot={medFoot("completed", fmtNum)} spark={<Sparkline values={m.bs.map((x) => x.completed)} />} />
         <Kpi label={__analyticsTr("حجم کار وزن‌دار")} icon="bars" value={fmtInt(cur.units)} delta={prev && <Delta now={cur.units} before={prev.units} label={short} />} foot={medFoot("units", fmtNum)} />
-        <Kpi label={__analyticsTr("ساعت ثبت‌شده")} icon="clock" value={fmtNum(cur.hours, 0)} unit="ساعت" delta={prev && <Delta now={cur.hours} before={prev.hours} label={short} />} foot={medFoot("hours", (v) => fmtNum(v, 0))} />
+        <Kpi label={__analyticsTr("ساعت ثبت‌شده")} icon="clock" value={fmtNum(cur.hours, 0)} unit={__extraTr("ساعت")} delta={prev && <Delta now={cur.hours} before={prev.hours} label={short} />} foot={medFoot("hours", (v) => fmtNum(v, 0))} />
         <Kpi label={__analyticsTr("تحویل به‌موقع")} icon="cal" value={fmtPct(cur.onTimeRate)} delta={prev && cur.onTimeRate !== null && <Delta now={cur.onTimeRate} before={prev.onTimeRate} kind="rate" label={short} />} foot={cur.onTimeRate === null ? `${faDigits(cur.onTimeN)} تسک دارای ددلاین (کمتر از ۵)` : medFoot("onTimeRate", fmtPct)} />
         <Kpi label={__analyticsTr("میانه زمان انجام")} icon="clock" value={fmtDays(cur.cycleMedian)} foot={medFoot("cycleMedian", fmtDays) ?? `${faDigits(cur.cycleN)} تسک با زمان شروع`} />
         <Kpi label={__analyticsTr("صف کار باز (اکنون)")} icon="tasks" value={fmtInt(open.open)} tone={open.overdue ? "alert" : undefined} foot={`${faDigits(open.overdue)} معوق · ${faDigits(open.blocked)} مسدود · ${faDigits(open.review)} در بازبینی`} />
@@ -105,7 +111,7 @@ function PersonBody({ id }) {
             valueCol("cur", "این دوره"),
             ...(cmp ? [valueCol("prev", cmp.label)] : []),
             ...(medians ? [valueCol("med", "میانه تیم")] : []),
-            ...(cmp ? [{ key: "d", label: "تغییر", sort: false, value: () => null, render: (r) => <Delta now={r.cur} before={r.prev} kind={r.kind === "rate" ? "rate" : "count"} /> }] : []),
+            ...(cmp ? [{ key: "d", label: __extraTr("تغییر"), sort: false, value: () => null, render: (r) => <Delta now={r.cur} before={r.prev} kind={r.kind === "rate" ? "rate" : "count"} /> }] : []),
           ]}
           rows={compareRows}
           caption={__analyticsTr("مقایسه با دوره قبل و میانه تیم")}
@@ -114,10 +120,10 @@ function PersonBody({ id }) {
 
       <div className="an-row">
         <ChartPanel title={__analyticsTr("روند تسک‌های تکمیل‌شده")} question="حجم کار در طول دوره چگونه تغییر کرده است؟" build={trend} height={230}
-          table={{ columns: [{ key: "b", label: __analyticsTr("بازه"), value: (r) => r.label }, { key: "c", label: "تکمیل‌شده", kind: "count", value: (r) => r.c }, { key: "u", label: "حجم وزن‌دار", kind: "count", value: (r) => r.u }, { key: "h", label: "ساعت", kind: "count", value: (r) => r.h }], rows: m.b.map((x, i) => ({ id: x.from, label: x.label, c: m.bs[i].completed, u: m.bs[i].units, h: m.bs[i].hours })) }}
+          table={{ columns: [{ key: "b", label: __analyticsTr("بازه"), value: (r) => r.label }, { key: "c", label: __extraTr("تکمیل‌شده"), kind: "count", value: (r) => r.c }, { key: "u", label: __extraTr("حجم وزن‌دار"), kind: "count", value: (r) => r.u }, { key: "h", label: __extraTr("ساعت"), kind: "count", value: (r) => r.h }], rows: m.b.map((x, i) => ({ id: x.from, label: x.label, c: m.bs[i].completed, u: m.bs[i].units, h: m.bs[i].hours })) }}
           fileName={`person-trend-${p.id}`} />
         <ChartPanel title={__analyticsTr("روند ساعت ثبت‌شده")} question="ساعت‌ها جدا از تعداد تسک (بدون محور دوگانه)؛ ساعت دستی وارد می‌شود." build={hours} height={230}
-          table={{ columns: [{ key: "b", label: __analyticsTr("بازه"), value: (r) => r.label }, { key: "h", label: "ساعت", kind: "count", value: (r) => r.h }], rows: m.b.map((x, i) => ({ id: x.from, label: x.label, h: m.bs[i].hours })) }}
+          table={{ columns: [{ key: "b", label: __analyticsTr("بازه"), value: (r) => r.label }, { key: "h", label: __extraTr("ساعت"), kind: "count", value: (r) => r.h }], rows: m.b.map((x, i) => ({ id: x.from, label: x.label, h: m.bs[i].hours })) }}
           fileName={`person-hours-${p.id}`} />
       </div>
 
@@ -148,6 +154,8 @@ function PersonBody({ id }) {
 
 /** SOC analysts: routine completion per day on a Jalali calendar, daily IOC and tickets, each activity, shift mix. */
 function ShiftSection({ id, cur, prev, medians }) {
+  const { t: __extraTr } = useExtraI18n();
+  const { fmtInt, fmtPct, fmtNum } = useAnalyticsFormat();
   const { t: __analyticsTr } = useAnalyticsI18n();
   const a = useAnalytics();
   const { range } = a;
@@ -190,16 +198,16 @@ function ShiftSection({ id, cur, prev, medians }) {
         <Kpi label={__analyticsTr("Issue گزارش‌شده")} icon="flag" value={fmtInt(cur.issues)} />
       </MetricGrid>
       <ChartPanel title={__analyticsTr("انجام روتین در هر روز")} question="کدام روزها روتین کامل انجام نشده است؟ خانه خالی یعنی شیفت نداشته." build={cal} height={7 * 20 + 70}
-        table={{ columns: [{ key: "d", label: "روز", value: (r) => r.label }, { key: "v", label: __analyticsTr("انجام روتین"), kind: "rate", value: (r) => r.value }], rows: m.cells.filter((c) => c.value !== null).map((c) => ({ ...c, id: c.date })) }}
+        table={{ columns: [{ key: "d", label: __extraTr("روز"), value: (r) => r.label }, { key: "v", label: __analyticsTr("انجام روتین"), kind: "rate", value: (r) => r.value }], rows: m.cells.filter((c) => c.value !== null).map((c) => ({ ...c, id: c.date })) }}
         fileName="routine-daily" />
       <div className="an-row">
         <ChartPanel title={__analyticsTr("IOC روزانه")} build={iocBuild} height={200} fileName="ioc-daily"
-          table={{ columns: [{ key: "d", label: "روز", value: (r) => faDate(r[0]) }, { key: "v", label: "IOC", kind: "count", value: (r) => r[1] }], rows: m.iocs.filter((x, i) => m.shifts[i][1]) }} />
+          table={{ columns: [{ key: "d", label: __extraTr("روز"), value: (r) => faDate(r[0]) }, { key: "v", label: "IOC", kind: "count", value: (r) => r[1] }], rows: m.iocs.filter((x, i) => m.shifts[i][1]) }} />
         <ChartPanel title={__analyticsTr("تیکت روزانه (تعداد)")} build={ticketBuild} height={200} fileName="tickets-daily"
-          table={{ columns: [{ key: "d", label: "روز", value: (r) => faDate(r[0]) }, { key: "v", label: __analyticsTr("تیکت"), kind: "count", value: (r) => r[1] }], rows: m.tickets.filter((x, i) => m.shifts[i][1]) }} />
+          table={{ columns: [{ key: "d", label: __extraTr("روز"), value: (r) => faDate(r[0]) }, { key: "v", label: __analyticsTr("تیکت"), kind: "count", value: (r) => r[1] }], rows: m.tickets.filter((x, i) => m.shifts[i][1]) }} />
       </div>
       <ChartPanel title={__analyticsTr("درصد انجام هر فعالیت روتین")} question="کدام فعالیت بیشتر جا می‌ماند؟" build={acts} height={300} fileName="routine-activities"
-        table={{ columns: [{ key: "l", label: "فعالیت", value: (r) => r.label }, { key: "v", label: "درصد انجام", kind: "rate", value: (r) => r.value }, { key: "n", label: __analyticsTr("شیفت"), kind: "count", value: (r) => r.n }], rows: ACTIVITIES_FA.map((label, i) => ({ id: i, label, value: cur.activityRates[i], n: cur.activityN[i] })) }} />
+        table={{ columns: [{ key: "l", label: __extraTr("فعالیت"), value: (r) => r.label }, { key: "v", label: __extraTr("درصد انجام"), kind: "rate", value: (r) => r.value }, { key: "n", label: __analyticsTr("شیفت"), kind: "count", value: (r) => r.n }], rows: ACTIVITIES_FA.map((label, i) => ({ id: i, label, value: cur.activityRates[i], n: cur.activityN[i] })) }} />
     </>
   );
 }

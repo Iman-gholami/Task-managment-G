@@ -1,5 +1,7 @@
 "use client";
 
+import { useI18n as useExtraI18n } from "@/components/I18nProvider";
+
 import { useI18n as useAnalyticsI18n } from "@/components/I18nProvider";
 
 import { useMemo, useState } from "react";
@@ -31,12 +33,13 @@ export default function Alerts() {
 }
 
 function AlertsBody() {
+  const { t: __extraTr } = useExtraI18n();
   const { t: __analyticsTr } = useAnalyticsI18n();
   const { view, range, cmp } = useAnalytics();
   const [level, setLevel] = useState("all");
   const m = useMemo(() => {
-    const alerts = buildAlerts(view, { range, cmp });
-    return { alerts, status: overallStatus(alerts), insights: buildInsights(view, { range, cmp }) };
+    const alerts = buildAlerts(view, { range, cmp, locale: a.locale });
+    return { alerts, status: overallStatus(alerts), insights: buildInsights(view, { range, cmp, locale: a.locale }) };
   }, [view, range, cmp]);
   const count = (l) => m.alerts.filter((x) => x.level === l).length;
   const shown = level === "all" ? m.alerts : m.alerts.filter((x) => x.level === level);
@@ -56,9 +59,9 @@ function AlertsBody() {
               onChange={setLevel}
               options={[
                 { value: "all", label: __analyticsTr("همه"), count: n(m.alerts.length) },
-                { value: "critical", label: "بحرانی", count: n(count("critical")) },
-                { value: "warning", label: "نیازمند توجه", count: n(count("warning")) },
-                { value: "info", label: "اطلاع", count: n(count("info")) },
+                { value: "critical", label: __extraTr("بحرانی"), count: n(count("critical")) },
+                { value: "warning", label: __extraTr("نیازمند توجه"), count: n(count("warning")) },
+                { value: "info", label: __extraTr("اطلاع"), count: n(count("info")) },
               ]}
             />
           }

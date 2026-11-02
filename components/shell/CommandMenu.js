@@ -23,7 +23,7 @@ const norm = (s) => s.toLowerCase();
  */
 export default function CommandMenu({ onClose }) {
   const { t: __sharedTr } = useSharedI18n();
-  const { t: __uiTr } = useUiI18n();
+  const { t: __uiTr, team: teamText } = useUiI18n();
   const { me, tasks, members, peopleMap, setCreateOpen, theme, setTheme } = useApp();
   const router = useRouter();
   const ref = useFocusTrap(onClose);
@@ -51,24 +51,24 @@ export default function CommandMenu({ onClose }) {
       }
       if (manager) {
         const people = members.filter((p) => p.role !== "security_manager" && match(p.name)).slice(0, 5);
-        if (people.length) out.push(["People", people.map((p) => ({ key: p.id, label: <span className="title">{p.name}</span>, lead: <Avatar id={p.id} size="sm" />, hint: p.team, run: () => router.push(`/performance/employees/${p.id}`) }))]);
+        if (people.length) out.push(["People", people.map((p) => ({ key: p.id, label: <span className="title">{p.name}</span>, lead: <Avatar id={p.id} size="sm" />, hint: teamText(p.team), run: () => router.push(`/performance/employees/${p.id}`) }))]);
       }
     }
-    const pages = pagesFor(me).filter((p) => match(p.label)).slice(0, term ? 6 : 20);
-    if (pages.length) out.push(["Go to", pages.map((p) => ({ key: p.href, label: <span className="title">{p.label}</span>, icon: p.icon, run: () => router.push(p.href) }))]);
+    const pages = pagesFor(me).map((p) => ({ ...p, translatedLabel: p.label.split(" · ").map(__uiTr).join(" · ") })).filter((p) => match(p.label) || match(p.translatedLabel)).slice(0, term ? 6 : 20);
+    if (pages.length) out.push(["Go to", pages.map((p) => ({ key: p.href, label: <span className="title">{p.translatedLabel}</span>, icon: p.icon, run: () => router.push(p.href) }))]);
     // Themes appear once the search mentions them ("theme", "dark", "gold", "midnight"…).
-    const themes = term ? THEMES.filter((t) => match(`theme ${t.name} ${t.note} ${t.scheme} ${t.id}`)) : [];
+    const themes = term ? THEMES.filter((t) => match(`theme ${t.name} ${t.note} ${t.scheme} ${t.id} ${__uiTr("Theme")} ${__uiTr(t.name)} ${__uiTr(t.note)}`)) : [];
     if (themes.length) {
       out.push(["Theme", themes.map((t) => ({
         key: `theme-${t.id}`,
-        label: <span className="title">{"" + __uiTr("Theme:") + " "}{t.name}</span>,
+        label: <span className="title">{__uiTr("Theme:")} {__uiTr(t.name)}</span>,
         lead: <ThemeDot theme={t} />,
-        hint: t.id === theme ? "Current" : t.note,
+        hint: __uiTr(t.id === theme ? "Current" : t.note),
         run: () => setTheme(t.id),
       }))]);
     }
     return out;
-  }, [q, tasks, me, peopleMap, members, manager, router, setCreateOpen, theme, setTheme]);
+  }, [q, tasks, me, peopleMap, members, manager, router, setCreateOpen, theme, setTheme, __sharedTr, __uiTr, teamText]);
 
   const flat = groups.flatMap(([, items]) => items);
   const current = Math.min(active, Math.max(0, flat.length - 1));
@@ -86,7 +86,7 @@ export default function CommandMenu({ onClose }) {
   let i = -1;
   return (
     <div className="scrim" onMouseDown={(e) => e.target === e.currentTarget && onClose()}>
-      <div ref={ref} className="modal cmd" role="dialog" aria-modal="true" aria-label="Search and commands">
+      <div ref={ref} className="modal cmd" role="dialog" aria-modal="true" aria-label={__uiTr("Search and commands")}>
         <div className="cmd-input">
           <Icon name="search" />
           <input
@@ -98,7 +98,7 @@ export default function CommandMenu({ onClose }) {
             aria-activedescendant={flat.length ? optionId(current) : undefined}
             aria-autocomplete="list"
             aria-label={__uiTr("Search tasks, people and pages")}
-            placeholder={manager ? "Search tasks, people and pages…" : "Search tasks and pages…"}
+            placeholder={__uiTr(manager ? "Search tasks, people and pages…" : "Search tasks and pages…")}
             value={q}
             onChange={(e) => { setQ(e.target.value); setActive(0); }}
             onKeyDown={onKeyDown}
@@ -110,8 +110,8 @@ export default function CommandMenu({ onClose }) {
             <div className="empty compact"><h3>{"" + __uiTr("No matches for “") + ""}{q.trim()}”</h3><p>{"" + __uiTr("Try a task ID such as T-1001, part of a title, or a page name.") + ""}</p></div>
           )}
           {groups.map(([name, items]) => (
-            <div key={name} role="group" aria-label={name}>
-              <div className="cmd-group" aria-hidden="true">{name}</div>
+            <div key={name} role="group" aria-label={__uiTr(name)}>
+              <div className="cmd-group" aria-hidden="true">{__uiTr(name)}</div>
               {items.map((it) => {
                 const idx = ++i;
                 const sel = idx === current;
@@ -137,7 +137,7 @@ export default function CommandMenu({ onClose }) {
         </div>
         <div className="cmd-foot" aria-hidden="true">
           <span><kbd>↑</kbd><kbd>↓</kbd>{"" + __uiTr("Navigate") + ""}</span>
-          <span><kbd>↵</kbd>Open</span>
+          <span><kbd>↵</kbd>{__uiTr("Open")}</span>
           <span><kbd>Esc</kbd>{"" + __uiTr("Close") + ""}</span>
         </div>
       </div>

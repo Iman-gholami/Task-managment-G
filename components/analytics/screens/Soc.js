@@ -1,5 +1,9 @@
 "use client";
 
+import { useI18n as useExtraI18n } from "@/components/I18nProvider";
+
+import useAnalyticsFormat from "@/components/analytics/useAnalyticsFormat";
+
 import { useI18n as useAnalyticsI18n } from "@/components/I18nProvider";
 
 import { useCallback, useEffect, useMemo, useState } from "react";
@@ -79,6 +83,8 @@ function ReviewEditor({ analytics, person, month, review, eligible }) {
 }
 
 function MonthlyShiftReviews({ analytics, analysts }) {
+  const { t: __extraTr } = useExtraI18n();
+  const { fmtPct } = useAnalyticsFormat();
   const { t: __analyticsTr } = useAnalyticsI18n();
   const { view } = analytics;
   const months = useMemo(() => jalaliMonthsInRange(view.window.from, view.window.to).filter((m) => m.from <= analytics.today), [view.window.from, view.window.to, analytics.today]);
@@ -99,12 +105,12 @@ function MonthlyShiftReviews({ analytics, analysts }) {
     return { id: person.id, person, cur, eligible, review: reviews.find((r) => r.a === person.id && r.month === month) ?? null };
   });
   const columns = [
-    { key: "name", label: "تحلیلگر", value: (r) => r.person.name, render: (r) => <span className="an-person">{r.person.name}<small>{r.person.level}</small></span> },
+    { key: "name", label: __extraTr("تحلیلگر"), value: (r) => r.person.name, render: (r) => <span className="an-person">{r.person.name}<small>{r.person.level}</small></span> },
     { key: "shift", label: __analyticsTr("شیفت"), kind: "count", value: (r) => r.cur.shifts },
-    { key: "closure", label: "بسته‌شدن لاگ", value: (r) => r.cur.closureRate, render: (r) => <span>{fmtPct(r.cur.closureRate)} <small className="muted">(n={faDigits(r.cur.past)})</small></span> },
+    { key: "closure", label: __extraTr("بسته‌شدن لاگ"), value: (r) => r.cur.closureRate, render: (r) => <span>{fmtPct(r.cur.closureRate)} <small className="muted">(n={faDigits(r.cur.past)})</small></span> },
     { key: "routine", label: __analyticsTr("انجام روتین"), kind: "rate", value: (r) => r.cur.routineRate },
-    { key: "missed", label: "جامانده", kind: "count", value: (r) => r.cur.missed },
-    { key: "review", label: "ارزیابی ماهانه", sort: false, value: () => null, render: (r) => <ReviewEditor analytics={analytics} person={r.person} month={month} review={r.review} eligible={r.eligible} /> },
+    { key: "missed", label: __extraTr("جامانده"), kind: "count", value: (r) => r.cur.missed },
+    { key: "review", label: __extraTr("ارزیابی ماهانه"), sort: false, value: () => null, render: (r) => <ReviewEditor analytics={analytics} person={r.person} month={month} review={r.review} eligible={r.eligible} /> },
   ];
 
   return (
@@ -133,6 +139,8 @@ export default function Soc() {
 }
 
 function SocBody() {
+  const { t: __extraTr } = useExtraI18n();
+  const { fmtInt, fmtPct, fmtNum } = useAnalyticsFormat();
   const { t: __analyticsTr } = useAnalyticsI18n();
   const a = useAnalytics();
   const { view, range, cmp, gran } = a;
@@ -140,12 +148,12 @@ function SocBody() {
   const m = useMemo(() => {
     const analysts = view.people.filter((p) => p.shift);
     const ids = idsOf(analysts);
-    const b = buckets(range.from, range.end, gran);
+    const b = buckets(range.from, range.end, gran, a.locale);
     const rows = analysts
       .map((p) => ({ id: p.id, person: p, cur: stats(view, [p.id], range), prev: cmp ? stats(view, [p.id], cmp) : null }))
       .filter((r) => r.person.active || r.cur.shifts)
       .sort((x, y) => x.person.name.localeCompare(y.person.name, "fa"));
-    const shiftAlert = buildAlerts({ ...view, tasks: [] }, {}).find((x) => x.id === "missed-logs") ?? null;
+    const shiftAlert = buildAlerts({ ...view, tasks: [] }, { locale: a.locale }).find((x) => x.id === "missed-logs") ?? null;
     return {
       ids, rows, b, shiftAlert,
       cur: stats(view, ids, range),
@@ -175,15 +183,15 @@ function SocBody() {
 
   const typeCounts = SHIFT_KEYS.map((k) => cur.shiftTypes[k]);
   const columns = [
-    { key: "n", label: "تحلیلگر", value: (r) => r.person.name, render: (r) => <span className="an-person">{r.person.name}<small>{r.person.level}</small></span> },
+    { key: "n", label: __extraTr("تحلیلگر"), value: (r) => r.person.name, render: (r) => <span className="an-person">{r.person.name}<small>{r.person.level}</small></span> },
     { key: "s", label: __analyticsTr("شیفت"), kind: "count", value: (r) => r.cur.shifts },
     { key: "off", label: __analyticsTr("تعطیل شیفت"), kind: "count", value: (r) => r.cur.offDays },
     { key: "leave", label: __analyticsTr("مرخصی"), kind: "count", value: (r) => r.cur.leaveDays },
     ...SHIFT_KEYS.map((k) => ({ key: k, label: SHIFT_FA[k], kind: "count", value: (r) => r.cur.shiftTypes[k] })),
-    { key: "h", label: "ساعت شیفت", kind: "count", value: (r) => r.cur.shiftHours },
-    { key: "c", label: "بسته‌شدن لاگ", kind: "rate", value: (r) => r.cur.closureRate },
-    { key: "m", label: "جامانده", kind: "count", value: (r) => r.cur.missed },
-    { key: "r", label: "روتین", kind: "rate", value: (r) => r.cur.routineRate },
+    { key: "h", label: __extraTr("ساعت شیفت"), kind: "count", value: (r) => r.cur.shiftHours },
+    { key: "c", label: __extraTr("بسته‌شدن لاگ"), kind: "rate", value: (r) => r.cur.closureRate },
+    { key: "m", label: __extraTr("جامانده"), kind: "count", value: (r) => r.cur.missed },
+    { key: "r", label: __extraTr("روتین"), kind: "rate", value: (r) => r.cur.routineRate },
     { key: "i", label: "IOC", kind: "count", value: (r) => r.cur.iocs },
     { key: "t", label: __analyticsTr("تیکت"), kind: "count", value: (r) => r.cur.tickets },
     { key: "rp", label: __analyticsTr("گزارش ترافیک"), kind: "count", value: (r) => r.cur.reports },
@@ -211,25 +219,25 @@ function SocBody() {
         build={heat}
         height={90 + 30 * m.rows.length}
         onChartClick={(e) => m.rows[e.value?.[1]] && setPerson(m.rows[e.value[1]].id)}
-        table={{ columns: [{ key: "n", label: "تحلیلگر", value: (r) => r.person.name }, ...ACTIVITIES_FA.map((l, i) => ({ key: `a${i}`, label: l, kind: "rate", value: (r) => r.cur.activityRates[i] }))], rows: m.rows }}
+        table={{ columns: [{ key: "n", label: __extraTr("تحلیلگر"), value: (r) => r.person.name }, ...ACTIVITIES_FA.map((l, i) => ({ key: `a${i}`, label: l, kind: "rate", value: (r) => r.cur.activityRates[i] }))], rows: m.rows }}
         fileName="routine-by-analyst"
         testId="soc-heatmap"
       />
 
       <div className="an-row">
         <ChartPanel title={__analyticsTr("درصد انجام هر فعالیت (کل SOC)")} question="کدام فعالیت روتین بیشتر جا می‌ماند؟" build={acts} height={300}
-          table={{ columns: [{ key: "l", label: "فعالیت", value: (r) => r.label }, { key: "v", label: "درصد انجام", kind: "rate", value: (r) => r.v }, { key: "n", label: __analyticsTr("شیفت"), kind: "count", value: (r) => r.n }], rows: ACTIVITIES_FA.map((label, i) => ({ id: i, label, v: cur.activityRates[i], n: cur.activityN[i] })) }}
+          table={{ columns: [{ key: "l", label: __extraTr("فعالیت"), value: (r) => r.label }, { key: "v", label: __extraTr("درصد انجام"), kind: "rate", value: (r) => r.v }, { key: "n", label: __analyticsTr("شیفت"), kind: "count", value: (r) => r.n }], rows: ACTIVITIES_FA.map((label, i) => ({ id: i, label, v: cur.activityRates[i], n: cur.activityN[i] })) }}
           fileName="activity-completion" />
         <ChartPanel title={__analyticsTr("توزیع نوع شیفت هر تحلیلگر")} question="شیفت‌های شب و تا ساعت ۲۰ منصفانه تقسیم شده‌اند؟" build={types} height={70 + 30 * m.rows.length}
-          table={{ columns: [{ key: "n", label: "تحلیلگر", value: (r) => r.person.name }, ...SHIFT_KEYS.map((k) => ({ key: k, label: SHIFT_FA[k], kind: "count", value: (r) => r.cur.shiftTypes[k] }))], rows: m.rows }}
+          table={{ columns: [{ key: "n", label: __extraTr("تحلیلگر"), value: (r) => r.person.name }, ...SHIFT_KEYS.map((k) => ({ key: k, label: SHIFT_FA[k], kind: "count", value: (r) => r.cur.shiftTypes[k] }))], rows: m.rows }}
           fileName="shift-types" />
       </div>
 
       <div className="an-row">
         <ChartPanel title={__analyticsTr("IOC ثبت‌شده در هر روز")} build={iocBuild} height={220} fileName="ioc-daily"
-          table={{ columns: [{ key: "d", label: "روز", value: (r) => faDate(r[0]) }, { key: "v", label: "IOC", kind: "count", value: (r) => r[1] }], rows: m.iocs }} />
+          table={{ columns: [{ key: "d", label: __extraTr("روز"), value: (r) => faDate(r[0]) }, { key: "v", label: "IOC", kind: "count", value: (r) => r[1] }], rows: m.iocs }} />
         <ChartPanel title={__analyticsTr("تیکت ثبت‌شده در هر روز (تعداد)")} build={ticketBuild} height={220} fileName="tickets-daily"
-          table={{ columns: [{ key: "d", label: "روز", value: (r) => faDate(r[0]) }, { key: "v", label: __analyticsTr("تیکت"), kind: "count", value: (r) => r[1] }], rows: m.tickets }} />
+          table={{ columns: [{ key: "d", label: __extraTr("روز"), value: (r) => faDate(r[0]) }, { key: "v", label: __analyticsTr("تیکت"), kind: "count", value: (r) => r[1] }], rows: m.tickets }} />
       </div>
 
       <Panel title={__analyticsTr("تحلیلگران")} meta={__analyticsTr("الفبایی · برای خلاصه روی ردیف کلیک کنید")}>

@@ -8,15 +8,15 @@ import { METRICS, bucketStats, openStats, peerMedian, stats } from "@/lib/analyt
 import { buckets } from "@/lib/analytics/periods";
 
 /** Everything the person drawer and profile show for one expert. Null when the person isn't in view. */
-export function personModel(facts, id, range, cmp, gran) {
+export function personModel(facts, id, range, cmp, gran, locale = "fa") {
   const p = facts.people.find((x) => x.id === id);
   if (!p) return null;
   const team = facts.people.filter((x) => x.group === p.group && !x.manager);
   const medians = facts.peers
     ? (facts.peers.hidden ? null : facts.peers.range ?? null)
     : team.length > 1 ? Object.fromEntries(Object.keys(METRICS).map((k) => [k, peerMedian(facts, team, range, k)])) : null;
-  const b = buckets(range.from, range.end, gran);
-  const pb = cmp ? buckets(cmp.from, cmp.to, gran) : [];
+  const b = buckets(range.from, range.end, gran, locale);
+  const pb = cmp ? buckets(cmp.from, cmp.to, gran, locale) : [];
   const mine = facts.tasks.filter((t) => t.a === id);
   return {
     p, team, medians, b, pb,

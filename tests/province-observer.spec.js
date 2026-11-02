@@ -9,12 +9,12 @@ test("province member setup and observer access to provincial analytics, but not
   await page.goto("/team");
   await page.getByRole("button", { name: "Add member" }).click();
   const dialog = page.getByRole("dialog", { name: "Add member" });
-  const province = dialog.getByLabel("استان");
+  const province = dialog.getByLabel("Province");
   await province.focus();
   await expect(dialog.getByRole("listbox", { name: "Provinces" }).getByRole("option")).toHaveCount(31);
   await province.fill("قم");
-  await expect(dialog.getByRole("option", { name: "قم", exact: true })).toBeVisible();
-  await expect(dialog.getByRole("option", { name: "تهران", exact: true })).toHaveCount(0);
+  await expect(dialog.getByRole("option", { name: "Qom", exact: true })).toBeVisible();
+  await expect(dialog.getByRole("option", { name: "Tehran", exact: true })).toHaveCount(0);
   await province.press("Escape");
   await expect(dialog.getByRole("listbox", { name: "Provinces" })).toHaveCount(0);
   await dialog.getByLabel("Full name").fill("Qom Provincial Analyst");
@@ -22,12 +22,12 @@ test("province member setup and observer access to provincial analytics, but not
   await dialog.getByLabel("Primary team").selectOption("SOC · L1");
   await dialog.getByLabel("Initial password").fill(PW);
   await dialog.getByRole("button", { name: "Add member" }).click();
-  await expect(dialog).toContainText("استان");
+  await expect(dialog).toContainText("province");
   await province.fill("قم");
-  await dialog.getByRole("option", { name: "قم", exact: true }).click();
+  await dialog.getByRole("option", { name: "Qom", exact: true }).click();
   await dialog.getByRole("button", { name: "Add member" }).click();
   await expect(dialog).toBeHidden();
-  await expect(page.locator("tr", { hasText: "Qom Provincial Analyst" })).toContainText("قم");
+  await expect(page.locator("tr", { hasText: "Qom Provincial Analyst" })).toContainText("Qom");
 
   const t = await page.request.post("/api/members", { data: {
     name: "Tehran Provincial Analyst", email: "tehran@province-analytics.test",
@@ -56,18 +56,18 @@ test("province member setup and observer access to provincial analytics, but not
   await page.request.post("/api/auth/login", { data: { email: "observer@province-analytics.test", password: PW } });
   await page.goto("/dashboard");
   await expect(page).toHaveURL(/\/analytics/);
-  await expect(page.locator(".sidebar")).toContainText("نظارت و ارزیابی");
+  await expect(page.locator(".sidebar")).toContainText("Monitoring and assessment");
   await expect(page.locator(".sidebar")).not.toContainText("Shift Schedule");
   await expect(page.locator(".sidebar")).not.toContainText("Administration");
   await page.goto("/analytics/people");
-  await page.getByRole("combobox", { name: "استان" }).fill("قم");
-  await page.getByRole("option", { name: "قم", exact: true }).click();
+  await page.getByRole("combobox", { name: "Province" }).fill("قم");
+  await page.getByRole("option", { name: "Qom", exact: true }).click();
   await expect(page).toHaveURL(/province=/);
   await expect(page.getByTestId("people-table")).toContainText("Qom Provincial Analyst");
   await expect(page.getByTestId("people-table")).not.toContainText("Tehran Provincial Analyst");
-  await expect(page.getByText("سوابق ارزیابی ماهانه شیفت‌لاگ")).toBeVisible();
-  await page.getByRole("combobox", { name: "استان" }).fill("تهران");
-  await page.getByRole("option", { name: "تهران", exact: true }).click();
+  await expect(page.getByText("Monthly shift log evaluation history")).toBeVisible();
+  await page.getByRole("combobox", { name: "Province" }).fill("تهران");
+  await page.getByRole("option", { name: "Tehran", exact: true }).click();
   await expect(page.getByTestId("people-table")).toContainText("Tehran Provincial Analyst");
   await expect(page.getByTestId("people-table")).not.toContainText("Qom Provincial Analyst");
 

@@ -19,6 +19,8 @@ import { Meter } from "@/components/ui/charts";
 import { Status, Who } from "@/components/ui/indicators";
 import L2AnalyzedTickets from "@/components/screens/L2AnalyzedTickets";
 import { TODAY, fmtDate, fmtRange, longDate, plural, weekday } from "@/lib/format";
+import { localDate } from "@/lib/analytics/calendar";
+import { shiftActivityText } from "@/lib/i18n/shift-content";
 
 const HINTS = { misp: "The IOC count feeds monthly reports", report: "Prepare and share the daily traffic report" };
 const SAVE_LABEL = { saved: "Autosaved", saving: "Saving…", failed: "Not saved — try again" };
@@ -45,7 +47,7 @@ export default function ShiftLog({ initialLog }) {
 }
 
 function Layer2ShiftLog({ initialLog }) {
-  const { t: __shiftFaTr } = useEngShiftI18n();
+  const { t: __shiftFaTr, locale } = useEngShiftI18n();
   const { me, shiftDone, dispatch, toast } = useApp();
   const [tickets, setTickets] = useState(initialLog?.analyzedTickets ?? []);
   const [submitting, setSubmitting] = useState(false);
@@ -67,22 +69,22 @@ function Layer2ShiftLog({ initialLog }) {
 
   return (
     <div className="page mid shift-page">
-      <PageHeader title={`Shift Log — ${longDate(initialLog.date)}`}
-        meta={[weekday(initialLog.date), `SOC · L2 · ${initialLog.shift?.label ?? initialLog.shiftType}`,
-          completed ? "Submitted — read only" : "Tickets are saved as you add them"]}
-        actions={<Link className="btn btn-secondary" href="/shift/history"><Icon name="clock" />History</Link>} />
+      <PageHeader title={`${__shiftFaTr("Shift Log")} — ${locale === "fa" ? localDate(initialLog.date, locale) : longDate(initialLog.date)}`}
+        meta={[locale === "fa" ? new Intl.DateTimeFormat("fa-IR", { weekday: "long", timeZone: "UTC" }).format(new Date(`${initialLog.date}T00:00:00Z`)) : weekday(initialLog.date), `SOC · L2 · ${__shiftFaTr(initialLog.shift?.label ?? initialLog.shiftType)}`,
+          __shiftFaTr(completed ? "Submitted — read only" : "Tickets are saved as you add them")]}
+        actions={<Link className="btn btn-secondary" href="/shift/history"><Icon name="clock" />{__shiftFaTr("History")}</Link>} />
       <div className="panel" style={{ marginBottom: "var(--s-4)" }}>
         <div className="shift-head">
           <dl className="facts">
-            <div><dt><small>Analyst</small></dt><dd><Who id={me.id} /></dd></div>
-            <div><dt><small>{"" + __shiftFaTr("Shift") + ""}</small></dt><dd>{initialLog.shift?.label ?? initialLog.shiftType}</dd></div>
-            <div><dt><small>{"" + __shiftFaTr("Date") + ""}</small></dt><dd>{longDate(initialLog.date)}</dd></div>
-            <div><dt><small>{"" + __shiftFaTr("Status") + ""}</small></dt><dd><span className={`badge dot ${completed ? "success" : "info"}`}>{completed ? "Submitted" : __shiftFaTr("In progress")}</span></dd></div>
+            <div><dt><small>{__shiftFaTr("Analyst")}</small></dt><dd><Who id={me.id} /></dd></div>
+            <div><dt><small>{__shiftFaTr("Shift")}</small></dt><dd>{__shiftFaTr(initialLog.shift?.label ?? initialLog.shiftType)}</dd></div>
+            <div><dt><small>{__shiftFaTr("Date")}</small></dt><dd>{locale === "fa" ? localDate(initialLog.date, locale) : longDate(initialLog.date)}</dd></div>
+            <div><dt><small>{__shiftFaTr("Status")}</small></dt><dd><span className={`badge dot ${completed ? "success" : "info"}`}>{__shiftFaTr(completed ? "Submitted" : "In progress")}</span></dd></div>
           </dl>
         </div>
       </div>
       {initialLog.date !== TODAY && <div className="panel" style={{ padding: "var(--s-3)", marginBottom: "var(--s-3)" }}>
-        <span className="badge dot info">{"" + __shiftFaTr("Manager-authorized backfill ·") + " "}{fmtDate(initialLog.date)}</span>
+        <span className="badge dot info">{__shiftFaTr("Manager-authorized backfill ·")} {locale === "fa" ? localDate(initialLog.date, locale) : fmtDate(initialLog.date)}</span>
         <p className="muted small">{"" + __shiftFaTr("Entries are saved to the original shift date and remain auditable.") + ""}</p>
       </div>}
       <L2AnalyzedTickets initialItems={tickets} readOnly={completed}
@@ -95,7 +97,7 @@ function Layer2ShiftLog({ initialLog }) {
           {initialLog.date !== TODAY && <Link className="btn btn-secondary" href="/dashboard">{"" + __shiftFaTr("Back to dashboard") + ""}</Link>}
         </> :
           <button type="button" className="btn btn-primary" onClick={submit} disabled={submitting}>
-            {submitting ? "Submitting…" : __shiftFaTr("Complete shift")}
+            {__shiftFaTr(submitting ? "Submitting…" : "Complete shift")}
           </button>}
       </div>
     </div>
@@ -103,7 +105,7 @@ function Layer2ShiftLog({ initialLog }) {
 }
 
 function RoutineShiftLog({ initialLog }) {
-  const { t: __shiftFaTr } = useEngShiftI18n();
+  const { t: __shiftFaTr, locale, team: teamText } = useEngShiftI18n();
   const { dispatch, toast, me, activities, tickets, shiftDone, shiftDate, shiftChecklist, shiftTeam } = useApp();
   const logDate = initialLog?.date ?? shiftDate;
   const backfill = logDate !== TODAY;
@@ -194,51 +196,52 @@ function RoutineShiftLog({ initialLog }) {
   return (
     <div className="page mid shift-page">
       <PageHeader
-        title={`Shift Log — ${longDate(logDate)}`}
-        meta={[weekday(logDate), readOnly ? "Submitted — locked; ask a manager for corrections" : "Changes save automatically"]}
-        actions={<Link className="btn btn-secondary" href="/shift/history"><Icon name="clock" />History</Link>}
+        title={`${__shiftFaTr("Shift Log")} — ${locale === "fa" ? localDate(logDate, locale) : longDate(logDate)}`}
+        meta={[locale === "fa" ? new Intl.DateTimeFormat("fa-IR", { weekday: "long", timeZone: "UTC" }).format(new Date(`${logDate}T00:00:00Z`)) : weekday(logDate), __shiftFaTr(readOnly ? "Submitted — locked; ask a manager for corrections" : "Changes save automatically")]}
+        actions={<Link className="btn btn-secondary" href="/shift/history"><Icon name="clock" />{__shiftFaTr("History")}</Link>}
       />
 
       {backfill && <div className="panel" style={{ padding: "var(--s-3)", marginBottom: "var(--s-3)" }}>
-        <span className="badge dot info">{"" + __shiftFaTr("Manager-authorized backfill ·") + " "}{fmtDate(logDate)}</span>
+        <span className="badge dot info">{__shiftFaTr("Manager-authorized backfill ·")} {locale === "fa" ? localDate(logDate, locale) : fmtDate(logDate)}</span>
       </div>}
       <div className="panel" style={{ marginBottom: "var(--s-4)" }}>
         <div className="shift-head">
           <div className="ring" style={{ "--v": pct }} role="img" aria-label={`${pct}% complete`} />
           <dl className="facts">
-            <div><dt><small>Analyst</small></dt><dd><Who id={me.id} /></dd></div>
-            <div><dt><small>{"" + __shiftFaTr("Checklist") + ""}</small></dt><dd dir="auto" data-testid="shift-checklist">{checklistLabel(displayChecklist)}</dd></div>
+            <div><dt><small>{__shiftFaTr("Analyst")}</small></dt><dd><Who id={me.id} /></dd></div>
+            <div><dt><small>{__shiftFaTr("Checklist")}</small></dt><dd dir="auto" data-testid="shift-checklist">{displayChecklist?.builtIn ? __shiftFaTr(checklistLabel(displayChecklist)) : displayChecklist ? checklistLabel(displayChecklist) : __shiftFaTr("None assigned")}</dd></div>
             <div><dt><small>{"" + __shiftFaTr("Status") + ""}</small></dt><dd>{readOnly ? <span className="badge dot success">{"" + __shiftFaTr("Submitted & locked") + ""}</span> : done ? <span className="badge dot info">{"" + __shiftFaTr("In progress") + ""}</span> : <span className="badge dot">{"" + __shiftFaTr("Not started") + ""}</span>}</dd></div>
             <div><dt><small>{"" + __shiftFaTr("Completion") + ""}</small></dt><dd className="num">{done}{" " + __shiftFaTr("of") + " "}{displayActivities.length} · {pct}%</dd></div>
-            <div><dt><small>{"" + __shiftFaTr("Last change") + ""}</small></dt><dd className="num" style={saved === "failed" ? { color: "var(--danger)" } : undefined} aria-live="polite">{SAVE_LABEL[saved]}</dd></div>
+            <div><dt><small>{__shiftFaTr("Last change")}</small></dt><dd className="num" style={saved === "failed" ? { color: "var(--danger)" } : undefined} aria-live="polite">{__shiftFaTr(SAVE_LABEL[saved])}</dd></div>
           </dl>
         </div>
       </div>
 
-      <Panel title={technical ? "Engineering daily work" : "SOC shift duties"}
-        meta={displayActivities.length ? `${done} of ${displayActivities.length} done` : shiftTeam}>
+      <Panel title={__shiftFaTr(technical ? "Engineering daily work" : "SOC shift duties")}
+        meta={displayActivities.length ? locale === "fa" ? `${done} از ${displayActivities.length} انجام شد` : `${done} of ${displayActivities.length} done` : teamText(shiftTeam)}>
         {displayActivities.length === 0 && (
-          <EmptyState compact icon="shift" title={displayChecklist ? "No checklist items for this shift" : `No checklist for ${shiftTeam} yet`}>
-            {displayChecklist
+          <EmptyState compact icon="shift" title={displayChecklist ? __shiftFaTr("No checklist items for this shift") : locale === "fa" ? `هنوز چک‌لیستی برای ${teamText(shiftTeam)} وجود ندارد` : `No checklist for ${teamText(shiftTeam)} yet`}>
+            {__shiftFaTr(displayChecklist
               ? "Your group's checklist has no items for this shift type. You can still record tickets and submit the shift."
-              : "A manager hasn't assigned a Shift Log checklist to your group, or it is turned off. You can still record tickets and submit the shift."}
+              : "A manager hasn't assigned a Shift Log checklist to your group, or it is turned off. You can still record tickets and submit the shift.")}
           </EmptyState>
         )}
         {displayActivities.map((a) => {
+          const content = shiftActivityText(a, displayChecklist, locale);
           const kindHint = a.kind === "monitor" ? (a.issue ? "Completed with an issue" : "Mark it completed when nothing unusual was found") : HINTS[a.kind];
-          const hint = [a.hint, kindHint].filter(Boolean).join(" · ");
+          const hint = [content.hint, kindHint && __shiftFaTr(kindHint)].filter(Boolean).join(" · ");
           return (
             <div key={a.n} id={`act-${a.n}`} className={`act ${a.done ? "done" : ""} ${flash === a.n ? "flash" : ""}`}>
               <div className="act-row">
                 <span className="n">{a.n}</span>
-                <input type="checkbox" className="cb" checked={a.done} disabled={readOnly} onChange={() => update(a.n, { done: !a.done })} aria-label={`${a.title} done`} />
-                <div className="t" dir="auto">{a.title}{hint && <small>{hint}</small>}</div>
+                <input type="checkbox" className="cb" checked={a.done} disabled={readOnly} onChange={() => update(a.n, { done: !a.done })} aria-label={locale === "fa" ? `${content.title} انجام شد` : `${content.title} done`} />
+                <div className="t" dir="auto">{content.title}{hint && <small>{hint}</small>}</div>
                 <div className="act-tools">
                   {a.kind === "monitor" && !a.issue && !readOnly && (
                     <button type="button" className="btn btn-ghost btn-sm" aria-expanded={issueOpen === a.n} onClick={() => setIssueOpen(issueOpen === a.n ? null : a.n)}><Icon name="alert" />{"" + __shiftFaTr("Report an issue") + ""}</button>
                   )}
                   <button type="button" className={`toggle-done ${a.done ? "on" : ""}`} disabled={readOnly} aria-pressed={a.done} onClick={() => update(a.n, { done: !a.done })}>
-                    <Icon name="check" />{a.kind === "monitor" && !a.issue ? "Completed — no issue" : a.done ? "Done" : "Mark done"}
+                    <Icon name="check" />{__shiftFaTr(a.kind === "monitor" && !a.issue ? "Completed — no issue" : a.done ? "Done" : "Mark done")}
                   </button>
                 </div>
               </div>

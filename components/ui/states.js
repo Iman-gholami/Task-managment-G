@@ -41,11 +41,14 @@ export function describeError(error, fallbackTitle = "Couldn't load this") {
 
 /** Inline failure for one region of a page; the rest of the page keeps working. */
 export function ErrorState({ error, title, onRetry, compact }) {
-  const { t: __sharedTr } = useSharedI18n();
+  const { t: __sharedTr, locale } = useSharedI18n();
   const e = describeError(error, title);
+  const body = error?.status === 403 && locale === "fa"
+    ? `${__sharedTr(error.message)} در صورت نیاز با مدیر سامانه تماس بگیرید.`
+    : __sharedTr(e.body);
   return (
-    <EmptyState danger icon={e.icon} title={e.title} compact={compact} action={e.retry && onRetry ? <button type="button" className="btn btn-secondary btn-sm" onClick={onRetry}>{"" + __sharedTr("Try again") + ""}</button> : null}>
-      {e.body}
+    <EmptyState danger icon={e.icon} title={__sharedTr(e.title)} compact={compact} action={e.retry && onRetry ? <button type="button" className="btn btn-secondary btn-sm" onClick={onRetry}>{__sharedTr("Try again")}</button> : null}>
+      {body}
     </EmptyState>
   );
 }
@@ -68,9 +71,10 @@ export function TableSkeleton({ rows = 6 }) {
 
 /** Loading region with an accessible label. */
 export function Loading({ label = "Loading", rows = 6 }) {
+  const { t } = useSharedI18n();
   return (
     <div role="status" aria-live="polite" aria-busy="true">
-      <span className="sr-only">{label}…</span>
+      <span className="sr-only">{t(label)}…</span>
       <TableSkeleton rows={rows} />
     </div>
   );

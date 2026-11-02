@@ -1,5 +1,9 @@
 "use client";
 
+import { useI18n as useExtraI18n } from "@/components/I18nProvider";
+
+import useAnalyticsFormat from "@/components/analytics/useAnalyticsFormat";
+
 import { useI18n as useAnalyticsI18n } from "@/components/I18nProvider";
 
 import { useMemo, useState } from "react";
@@ -49,19 +53,21 @@ const scoreFormula = (shift) => {
 };
 
 function Details({ row, shift }) {
+  const { t: __extraTr } = useExtraI18n();
+  const { fmtNum } = useAnalyticsFormat();
   const { t: __analyticsTr } = useAnalyticsI18n();
   const taskColumns = [
     { key: "title", label: __analyticsTr("تسک"), value: (t) => t.title },
-    { key: "cx", label: "سختی", value: (t) => CX_FA[t.cx - 1] ?? "—" },
-    { key: "q", label: "کیفیت", value: (t) => t.quality ? QUAL_FA[t.quality] : "ثبت نشده" },
-    { key: "late", label: "ارسال", value: (t) => !t.due ? "بدون ددلاین" : t.scoring.late ? "دیر" : "به‌موقع" },
-    { key: "score", label: "امتیاز", kind: "avg", value: (t) => t.scoring.score },
+    { key: "cx", label: __extraTr("سختی"), value: (t) => CX_FA[t.cx - 1] ?? "—" },
+    { key: "q", label: __extraTr("کیفیت"), value: (t) => t.quality ? QUAL_FA[t.quality] : "ثبت نشده" },
+    { key: "late", label: __extraTr("ارسال"), value: (t) => !t.due ? "بدون ددلاین" : t.scoring.late ? "دیر" : "به‌موقع" },
+    { key: "score", label: __extraTr("امتیاز"), kind: "avg", value: (t) => t.scoring.score },
   ];
   const reviewColumns = [
-    { key: "month", label: "ماه", value: (r) => faDigits(r.month) },
-    { key: "rating", label: "کیفیت", value: (r) => QUAL_FA[r.rating] ?? r.rating },
-    { key: "points", label: "امتیاز", kind: "avg", value: (r) => r.points },
-    { key: "by", label: "ثبت‌کننده", value: (r) => r.byName ?? "—" },
+    { key: "month", label: __extraTr("ماه"), value: (r) => faDigits(r.month) },
+    { key: "rating", label: __extraTr("کیفیت"), value: (r) => QUAL_FA[r.rating] ?? r.rating },
+    { key: "points", label: __extraTr("امتیاز"), kind: "avg", value: (r) => r.points },
+    { key: "by", label: __extraTr("ثبت‌کننده"), value: (r) => r.byName ?? "—" },
   ];
   return (
     <Panel title={`جزئیات امتیاز — ${row.person.name}`} meta={`امتیاز کل ${fmtNum(row.score, 1)} · تسک‌ها ${fmtNum(row.taskScore, 1)}${shift ? ` · ارزیابی شیفت ${fmtNum(row.reviewScore, 1)}` : ""}`}>
@@ -81,6 +87,7 @@ function Details({ row, shift }) {
 }
 
 export default function PeerLeaderboard() {
+  const { t: __extraTr } = useExtraI18n();
   const { t: __analyticsTr } = useAnalyticsI18n();
   const { view, range, params, setParam } = useAnalytics();
   const [selected, setSelected] = useState(null);
@@ -100,7 +107,7 @@ export default function PeerLeaderboard() {
   ].filter(([, names]) => names);
 
   const columns = [
-    { key: "rank", label: "رتبه", kind: "count", value: (row) => row.rank, sort: false },
+    { key: "rank", label: __extraTr("رتبه"), kind: "count", value: (row) => row.rank, sort: false },
     {
       key: "name",
       label: __analyticsTr("کارشناس"),
@@ -112,17 +119,17 @@ export default function PeerLeaderboard() {
         </span>
       ),
     },
-    { key: "score", label: "امتیاز", kind: "avg", value: (row) => row.score, title: "فقط داخل همین گروه هم‌سطح قابل مقایسه است" },
-    { key: "ratio", label: "نسبت به نفر اول", kind: "rate", value: (row) => row.leaderRatio },
-    { key: "taskScore", label: "امتیاز تسک‌ها", kind: "avg", value: (row) => row.taskScore },
-    { key: "late", label: "کسر تأخیر", kind: "avg", value: (row) => row.lateDeduction },
-    ...(shift ? [{ key: "review", label: "ارزیابی شیفت‌لاگ", kind: "avg", value: (row) => row.reviewScore }] : []),
+    { key: "score", label: __extraTr("امتیاز"), kind: "avg", value: (row) => row.score, title: __extraTr("فقط داخل همین گروه هم‌سطح قابل مقایسه است") },
+    { key: "ratio", label: __extraTr("نسبت به نفر اول"), kind: "rate", value: (row) => row.leaderRatio },
+    { key: "taskScore", label: __extraTr("امتیاز تسک‌ها"), kind: "avg", value: (row) => row.taskScore },
+    { key: "late", label: __extraTr("کسر تأخیر"), kind: "avg", value: (row) => row.lateDeduction },
+    ...(shift ? [{ key: "review", label: __extraTr("ارزیابی شیفت‌لاگ"), kind: "avg", value: (row) => row.reviewScore }] : []),
     { key: "tasks", label: __analyticsTr("تسک"), kind: "count", value: (row) => row.cur.completed },
-    { key: "units", label: "حجم وزن‌دار", kind: "count", value: (row) => row.cur.units },
-    { key: "hours", label: "ساعت", kind: "count", value: (row) => row.cur.hours },
-    { key: "onTime", label: "به‌موقع", kind: "rate", value: (row) => row.cur.onTimeRate },
-    { key: "quality", label: "کیفیت عالی/خوب", kind: "rate", value: (row) => row.cur.highQualityShare },
-    { key: "returns", label: "برگشتی", kind: "rate", value: (row) => row.cur.returnShare },
+    { key: "units", label: __extraTr("حجم وزن‌دار"), kind: "count", value: (row) => row.cur.units },
+    { key: "hours", label: __extraTr("ساعت"), kind: "count", value: (row) => row.cur.hours },
+    { key: "onTime", label: __extraTr("به‌موقع"), kind: "rate", value: (row) => row.cur.onTimeRate },
+    { key: "quality", label: __extraTr("کیفیت عالی/خوب"), kind: "rate", value: (row) => row.cur.highQualityShare },
+    { key: "returns", label: __extraTr("برگشتی"), kind: "rate", value: (row) => row.cur.returnShare },
     ...(shift ? [
       { key: "shifts", label: __analyticsTr("شیفت"), kind: "count", value: (row) => row.cur.shifts },
       { key: "iocs", label: "IOC", kind: "count", value: (row) => row.cur.iocs },

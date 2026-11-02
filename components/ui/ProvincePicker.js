@@ -5,6 +5,7 @@ import { useI18n as useSharedI18n } from "@/components/I18nProvider";
 import { useEffect, useId, useMemo, useRef, useState } from "react";
 import Icon from "@/components/ui/Icon";
 import { IRAN_PROVINCES } from "@/lib/roles";
+import { provinceLabel } from "@/lib/i18n/labels";
 import styles from "./ProvincePicker.module.css";
 
 // Persian and Arabic keyboards should search the same provinces.
@@ -13,14 +14,16 @@ const normalize = (value) => String(value ?? "").normalize("NFKC")
   .trim().toLocaleLowerCase("fa");
 
 export default function ProvincePicker({ id, value = "", onChange, placeholder = "Search provinces…", className = "", ...inputProps }) {
-  const { t: __sharedTr } = useSharedI18n();
+  const { t: __sharedTr, locale, dir, province: displayProvince } = useSharedI18n();
   const [open, setOpen] = useState(false);
   const [query, setQuery] = useState("");
   const [active, setActive] = useState(0);
   const root = useRef(null);
   const input = useRef(null);
   const listId = useId();
-  const matches = useMemo(() => IRAN_PROVINCES.filter((province) => normalize(province).includes(normalize(query))), [query]);
+  const matches = useMemo(() => IRAN_PROVINCES.filter((name) =>
+    normalize(name).includes(normalize(query)) || normalize(provinceLabel(name, "en")).includes(normalize(query))
+  ), [query]);
 
   const close = () => { setOpen(false); setQuery(""); setActive(0); };
   const choose = (province) => { onChange?.(province); close(); input.current?.focus(); };
@@ -47,15 +50,15 @@ export default function ProvincePicker({ id, value = "", onChange, placeholder =
   };
 
   return (
-    <div ref={root} className={`${styles.root} ${className}`} dir="rtl">
+    <div ref={root} className={`${styles.root} ${className}`} dir={dir}>
       <div className={styles.control}>
         <Icon name="search" size="sm" />
         <input {...inputProps} ref={input} id={id} type="text"
           className={`input ${styles.input}`}
           role="combobox" aria-autocomplete="list" aria-expanded={open}
           aria-controls={listId} aria-activedescendant={open && matches[active] ? `${listId}-${IRAN_PROVINCES.indexOf(matches[active])}` : undefined}
-          value={open ? query : value}
-          placeholder={open ? "Type to filter provinces…" : (value || placeholder)}
+          value={open ? query : displayProvince(value)}
+          placeholder={open ? __sharedTr("Type to filter provinces…") : (displayProvince(value) || __sharedTr(placeholder))}
           autoComplete="off" spellCheck={false}
           onFocus={() => { setQuery(""); setActive(0); setOpen(true); }}
           onChange={(event) => { setQuery(event.target.value); setActive(0); setOpen(true); }}
@@ -79,7 +82,7 @@ export default function ProvincePicker({ id, value = "", onChange, placeholder =
       </div>
       {open && (
         <div id={listId} className={styles.menu} role="listbox" aria-label={__sharedTr("Provinces")}>
-          <div className={styles.hint}>{matches.length} {matches.length === 1 ? "province" : "provinces"}</div>
+          <div className={styles.hint}>{locale === "fa" ? `${matches.length} استان` : `${matches.length} ${matches.length === 1 ? "province" : "provinces"}`}</div>
           {matches.length ? matches.map((province, index) => (
             <button type="button" role="option" id={`${listId}-${IRAN_PROVINCES.indexOf(province)}`} key={province}
               aria-selected={province === value} data-active={index === active}
@@ -87,7 +90,7 @@ export default function ProvincePicker({ id, value = "", onChange, placeholder =
               onMouseEnter={() => setActive(index)}
               onMouseDown={(event) => event.preventDefault()}
               onClick={() => choose(province)}>
-              <span>{province}</span>
+              <span>{displayProvince(province)}</span>
               {province === value && <Icon name="check" size="sm" />}
             </button>
           )) : <p className={styles.empty}>{"" + __sharedTr("No matching province") + ""}</p>}

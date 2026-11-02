@@ -1,5 +1,9 @@
 "use client";
 
+import { useI18n as useExtraI18n } from "@/components/I18nProvider";
+
+import useAnalyticsFormat from "@/components/analytics/useAnalyticsFormat";
+
 import { useI18n as useAnalyticsI18n } from "@/components/I18nProvider";
 
 import { useCallback, useEffect, useMemo, useState } from "react";
@@ -50,6 +54,8 @@ export default function Report() {
 }
 
 function ReportBody() {
+  const { t: __extraTr } = useExtraI18n();
+  const { fmtInt, fmtNum, fmtPct } = useAnalyticsFormat();
   const { t: __analyticsTr } = useAnalyticsI18n();
   const a = useAnalytics();
   const { view, range, cmp, gran, filters, params, setParam } = a;
@@ -65,14 +71,14 @@ function ReportBody() {
   };
 
   const m = useMemo(() => {
-    const b = buckets(range.from, range.end, gran);
-    const pb = cmp ? buckets(cmp.from, cmp.to, gran) : [];
-    const alerts = buildAlerts(view, { range, cmp });
+    const b = buckets(range.from, range.end, gran, a.locale);
+    const pb = cmp ? buckets(cmp.from, cmp.to, gran, a.locale) : [];
+    const alerts = buildAlerts(view, { range, cmp, locale: a.locale });
     const shiftIds = idsOf(view.people.filter((p) => p.shift));
     return {
       b, pb, alerts,
       status: overallStatus(alerts),
-      insights: buildInsights(view, { range, cmp }),
+      insights: buildInsights(view, { range, cmp, locale: a.locale }),
       cur: stats(view, null, range), prev: cmp ? stats(view, null, cmp) : null,
       bs: bucketStats(view, null, b), pbs: bucketStats(view, null, pb),
       open: openStats(view, null),
@@ -84,8 +90,8 @@ function ReportBody() {
   }, [view, range, cmp, gran, full]);
   const flow = useCallback((t) => lineOption(t, {
     labels: m.b.map((x) => x.label),
-    series: [{ name: "تکمیل‌شده", data: m.bs.map((x) => x.completed), color: t["cat-1"] }, { name: "ایجادشده", data: m.bs.map((x) => x.created), color: t["cat-2"] }],
-    prev: cmp ? { name: "تکمیل‌شده در دوره مقایسه", data: m.pbs.map((x) => x.completed), labels: m.pb.map((x) => x.label) } : null,
+    series: [{ name: __extraTr("تکمیل‌شده"), data: m.bs.map((x) => x.completed), color: t["cat-1"] }, { name: __extraTr("ایجادشده"), data: m.bs.map((x) => x.created), color: t["cat-2"] }],
+    prev: cmp ? { name: __extraTr("تکمیل‌شده در دوره مقایسه"), data: m.pbs.map((x) => x.completed), labels: m.pb.map((x) => x.label) } : null,
   }), [m, cmp]);
   const { cur, prev, open, soc, socPrev } = m;
   const short = cmp?.short;
@@ -120,7 +126,7 @@ function ReportBody() {
         <MetricGrid label={__analyticsTr("شاخص‌های اصلی")}>
           <Kpi label={__analyticsTr("تسک‌های تکمیل‌شده")} value={fmtInt(cur.completed)} delta={prev && <Delta now={cur.completed} before={prev.completed} label={short} />} />
           <Kpi label={__analyticsTr("حجم کار وزن‌دار")} value={fmtInt(cur.units)} delta={prev && <Delta now={cur.units} before={prev.units} label={short} />} />
-          <Kpi label={__analyticsTr("ساعت ثبت‌شده")} value={fmtNum(cur.hours, 0)} unit="ساعت" delta={prev && <Delta now={cur.hours} before={prev.hours} label={short} />} />
+          <Kpi label={__analyticsTr("ساعت ثبت‌شده")} value={fmtNum(cur.hours, 0)} unit={__extraTr("ساعت")} delta={prev && <Delta now={cur.hours} before={prev.hours} label={short} />} />
           <Kpi label={__analyticsTr("تحویل به‌موقع")} value={fmtPct(cur.onTimeRate)} delta={prev && cur.onTimeRate !== null && <Delta now={cur.onTimeRate} before={prev.onTimeRate} kind="rate" label={short} />} foot={`از ${faDigits(cur.onTimeN)} تسک دارای ددلاین`} />
           <Kpi label={__analyticsTr("صف کار باز (اکنون)")} value={fmtInt(open.open)} tone={open.overdue ? "alert" : undefined} foot={`${faDigits(open.overdue)} معوق · ${faDigits(open.blocked)} مسدود`} />
           {soc
@@ -155,13 +161,13 @@ function ReportBody() {
           <DataTable dense columns={[
             { key: "t", label: __analyticsTr("تیم"), value: (r) => r.fa, sort: false },
             { key: "n", label: __analyticsTr("کارشناسان"), kind: "count", value: (r) => r.headcount, sort: false },
-            { key: "c", label: "تکمیل‌شده", kind: "count", value: (r) => r.cur.completed, sort: false },
-            { key: "d", label: "تغییر", value: () => null, sort: false, render: (r) => (r.prev ? <Delta now={r.cur.completed} before={r.prev.completed} /> : "—") },
-            { key: "pc", label: "سرانه", kind: "avg", value: (r) => r.pc.completed, sort: false },
-            { key: "h", label: "ساعت", kind: "count", value: (r) => r.cur.hours, sort: false },
-            { key: "ot", label: "به‌موقع", kind: "rate", value: (r) => r.cur.onTimeRate, sort: false },
-            { key: "o", label: "صف باز", kind: "count", value: (r) => r.open.open, sort: false },
-            { key: "od", label: "معوق", kind: "count", value: (r) => r.open.overdue, sort: false },
+            { key: "c", label: __extraTr("تکمیل‌شده"), kind: "count", value: (r) => r.cur.completed, sort: false },
+            { key: "d", label: __extraTr("تغییر"), value: () => null, sort: false, render: (r) => (r.prev ? <Delta now={r.cur.completed} before={r.prev.completed} /> : "—") },
+            { key: "pc", label: __extraTr("سرانه"), kind: "avg", value: (r) => r.pc.completed, sort: false },
+            { key: "h", label: __extraTr("ساعت"), kind: "count", value: (r) => r.cur.hours, sort: false },
+            { key: "ot", label: __extraTr("به‌موقع"), kind: "rate", value: (r) => r.cur.onTimeRate, sort: false },
+            { key: "o", label: __extraTr("صف باز"), kind: "count", value: (r) => r.open.open, sort: false },
+            { key: "od", label: __extraTr("معوق"), kind: "count", value: (r) => r.open.overdue, sort: false },
           ]} rows={m.teams} rowKey={(r) => r.key} caption={__analyticsTr("تیم‌ها")} />
         </section>
 
@@ -169,12 +175,12 @@ function ReportBody() {
           <section>
             <h3>{"" + __analyticsTr("کارشناسان") + ""}</h3>
             <DataTable dense columns={[
-              { key: "n", label: "نام", value: (r) => r.person.name, render: (r) => <span className="an-person">{r.person.name}<small>{[groupFa(r.person.group), r.person.level, ROLE_FA[r.person.role]].filter(Boolean).join(" · ")}</small></span> },
-              { key: "c", label: "تکمیل‌شده", kind: "count", value: (r) => r.cur.completed },
-              { key: "u", label: "حجم وزن‌دار", kind: "count", value: (r) => r.cur.units },
-              { key: "h", label: "ساعت", kind: "count", value: (r) => r.cur.hours },
-              { key: "ot", label: "به‌موقع", kind: "rate", value: (r) => r.cur.onTimeRate },
-              { key: "o", label: "صف باز", kind: "count", value: (r) => r.open.open },
+              { key: "n", label: __extraTr("نام"), value: (r) => r.person.name, render: (r) => <span className="an-person">{r.person.name}<small>{[groupFa(r.person.group), r.person.level, ROLE_FA[r.person.role]].filter(Boolean).join(" · ")}</small></span> },
+              { key: "c", label: __extraTr("تکمیل‌شده"), kind: "count", value: (r) => r.cur.completed },
+              { key: "u", label: __extraTr("حجم وزن‌دار"), kind: "count", value: (r) => r.cur.units },
+              { key: "h", label: __extraTr("ساعت"), kind: "count", value: (r) => r.cur.hours },
+              { key: "ot", label: __extraTr("به‌موقع"), kind: "rate", value: (r) => r.cur.onTimeRate },
+              { key: "o", label: __extraTr("صف باز"), kind: "count", value: (r) => r.open.open },
               { key: "s", label: __analyticsTr("شیفت"), kind: "count", value: (r) => (r.person.shift ? r.cur.shifts : null) },
               { key: "tk", label: __analyticsTr("تیکت"), kind: "count", value: (r) => (r.person.shift ? r.cur.tickets : null) },
             ]} rows={m.people.map((r) => ({ ...r, id: r.person.id }))} caption={__analyticsTr("کارشناسان")} />

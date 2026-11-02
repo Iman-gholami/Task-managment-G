@@ -1,5 +1,7 @@
 "use client";
 
+import { useI18n as useExtraI18n } from "@/components/I18nProvider";
+
 import { useI18n as useAnalyticsI18n } from "@/components/I18nProvider";
 
 import { memo, useCallback, useDeferredValue, useMemo, useState } from "react";
@@ -28,13 +30,14 @@ export default function People() {
 }
 
 function PeopleBody() {
+  const { t: __extraTr } = useExtraI18n();
   const { t: __analyticsTr } = useAnalyticsI18n();
   const a = useAnalytics();
   const { view, range, cmp, gran, params, setParam } = a;
   const person = params.get("person");
   const metric = DIST_METRICS.includes(params.get("metric")) ? params.get("metric") : "completed";
   const m = useMemo(() => {
-    const b = buckets(range.from, range.end, gran);
+    const b = buckets(range.from, range.end, gran, a.locale);
     const rows = peopleRows(view, range, cmp).map((r) => ({ ...r, id: r.person.id, spark: bucketStats(view, [r.person.id], b).map((x) => x.completed) }));
     return { rows, groups: groupsIn(view), shift: rows.some((r) => r.person.shift) };
   }, [view, range, cmp, gran]);
@@ -61,10 +64,10 @@ function PeopleBody() {
       <Panel title={__analyticsTr("سوابق ارزیابی ماهانه شیفت‌لاگ")} meta={__analyticsTr("جدیدترین ارزیابی‌ها در ابتدا نمایش داده می‌شوند")}>
         {!reviews.length ? <p className="panel-body muted">{"" + __analyticsTr("برای این استان و دوره، ارزیابی ماهانه ثبت نشده است.") + ""}</p> : (
           <DataTable dense columns={[
-            { key: "month", label: "ماه ارزیابی", value: (r) => r.month },
+            { key: "month", label: __extraTr("ماه ارزیابی"), value: (r) => r.month },
             { key: "name", label: __analyticsTr("کارشناس"), value: (r) => m.rows.find((p) => p.person.id === r.a)?.person.name ?? "—" },
-            { key: "rating", label: "نتیجه", value: (r) => QUAL_FA[r.rating] ?? r.rating },
-            { key: "note", label: "توضیحات ارزیابی", value: (r) => r.note || "—" },
+            { key: "rating", label: __extraTr("نتیجه"), value: (r) => QUAL_FA[r.rating] ?? r.rating },
+            { key: "note", label: __extraTr("توضیحات ارزیابی"), value: (r) => r.note || "—" },
           ]} rows={reviews.map((r, i) => ({ ...r, id: `${r.a}-${r.month}-${i}` }))} caption="سوابق ارزیابی کارشناسان" />
         )}
       </Panel>
@@ -91,6 +94,7 @@ function PeopleBody() {
 // Search input state belongs to this small table subtree. ECharts, detailed
 // employee metrics, and the province's history do not rerender per keystroke.
 const PeopleSearchTable = memo(function PeopleSearchTable({ m, setParam }) {
+  const { t: __extraTr } = useExtraI18n();
   const { t: __analyticsTr } = useAnalyticsI18n();
   const [q, setQ] = useState("");
   const deferredQ = useDeferredValue(q);
@@ -101,28 +105,28 @@ const PeopleSearchTable = memo(function PeopleSearchTable({ m, setParam }) {
 
   const columns = [
     { key: "name", label: __analyticsTr("کارشناس"), value: (r) => r.person.name, render: (r) => <span className="an-person">{r.person.name}<small>{[r.person.province || "استان تعیین‌نشده", groupFa(r.person.group), r.person.level, ROLE_FA[r.person.role], r.person.active ? null : "غیرفعال"].filter(Boolean).join(" · ")}</small></span> },
-    { key: "c", label: "تکمیل‌شده", kind: "count", value: (r) => r.cur.completed },
-    { key: "good", label: "عالی/خوب", kind: "count", value: (r) => r.cur.quality[0] + r.cur.quality[1] },
-    { key: "needs", label: "نیاز بهبود", kind: "count", value: (r) => r.cur.quality[3] },
-    { key: "d", label: "تغییر", value: (r) => (r.prev ? r.cur.completed - r.prev.completed : null), render: (r) => (r.prev ? <Delta now={r.cur.completed} before={r.prev.completed} /> : "—") },
-    { key: "u", label: "حجم وزن‌دار", kind: "count", value: (r) => r.cur.units },
-    { key: "h", label: "ساعت", kind: "count", value: (r) => r.cur.hours },
-    { key: "hp", label: "ساعت/تسک", kind: "avg", value: (r) => r.cur.hoursPerTask },
-    { key: "ot", label: "به‌موقع", kind: "rate", value: (r) => r.cur.onTimeRate, title: "نرخ وقتی حداقل ۵ تسک دارای ددلاین باشد نمایش داده می‌شود" },
-    { key: "cy", label: "زمان انجام", kind: "days", value: (r) => r.cur.cycleMedian },
-    { key: "rt", label: "برگشت", kind: "count", value: (r) => r.cur.returns },
-    { key: "o", label: "صف باز", kind: "count", value: (r) => r.open.open },
-    { key: "od", label: "معوق", kind: "count", value: (r) => r.open.overdue },
+    { key: "c", label: __extraTr("تکمیل‌شده"), kind: "count", value: (r) => r.cur.completed },
+    { key: "good", label: __extraTr("عالی/خوب"), kind: "count", value: (r) => r.cur.quality[0] + r.cur.quality[1] },
+    { key: "needs", label: __extraTr("نیاز بهبود"), kind: "count", value: (r) => r.cur.quality[3] },
+    { key: "d", label: __extraTr("تغییر"), value: (r) => (r.prev ? r.cur.completed - r.prev.completed : null), render: (r) => (r.prev ? <Delta now={r.cur.completed} before={r.prev.completed} /> : "—") },
+    { key: "u", label: __extraTr("حجم وزن‌دار"), kind: "count", value: (r) => r.cur.units },
+    { key: "h", label: __extraTr("ساعت"), kind: "count", value: (r) => r.cur.hours },
+    { key: "hp", label: __extraTr("ساعت/تسک"), kind: "avg", value: (r) => r.cur.hoursPerTask },
+    { key: "ot", label: __extraTr("به‌موقع"), kind: "rate", value: (r) => r.cur.onTimeRate, title: __extraTr("نرخ وقتی حداقل ۵ تسک دارای ددلاین باشد نمایش داده می‌شود") },
+    { key: "cy", label: __extraTr("زمان انجام"), kind: "days", value: (r) => r.cur.cycleMedian },
+    { key: "rt", label: __extraTr("برگشت"), kind: "count", value: (r) => r.cur.returns },
+    { key: "o", label: __extraTr("صف باز"), kind: "count", value: (r) => r.open.open },
+    { key: "od", label: __extraTr("معوق"), kind: "count", value: (r) => r.open.overdue },
     ...(m.shift ? [
       { key: "s", label: __analyticsTr("شیفت"), kind: "count", value: (r) => (r.person.shift ? r.cur.shifts : null) },
       { key: "off", label: __analyticsTr("تعطیل شیفت"), kind: "count", value: (r) => (r.person.shift ? r.cur.offDays : null) },
       { key: "leave", label: __analyticsTr("مرخصی"), kind: "count", value: (r) => (r.person.shift ? r.cur.leaveDays : null) },
-      { key: "cl", label: "بسته‌شدن لاگ", kind: "rate", value: (r) => (r.person.shift ? r.cur.closureRate : null) },
-      { key: "rn", label: "روتین", kind: "rate", value: (r) => (r.person.shift ? r.cur.routineRate : null) },
+      { key: "cl", label: __extraTr("بسته‌شدن لاگ"), kind: "rate", value: (r) => (r.person.shift ? r.cur.closureRate : null) },
+      { key: "rn", label: __extraTr("روتین"), kind: "rate", value: (r) => (r.person.shift ? r.cur.routineRate : null) },
       { key: "io", label: "IOC", kind: "count", value: (r) => (r.person.shift ? r.cur.iocs : null) },
       { key: "tk", label: __analyticsTr("تیکت"), kind: "count", value: (r) => (r.person.shift ? r.cur.tickets : null) },
     ] : []),
-    { key: "sp", label: "روند", sort: false, value: () => null, render: (r) => <Sparkline values={r.spark} width={76} height={22} /> },
+    { key: "sp", label: __extraTr("روند"), sort: false, value: () => null, render: (r) => <Sparkline values={r.spark} width={76} height={22} /> },
   ];
   return (
       <Panel

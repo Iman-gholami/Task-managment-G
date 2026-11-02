@@ -1,5 +1,9 @@
 "use client";
 
+import { useI18n as useExtraI18n } from "@/components/I18nProvider";
+
+import useAnalyticsFormat from "@/components/analytics/useAnalyticsFormat";
+
 import { useI18n as useAnalyticsI18n } from "@/components/I18nProvider";
 
 import Link from "next/link";
@@ -18,13 +22,15 @@ const med = (m, k, f) => (m && m[k] !== null && m[k] !== undefined ? `میانه
 
 /** Quick look at one expert: key figures against the comparison period and the team median. */
 export default function PersonDrawer({ id, onClose }) {
+  const { t: __extraTr } = useExtraI18n();
+  const { fmtInt, fmtNum, fmtPct, fmtDays } = useAnalyticsFormat();
   const { t: __analyticsTr } = useAnalyticsI18n();
   const a = useAnalytics();
-  const m = useMemo(() => personModel(a.view, id, a.range, a.cmp, a.gran), [a.view, id, a.range, a.cmp, a.gran]);
+  const m = useMemo(() => personModel(a.view, id, a.range, a.cmp, a.gran, a.locale), [a.view, id, a.range, a.cmp, a.gran]);
   const build = useCallback((t) => lineOption(t, {
     labels: m.b.map((x) => x.label), bars: true,
-    series: [{ name: "تکمیل‌شده", data: m.bs.map((x) => x.completed) }],
-    prev: a.cmp ? { name: "دوره مقایسه", data: m.pbs.map((x) => x.completed), labels: m.pb.map((x) => x.label) } : null,
+    series: [{ name: __extraTr("تکمیل‌شده"), data: m.bs.map((x) => x.completed) }],
+    prev: a.cmp ? { name: __extraTr("دوره مقایسه"), data: m.pbs.map((x) => x.completed), labels: m.pb.map((x) => x.label) } : null,
   }), [m, a.cmp]);
   if (!m) return null;
   const { p, cur, prev, medians, open } = m;
