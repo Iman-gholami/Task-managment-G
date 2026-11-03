@@ -12,7 +12,7 @@ const nameCollator = new Intl.Collator("fa");
  * Free text is not an assignee: an explicit result must be chosen.
  */
 export default function AssigneePicker({ id, value, people, onSelect, onClear, disabled = false, autoFocus = false, overlayOptions = false, ...inputProps }) {
-  const { t: __sharedTr } = useSharedI18n();
+  const { t: __sharedTr, team: teamText } = useSharedI18n();
   const selected = people.find((person) => person.id === value);
   const [search, setSearch] = useState(() => selected?.name ?? "");
   const [open, setOpen] = useState(false);
@@ -26,8 +26,8 @@ export default function AssigneePicker({ id, value, people, onSelect, onClear, d
 
   // Member data changes rarely; don't re-sort or normalize it for every keystroke.
   const searchIndex = useMemo(() => people
-    .map((person) => ({ person, text: (person.name + " " + person.team).toLocaleLowerCase() }))
-    .sort((a, b) => nameCollator.compare(a.person.name, b.person.name)), [people]);
+    .map((person) => ({ person, text: `${person.name} ${person.team} ${teamText(person.team)}`.toLocaleLowerCase() }))
+    .sort((a, b) => nameCollator.compare(a.person.name, b.person.name)), [people, teamText]);
   const filtered = useMemo(() => {
     const normalized = search.trim().toLocaleLowerCase();
     return searchIndex.filter((entry) => !normalized || entry.text.includes(normalized)).map((entry) => entry.person);
@@ -73,7 +73,7 @@ export default function AssigneePicker({ id, value, people, onSelect, onClear, d
         aria-expanded={open && !disabled}
         aria-controls={open && !disabled ? listId : undefined}
         aria-activedescendant={open && filtered.length ? listId + "-opt-" + active : undefined}
-        placeholder={disabled ? undefined : "Type a name or team..."}
+        placeholder={disabled ? undefined : __sharedTr("Type a name or team...")}
         autoComplete="off"
         disabled={disabled}
         value={disabled ? selected?.name ?? "" : search}
@@ -112,7 +112,7 @@ export default function AssigneePicker({ id, value, people, onSelect, onClear, d
               onClick={() => choose(person)}
             >
               <span>{person.name}</span>
-              <small>{person.team}</small>
+              <small>{teamText(person.team)}</small>
             </button>
           ))}
         </div>

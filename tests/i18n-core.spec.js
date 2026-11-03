@@ -80,6 +80,7 @@ test("report and checklist screens localize while preserving authored content", 
 
 test("both language layouts remain usable on desktop and mobile", async ({ page, baseURL }, testInfo) => {
   expect((await page.request.post("/api/auth/login", { data: ADMIN })).ok()).toBeTruthy();
+  await page.emulateMedia({ reducedMotion: "reduce" });
   for (const [locale, direction] of [["en", "ltr"], ["fa", "rtl"]]) {
     await page.context().addCookies([{ name: "so.locale", value: locale, url: baseURL }]);
     for (const [size, width, height] of [["desktop", 1440, 900], ["mobile", 390, 844]]) {
@@ -88,7 +89,34 @@ test("both language layouts remain usable on desktop and mobile", async ({ page,
       await expect(page.locator("html")).toHaveAttribute("dir", direction);
       await expect(page.locator("h1")).toBeVisible();
       await expect(page.locator(".metrics").first()).toBeVisible();
-      if (process.env.CI) await page.screenshot({ path: testInfo.outputPath(`dashboard-${locale}-${size}.png`), fullPage: true });
+      await expect(page.locator('.metrics .metric[aria-busy="true"]')).toHaveCount(0);
+      await expect(page.getByRole("heading", { name: locale === "fa" ? "مقایسه تیم‌ها" : "Team comparison" })).toBeVisible();
+      expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true);
+      if (process.env.CI) await page.screenshot({ path: testInfo.outputPath(`dashboard-${locale}-${size}.png`), fullPage: true, animations: "disabled" });
     }
   }
+});
+
+test("task creation translates options and searches translated team names", async ({ page }) => {
+  expect((await page.request.post("/api/auth/login", { data: ADMIN })).ok()).toBeTruthy();
+  const member = await page.request.post("/api/members", { data: {
+    name: "Bilingual Design Analyst", email: "i18n-design@example.invalid", password: "I18N-Design-2026!", role: "engineer", team: "Design & Automation",
+  } });
+  expect(member.status()).toBe(201);
+  await page.goto("/tasks/assigned");
+  await page.getByRole("button", { name: "فارسی", exact: true }).click();
+  await page.getByRole("button", { name: /^ایجاد تسک/ }).first().click();
+  const dialog = page.getByRole("dialog", { name: "ایجاد تسک" });
+  const assignee = dialog.getByRole("combobox", { name: "مسئول انجام" });
+  await expect(assignee).toHaveAttribute("placeholder", "نام یا تیم را وارد کنید...");
+  await expect(dialog.getByLabel("اولویت").locator("option:checked")).toHaveText("معمولی");
+  await expect(dialog.getByLabel("پیچیدگی").locator("option:checked")).toHaveText("متوسط");
+  await assignee.fill("طراحی");
+  await expect(dialog.getByRole("option").filter({ hasText: "Bilingual Design Analyst" })).toContainText("طراحی و اتوماسیون");
+  await assignee.fill("Design");
+  await dialog.getByRole("option").filter({ hasText: "Bilingual Design Analyst" }).click();
+  await dialog.getByLabel("عنوان تسک").fill("User-authored task");
+  await dialog.getByRole("button", { name: "بررسی جزئیات" }).click();
+  await expect(dialog.getByText("توضیحی اضافه نشده است.")).toBeVisible();
+  await expect(dialog.getByRole("heading", { name: "User-authored task" })).toBeVisible();
 });

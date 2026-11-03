@@ -117,6 +117,18 @@ test("unsaved report changes are protected when navigating away", async ({ page 
   await expect(page.getByLabel(/What did you do/)).toHaveValue("Unsaved work in progress");
 });
 
+test("switching language preserves an unsaved work report", async ({ page }) => {
+  const { analyst, task } = await setup(page, "locale-draft");
+  await login(page, { email: analyst.email, password: PASSWORD });
+  await page.goto(`/tasks/${task.id}`);
+  await page.getByRole("button", { name: "Start", exact: true }).click();
+  await page.getByLabel(/What did you do/).fill("Investigation still in progress");
+  await page.getByRole("button", { name: "فارسی", exact: true }).click();
+  await expect(page.getByLabel(/چه کاری انجام دادید/)).toHaveValue("Investigation still in progress");
+  await page.getByRole("button", { name: "English", exact: true }).click();
+  await expect(page.getByLabel(/What did you do/)).toHaveValue("Investigation still in progress");
+});
+
 test("a return started from the task list opens the reason workflow", async ({ page }) => {
   const { analyst, task } = await setup(page, "list-return");
   await login(page, { email: analyst.email, password: PASSWORD });

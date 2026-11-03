@@ -38,7 +38,7 @@ export function TaskFlowStep({ number, title, note, active, done, onOpen, childr
 }
 
 export function TaskReportSummary({ task, details, attachments }) {
-  const { t: __taskTr } = useTaskI18n();
+  const { t: __taskTr, locale, number } = useTaskI18n();
   const report = details.report;
   const hasReport = report.workPerformed || report.outcome || report.hoursRecorded;
   return (
@@ -47,7 +47,7 @@ export function TaskReportSummary({ task, details, attachments }) {
       <dl className="task-report-facts">
         <div><dt>{"" + __taskTr("Work performed") + ""}</dt><dd dir="auto">{report.workPerformed || __taskTr("Not recorded")}</dd></div>
         <div><dt>{"" + __taskTr("Outcome") + ""}</dt><dd dir="auto">{report.outcome || __taskTr("Not recorded")}</dd></div>
-        <div><dt>{"" + __taskTr("Total time") + ""}</dt><dd>{report.hoursRecorded ? `${task.hours} hrs` : task.hours ? `${task.hours} hrs (existing total)` : __taskTr("Not recorded")}</dd></div>
+        <div><dt>{"" + __taskTr("Total time") + ""}</dt><dd>{report.hoursRecorded ? `${number(task.hours)} ${__taskTr("hrs")}` : task.hours ? locale === "fa" ? `${number(task.hours)} ساعت (مجموع قبلی)` : `${task.hours} hrs (existing total)` : __taskTr("Not recorded")}</dd></div>
       </dl>
       {attachments}
     </div>
@@ -55,7 +55,7 @@ export function TaskReportSummary({ task, details, attachments }) {
 }
 
 export default function TaskWorkPanel({ task, details, transitions, onMove, setData, commentDraftRef, editingCommentRef, posting, uploading, attachments, onShowComments }) {
-  const { t: __taskTr } = useTaskI18n();
+  const { t: __taskTr, number } = useTaskI18n();
   const { dispatch } = useApp();
   const router = useRouter();
   const initial = details.report;
@@ -223,7 +223,7 @@ export default function TaskWorkPanel({ task, details, transitions, onMove, setD
           <TaskFlowStep number={task.reviewRequired ? 7 : 6} title={__taskTr("Complete")} note={__taskTr(task.reviewRequired ? "After approval" : "After completion")} />
         </ol>
         {error && !invalidField && <div className="task-flow-error"><FormAlert>{__taskTr(error)}</FormAlert>{uncertain && <button type="button" className="btn btn-secondary btn-sm" disabled={busy} onClick={checkCurrent}>{"" + __taskTr("Check task") + ""}</button>}</div>}
-        {conflict && <details className="task-extra task-conflict" open><summary><span>{"" + __taskTr("Current saved report") + ""}</span><span>{"" + __taskTr("Your draft is still editable") + ""}</span></summary><div className="task-extra-body"><dl className="task-report-facts"><div><dt>{"" + __taskTr("Work performed") + ""}</dt><dd dir="auto">{conflict.report.workPerformed || __taskTr("Not recorded")}</dd></div><div><dt>{"" + __taskTr("Outcome") + ""}</dt><dd dir="auto">{conflict.report.outcome || __taskTr("Not recorded")}</dd></div><div><dt>{"" + __taskTr("Total time") + ""}</dt><dd>{conflict.report.hoursRecorded || conflict.hours ? `${conflict.hours} hrs` : __taskTr("Not recorded")}</dd></div></dl></div></details>}
+        {conflict && <details className="task-extra task-conflict" open><summary><span>{"" + __taskTr("Current saved report") + ""}</span><span>{"" + __taskTr("Your draft is still editable") + ""}</span></summary><div className="task-extra-body"><dl className="task-report-facts"><div><dt>{"" + __taskTr("Work performed") + ""}</dt><dd dir="auto">{conflict.report.workPerformed || __taskTr("Not recorded")}</dd></div><div><dt>{"" + __taskTr("Outcome") + ""}</dt><dd dir="auto">{conflict.report.outcome || __taskTr("Not recorded")}</dd></div><div><dt>{"" + __taskTr("Total time") + ""}</dt><dd>{conflict.report.hoursRecorded || conflict.hours ? `${number(conflict.hours)} ${__taskTr("hrs")}` : __taskTr("Not recorded")}</dd></div></dl></div></details>}
         <p className="task-flow-status" role="status">{__taskTr(message || (dirty ? "Unsaved changes" : saved.current.revision ? "All changes saved" : "No draft saved yet"))}</p>
       </>}
       {leaveTarget && <Dialog label={__taskTr("Unsaved work report")} title={__taskTr("Leave without saving?")} description={__taskTr("Your latest report changes have not been saved.")} onClose={() => setLeaveTarget(null)} width={440}>

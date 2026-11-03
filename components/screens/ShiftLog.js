@@ -63,7 +63,7 @@ function Layer2ShiftLog({ initialLog }) {
       await api("/api/shift", { method: "PATCH", body: { completed: true, ...(initialLog.date !== TODAY ? { date: initialLog.date } : {}) } });
       setSubmitted(true);
       if (initialLog.date === TODAY) dispatch({ type: "shift/complete", value: true });
-      toast("Shift submitted");
+      toast(__shiftFaTr("Shift submitted"));
     } catch (error) { toast(error.message, "error"); }
     finally { setSubmitting(false); }
   };
@@ -106,7 +106,7 @@ function Layer2ShiftLog({ initialLog }) {
 }
 
 function RoutineShiftLog({ initialLog }) {
-  const { t: __shiftFaTr, locale, team: teamText } = useEngShiftI18n();
+  const { t: __shiftFaTr, locale, number, team: teamText } = useEngShiftI18n();
   const { dispatch, toast, me, activities, tickets, shiftDone, shiftDate, shiftChecklist, shiftTeam } = useApp();
   const logDate = initialLog?.date ?? shiftDate;
   const backfill = logDate !== TODAY;
@@ -175,20 +175,20 @@ function RoutineShiftLog({ initialLog }) {
       await api("/api/shift", { method: "PATCH", body: { completed: true, ...(backfill ? { date: logDate } : {}) } });
       if (backfill) setHistoricalSubmitted(true);
       else dispatch({ type: "shift/complete", value: true });
-      toast("Shift submitted and locked");
+      toast(__shiftFaTr("Shift submitted and locked"));
     } catch (e) {
       toast(e.message, "error");
     }
   };
 
   const completeShift = () => {
-    if (pending > 0) { toast("Finish saving your last change before submitting the shift.", "info"); return; }
+    if (pending > 0) { toast(__shiftFaTr("Finish saving your last change before submitting the shift."), "info"); return; }
     if (remaining.length) {
       const first = remaining[0];
       document.getElementById(`act-${first.n}`)?.scrollIntoView({ behavior: "smooth", block: "center" });
       setFlash(first.n);
       setTimeout(() => setFlash(null), 1400);
-      toast(`Finish ${plural(remaining.length, "remaining activity", "remaining activities")} before completing the shift.`, "info");
+      toast(locale === "fa" ? `پیش از تکمیل شیفت، ${number(remaining.length)} فعالیت باقی‌مانده را انجام دهید.` : `Finish ${plural(remaining.length, "remaining activity", "remaining activities")} before completing the shift.`, "info");
       return;
     }
     setCompleted();
@@ -207,7 +207,7 @@ function RoutineShiftLog({ initialLog }) {
       </div>}
       <div className="panel" style={{ marginBottom: "var(--s-4)" }}>
         <div className="shift-head">
-          <div className="ring" style={{ "--v": pct }} role="img" aria-label={`${pct}% complete`} />
+          <div className="ring" style={{ "--v": pct }} role="img" aria-label={locale === "fa" ? `${number(pct)} درصد تکمیل شده` : `${pct}% complete`} />
           <dl className="facts">
             <div><dt><small>{__shiftFaTr("Analyst")}</small></dt><dd><Who id={me.id} /></dd></div>
             <div><dt><small>{__shiftFaTr("Checklist")}</small></dt><dd dir="auto" data-testid="shift-checklist">{displayChecklist?.builtIn ? __shiftFaTr(checklistLabel(displayChecklist)) : displayChecklist ? checklistLabel(displayChecklist) : __shiftFaTr("None assigned")}</dd></div>
@@ -277,7 +277,7 @@ function RoutineShiftLog({ initialLog }) {
                 </div>
               )}
 
-              {issueOpen === a.n && <IssueForm onCancel={() => setIssueOpen(null)} onSave={(issue) => { update(a.n, { issue, done: true }); setIssueOpen(null); toast("Issue recorded"); }} />}
+              {issueOpen === a.n && <IssueForm onCancel={() => setIssueOpen(null)} onSave={(issue) => { update(a.n, { issue, done: true }); setIssueOpen(null); toast(__shiftFaTr("Issue recorded")); }} />}
             </div>
           );
         })}
@@ -290,11 +290,11 @@ function RoutineShiftLog({ initialLog }) {
         <span className="s"><b>{done}/{displayActivities.length}</b>{"" + __shiftFaTr("activities") + ""}</span>
         {!technical && <>
           <span className="s"><b>{iocs}</b>{"" + __shiftFaTr("IOCs added") + ""}</span>
-          <span className="s"><b>{displayTickets.length}</b>{displayTickets.length === 1 ? "ticket" : "tickets"}</span>
-          <span className="s"><b>{issues}</b>{issues === 1 ? "issue" : "issues"}</span>
+          <span className="s"><b>{number(displayTickets.length)}</b>{locale === "fa" ? "تیکت" : displayTickets.length === 1 ? "ticket" : "tickets"}</span>
+          <span className="s"><b>{number(issues)}</b>{locale === "fa" ? "مشکل" : issues === 1 ? "issue" : "issues"}</span>
         </>}
-        <span className="remain" title={remaining.map((r) => r.title).join("\n")}>
-          {!readOnly && remaining.length > 0 && `${remaining.length} remaining · next: ${remaining[0].title}`}
+        <span className="remain" title={remaining.map((r) => shiftActivityText(r, displayChecklist, locale).title).join("\n")}>
+          {!readOnly && remaining.length > 0 && (locale === "fa" ? `${number(remaining.length)} مورد باقی‌مانده · بعدی: ${shiftActivityText(remaining[0], displayChecklist, locale).title}` : `${remaining.length} remaining · next: ${remaining[0].title}`)}
         </span>
         {readOnly
           ? <>
@@ -363,7 +363,7 @@ function IssueForm({ onSave, onCancel }) {
 }
 
 function Tickets({ readOnly, list: tickets, date = null, onUpdate = null }) {
-  const { t: __shiftFaTr } = useEngShiftI18n();
+  const { t: __shiftFaTr, locale, number } = useEngShiftI18n();
   const { dispatch, toast } = useApp();
   const [adding, setAdding] = useState(false);
   const [row, setRow] = useState({ no: "", ref: "", desc: "" });
@@ -384,7 +384,7 @@ function Tickets({ readOnly, list: tickets, date = null, onUpdate = null }) {
     } finally {
       setBusy(false);
     }
-    toast(`Ticket ${row.no.trim()} added`);
+    toast(locale === "fa" ? `تیکت ${row.no.trim()} اضافه شد` : `Ticket ${row.no.trim()} added`);
     setRow({ no: "", ref: "", desc: "" });
     setAdding(false);
   };
@@ -394,12 +394,12 @@ function Tickets({ readOnly, list: tickets, date = null, onUpdate = null }) {
   return (
     <Panel
       title={__shiftFaTr("Created tickets")}
-      meta={<span data-testid="ticket-count">{plural(tickets.length, "ticket")}</span>}
+      meta={<span data-testid="ticket-count">{locale === "fa" ? `${number(tickets.length)} تیکت` : plural(tickets.length, "ticket")}</span>}
       actions={!readOnly && !adding && <button type="button" className="btn btn-secondary btn-sm" onClick={() => { setAdding(true); setError(false); }}><Icon name="plus" />{"" + __shiftFaTr("Add ticket") + ""}</button>}
       style={{ marginTop: "var(--s-4)" }}
     >
       {tickets.length === 0 && !adding ? (
-        <p className="panel-body muted small">{"" + __shiftFaTr("No tickets registered today.") + ""}{readOnly ? "" : " Add each ticket you create so it counts in reports."}</p>
+        <p className="panel-body muted small">{"" + __shiftFaTr("No tickets registered today.") + ""}{readOnly ? "" : ` ${__shiftFaTr("Add each ticket you create so it counts in reports.")}`}</p>
       ) : (
         <div role="table" aria-label={__shiftFaTr("Tickets")}>
           <div className="ticket head" role="row"><span role="columnheader">{"" + __shiftFaTr("Ticket number") + ""}</span><span role="columnheader">{"" + __shiftFaTr("Related reference") + ""}</span><span role="columnheader">{"" + __shiftFaTr("Description") + ""}</span></div>

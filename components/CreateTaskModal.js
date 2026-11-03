@@ -25,7 +25,7 @@ export default function CreateTaskModal() {
 }
 
 function CreateTaskDialog({ onClose }) {
-  const { t: __taskTr, locale } = useTaskI18n();
+  const { t: __taskTr, locale, number } = useTaskI18n();
   const { addTask, toast, me, users, peopleMap } = useApp();
   const manager = isManager(me);
   const [busy, setBusy] = useState(false);
@@ -157,7 +157,7 @@ function CreateTaskDialog({ onClose }) {
             </Field>
 
             <div className={styles.attachments}>
-              <div className={styles.sectionTitle}><strong>{"" + __taskTr("Attachments") + ""}</strong><span>{files.length ? `${files.length} selected` : __taskTr("Optional")}</span></div>
+              <div className={styles.sectionTitle}><strong>{"" + __taskTr("Attachments") + ""}</strong><span>{files.length ? `${number(files.length)} ${__taskTr("selected")}` : __taskTr("Optional")}</span></div>
               <input ref={fileRef} type="file" multiple hidden aria-label={__taskTr("Files for new task")} onChange={(e) => { addFiles(e.target.files); e.target.value = ""; }} />
               <button type="button" className={`${styles.dropzone} ${dragOver ? styles.over : ""}`} onClick={() => fileRef.current?.click()}
                 onDragOver={(e) => { e.preventDefault(); setDragOver(true); }} onDragLeave={(e) => { if (!e.currentTarget.contains(e.relatedTarget)) setDragOver(false); }}
@@ -168,7 +168,7 @@ function CreateTaskDialog({ onClose }) {
               {fileError && <p className={styles.fileError} role="alert">{__taskTr(fileError)} <button type="button" className="btn btn-ghost btn-sm" onClick={() => setFileError("")}>{"" + __taskTr("Dismiss") + ""}</button></p>}
               {files.length > 0 && <ul className={styles.fileList} aria-label={__taskTr("Selected files")}>
                 {files.map(({ key, file }) => <li key={key}><Icon name="sheet" /><span><b>{file.name}</b><small>{size(file.size)}</small></span>
-                  <button type="button" className="btn btn-ghost icon-btn btn-sm" aria-label={`Remove ${file.name}`} onClick={() => { setFiles((current) => current.filter((item) => item.key !== key)); setFileError(""); }}><Icon name="x" /></button></li>)}
+                  <button type="button" className="btn btn-ghost icon-btn btn-sm" aria-label={locale === "fa" ? `حذف ${file.name}` : `Remove ${file.name}`} onClick={() => { setFiles((current) => current.filter((item) => item.key !== key)); setFileError(""); }}><Icon name="x" /></button></li>)}
               </ul>}
             </div>
           </div>
@@ -180,8 +180,8 @@ function CreateTaskDialog({ onClose }) {
                 onSelect={(id) => { set({ a: id }); setError(null); }} onClear={() => { if (form.a) set({ a: "" }); if (error) setError(null); }} />
             </Field>
             <div className={styles.settingsGrid}>
-              <Field label={__taskTr("Priority")} htmlFor="task-priority"><select id="task-priority" className="input" value={form.prio} onChange={(e) => set({ prio: e.target.value })}>{Object.entries(PRIO).map(([value, label]) => <option key={value} value={value}>{label}</option>)}</select></Field>
-              <Field label={__taskTr("Complexity")} htmlFor="task-complexity"><select id="task-complexity" className="input" value={form.cx} onChange={(e) => set({ cx: Number(e.target.value) })}>{CX.slice(1).map((label, i) => <option key={label} value={i + 1}>{label}</option>)}</select></Field>
+              <Field label={__taskTr("Priority")} htmlFor="task-priority"><select id="task-priority" className="input" value={form.prio} onChange={(e) => set({ prio: e.target.value })}>{Object.entries(PRIO).map(([value, label]) => <option key={value} value={value}>{__taskTr(label)}</option>)}</select></Field>
+              <Field label={__taskTr("Complexity")} htmlFor="task-complexity"><select id="task-complexity" className="input" value={form.cx} onChange={(e) => set({ cx: Number(e.target.value) })}>{CX.slice(1).map((label, i) => <option key={label} value={i + 1}>{__taskTr(label)}</option>)}</select></Field>
               <Field label={__taskTr("Start date (Solar Hijri)")} htmlFor="task-start"><TaskDateInput id="task-start" calendarLabel="Choose start date" value={form.start} onValidityChange={(start) => setDateErrors((current) => ({ ...current, start }))} onChange={(start) => { set({ start, ...(form.due && start && form.due < start ? { due: "" } : {}) }); }} /></Field>
               <Field label={__taskTr("Deadline (Solar Hijri)")} htmlFor="task-deadline"><TaskDateInput id="task-deadline" calendarLabel="Choose deadline" min={form.start || TODAY} value={form.due} onValidityChange={(due) => setDateErrors((current) => ({ ...current, due }))} onChange={(due) => set({ due })} /></Field>
             </div>
@@ -202,7 +202,7 @@ function CreateTaskDialog({ onClose }) {
             <div className={styles.previewBrief}>
               <span className={styles.eyebrow}>{"" + __taskTr("Task") + ""}</span>
               <h3 dir="auto">{form.title.trim()}</h3>
-              <p dir="auto">{form.description.trim() || "No description added."}</p>
+              <p dir="auto">{form.description.trim() || __taskTr("No description added.")}</p>
             </div>
             <dl className={styles.previewFacts}>
               <div><dt>{"" + __taskTr("Assignee") + ""}</dt><dd dir="auto">{peopleMap[form.a]?.name ?? "—"}</dd></div>
@@ -214,7 +214,7 @@ function CreateTaskDialog({ onClose }) {
             </dl>
           </div>
           <div className={styles.previewAttachments}>
-            <div className={styles.sectionTitle}><strong>{"" + __taskTr("Attachments") + ""}</strong><span>{files.length}{" " + __taskTr("selected") + ""}</span></div>
+            <div className={styles.sectionTitle}><strong>{"" + __taskTr("Attachments") + ""}</strong><span>{number(files.length)}{" " + __taskTr("selected") + ""}</span></div>
             {files.length ? <ul className={styles.previewFiles}>{files.map(({ key, file }) => <li key={key}><Icon name="clip" /><span>{file.name}</span><small>{size(file.size)}</small></li>)}</ul>
               : <p className={styles.noFiles}><Icon name="info" />{"" + __taskTr("No files selected. Go back if you need to add any.") + ""}</p>}
           </div>
