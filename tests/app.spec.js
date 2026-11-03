@@ -515,7 +515,13 @@ test.describe("analytics (management dashboard)", () => {
     // Let the demo response and initial client render settle before opening the anchored menu.
     await expect(page.locator(".an-demo:visible")).toBeVisible();
     await page.getByTestId("period").click();
-    await page.getByRole("button", { name: "ماه گذشته" }).click();
+    const menu = page.getByRole("dialog", { name: "بازه زمانی" });
+    await expect(menu).toBeVisible();
+    const content = page.locator(".content");
+    await content.evaluate((element) => { element.scrollTop += 30; });
+    await expect.poll(() => content.evaluate((element) => element.scrollTop)).toBeGreaterThan(0);
+    await expect(menu).toBeVisible();
+    await menu.getByRole("button", { name: "ماه گذشته" }).click();
     await expect(page).toHaveURL(/p=prev-month/);
     await page.getByTestId("period").click();
     await page.getByRole("button", { name: "بازه دلخواه…" }).click();
