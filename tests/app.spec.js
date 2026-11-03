@@ -512,6 +512,8 @@ test.describe("analytics (management dashboard)", () => {
   test("period menu: presets and a custom Jalali range drive every view through the URL", async ({ page }) => {
     await signIn(page, "admin");
     await page.goto("/analytics?demo=1", { waitUntil: "domcontentloaded" });
+    // Let the demo response and initial client render settle before opening the anchored menu.
+    await expect(page.locator(".an-demo")).toBeVisible();
     await page.getByTestId("period").click();
     await page.getByRole("button", { name: "ماه گذشته" }).click();
     await expect(page).toHaveURL(/p=prev-month/);
