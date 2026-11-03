@@ -4,6 +4,7 @@ import { useRef } from "react";
 import { THEMES } from "@/lib/themes";
 import { centerOf } from "@/components/theme";
 import Icon from "@/components/ui/Icon";
+import { useI18n } from "@/components/I18nProvider";
 
 // Preview colours come from lib/themes.js, so a preview always shows its own theme, whatever theme is active.
 const vars = (t) => ({
@@ -40,6 +41,7 @@ export function ThemeDot({ theme }) {
  * pointer or focus position so the new theme can spread from it.
  */
 export function ThemeChooser({ value, onChange, variant = "cards", label = "Theme" }) {
+  const { t: translateTheme } = useI18n();
   const refs = useRef([]);
   const move = (e, i) => {
     const step = { ArrowRight: 1, ArrowDown: 1, ArrowLeft: -1, ArrowUp: -1 }[e.key];
@@ -54,7 +56,7 @@ export function ThemeChooser({ value, onChange, variant = "cards", label = "Them
   const selected = THEMES.some((t) => t.id === value) ? value : THEMES[0].id;
 
   return (
-    <div className={variant === "dots" ? "theme-dots" : "theme-gallery"} role="radiogroup" aria-label={label}>
+    <div className={variant === "dots" ? "theme-dots" : "theme-gallery"} role="radiogroup" aria-label={translateTheme(label)}>
       {THEMES.map((t, i) => {
         const on = t.id === selected;
         const common = {
@@ -68,7 +70,7 @@ export function ThemeChooser({ value, onChange, variant = "cards", label = "Them
         };
         if (variant === "dots") {
           return (
-            <button key={t.id} {...common} className="theme-dot-btn" aria-label={t.name} title={t.name}>
+            <button key={t.id} {...common} className="theme-dot-btn" aria-label={translateTheme(t.name)} title={translateTheme(t.name)}>
               <ThemeDot theme={t} />
             </button>
           );
@@ -77,8 +79,8 @@ export function ThemeChooser({ value, onChange, variant = "cards", label = "Them
           <button key={t.id} {...common} className="theme-card">
             <ThemePreview theme={t} size="lg" />
             <span className="theme-card-meta">
-              <b>{t.name}</b>
-              <small>{t.note}</small>
+              <b>{translateTheme(t.name)}</b>
+              <small>{translateTheme(t.note)}</small>
             </span>
             <span className="theme-card-check" aria-hidden="true"><Icon name="check" size="sm" /></span>
           </button>
@@ -89,11 +91,11 @@ export function ThemeChooser({ value, onChange, variant = "cards", label = "Them
 }
 
 /** Menu items for the top bar's theme menu (see Popover `items`). Digits 1–4 pick a theme while it is open. */
-export const themeMenuItems = (current) =>
+export const themeMenuItems = (current, translate = (value) => value) =>
   THEMES.map((t, i) => ({
     value: t.id,
     icon: <ThemePreview theme={t} size="sm" />,
-    label: <span className="theme-mi"><b>{t.name}</b><small>{t.note}</small></span>,
+    label: <span className="theme-mi"><b>{translate(t.name)}</b><small>{translate(t.note)}</small></span>,
     checked: t.id === current,
     kbd: String(i + 1),
   }));

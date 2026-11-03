@@ -50,6 +50,36 @@
 .task-brief-meta > span { display: inline-flex; align-items: center; gap: var(--s-2); }
 .task-brief-meta .who .avatar { width: 22px; height: 22px; font-size: var(--fs-11); }
 
+/* Task journey: state and next owner stay visible to both assignee and reviewer. */
+.task-journey { margin-top: var(--s-4); padding: var(--s-5); border: 1px solid var(--border); border-radius: var(--r-lg); background: var(--surface-card); box-shadow: var(--shadow-card); }
+.task-journey-summary { display: flex; justify-content: space-between; align-items: start; flex-wrap: wrap; gap: var(--s-4); }
+.task-journey-summary h2 { margin: 3px 0; font: var(--type-section); color: var(--text); }
+.task-journey-summary p { margin: 0; color: var(--text-2); font: var(--type-body-sm); }
+.task-journey-owner { display: grid; gap: 2px; max-width: 350px; font: var(--type-caption); color: var(--text-2); }
+.task-journey-owner strong { color: var(--text); font: var(--type-label); }
+.task-journey-owner small { font: inherit; color: var(--text-3); }
+.task-journey-steps { display: flex; flex-wrap: wrap; gap: var(--s-2) var(--s-5); margin: var(--s-4) 0 0; padding: var(--s-4) 0 0; border-top: 1px solid var(--divider); list-style: none; }
+.task-journey-steps li { display: inline-flex; align-items: center; gap: var(--s-2); color: var(--text-3); font: var(--type-caption); }
+.task-journey-steps li span { width: 9px; height: 9px; border: 1px solid var(--border-strong); border-radius: 50%; }
+.task-journey-steps li.is-past span { border-color: var(--primary); background: var(--primary); }
+.task-journey-steps li.is-current { color: var(--text); }
+.task-journey-steps li.is-current span { border-color: var(--primary); background: var(--primary); box-shadow: 0 0 0 3px var(--primary-soft); }
+.task-deadline { display: inline-flex; flex-direction: column; line-height: 1.25; }
+.task-deadline small { font-size: var(--fs-11); }
+.task-date-control { display: flex; align-items: center; gap: var(--s-1); }
+.task-date-control .input { min-width: 0; flex: 1; }
+.task-date-field > .field-error { margin-top: var(--s-1); }
+.task-calendar { padding: var(--s-3); }
+.task-calendar-head { display: flex; justify-content: space-between; align-items: center; margin-bottom: var(--s-2); }
+.task-calendar-head strong { font: var(--type-label); }
+.task-calendar-grid { display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); gap: 2px; text-align: center; }
+.task-calendar-weekday { color: var(--text-3); font: var(--type-caption); }
+.task-calendar-day { min-height: 40px; border: 0; border-radius: var(--r-sm); background: transparent; color: var(--text); cursor: pointer; }
+.task-calendar-day:hover:not(:disabled) { background: var(--hover); }
+.task-calendar-day[aria-pressed="true"] { background: var(--primary-soft); color: var(--link); font-weight: var(--fw-semibold); }
+.task-calendar-day:disabled { color: var(--text-3); opacity: .45; cursor: not-allowed; }
+.task-calendar-day:focus-visible { outline: 2px solid var(--focus); outline-offset: -2px; }
+
 /* A single chronological workspace; the expanded card is the current action. */
 .task-flow-section { margin-top: var(--s-6); }
 .task-flow-intro { margin: 0 0 var(--s-4); }

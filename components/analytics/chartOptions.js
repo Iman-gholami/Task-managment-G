@@ -7,25 +7,25 @@ import { fmtNum, fmtPct, isNum } from "@/lib/analytics/format";
 const esc = (s) => String(s ?? "").replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[c]);
 
 /** Formats a value for axes and tooltips by kind ("count", "rate", "days", "avg"). */
-export function fmtBy(kind) {
-  if (kind === "rate") return (v) => fmtPct(v);
-  if (kind === "days") return (v) => (isNum(v) ? `${fmtNum(v)} روز` : "—");
-  if (kind === "hours") return (v) => (isNum(v) ? `${fmtNum(v, 0)} ساعت` : "—");
-  return (v) => fmtNum(v, isNum(v) && !Number.isInteger(v) ? 1 : 0);
+export function fmtBy(kind, locale = "fa") {
+  if (kind === "rate") return (v) => fmtPct(v, 0, locale);
+  if (kind === "days") return (v) => (isNum(v) ? `${fmtNum(v, 1, locale)} ${locale === "fa" ? "روز" : "days"}` : "—");
+  if (kind === "hours") return (v) => (isNum(v) ? `${fmtNum(v, 0, locale)} ${locale === "fa" ? "ساعت" : "hours"}` : "—");
+  return (v) => fmtNum(v, isNum(v) && !Number.isInteger(v) ? 1 : 0, locale);
 }
 /**
  * Chart text is drawn in a left-to-right box (so the engine anchors it correctly); wrapping each
  * label in a right-to-left embedding keeps mixed Persian/Latin text ("۱ مهر", "… در Splunk") in order.
  */
-export const rtl = (s) => (s === null || s === undefined || s === "" ? "" : `\u202B${s}\u202C`);
-const axisFmt = (kind) => (kind === "rate" ? (v) => rtl(fmtPct(v)) : (v) => rtl(fmtNum(v, 1)));
+export const rtl = (s, locale = "fa") => (s === null || s === undefined || s === "" ? "" : locale === "en" ? String(s) : `\u202B${s}\u202C`);
+const axisFmt = (kind, locale) => (kind === "rate" ? (v) => rtl(fmtPct(v, 0, locale), locale) : (v) => rtl(fmtNum(v, 1, locale), locale));
 
 /** Tooltip body: a title, then one row per series — value first, then a line key and the name. */
-export function tipHtml(title, rows, note) {
+export function tipHtml(title, rows, note, locale = "fa") {
   const body = rows
     .map((r) => `<div class="ec-tip-row"><b>${esc(r.value)}</b><i style="background:${esc(r.color)}"></i><span>${esc(r.name)}</span></div>`)
     .join("");
-  return `<div class="ec-tip" dir="rtl"><div class="ec-tip-title">${esc(title)}</div>${body}${note ? `<div class="ec-tip-note">${esc(note)}</div>` : ""}</div>`;
+  return `<div class="ec-tip" dir="${locale === "en" ? "ltr" : "rtl"}"><div class="ec-tip-title">${esc(title)}</div>${body}${note ? `<div class="ec-tip-note">${esc(note)}</div>` : ""}</div>`;
 }
 
 function base(t) {
@@ -49,9 +49,9 @@ const axisCommon = (t) => ({
 });
 
 const legend = (t, names) => (names.length > 1 ? {
-  show: true, top: 0, right: 0, align: "right", itemWidth: 14, itemHeight: 8, itemGap: 16, icon: "roundRect",
+  show: true, top: 0, ...(t.locale === "en" ? { left: 0, align: "left" } : { right: 0, align: "right" }), itemWidth: 14, itemHeight: 8, itemGap: 16, icon: "roundRect",
   // Laid out left to right by the engine; reversed so the first series sits on the right (RTL reading order).
-  textStyle: { color: t["text-2"], fontFamily: t.font, fontSize: 12 }, data: [...names].reverse(), formatter: rtl,
+  textStyle: { color: t["text-2"], fontFamily: t.font, fontSize: 12 }, data: t.locale === "en" ? names : [...names].reverse(), formatter: (value) => rtl(value, t.locale),
 } : { show: false });
 
 /**
@@ -59,7 +59,7 @@ const legend = (t, names) => (names.length > 1 ? {
  * comparison series drawn as a quiet grey line behind. `kind` formats values; `labels` the buckets.
  */
 export function lineOption(t, { labels, series, prev, kind = "count", partial = [], bars = false, markValue }) {
-  const f = fmtBy(kind);
+  const f = fmtBy(kind, t.locale);
   const names = [...series.map((s) => s.name), ...(prev ? [prev.name] : [])];
   return {
     ...base(t),
@@ -71,11 +71,11 @@ export function lineOption(t, { labels, series, prev, kind = "count", partial = 
       formatter: (ps) => {
         const i = ps[0]?.dataIndex ?? 0;
         const rows = ps.map((p) => ({ value: f(p.value), color: p.color, name: p.seriesName === prev?.name && prev.labels ? `${p.seriesName} (${prev.labels[i] ?? ""})` : p.seriesName }));
-        return tipHtml(labels[i], rows, partial[i] ? "بازه ناقص" : null);
+        return tipHtml(labels[i], rows, partial[i] ? (t.locale === "en" ? "Partial period" : "بازه ناقص") : null, t.locale);
       },
     },
-    xAxis: { type: "category", data: labels, boundaryGap: bars, ...axisCommon(t), splitLine: { show: false }, axisLabel: { ...axisCommon(t).axisLabel, hideOverlap: true, formatter: rtl } },
-    yAxis: { type: "value", position: "right", ...axisCommon(t), axisLine: { show: false }, axisLabel: { ...axisCommon(t).axisLabel, formatter: axisFmt(kind) }, max: kind === "rate" ? 1 : undefined, minInterval: kind === "count" ? 1 : undefined },
+    xAxis: { type: "category", data: labels, boundaryGap: bars, ...axisCommon(t), splitLine: { show: false }, axisLabel: { ...axisCommon(t).axisLabel, hideOverlap: true, formatter: (value) => rtl(value, t.locale) } },
+    yAxis: { type: "value", position: t.locale === "en" ? "left" : "right", ...axisCommon(t), axisLine: { show: false }, axisLabel: { ...axisCommon(t).axisLabel, formatter: axisFmt(kind, t.locale) }, max: kind === "rate" ? 1 : undefined, minInterval: kind === "count" ? 1 : undefined },
     series: [
       ...(prev ? [{
         name: prev.name, type: "line", data: prev.data, symbol: "none", z: 1,
@@ -98,12 +98,12 @@ export function lineOption(t, { labels, series, prev, kind = "count", partial = 
   };
 }
 
-function markLine(t, value, kind, label = "میانه") {
+function markLine(t, value, kind, label = t.locale === "en" ? "Median" : "میانه") {
   if (!isNum(value)) return undefined;
   return {
     silent: true, symbol: "none", data: [{ yAxis: value }],
     lineStyle: { color: t["text-3"], width: 1, type: "solid" },
-    label: { formatter: rtl(`${label}: ${fmtBy(kind)(value)}`), color: t["text-3"], fontFamily: t.font, fontSize: 11, position: "insideStartTop" },
+    label: { formatter: rtl(`${label}: ${fmtBy(kind, t.locale)(value)}`, t.locale), color: t["text-3"], fontFamily: t.font, fontSize: 11, position: "insideStartTop" },
   };
 }
 
@@ -113,27 +113,27 @@ function markLine(t, value, kind, label = "میانه") {
  * rows: [{ label, value, id?, color?, note? }]
  */
 export function hbarOption(t, { rows, kind = "count", median, color, max, labelWidth = 150 }) {
-  const f = fmtBy(kind);
+  const f = fmtBy(kind, t.locale);
   return {
     ...base(t),
     grid: { top: isNum(median) ? 24 : 8, right: 8, bottom: 4, left: 48, containLabel: true },
     tooltip: {
       ...base(t).tooltip, trigger: "item",
-      formatter: (p) => tipHtml(rows[p.dataIndex].label, [{ value: f(rows[p.dataIndex].value), color: p.color, name: rows[p.dataIndex].note ?? "" }]),
+      formatter: (p) => tipHtml(rows[p.dataIndex].label, [{ value: f(rows[p.dataIndex].value), color: p.color, name: rows[p.dataIndex].note ?? "" }], null, t.locale),
     },
-    xAxis: { type: "value", inverse: true, max: max ?? (kind === "rate" ? 1 : undefined), ...axisCommon(t), axisLine: { show: false }, axisLabel: { show: false }, splitLine: { show: false } },
+    xAxis: { type: "value", inverse: t.locale !== "en", max: max ?? (kind === "rate" ? 1 : undefined), ...axisCommon(t), axisLine: { show: false }, axisLabel: { show: false }, splitLine: { show: false } },
     yAxis: {
-      type: "category", position: "right", inverse: true, data: rows.map((r) => r.label), ...axisCommon(t),
-      axisLine: { show: false }, axisLabel: { ...axisCommon(t).axisLabel, color: t["text-2"], fontSize: 12, width: labelWidth, overflow: "truncate", formatter: rtl },
+      type: "category", position: t.locale === "en" ? "left" : "right", inverse: true, data: rows.map((r) => r.label), ...axisCommon(t),
+      axisLine: { show: false }, axisLabel: { ...axisCommon(t).axisLabel, color: t["text-2"], fontSize: 12, width: labelWidth, overflow: "truncate", formatter: (value) => rtl(value, t.locale) },
     },
     series: [{
       type: "bar", barMaxWidth: 18, barCategoryGap: "38%",
       data: rows.map((r) => ({ value: isNum(r.value) ? r.value : 0, itemStyle: { color: r.color ?? color ?? t["viz-bar"] }, id: r.id })),
       itemStyle: { borderRadius: [4, 0, 0, 4] },
-      label: { show: true, position: "left", color: t["text-2"], fontFamily: t.font, fontSize: 11.5, formatter: (p) => rtl(f(rows[p.dataIndex].value)) },
+      label: { show: true, position: t.locale === "en" ? "right" : "left", color: t["text-2"], fontFamily: t.font, fontSize: 11.5, formatter: (p) => rtl(f(rows[p.dataIndex].value), t.locale) },
       markLine: median !== undefined && isNum(median) ? {
         silent: true, symbol: "none", data: [{ xAxis: median }], lineStyle: { color: t["text-3"], width: 1, type: "solid" },
-        label: { formatter: rtl(`میانه ${f(median)}`), color: t["text-3"], fontFamily: t.font, fontSize: 11, position: "end" },
+        label: { formatter: rtl(`${t.locale === "en" ? "Median" : "میانه"} ${f(median)}`, t.locale), color: t["text-3"], fontFamily: t.font, fontSize: 11, position: "end" },
       } : undefined,
     }],
   };
@@ -154,14 +154,14 @@ export function stackedOption(t, { rows, parts, percent = true }) {
       ...base(t).tooltip, trigger: "axis", axisPointer: { type: "shadow", shadowStyle: { color: t["text-3"] + "14" } },
       formatter: (ps) => {
         const i = ps[0]?.dataIndex ?? 0;
-        return tipHtml(`${rows[i].label} · ${fmtNum(totals[i], 0)}`, ps.map((p) => ({
-          value: `${fmtNum(rows[i].parts[p.seriesIndex], 0)}${percent && totals[i] ? ` (${fmtPct(rows[i].parts[p.seriesIndex] / totals[i])})` : ""}`,
+        return tipHtml(`${rows[i].label} · ${fmtNum(totals[i], 0, t.locale)}`, ps.map((p) => ({
+          value: `${fmtNum(rows[i].parts[p.seriesIndex], 0, t.locale)}${percent && totals[i] ? ` (${fmtPct(rows[i].parts[p.seriesIndex] / totals[i], 0, t.locale)})` : ""}`,
           color: p.color, name: p.seriesName,
-        })));
+        })), null, t.locale);
       },
     },
-    xAxis: { type: "value", inverse: true, max: percent ? 1 : undefined, ...axisCommon(t), axisLine: { show: false }, axisLabel: { ...axisCommon(t).axisLabel, formatter: percent ? (v) => rtl(fmtPct(v)) : (v) => rtl(fmtNum(v, 0)) } },
-    yAxis: { type: "category", position: "right", inverse: true, data: rows.map((r) => r.label), ...axisCommon(t), axisLine: { show: false }, axisLabel: { ...axisCommon(t).axisLabel, color: t["text-2"], fontSize: 12, formatter: rtl } },
+    xAxis: { type: "value", inverse: t.locale !== "en", max: percent ? 1 : undefined, ...axisCommon(t), axisLine: { show: false }, axisLabel: { ...axisCommon(t).axisLabel, formatter: percent ? (v) => rtl(fmtPct(v, 0, t.locale), t.locale) : (v) => rtl(fmtNum(v, 0, t.locale), t.locale) } },
+    yAxis: { type: "category", position: t.locale === "en" ? "left" : "right", inverse: true, data: rows.map((r) => r.label), ...axisCommon(t), axisLine: { show: false }, axisLabel: { ...axisCommon(t).axisLabel, color: t["text-2"], fontSize: 12, formatter: (value) => rtl(value, t.locale) } },
     series: parts.map((p, k) => ({
       name: p.name, type: "bar", stack: "all", barMaxWidth: 22,
       data: rows.map((r, i) => (percent ? (totals[i] ? r.parts[k] / totals[i] : 0) : r.parts[k])),
@@ -176,21 +176,21 @@ export function stackedOption(t, { rows, parts, percent = true }) {
  * empty cells (null) stay blank. data: [[x, y, value]].
  */
 export function heatmapOption(t, { xLabels, yLabels, data, kind = "rate", max, min = 0, xTip, yTip }) {
-  const f = fmtBy(kind);
+  const f = fmtBy(kind, t.locale);
   const values = data.map((d) => d[2]).filter(isNum);
   return {
     ...base(t),
     grid: { top: 8, right: 8, bottom: 40, left: 8, containLabel: true },
     tooltip: {
       ...base(t).tooltip, trigger: "item",
-      formatter: (p) => tipHtml(`${(yTip ?? yLabels)[p.value[1]]} · ${(xTip ?? xLabels)[p.value[0]]}`, [{ value: isNum(p.value[2]) ? f(p.value[2]) : "—", color: p.color, name: "" }]),
+      formatter: (p) => tipHtml(`${(yTip ?? yLabels)[p.value[1]]} · ${(xTip ?? xLabels)[p.value[0]]}`, [{ value: isNum(p.value[2]) ? f(p.value[2]) : "—", color: p.color, name: "" }], null, t.locale),
     },
-    xAxis: { type: "category", data: xLabels, inverse: true, ...axisCommon(t), axisLine: { show: false }, splitArea: { show: false }, axisLabel: { ...axisCommon(t).axisLabel, interval: 0, hideOverlap: true, formatter: rtl } },
-    yAxis: { type: "category", data: yLabels, position: "right", inverse: true, ...axisCommon(t), axisLine: { show: false }, axisLabel: { ...axisCommon(t).axisLabel, color: t["text-2"], fontSize: 12, formatter: rtl } },
+    xAxis: { type: "category", data: xLabels, inverse: t.locale !== "en", ...axisCommon(t), axisLine: { show: false }, splitArea: { show: false }, axisLabel: { ...axisCommon(t).axisLabel, interval: 0, hideOverlap: true, formatter: (value) => rtl(value, t.locale) } },
+    yAxis: { type: "category", data: yLabels, position: t.locale === "en" ? "left" : "right", inverse: true, ...axisCommon(t), axisLine: { show: false }, axisLabel: { ...axisCommon(t).axisLabel, color: t["text-2"], fontSize: 12, formatter: (value) => rtl(value, t.locale) } },
     visualMap: {
       min, max: max ?? Math.max(1e-9, ...values), calculable: false, orient: "horizontal", left: "center", bottom: 0, itemWidth: 10, itemHeight: 120,
       inRange: { color: [t["viz-track"], t["viz-1"], t["viz-2"], t["viz-3"], t["viz-4"]] },
-      textStyle: { color: t["text-3"], fontFamily: t.font, fontSize: 11 }, formatter: (v) => rtl(f(v)),
+      textStyle: { color: t["text-3"], fontFamily: t.font, fontSize: 11 }, formatter: (v) => rtl(f(v), t.locale),
     },
     series: [{
       type: "heatmap", data: data.filter((d) => isNum(d[2])),
@@ -205,16 +205,16 @@ export function heatmapOption(t, { xLabels, yLabels, data, kind = "rate", max, m
  * a hairline at the overall median. Shows spread, not rank. points: [{ id, name, value, group }].
  */
 export function stripOption(t, { groups, points, kind = "count", median }) {
-  const f = fmtBy(kind);
+  const f = fmtBy(kind, t.locale);
   const jitter = (id) => { let h = 0; for (const c of id) h = (h * 31 + c.charCodeAt(0)) % 997; return (h / 997 - 0.5) * 0.5; };
   return {
     ...base(t),
     grid: { top: 22, right: 8, bottom: 8, left: 16, containLabel: true },
-    tooltip: { ...base(t).tooltip, trigger: "item", formatter: (p) => tipHtml(p.data.name, [{ value: f(p.data.value[0]), color: p.color, name: groups[Math.round(p.data.value[1])] ?? "" }]) },
-    xAxis: { type: "value", inverse: true, ...axisCommon(t), axisLine: { show: false }, axisLabel: { ...axisCommon(t).axisLabel, formatter: axisFmt(kind) }, max: kind === "rate" ? 1 : undefined },
+    tooltip: { ...base(t).tooltip, trigger: "item", formatter: (p) => tipHtml(p.data.name, [{ value: f(p.data.value[0]), color: p.color, name: groups[Math.round(p.data.value[1])] ?? "" }], null, t.locale) },
+    xAxis: { type: "value", inverse: t.locale !== "en", ...axisCommon(t), axisLine: { show: false }, axisLabel: { ...axisCommon(t).axisLabel, formatter: axisFmt(kind, t.locale) }, max: kind === "rate" ? 1 : undefined },
     // Rows sit on integer ticks (one per team); the extra tick at each end is padding with no label.
-    yAxis: { type: "value", position: "right", min: -1, max: groups.length, interval: 1, inverse: true, ...axisCommon(t), axisLine: { show: false },
-      splitLine: { show: true, lineStyle: { color: t.divider } }, axisLabel: { ...axisCommon(t).axisLabel, color: t["text-2"], fontSize: 12, formatter: (v) => rtl(groups[v] ?? "") } },
+    yAxis: { type: "value", position: t.locale === "en" ? "left" : "right", min: -1, max: groups.length, interval: 1, inverse: true, ...axisCommon(t), axisLine: { show: false },
+      splitLine: { show: true, lineStyle: { color: t.divider } }, axisLabel: { ...axisCommon(t).axisLabel, color: t["text-2"], fontSize: 12, formatter: (v) => rtl(groups[v] ?? "", t.locale) } },
     series: [{
       type: "scatter", symbolSize: 12,
       data: points.filter((p) => isNum(p.value)).map((p) => ({ id: p.id, name: p.name, value: [p.value, p.groupIndex + jitter(p.id)], itemStyle: { color: t.cat[p.groupIndex % 4] } })),
@@ -222,7 +222,7 @@ export function stripOption(t, { groups, points, kind = "count", median }) {
       emphasis: { scale: 1.3, itemStyle: { opacity: 1 } },
       markLine: isNum(median) ? {
         silent: true, symbol: "none", data: [{ xAxis: median }], lineStyle: { color: t["text-3"], width: 1, type: "solid" },
-        label: { formatter: rtl(`میانه ${f(median)}`), color: t["text-3"], fontFamily: t.font, fontSize: 11, position: "start" },
+        label: { formatter: rtl(`${t.locale === "en" ? "Median" : "میانه"} ${f(median)}`, t.locale), color: t["text-3"], fontFamily: t.font, fontSize: 11, position: "start" },
       } : undefined,
     }],
   };
@@ -233,18 +233,18 @@ export function stripOption(t, { groups, points, kind = "count", median }) {
  * cells: [{ week, day, date, value, label }], weeks: column labels (month names at month starts).
  */
 export function calendarOption(t, { cells, weekLabels, dayLabels, kind = "count", name, cell = 20 }) {
-  const f = fmtBy(kind);
+  const f = fmtBy(kind, t.locale);
   const values = cells.map((c) => c.value).filter(isNum);
   return {
     ...base(t),
     // Square cells of a fixed size: a short period stays a compact block instead of stretching.
     grid: { top: 22, right: 64, bottom: 40, width: weekLabels.length * cell, height: dayLabels.length * cell },
-    tooltip: { ...base(t).tooltip, trigger: "item", formatter: (p) => tipHtml(cells[p.dataIndex].label, [{ value: f(cells[p.dataIndex].value), color: p.color, name }]) },
-    xAxis: { type: "category", data: weekLabels, inverse: true, position: "top", ...axisCommon(t), axisLine: { show: false }, axisLabel: { ...axisCommon(t).axisLabel, interval: 0, align: "right", hideOverlap: true, formatter: rtl } },
-    yAxis: { type: "category", data: dayLabels, inverse: true, position: "right", ...axisCommon(t), axisLine: { show: false }, axisLabel: { ...axisCommon(t).axisLabel, fontSize: 11, formatter: rtl } },
+    tooltip: { ...base(t).tooltip, trigger: "item", formatter: (p) => tipHtml(cells[p.dataIndex].label, [{ value: f(cells[p.dataIndex].value), color: p.color, name }], null, t.locale) },
+    xAxis: { type: "category", data: weekLabels, inverse: t.locale !== "en", position: "top", ...axisCommon(t), axisLine: { show: false }, axisLabel: { ...axisCommon(t).axisLabel, interval: 0, align: t.locale === "en" ? "left" : "right", hideOverlap: true, formatter: (value) => rtl(value, t.locale) } },
+    yAxis: { type: "category", data: dayLabels, inverse: true, position: t.locale === "en" ? "left" : "right", ...axisCommon(t), axisLine: { show: false }, axisLabel: { ...axisCommon(t).axisLabel, fontSize: 11, formatter: (value) => rtl(value, t.locale) } },
     visualMap: {
       min: 0, max: Math.max(kind === "rate" ? 1 : 1, ...values), orient: "horizontal", right: 64, bottom: 0, itemWidth: 10, itemHeight: 120, calculable: false,
-      inRange: { color: [t["viz-track"], t["viz-1"], t["viz-2"], t["viz-3"], t["viz-4"]] }, textStyle: { color: t["text-3"], fontFamily: t.font, fontSize: 11 }, formatter: (v) => rtl(f(v)),
+      inRange: { color: [t["viz-track"], t["viz-1"], t["viz-2"], t["viz-3"], t["viz-4"]] }, textStyle: { color: t["text-3"], fontFamily: t.font, fontSize: 11 }, formatter: (v) => rtl(f(v), t.locale),
     },
     series: [{ type: "heatmap", data: cells.map((c) => [c.week, c.day, c.value]), itemStyle: { borderColor: t["surface-card"], borderWidth: 2, borderRadius: 2 } }],
   };

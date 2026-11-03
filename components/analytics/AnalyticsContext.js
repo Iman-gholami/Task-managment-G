@@ -9,6 +9,7 @@ import { applyFilters, filterQuery, parseFilters } from "@/lib/analytics/filters
 import { autoGranularity, comparisonRange, resolveRange } from "@/lib/analytics/periods";
 import { canViewManagementAnalytics } from "@/lib/roles";
 import { tehranDate } from "@/lib/shifts";
+import { useI18n } from "@/components/I18nProvider";
 
 const Ctx = createContext(null);
 export const useAnalytics = () => useContext(Ctx);
@@ -36,6 +37,7 @@ function useFacts(url) {
 
 /** Filters (from the URL), the period and comparison, and the facts behind every analytics screen. */
 export function AnalyticsProvider({ children }) {
+  const { locale } = useI18n();
   const params = useSearchParams();
   const router = useRouter();
   const pathname = usePathname();
@@ -43,8 +45,8 @@ export function AnalyticsProvider({ children }) {
   const manager = canViewManagementAnalytics(me);
   const filters = useMemo(() => parseFilters(params), [params]);
   const today = useMemo(() => tehranDate(), []);
-  const range = useMemo(() => resolveRange(filters, today), [filters, today]);
-  const cmp = useMemo(() => comparisonRange(range, filters.cmp), [range, filters.cmp]);
+  const range = useMemo(() => resolveRange(filters, today, locale), [filters, today, locale]);
+  const cmp = useMemo(() => comparisonRange(range, filters.cmp, locale), [range, filters.cmp, locale]);
   const gran = filters.g === "auto" ? autoGranularity(range.days) : filters.g;
 
   // One window of history serves every preset in the last year without refetching.
@@ -98,13 +100,13 @@ export function AnalyticsProvider({ children }) {
     return q ? `${path}?${q}` : path;
   }, [filters]);
 
-  const exportUrl = useCallback((kind, more = {}) => `/api/analytics/export?${filterQuery(filters, { kind, ...more })}`, [filters]);
+  const exportUrl = useCallback((kind, more = {}) => `/api/analytics/export?${filterQuery(filters, { kind, lang: locale, ...more })}`, [filters, locale]);
 
   const value = useMemo(() => ({
     me, manager, filters, setFilters, setParam, setParams, params, href, exportUrl,
-    today: data?.today ?? today, range, cmp, gran,
+    today: data?.today ?? today, range, cmp, gran, locale,
     facts: data, view, error, loading, reload, demo: !!data?.demo,
-  }), [me, manager, filters, setFilters, setParam, setParams, params, href, exportUrl, data, today, range, cmp, gran, view, error, loading, reload]);
+  }), [me, manager, filters, setFilters, setParam, setParams, params, href, exportUrl, data, today, range, cmp, gran, locale, view, error, loading, reload]);
 
   return <Ctx.Provider value={value}>{children}</Ctx.Provider>;
 }

@@ -171,6 +171,12 @@ table.dt { width: 100%; border-collapse: separate; border-spacing: 0; font: var(
   .metrics { gap: var(--s-2); }
   .metrics-wrap { margin-bottom: var(--s-5); }
   .metric { padding: 12px; }
+  /* Let translated labels and explanations remain readable on narrow cards. */
+  .metric-label { align-items: flex-start; white-space: normal; }
+  .metric-label > span:not(.metric-icon):not(.metric-hint) { overflow: visible; text-overflow: clip; overflow-wrap: anywhere; }
+  .metric-hint { flex: none; }
+  .metric-foot { white-space: normal; overflow: visible; flex-wrap: wrap; overflow-wrap: anywhere; }
+  .metric-foot > span:last-child { overflow: visible; text-overflow: clip; }
   .metric-value { font-size: var(--fs-22); }
   .toolbar .input, .toolbar select.input { flex: 1 1 140px; min-width: 0; }
   .toolbar .end { margin-left: 0; width: 100%; justify-content: space-between; }

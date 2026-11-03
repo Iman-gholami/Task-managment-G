@@ -12,6 +12,7 @@ import CommandMenu from "@/components/shell/CommandMenu";
 import SessionMonitor from "@/components/SessionMonitor";
 import { crumbsFor, navFor } from "@/components/shell/nav";
 import { isOpen } from "@/lib/format";
+import { useI18n } from "@/components/I18nProvider";
 
 const DRAWER = "(max-width: 1023px)";
 const subscribe = (cb) => { const m = window.matchMedia(DRAWER); m.addEventListener("change", cb); return () => m.removeEventListener("change", cb); };
@@ -29,6 +30,7 @@ const SHORTCUTS = [
 ];
 
 export default function AppShell({ children }) {
+  const { t } = useI18n();
   const { me, collapsed, setCollapsed, setCreateOpen, tasks, peopleMap, openPopover } = useApp();
   const path = usePathname();
   const router = useRouter();
@@ -41,8 +43,8 @@ export default function AppShell({ children }) {
     my: tasks.filter((t) => t.a === me.id && isOpen(t)).length,
     assigned: tasks.filter((t) => t.createdBy === me.id && t.a !== me.id && isOpen(t)).length,
   };
-  const groups = navFor(me, counts);
-  const crumbs = crumbsFor(path, peopleMap, me);
+  const groups = navFor(me, counts).map((group) => ({ ...group, label: t(group.label), items: group.items.map((item) => ({ ...item, label: t(item.label), subs: item.subs?.map((sub) => ({ ...sub, label: t(sub.label) })) })) }));
+  const crumbs = crumbsFor(path, peopleMap, me).map((crumb) => ({ ...crumb, label: crumb.userContent ? crumb.label : t(crumb.label) }));
 
   // Drawer: close on navigation and on Escape; move focus into it when it opens.
   useEffect(() => { setNavOpen(false); }, [path]);
@@ -75,7 +77,7 @@ export default function AppShell({ children }) {
 
   const openProfile = (anchor) =>
     openPopover(anchor, {
-      label: "Account menu",
+      label: t("Account menu"),
       width: 240,
       header: (
         <div className="pop-profile">
@@ -84,10 +86,10 @@ export default function AppShell({ children }) {
         </div>
       ),
       items: [
-        { value: "account", label: "Account & password", icon: <Icon name="user" /> },
-        { value: "shortcuts", label: "Keyboard shortcuts", icon: <Icon name="keyboard" />, kbd: "?" },
+        { value: "account", label: t("Account & password"), icon: <Icon name="user" /> },
+        { value: "shortcuts", label: t("Keyboard shortcuts"), icon: <Icon name="keyboard" />, kbd: "?" },
         { separator: true },
-        { value: "signout", label: "Sign out", icon: <Icon name="logout" /> },
+        { value: "signout", label: t("Sign out"), icon: <Icon name="logout" /> },
       ],
       onPick: (v) => (v === "account" ? router.push("/account") : v === "shortcuts" ? setShortcutsOpen(true) : signOut()),
     });
@@ -95,7 +97,7 @@ export default function AppShell({ children }) {
   return (
     <div className={`app ${collapsed ? "collapsed" : ""} ${navOpen ? "nav-open" : ""}`}>
       <SessionMonitor />
-      <a href="#main" className="btn btn-primary sr-only skip-link">Skip to content</a>
+      <a href="#main" className="btn btn-primary sr-only skip-link">{t("Skip to content")}</a>
       <div className="nav-scrim" onClick={() => setNavOpen(false)} aria-hidden="true" />
       <Sidebar groups={groups} path={path} collapsed={collapsed && !drawer} inert={drawer && !navOpen} onProfile={openProfile} />
 
@@ -103,7 +105,7 @@ export default function AppShell({ children }) {
         <Topbar
           crumbs={crumbs}
           onToggleNav={toggleNav}
-          navLabel={drawer ? (navOpen ? "Close navigation" : "Open navigation") : collapsed ? "Expand sidebar" : "Collapse sidebar"}
+          navLabel={t(drawer ? (navOpen ? "Close navigation" : "Open navigation") : collapsed ? "Expand sidebar" : "Collapse sidebar")}
           navExpanded={drawer ? navOpen : !collapsed}
           onSearch={() => setCmdOpen(true)}
         />
@@ -115,10 +117,10 @@ export default function AppShell({ children }) {
       <CreateTaskModal />
       {cmdOpen && <CommandMenu onClose={() => setCmdOpen(false)} />}
       {shortcutsOpen && (
-        <Dialog label="Keyboard shortcuts" title="Keyboard shortcuts" onClose={() => setShortcutsOpen(false)} width={440}>
+        <Dialog label={t("Keyboard shortcuts")} title={t("Keyboard shortcuts")} onClose={() => setShortcutsOpen(false)} width={440}>
           <div className="modal-body">
             <dl className="shortcuts">
-              {SHORTCUTS.map(([k, d]) => <div key={k}><dt>{k.split(" / ").map((x, i) => <kbd key={i}>{x}</kbd>)}</dt><dd>{d}</dd></div>)}
+              {SHORTCUTS.map(([k, d]) => <div key={k}><dt>{k.split(" / ").map((x, i) => <kbd key={i}>{x}</kbd>)}</dt><dd>{t(d)}</dd></div>)}
             </dl>
           </div>
         </Dialog>

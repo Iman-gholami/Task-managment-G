@@ -51,3 +51,18 @@
 [dir="rtl"] .page-meta > * + *::before { margin: 0 8px; }
 [dir="rtl"] .btn kbd { margin-right: 0; margin-left: -4px; }
 [dir="rtl"] .avatar { font-family: var(--font-sans); }
+
+/* The full application follows the selected interface direction. */
+html[dir="rtl"] .main { margin: var(--s-2) 0 var(--s-2) var(--s-2); }
+html[dir="rtl"] :is(.nav-item, .profile, .dt thead th, .dt tbody th, .task-flow-heading) { text-align: right; }
+html[dir="rtl"] .nav-item.active::before { left: auto; right: -8px; border-radius: 3px 0 0 3px; }
+html[dir="rtl"] .nav-sub { margin: 1px 16px 4px 0; padding-left: 0; padding-right: 10px; border-left: 0; border-right: 1px solid var(--border); }
+html[dir="rtl"] .nav-sub .nav-item.active::before { left: auto; right: -11.5px; }
+html[dir="rtl"] :is(.header-actions, .detail-bar .actions, .nav-count, .section-head .right) { margin-left: 0; margin-right: auto; }
+html[dir="rtl"] .task-flow-list::before { left: auto; right: 14px; }
+html[dir="rtl"] .task-review-feedback { border-left: 0; border-right: 3px solid var(--warning); }
+@media (max-width: 1023px) {
+  html[dir="rtl"] .main { margin: 0; }
+  html[dir="rtl"] .sidebar { inset: 0 0 0 auto; transform: translateX(102%); border-left: 1px solid var(--border); border-right: 0; }
+  html[dir="rtl"] .app.nav-open .sidebar { transform: none; }
+}

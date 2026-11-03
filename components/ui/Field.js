@@ -2,6 +2,7 @@
 
 import { cloneElement, isValidElement } from "react";
 import Icon from "@/components/ui/Icon";
+import { useI18n } from "@/components/I18nProvider";
 
 /**
  * Form field: visible label, the control, then either a hint or an error (never a placeholder-only label).
@@ -22,11 +23,13 @@ export function Field({ label, htmlFor, hint, error, children }) {
 }
 
 export function FieldError({ id, children }) {
-  return <span id={id} className="field-error"><Icon name="alert" />{children}</span>;
+  const { t } = useI18n();
+  return <span id={id} className="field-error"><Icon name="alert" />{typeof children === "string" ? t(children) : children}</span>;
 }
 
 /** Form-level error (e.g. from the server), announced when it appears. */
 export function FormAlert({ children }) {
+  const { t } = useI18n();
   if (!children) return null;
-  return <div className="form-alert" role="alert"><Icon name="alert" /><span>{children}</span></div>;
+  return <div className="form-alert" role="alert"><Icon name="alert" /><span>{typeof children === "string" ? t(children) : children}</span></div>;
 }

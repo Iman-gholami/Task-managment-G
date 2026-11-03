@@ -50,12 +50,12 @@ test.describe("fresh install", () => {
     await page.getByLabel("Work email").fill(ADMIN.email);
     await page.getByLabel("Password").fill(ADMIN.password);
     await page.getByRole("button", { name: "Sign in" }).click();
-    await expect(page.locator("h1")).toHaveText("Security Department");
+    await expect(page.getByRole("heading", { level: 1 })).toHaveText("Security Department");
     const users = (await (await page.request.get("/api/members")).json()).users;
     expect(users.map((u) => u.email)).toEqual([ADMIN.email]);
     expect((await (await page.request.get("/api/tasks")).json()).tasks).toEqual([]);
     await page.goto("/team");
-    await expect(page.locator("tbody tr")).toHaveCount(1);
+    await expect(page.locator("tbody:visible tr:visible")).toHaveCount(1);
   });
 
   test("wrong password shows an error; unauthenticated users go to login", async ({ page }) => {
@@ -110,12 +110,12 @@ test.describe("fresh install", () => {
       await dialog.getByLabel("Work email").fill(u.email);
       await dialog.getByLabel("Role").selectOption(u.role);
       await dialog.getByLabel("Primary team").selectOption(u.team);
-      await dialog.getByLabel("استان").fill("قم");
-      await dialog.getByRole("option", { name: "قم", exact: true }).click();
+      await dialog.getByRole("combobox", { name: "Province", exact: true }).fill("قم");
+      await dialog.getByRole("option", { name: "Qom", exact: true }).click();
       await dialog.getByLabel("Initial password").fill(PW);
       await dialog.getByRole("button", { name: "Add Member" }).click();
       await expect(dialog).toBeHidden();
-      await expect(page.locator("tbody")).toContainText(u.name);
+      await expect(page.locator("tbody:visible")).toContainText(u.name);
     }
     for (const u of (await (await page.request.get("/api/members")).json()).users) {
       const key = Object.keys(U).find((k) => U[k].email === u.email);
@@ -129,7 +129,7 @@ test.describe("shift logs for rostered staff", () => {
   test("SOC manager has shift scheduling but no personal shift log", async ({ page }) => {
     await signIn(page, "soc");
     await page.goto("/dashboard", { waitUntil: "domcontentloaded" });
-    await expect(page.locator("h1")).toHaveText("SOC overview");
+    await expect(page.getByRole("heading", { level: 1 })).toHaveText("SOC overview");
     await expect(page.locator(".sidebar")).toContainText("Shift Schedule");
     await expect(page.locator(".sidebar")).not.toContainText("Shift Log");
     await expect(page.locator(".content")).not.toContainText("Shift Log");
@@ -164,13 +164,13 @@ test.describe("shift logs for rostered staff", () => {
 
     await signIn(page, "sara");
     await page.goto("/shift");
-    await expect(page.locator("h1")).toContainText("Shift Log —");
-    for (const n of [1, 2, 3, 4, 5, 7, 8]) await page.locator(`#act-${n} .toggle-done`).click();
+    await expect(page.getByRole("heading", { level: 1 })).toContainText("Shift Log —");
+    for (const n of [1, 2, 3, 4, 5, 7, 8]) await page.locator(`#act-${n}:visible .toggle-done`).click();
     await page.getByRole("button", { name: "Increase IOC count" }).click();
     await page.getByLabel("IOC count", { exact: true }).fill("12");
-    await page.locator("#act-6").getByRole("button", { name: "Report an issue" }).click();
-    await page.locator("#act-6").getByLabel("Issue summary").fill("Security Center login page returned 502");
-    await page.locator("#act-6").getByRole("button", { name: "Save issue" }).click();
+    await page.locator("#act-6:visible").getByRole("button", { name: "Report an issue" }).click();
+    await page.locator("#act-6:visible").getByLabel("Issue summary").fill("Security Center login page returned 502");
+    await page.locator("#act-6:visible").getByRole("button", { name: "Save issue" }).click();
     await page.getByRole("button", { name: "Add Ticket" }).click();
     await page.getByRole("button", { name: "Save", exact: true }).click();
     await expect(page.getByText("Ticket number is required.")).toBeVisible();
@@ -203,7 +203,7 @@ test.describe("shift logs for rostered staff", () => {
     expect(correctedActivity.note).toBe("Manager correction");
 
     await page.goto("/shift/manage");
-    await expect(page.locator("h1")).toHaveText("Shift log corrections");
+    await expect(page.getByRole("heading", { level: 1 })).toHaveText("Shift log corrections");
     await page.getByLabel("Analyst").selectOption(ids.sara);
     await page.getByText("Review or correct a Shift Log").click();
     await expect(page.getByText("Submitted & locked")).toBeVisible();
@@ -244,10 +244,10 @@ test.describe("manager assigns and follows up tasks", () => {
     await page.reload();
     await expect(page.getByTestId(`group-${ids.sara}`)).toContainText("2 tasks");
     await expect(page.getByTestId(`group-${ids.arash}`)).toContainText("1 task");
-    await expect(page.locator("tbody")).toContainText("Tune Splunk correlation rule");
+    await expect(page.locator("tbody:visible")).toContainText("Tune Splunk correlation rule");
 
-    await page.locator("select[aria-label=Assignee]").selectOption(ids.arash);
-    await expect(page.locator("tbody tr:not(.group-row)")).toHaveCount(1);
+    await page.getByRole("combobox", { name: "Assignee" }).selectOption(ids.arash);
+    await expect(page.locator("tbody:visible tr:not(.group-row):visible")).toHaveCount(1);
     await page.getByRole("button", { name: "Reset" }).click();
     await page.getByRole("tab", { name: /Needs review/ }).click();
     await expect(page.getByText("Nothing waiting for review")).toBeVisible();
@@ -256,7 +256,7 @@ test.describe("manager assigns and follows up tasks", () => {
   test("analysts see their assigned tasks and a notification", async ({ page }) => {
     await signIn(page, "sara");
     await page.goto("/tasks/my", { waitUntil: "domcontentloaded" });
-    await expect(page.locator("tbody tr")).toHaveCount(2);
+    await expect(page.locator("tbody:visible tr:visible")).toHaveCount(2);
     await page.getByRole("button", { name: "Notifications" }).click();
     await expect(page.locator(".pop")).toContainText("New task assigned");
   });
@@ -298,7 +298,7 @@ test.describe("task workflow", () => {
     await signIn(page, "soc");
     await page.goto("/tasks/assigned");
     await page.getByRole("tab", { name: /Needs review/ }).click();
-    await page.locator("tr", { hasText: ids.t1 }).locator("td.title").click();
+    await page.getByRole("row").filter({ has: page.locator("span.id", { hasText: new RegExp(`^${ids.t1}$`) }) }).locator("td.title").click();
     await page.getByRole("radio", { name: "Excellent" }).check();
     await expect(page.getByLabel("Confirm complexity")).toHaveValue("2");
     await page.getByLabel("Confirm complexity").selectOption("3");
@@ -312,7 +312,7 @@ test.describe("task workflow", () => {
     expect((await page.request.patch(`/api/tasks/${ids.t1}`, { data: { quality: "good" } })).status()).toBe(400);
     await page.goto("/tasks/assigned");
     await page.getByRole("tab", { name: /Done/ }).click();
-    await page.locator("tr", { hasText: ids.t1 }).locator('[data-edit="status"]').click();
+    await page.getByRole("row").filter({ has: page.locator("span.id", { hasText: new RegExp(`^${ids.t1}$`) }) }).getByLabel("Change status").click();
     await expect(page.getByRole("menuitem")).toHaveText([/Reopen/]);
   });
 
@@ -341,11 +341,11 @@ test.describe("task workflow", () => {
     await page.getByText("Checklist", { exact: true }).first().click();
     await page.getByLabel("New checklist item").fill("Export scanner inventory");
     await page.getByLabel("New checklist item").press("Enter");
-    await page.locator("label.check-item", { hasText: "Export scanner inventory" }).locator("input").check();
+    await page.locator("label.check-item:visible", { hasText: "Export scanner inventory" }).locator("input").check();
     await page.getByText("Conversation", { exact: true }).click();
     await page.getByLabel("New comment").fill("Started on this, @Leila Nouri FYI");
     await page.getByRole("button", { name: /^Comment/ }).click();
-    await expect(page.locator(".mention", { hasText: "@Leila Nouri" })).toBeVisible();
+    await expect(page.locator(".mention:visible", { hasText: "@Leila Nouri" })).toBeVisible();
     await page.getByText("Attachments", { exact: true }).first().click();
     await page.getByTestId("attach-input").setInputFiles({ name: "inventory.txt", mimeType: "text/plain", buffer: Buffer.from("hello") });
     await expect(page.getByRole("link", { name: /inventory\.txt/ })).toBeVisible();
@@ -353,7 +353,7 @@ test.describe("task workflow", () => {
     await page.getByText("Checklist", { exact: true }).first().click();
     await page.getByText("Conversation", { exact: true }).click();
     await page.getByText("Attachments", { exact: true }).first().click();
-    await expect(page.locator("label.check-item", { hasText: "Export scanner inventory" }).locator("input")).toBeChecked();
+    await expect(page.locator("label.check-item:visible", { hasText: "Export scanner inventory" }).locator("input")).toBeChecked();
     await expect(page.getByText("Started on this")).toBeVisible();
     const [download] = await Promise.all([page.waitForEvent("download"), page.getByRole("link", { name: /inventory\.txt/ }).click()]);
     expect(download.suggestedFilename()).toBe("inventory.txt");
@@ -375,22 +375,22 @@ test.describe("performance", () => {
   test("each employee has their own page with their own numbers", async ({ page }) => {
     await signIn(page, "soc");
     await page.goto("/performance/overview");
-    await page.locator("tr", { hasText: "Sara Rahimi" }).locator("td.title").click();
+    await page.getByRole("row").filter({ hasText: "Sara Rahimi" }).locator("td.title").click();
     await expect(page).toHaveURL(new RegExp(`/performance/employees/${ids.sara}$`));
-    await expect(page.locator("h1")).toHaveText("Sara Rahimi");
-    await expect(page.locator(".metric", { hasText: "Completed tasks" })).toContainText("1");
-    await expect(page.locator(".metric", { hasText: "MISP IOCs" })).toContainText("12");
-    await expect(page.locator("tbody")).toContainText("Tune Splunk correlation rule");
+    await expect(page.getByRole("heading", { level: 1 })).toHaveText("Sara Rahimi");
+    await expect(page.locator(".metric:visible", { hasText: "Completed tasks" })).toContainText("1");
+    await expect(page.locator(".metric:visible", { hasText: "MISP IOCs" })).toContainText("12");
+    await expect(page.locator("tbody:visible")).toContainText("Tune Splunk correlation rule");
 
     await page.getByLabel("Employee", { exact: true }).selectOption(ids.arash);
     await expect(page).toHaveURL(new RegExp(`/performance/employees/${ids.arash}$`));
-    await expect(page.locator("h1")).toHaveText("Arash Moradi");
-    await expect(page.locator(".metric", { hasText: "Completed tasks" })).toContainText("0");
+    await expect(page.getByRole("heading", { level: 1 })).toHaveText("Arash Moradi");
+    await expect(page.locator(".metric:visible", { hasText: "Completed tasks" })).toContainText("0");
     await expect(page.getByText("Tune Splunk correlation rule")).toHaveCount(0);
 
     await page.goto("/team");
-    await page.locator("tr", { hasText: "Mina Sadeghi" }).locator("td.title").click();
-    await expect(page.locator("h1")).toHaveText("Mina Sadeghi");
+    await page.getByRole("row").filter({ hasText: "Mina Sadeghi" }).locator("td.title").click();
+    await expect(page.getByRole("heading", { level: 1 })).toHaveText("Mina Sadeghi");
     await expect(page.getByText("Routine Activity")).toHaveCount(1); // Design engineers may cover SOC shifts
   });
 
@@ -416,7 +416,7 @@ test.describe("reports", () => {
   test("ticket report lists registered tickets", async ({ page }) => {
     await signIn(page, "soc");
     await page.goto("/reports/tickets");
-    await expect(page.locator("tbody")).toContainText("INC-2026-4480");
+    await expect(page.locator("tbody:visible")).toContainText("INC-2026-4480");
   });
 });
 
@@ -430,7 +430,7 @@ test.describe("members and accounts", () => {
     await expect(dialog.getByLabel("Role").locator("option")).toHaveText(["Analyst"]);
     await dialog.getByLabel("Primary team").selectOption("SOC · L3");
     await dialog.getByRole("button", { name: "Save changes" }).click();
-    await expect(page.locator("tr", { hasText: "Arash Moradi" })).toContainText("SOC · L3");
+    await expect(page.getByRole("row").filter({ hasText: "Arash Moradi" })).toContainText("SOC · L3");
     expect((await page.request.patch(`/api/members/${ids.arash}`, { data: { role: "soc_manager" } })).status()).toBe(403);
   });
 
@@ -441,17 +441,17 @@ test.describe("members and accounts", () => {
     const dialog = page.getByRole("dialog", { name: "Add member" });
     await dialog.getByLabel("Full name").fill("Parisa Ahmadi");
     await dialog.getByLabel("Work email").fill("parisa@corp.test");
-    await dialog.getByLabel("استان").fill("قم");
-      await dialog.getByRole("option", { name: "قم", exact: true }).click();
+    await dialog.getByRole("combobox", { name: "Province", exact: true }).fill("قم");
+    await dialog.getByRole("option", { name: "Qom", exact: true }).click();
     await dialog.getByLabel("Initial password").fill(PW);
     await dialog.getByRole("button", { name: "Add Member" }).click();
-    await expect(page.locator("tbody")).toContainText("Parisa Ahmadi");
+    await expect(page.locator("tbody:visible")).toContainText("Parisa Ahmadi");
     const other = await browser.newContext();
     const url = (p) => new URL(p, page.url()).href;
     expect((await other.request.post(url("/api/auth/login"), { data: { email: "parisa@corp.test", password: PW } })).ok()).toBeTruthy();
     await page.getByRole("button", { name: "Remove Parisa Ahmadi" }).click();
     await page.getByRole("dialog", { name: "Remove member" }).getByRole("button", { name: "Remove member" }).click();
-    await expect(page.locator("tbody")).not.toContainText("Parisa Ahmadi");
+    await expect(page.locator("tbody:visible")).not.toContainText("Parisa Ahmadi");
     expect((await other.request.get(url("/api/tasks"))).status()).toBe(401);
     await other.close();
   });
@@ -473,6 +473,9 @@ test.describe("members and accounts", () => {
 });
 
 test.describe("analytics (management dashboard)", () => {
+  test.beforeEach(async ({ context, baseURL }) => {
+    await context.addCookies([{ name: "so.locale", value: "fa", url: baseURL }]);
+  });
   test("security manager sees real figures; status changes are recorded as structured history", async ({ page }) => {
     await signIn(page, "admin");
     const facts = await (await page.request.get("/api/analytics")).json();
@@ -488,11 +491,11 @@ test.describe("analytics (management dashboard)", () => {
     expect(facts.shifts.some((s) => s.a === ids.sara && s.closed)).toBeTruthy();
 
     await page.goto("/analytics", { waitUntil: "domcontentloaded" });
-    await expect(page.locator("h1")).toHaveText("داشبورد مدیریتی");
+    await expect(page.getByRole("heading", { level: 1 })).toHaveText("داشبورد مدیریتی");
     await expect(page.getByTestId("status")).toBeVisible();
     await expect(page.getByTestId("kpi-completed")).toContainText("۱");
     await expect(page.getByTestId("team-table")).toContainText("SOC");
-    await expect(page.locator(".sidebar")).toContainText("Analytics");
+    await expect(page.locator(".sidebar")).toContainText("تحلیل‌ها");
   });
 
   test("demo data is opt-in and clearly labelled", async ({ page }) => {
@@ -500,7 +503,7 @@ test.describe("analytics (management dashboard)", () => {
     await page.goto("/analytics", { waitUntil: "domcontentloaded" });
     await page.getByTestId("demo-toggle").click();
     await expect(page).toHaveURL(/demo=1/);
-    await expect(page.locator(".an-demo")).toContainText("داده نمایشی");
+    await expect(page.locator(".an-demo:visible")).toContainText("داده نمایشی");
     await page.getByRole("link", { name: "کارشناسان" }).click();
     await expect(page).toHaveURL(/\/analytics\/people\?.*demo=1/);
     await expect(page.getByTestId("people-table")).toContainText("سارا رحیمی");
@@ -509,8 +512,16 @@ test.describe("analytics (management dashboard)", () => {
   test("period menu: presets and a custom Jalali range drive every view through the URL", async ({ page }) => {
     await signIn(page, "admin");
     await page.goto("/analytics?demo=1", { waitUntil: "domcontentloaded" });
+    // Let the demo response and initial client render settle before opening the anchored menu.
+    await expect(page.locator(".an-demo:visible")).toBeVisible();
     await page.getByTestId("period").click();
-    await page.getByRole("button", { name: "ماه گذشته" }).click();
+    const menu = page.getByRole("dialog", { name: "بازه زمانی" });
+    await expect(menu).toBeVisible();
+    const content = page.locator(".content");
+    await content.evaluate((element) => { element.scrollTop += 30; });
+    await expect.poll(() => content.evaluate((element) => element.scrollTop)).toBeGreaterThan(0);
+    await expect(menu).toBeVisible();
+    await menu.getByRole("button", { name: "ماه گذشته" }).click();
     await expect(page).toHaveURL(/p=prev-month/);
     await page.getByTestId("period").click();
     await page.getByRole("button", { name: "بازه دلخواه…" }).click();
@@ -552,7 +563,7 @@ test.describe("analytics (management dashboard)", () => {
     await signIn(page, "arash");
     await page.goto("/analytics");
     await expect(page).toHaveURL(new RegExp(`/analytics/people/${ids.arash}`));
-    await expect(page.locator("h1")).toHaveText("Arash Moradi");
+    await expect(page.getByRole("heading", { level: 1 })).toHaveText("Arash Moradi");
     await page.goto(`/analytics/people/${ids.sara}`);
     await expect(page).toHaveURL(new RegExp(`/analytics/people/${ids.arash}`));
     const facts = await (await page.request.get("/api/analytics")).json();
@@ -571,7 +582,7 @@ test.describe("analytics (management dashboard)", () => {
     for (const demo of ["", "demo=1"]) {
       for (const path of ["/analytics", "/analytics/teams", "/analytics/teams?team=soc", "/analytics/people", "/analytics/compare", "/analytics/trends", "/analytics/soc", "/analytics/alerts", "/analytics/report", `/analytics/people/${demo ? "d-srh" : ids.sara}`]) {
         await page.goto(`${path}${path.includes("?") ? "&" : "?"}${demo}`, { waitUntil: "domcontentloaded" });
-        await expect(page.locator("h1").first()).toBeVisible();
+        await expect(page.getByRole("heading", { level: 1 }).first()).toBeVisible();
         await expect(page.locator(".an-body, .an .empty").first()).toBeVisible();
       }
     }
@@ -594,7 +605,7 @@ test.describe("every screen renders without console errors", () => {
       page.on("console", (m) => m.type() === "error" && errors.push(`${page.url()} ${m.text()}`));
       for (const path of paths) {
         await page.goto(path, { waitUntil: "domcontentloaded" });
-        await expect(page.locator("h1").first()).toBeVisible();
+        await expect(page.getByRole("heading", { level: 1 }).first()).toBeVisible();
       }
       expect(errors).toEqual([]);
     });

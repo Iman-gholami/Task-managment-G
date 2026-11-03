@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useId, useLayoutEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useId, useLayoutEffect, useRef, useState } from "react";
 import Icon from "@/components/ui/Icon";
 
 /**
@@ -26,7 +26,8 @@ export default function Popover({ anchor, title, header, items, render, onPick, 
   };
   const pick = (value) => { close(); onPick?.(value); };
 
-  useLayoutEffect(() => {
+  const position = useCallback(() => {
+    if (!anchor?.isConnected || !ref.current) return;
     const r = anchor.getBoundingClientRect();
     const el = ref.current;
     const w = el.offsetWidth, h = el.offsetHeight;
@@ -38,15 +39,28 @@ export default function Popover({ anchor, title, header, items, render, onPick, 
       if (r.top - h - 6 >= 8) { top = r.top - h - 6; up = true; }
       else top = Math.max(8, window.innerHeight - h - 8);
     }
-    setPos({ left, top, up });
-    el.focus({ preventScroll: true });
+    setPos((current) => current?.left === left && current?.top === top && current?.up === up ? current : { left, top, up });
   }, [anchor, align]);
+
+  useLayoutEffect(() => {
+    position();
+    ref.current?.focus({ preventScroll: true });
+  }, [position]);
 
   useEffect(() => {
     const onDown = (e) => { if (ref.current && !ref.current.contains(e.target) && !anchor.contains(e.target)) close(false); };
     const onEsc = (e) => { if (e.key === "Escape") { e.stopPropagation(); close(); } };
-    const onScroll = (e) => { if (ref.current && !ref.current.contains(e.target)) close(false); };
-    const onResize = () => close(false);
+    const onScroll = (e) => {
+      if (!ref.current || (e.target instanceof Node && ref.current.contains(e.target))) return;
+      if (!anchor.isConnected) { close(false); return; }
+      // Unrelated scroll containers do not move the anchor. For a scroll that
+      // does move it, keep the menu open and update its viewport position.
+      if (e.target !== document && e.target !== window && e.target instanceof Node && !e.target.contains(anchor)) return;
+      const bounds = anchor.getBoundingClientRect();
+      if (bounds.bottom <= 0 || bounds.top >= window.innerHeight || bounds.right <= 0 || bounds.left >= window.innerWidth) { close(false); return; }
+      position();
+    };
+    const onResize = () => { if (anchor.isConnected) position(); else close(false); };
     // Defer so the click that opened the popover doesn't immediately close it.
     const id = setTimeout(() => document.addEventListener("mousedown", onDown));
     document.addEventListener("keydown", onEsc, true);
@@ -59,7 +73,7 @@ export default function Popover({ anchor, title, header, items, render, onPick, 
       window.removeEventListener("scroll", onScroll, true);
       window.removeEventListener("resize", onResize);
     };
-  });
+  }, [anchor, onClose, position]);
 
   const onKeyDown = (e) => {
     if (e.key === "Tab" && !render) { close(); return; } // menus close on Tab; focus moves on from the trigger

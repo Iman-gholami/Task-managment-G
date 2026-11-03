@@ -3,6 +3,8 @@ import { canViewManagementAnalytics } from "@/lib/roles";
 import { err } from "@/lib/server/access";
 import { buildReport, reportFileName, toXlsx } from "@/lib/server/reports";
 import { resolvePeriod } from "@/lib/server/stats";
+import { cookies } from "next/headers";
+import { normalizeLocale } from "@/lib/i18n/messages";
 
 /** GET /api/reports/<key>?period&from&to&user&team&status&cx&quality&q[&format=xlsx] */
 export async function GET(request, { params }) {
@@ -19,7 +21,8 @@ export async function GET(request, { params }) {
   const data = buildReport(report, { period, userId: q.user || (report === "employee" ? user.id : undefined), team: q.team, status: q.status, cx: q.cx, quality: q.quality, q: q.q });
   if (!data) return err(404, "Report not found.");
   if (q.format !== "xlsx") return Response.json({ period, ...data });
-  const file = await toXlsx(data, period);
+  const locale = normalizeLocale(q.lang ?? (await cookies()).get("so.locale")?.value);
+  const file = await toXlsx(data, period, locale);
   return new Response(file, {
     headers: {
       "Content-Type": "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",

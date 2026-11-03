@@ -4,7 +4,7 @@ The Security Department's internal work tool: Task Management, SOC Shift Logs, a
 
 **Stack:** Next.js 16 (App Router) · React 19 · JavaScript · Node.js ≥ 22.13 · SQLite (Node's built-in `node:sqlite`, so no database server or native build is needed) · ECharts (analytics charts, bundled from npm). The fonts (Geist, Vazirmatn) are bundled, so the app makes no external requests and works on an offline or internal network.
 
-**Session security:** each sign-in expires after **12 hours** regardless of activity, or **30 minutes without interaction**, whichever happens first. Visible app tabs report genuine user activity at most once per minute; background polling never renews idle sessions. The server enforces both limits. Upgrading from the former 7-day session format signs everyone out once; existing users and tasks are unaffected.
+**Session security:** each sign-in expires after **12 hours** regardless of activity, or **8 hours without interaction**, whichever happens first. Visible app tabs report genuine user activity at most once per minute; background polling never renews idle sessions. The server enforces both limits. Upgrading from the former 7-day session format signs everyone out once; existing users and tasks are unaffected.
 
 **Everything is stored in the database:** sign-in with sessions, tasks with a review workflow and status history, checklist / comments / file attachments, the daily Shift Log (SOC analysts), performance figures, all five reports with Excel export, the analytics dashboard, account settings, and member management.
 
@@ -18,6 +18,9 @@ The Security Department's internal work tool: Task Management, SOC Shift Logs, a
 - Before assigning a new task, the creator reviews its details and any selected attachments. Up to 8 files (20 MB each, 40 MB total) can be added at creation; the task and its attachments become visible together.
 - Analysts and engineers can delete their own created tasks while they remain visible to them. Deleted tasks disappear from normal lists and reports; their records, history and files remain stored for audit.
 - The server enforces these rules; the UI only offers the allowed actions.
+- The task page shows the current stage, the next action and, when a task is in review, the active managers who are eligible to review it. Review is not assigned to one particular manager.
+- Task dates in the task workspace and report preview use the Solar Hijri calendar. Dates remain ISO/Gregorian in storage and Excel exports, so existing integrations and records are preserved. The date editor accepts Solar Hijri dates as `YYYY/MM/DD`.
+- Assignment events are saved in SQLite and visible in the notification menu. Each signed-in browser can enable desktop notifications from that menu; the app checks for changes about every 30 seconds while its tab remains open. Desktop notifications require browser permission and HTTPS (or localhost); a plain HTTP address on another machine supports the in-app notification only. Assigning a task to yourself does not generate a desktop alert.
 
 ### Task views
 - **Assigned by Me** (managers): every task you created for someone else, grouped by assignee, with tabs for *Open*, *Needs review*, *Overdue / Blocked*, *Done* and *All*.

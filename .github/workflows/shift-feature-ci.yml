@@ -33,3 +33,19 @@ jobs:
           fi
       - name: Playwright E2E
         run: npx playwright test
+      - name: Save bilingual layout screenshots
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: bilingual-layouts
+          path: test-results/**/dashboard-*.png
+          if-no-files-found: ignore
+          retention-days: 7
+      - name: Save browser failure context
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: browser-failure-context
+          path: test-results/**/error-context.md
+          if-no-files-found: ignore
+          retention-days: 7

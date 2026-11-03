@@ -1,5 +1,7 @@
 "use client";
 
+import { useI18n as useTaskI18n } from "@/components/I18nProvider";
+
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useEffect, useMemo, useState } from "react";
@@ -9,8 +11,9 @@ import Icon from "@/components/ui/Icon";
 import Segmented from "@/components/ui/Segmented";
 import { PageHeader } from "@/components/ui/layout";
 import { EmptyState } from "@/components/ui/states";
-import { Avatar, Priority, Status } from "@/components/ui/indicators";
-import { PRIO, STATUS, TODAY, dueLabel, isOpen, plural } from "@/lib/format";
+import { Avatar, Due, Priority, Status } from "@/components/ui/indicators";
+import { PRIO, STATUS, TODAY, addDays, dueLabel, isOpen, plural } from "@/lib/format";
+import { taskDate } from "@/lib/task-date";
 import { inTeamScope, isManager } from "@/lib/roles";
 
 export { inTeamScope };
@@ -34,6 +37,7 @@ const VIEWS = {
 };
 
 export default function Tasks({ scope }) {
+  const { t: __taskTr, locale } = useTaskI18n();
   const { tasks, setCreateOpen, me, peopleMap } = useApp();
   const router = useRouter();
   const params = useSearchParams();
@@ -104,15 +108,15 @@ export default function Tasks({ scope }) {
 
   const onSort = (k) => setSort((s) => ({ k, dir: s.k === k ? -s.dir : 1 }));
   const v = VIEWS[scope];
-  const createButton = (size) => <button type="button" className={`btn btn-primary ${size ?? ""}`} onClick={() => setCreateOpen(true)}><Icon name="plus" />Create task{!size && <kbd>C</kbd>}</button>;
+  const createButton = (size) => <button type="button" className={`btn btn-primary ${size ?? ""}`} onClick={() => setCreateOpen(true)}><Icon name="plus" />{"" + __taskTr("Create task") + ""}{!size && <kbd>C</kbd>}</button>;
 
   let body;
   if (base.length === 0) {
-    body = <EmptyState icon="inbox" title={v.empty[0]} action={canCreate ? createButton("btn-sm") : null}>{v.empty[1]}</EmptyState>;
+    body = <EmptyState icon="inbox" title={__taskTr(v.empty[0])} action={canCreate ? createButton("btn-sm") : null}>{__taskTr(v.empty[1])}</EmptyState>;
   } else if (list.length === 0) {
     body = activeFilters
-      ? <EmptyState icon="search" title="No tasks match these filters" action={<button type="button" className="btn btn-secondary btn-sm" onClick={resetFilters}>Reset filters</button>}>Nothing in “{TABS.find((x) => x[0] === tab)[1]}” matches. Try another search or clear the filters.</EmptyState>
-      : <EmptyState icon="checkCircle" title={tabEmpty}>{tab === "open" ? "Everything here is done or cancelled." : "Switch tabs to see other tasks."}</EmptyState>;
+      ? <EmptyState icon="search" title={__taskTr("No tasks match these filters")} action={<button type="button" className="btn btn-secondary btn-sm" onClick={resetFilters}>{"" + __taskTr("Reset filters") + ""}</button>}>{"" + __taskTr("Nothing in “") + ""}{__taskTr(TABS.find((x) => x[0] === tab)[1])}{"" + __taskTr("” matches. Try another search or clear the filters.") + ""}</EmptyState>
+      : <EmptyState icon="checkCircle" title={__taskTr(tabEmpty)}>{tab === "open" ? __taskTr("Everything here is done or cancelled.") : __taskTr("Switch tabs to see other tasks.")}</EmptyState>;
   } else if (view === "board") {
     body = <Board list={list} />;
   } else if (isGrouped) {
@@ -127,8 +131,8 @@ export default function Tasks({ scope }) {
             <span className="who">
               <Avatar id={id} />
               <span>{peopleMap[id]?.name ?? "Unknown"}</span>
-              <span className="muted">{plural(items.length, "task")}{review > 0 && ` · ${review} in review`}</span>
-              {late > 0 && <span className="overdue" style={{ fontWeight: 400 }}>· {late} overdue</span>}
+              <span className="muted">{locale === "fa" ? `${items.length} تسک` : plural(items.length, "task")}{review > 0 && (locale === "fa" ? ` · ${review} در حال بازبینی` : ` · ${review} in review`)}</span>
+              {late > 0 && <span className="overdue" style={{ fontWeight: 400 }}>· {late}{" " + __taskTr("overdue") + ""}</span>}
             </span>
           ),
         };
@@ -141,11 +145,11 @@ export default function Tasks({ scope }) {
   return (
     <div className="page">
       <PageHeader
-        title={v.title}
-        meta={[v.sub, plural(base.filter(isOpen).length, "open task")]}
+        title={__taskTr(v.title)}
+        meta={[__taskTr(v.sub), locale === "fa" ? `${base.filter(isOpen).length} تسک باز` : plural(base.filter(isOpen).length, "open task")]}
         actions={
           <>
-            <Segmented label="Layout" iconOnly value={view} onChange={setView} options={[{ value: "table", icon: "list", ariaLabel: "Table view" }, { value: "board", icon: "board", ariaLabel: "Board view" }]} />
+            <Segmented label={__taskTr("Layout")} iconOnly value={view} onChange={setView} options={[{ value: "table", icon: "list", ariaLabel: __taskTr("Table view") }, { value: "board", icon: "board", ariaLabel: __taskTr("Board view") }]} />
             {canCreate && createButton()}
           </>
         }
@@ -156,34 +160,33 @@ export default function Tasks({ scope }) {
           <div className="tabs-row">
             <Segmented
               kind="tabs"
-              label="Task status"
+              label={__taskTr("Task status")}
               value={tab}
               onChange={(k) => { setTab(k); setKb(0); }}
-              options={TABS.filter(([k]) => k !== "review" || manager || scope === "my").map(([k, label, pred]) => ({ value: k, label, count: base.filter(pred).length }))}
+              options={TABS.filter(([k]) => k !== "review" || manager || scope === "my").map(([k, label, pred]) => ({ value: k, label: __taskTr(label), count: base.filter(pred).length }))}
             />
           </div>
-          <div className="toolbar" role="search" aria-label="Filter tasks">
+          <div className="toolbar" role="search" aria-label={__taskTr("Filter tasks")}>
             <div className="search">
               <Icon name="search" />
-              <input id="task-search" type="search" className="input" placeholder="Search title or ID" aria-label="Search tasks by title or ID" aria-keyshortcuts="/" value={q} onChange={(e) => { setQ(e.target.value); setKb(0); }} onKeyDown={(e) => e.key === "Escape" && e.currentTarget.blur()} />
+              <input id="task-search" type="search" className="input" placeholder={__taskTr("Search title or ID")} aria-label={__taskTr("Search tasks by title or ID")} aria-keyshortcuts="/" value={q} onChange={(e) => { setQ(e.target.value); setKb(0); }} onKeyDown={(e) => e.key === "Escape" && e.currentTarget.blur()} />
             </div>
             {scope !== "my" && (
-              <select className={`input ${assignee ? "is-set" : ""}`} style={{ width: 190 }} value={assignee} onChange={(e) => setAssignee(e.target.value)} aria-label="Assignee">
-                <option value="">All assignees</option>
+              <select className={`input ${assignee ? "is-set" : ""}`} style={{ width: 190 }} value={assignee} onChange={(e) => setAssignee(e.target.value)} aria-label={__taskTr("Assignee")}>
+                <option value="">{"" + __taskTr("All assignees") + ""}</option>
                 {people.map((p) => <option key={p.id} value={p.id}>{p.name}</option>)}
               </select>
             )}
-            <select className={`input ${prio ? "is-set" : ""}`} style={{ width: 150 }} value={prio} onChange={(e) => setPrio(e.target.value)} aria-label="Priority">
-              <option value="">Any priority</option>
-              {Object.entries(PRIO).map(([k, l]) => <option key={k} value={k}>{l}</option>)}
+            <select className={`input ${prio ? "is-set" : ""}`} style={{ width: 150 }} value={prio} onChange={(e) => setPrio(e.target.value)} aria-label={__taskTr("Priority")}>
+              <option value="">{"" + __taskTr("Any priority") + ""}</option>
+              {Object.entries(PRIO).map(([k, l]) => <option key={k} value={k}>{__taskTr(l)}</option>)}
             </select>
-            {activeFilters > 0 && <button type="button" className="btn btn-ghost btn-sm" onClick={resetFilters}><Icon name="x" />Reset filters ({activeFilters})</button>}
+            {activeFilters > 0 && <button type="button" className="btn btn-ghost btn-sm" onClick={resetFilters}><Icon name="x" />{"" + __taskTr("Reset filters (") + ""}{activeFilters})</button>}
             <div className="end">
-              <span className="result-count" aria-live="polite">{list.length === inTab.length ? plural(list.length, "task") : `${list.length} of ${inTab.length} tasks`}</span>
+              <span className="result-count" aria-live="polite">{list.length === inTab.length ? (locale === "fa" ? `${list.length} تسک` : plural(list.length, "task")) : locale === "fa" ? `${list.length} از ${inTab.length} تسک` : `${list.length} of ${inTab.length} tasks`}</span>
               {scope !== "my" && view === "table" && (
                 <label className="toggle-label">
-                  <input type="checkbox" role="switch" className="switch" checked={grouped} onChange={(e) => setGrouped(e.target.checked)} />Group by assignee
-                </label>
+                  <input type="checkbox" role="switch" className="switch" checked={grouped} onChange={(e) => setGrouped(e.target.checked)} />{"" + __taskTr("Group by assignee") + ""}</label>
               )}
             </div>
           </div>
@@ -198,26 +201,27 @@ export default function Tasks({ scope }) {
 const COLUMNS = ["todo", "progress", "review", "returned", "done"];
 
 function Board({ list }) {
+  const { t: __taskTr, locale } = useTaskI18n();
   return (
     <div className="board">
       {COLUMNS.map((s) => {
         const col = list.filter((t) => t.status === s || (s === "todo" && t.status === "backlog") || (s === "progress" && t.status === "blocked"));
         return (
-          <section key={s} className="board-col" data-s={s} aria-label={`${STATUS[s]}: ${col.length}`}>
+          <section key={s} className="board-col" data-s={s} aria-label={`${__taskTr(STATUS[s])}: ${col.length}`}>
             <div className="board-col-head"><Status s={s} /><span className="board-count num">{col.length}</span></div>
-            {col.length === 0 && <div className="board-empty">No tasks</div>}
+            {col.length === 0 && <div className="board-empty">{"" + __taskTr("No tasks") + ""}</div>}
             {col.map((t) => (
               <Link key={t.id} href={`/tasks/${t.id}`} className="board-card" data-s={t.status} data-overdue={isOpen(t) && t.due !== "—" && t.due < TODAY ? "" : undefined}>
                 <div className="board-card-top">
                   <span className="mono muted">{t.id}</span>
                   {t.status === "blocked" && <Status s="blocked" />}
-                  {t.status === "backlog" && <span className="badge">Backlog</span>}
+                  {t.status === "backlog" && <span className="badge">{"" + __taskTr("Backlog") + ""}</span>}
                   <Avatar id={t.a} size="sm" label />
                 </div>
                 <div className="t">{t.title}</div>
                 <div className="meta">
                   <Priority p={t.prio} />
-                  {t.due !== "—" && isOpen(t) && <span className={`due ${t.due < TODAY ? "overdue" : "muted"}`}>{dueLabel(t.due)}</span>}
+                  {t.due !== "—" && isOpen(t) && <span className={`due ${t.due < TODAY ? "overdue" : "muted"}`}><Due task={t} /></span>}
                 </div>
               </Link>
             ))}
