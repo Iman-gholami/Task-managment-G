@@ -17,12 +17,13 @@ import TeamComparison from "@/components/screens/dashboard/TeamComparison";
 import { AttentionList, allScope, countReason, useAttention } from "@/components/screens/dashboard/Attention";
 import { fmtRange, plural } from "@/lib/format";
 import { periodQuery, previousPeriod } from "@/lib/period";
+import { dashboardMonth, dashboardRange } from "@/lib/i18n/presentation";
 
 const total = (teams, key) => teams.reduce((s, t) => s + t[key], 0);
 
 /** Department-wide view for the Security Manager: output, risk, what needs a decision, who is loaded. */
 export default function SecurityDashboard() {
-  const { t: __uiTr } = useUiI18n();
+  const { t: __uiTr, locale, number } = useUiI18n();
   const { members, me } = useApp();
   const greeting = useGreeting(me.name);
   const [period, setPeriod] = useState("this");
@@ -30,6 +31,7 @@ export default function SecurityDashboard() {
   const { data, loading, error, reload } = useFetch(`/api/performance?${query}`);
   // Same figures for the period before, so completed work and hours can be compared honestly.
   const prev = previousPeriod(period);
+  const previousLabel = !prev || locale === "en" ? prev?.label : period === "quarter" ? "در مقایسه با فصل قبل" : period === "custom" ? "در مقایسه با دوره قبل" : `در مقایسه با ${dashboardMonth(new URLSearchParams(prev.query).get("from"), locale)}`;
   const before = useFetch(prev ? `/api/performance?${prev.query}` : null);
   const attention = useAttention(allScope);
 
@@ -45,8 +47,8 @@ export default function SecurityDashboard() {
     <div className="page">
       <PageHeader
         eyebrow={greeting}
-        title="Security Department"
-        meta={[data ? fmtRange(data.period.from, data.period.to) : null, data ? plural(teams.length, "team") : null, plural(members.length, "person", "people")]}
+        title={__uiTr("Security Department")}
+        meta={[data ? dashboardRange(data.period.from, data.period.to, locale) : null, data ? locale === "fa" ? `${number(teams.length)} تیم` : plural(teams.length, "team") : null, locale === "fa" ? `${number(members.length)} نفر` : plural(members.length, "person", "people")]}
         actions={
           <>
             <PeriodSelector value={period} onChange={setPeriod} />
@@ -62,44 +64,44 @@ export default function SecurityDashboard() {
           hint={__uiTr("Tasks approved in this period, by completion date.")}
           value={total(teams, "completed")}
           loading={busy}
-          foot={prevTeams ? <Delta now={total(teams, "completed")} before={total(prevTeams, "completed")} label={prev.label} /> : "Approved tasks"}
+          foot={prevTeams ? <Delta now={total(teams, "completed")} before={total(prevTeams, "completed")} label={previousLabel} /> : __uiTr("Approved tasks")}
         />
         <Metric
           label={__uiTr("Task hours logged")} icon="clock"
           hint={__uiTr("Actual hours recorded on tasks completed in this period.")}
           value={Math.round(total(teams, "hours"))}
-          unit="h"
+          unit={locale === "fa" ? "ساعت" : "h"}
           loading={busy}
-          foot={prevTeams ? <Delta now={Math.round(total(teams, "hours"))} before={Math.round(total(prevTeams, "hours"))} label={prev.label} goodWhen={null} /> : "On completed tasks"}
+          foot={prevTeams ? <Delta now={Math.round(total(teams, "hours"))} before={Math.round(total(prevTeams, "hours"))} label={previousLabel} goodWhen={null} /> : __uiTr("On completed tasks")}
         />
         <Metric
           label={__uiTr("Active tasks")} icon="tasks"
           value={total(teams, "active")}
           loading={busy}
           href="/tasks/team"
-          foot={blocked ? <span className="overdue">{blocked}{" " + __uiTr("blocked") + ""}</span> : "None blocked"}
+          foot={blocked ? <span className="overdue">{number(blocked)}{" " + __uiTr("blocked") + ""}</span> : __uiTr("None blocked")}
         />
         <Metric
-          label="Overdue" icon="flag"
+          label={__uiTr("Overdue")} icon="flag"
           value={overdue}
           tone={overdue ? "alert" : undefined}
           loading={busy}
-          foot={overdue ? `Across ${plural(overdueTeams, "team")}` : "Nothing past its deadline"}
+          foot={overdue ? locale === "fa" ? `در ${number(overdueTeams)} تیم` : `Across ${plural(overdueTeams, "team")}` : __uiTr("Nothing past its deadline")}
         />
         <Metric
           label={__uiTr("Awaiting review")} icon="review"
           value={reviews}
           href="/tasks/team?tab=review"
-          foot={reviews ? "Waiting for approval" : "No reviews waiting"}
+          foot={__uiTr(reviews ? "Waiting for approval" : "No reviews waiting")}
         />
       </MetricGrid>
 
       <ManagerReturnedQueue />
       <div className="stack-lg">
         <AttentionList items={attention} />
-        <TeamComparison teams={teams} loading={busy} error={error} onRetry={reload} periodLabel={data ? `${fmtRange(data.period.from, data.period.to)} · trend: last 6 months` : null} />
+        <TeamComparison teams={teams} loading={busy} error={error} onRetry={reload} periodLabel={data ? `${dashboardRange(data.period.from, data.period.to, locale)} · ${locale === "fa" ? "روند ۶ ماه گذشته" : "trend: last 6 months"}` : null} />
         <Panel
-          title="People"
+          title={__uiTr("People")}
           meta={__uiTr("Alphabetical · not a ranking")}
           actions={<Link className="btn btn-ghost btn-sm" href="/performance/overview">{"" + __uiTr("Performance overview") + ""}<Icon name="arrowRight" /></Link>}
         >

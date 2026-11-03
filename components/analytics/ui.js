@@ -130,7 +130,7 @@ export function AnError({ error, onRetry }) {
     <div className="empty danger" role="alert">
       <div className="glyph" aria-hidden="true"><Icon name={e.icon} /></div>
       <h3>{e.title}</h3>
-      <p>{e.body}</p>
+      <p>{__extraTr(e.body)}</p>
       {onRetry && status !== 403 && <div className="actions"><button type="button" className="btn btn-secondary btn-sm" onClick={onRetry}>{"" + __analyticsTr("تلاش دوباره") + ""}</button></div>}
     </div>
   );
@@ -159,8 +159,8 @@ export function ChartPanel({ title, question, meta, build, height = 260, table, 
     <section className={`panel an-panel ${className}`} aria-labelledby={id} data-testid={testId}>
       <div className="panel-head an-panel-head">
         <div className="an-panel-titles">
-          <h2 id={id}>{title}</h2>
-          {question && <p className="an-q">{question}</p>}
+          <h2 id={id}>{__analyticsTr(title)}</h2>
+          {question && <p className="an-q">{__analyticsTr(question)}</p>}
         </div>
         {meta && <span className="meta">{meta}</span>}
         <div className="right an-no-print">
@@ -171,7 +171,7 @@ export function ChartPanel({ title, question, meta, build, height = 260, table, 
               value={mode}
               onChange={setMode}
               iconOnly
-              options={[{ value: "chart", icon: "bars", ariaLabel: "نمودار" }, { value: "table", icon: "sheet", ariaLabel: "جدول" }]}
+              options={[{ value: "chart", icon: "bars", ariaLabel: __analyticsTr("نمودار") }, { value: "table", icon: "sheet", ariaLabel: __analyticsTr("جدول") }]}
             />
           )}
           {!empty && table && (

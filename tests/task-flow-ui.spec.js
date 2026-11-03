@@ -125,7 +125,7 @@ test("a return started from the task list opens the reason workflow", async ({ p
   await login(page, ADMIN);
   await page.goto("/tasks/assigned");
   await page.getByRole("tab", { name: /Needs review/ }).click();
-  await page.locator("tr", { hasText: task.id }).locator('[data-edit="status"]').click();
+  await page.locator("tr").filter({ has: page.locator("span.id", { hasText: new RegExp(`^${task.id}$`) }) }).locator('[data-edit="status"]').click();
   await page.getByRole("menuitem", { name: /Return for changes/ }).click();
   await expect(page).toHaveURL(new RegExp(`/tasks/${task.id}$`));
   await page.getByRole("button", { name: "Return for changes" }).click();

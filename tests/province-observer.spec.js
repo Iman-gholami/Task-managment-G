@@ -9,7 +9,7 @@ test("province member setup and observer access to provincial analytics, but not
   await page.goto("/team");
   await page.getByRole("button", { name: "Add member" }).click();
   const dialog = page.getByRole("dialog", { name: "Add member" });
-  const province = dialog.getByLabel("Province");
+  const province = dialog.getByRole("combobox", { name: "Province", exact: true });
   await province.focus();
   await expect(dialog.getByRole("listbox", { name: "Provinces" }).getByRole("option")).toHaveCount(31);
   await province.fill("قم");

@@ -23,7 +23,7 @@ const DIST_METRICS = ["completed", "units", "hours", "hoursPerTask", "onTimeRate
 export default function People() {
   const { t: __analyticsTr } = useAnalyticsI18n();
   return (
-    <AnalyticsFrame title={__analyticsTr("کارشناسان")} subtitle="آماری، بدون امتیاز و رتبه">
+    <AnalyticsFrame title={__analyticsTr("کارشناسان")} subtitle={__analyticsTr("آماری، بدون امتیاز و رتبه")}>
       <PeopleBody />
     </AnalyticsFrame>
   );
@@ -31,7 +31,7 @@ export default function People() {
 
 function PeopleBody() {
   const { t: __extraTr } = useExtraI18n();
-  const { t: __analyticsTr } = useAnalyticsI18n();
+  const { t: __analyticsTr, team: teamText } = useAnalyticsI18n();
   const a = useAnalytics();
   const { view, range, cmp, gran, params, setParam } = a;
   const person = params.get("person");
@@ -40,7 +40,7 @@ function PeopleBody() {
     const b = buckets(range.from, range.end, gran, a.locale);
     const rows = peopleRows(view, range, cmp).map((r) => ({ ...r, id: r.person.id, spark: bucketStats(view, [r.person.id], b).map((x) => x.completed) }));
     return { rows, groups: groupsIn(view), shift: rows.some((r) => r.person.shift) };
-  }, [view, range, cmp, gran]);
+  }, [view, range, cmp, gran, a.locale]);
   const reviews = useMemo(() => [...(view.reviews ?? [])].sort(
     (a, b) => b.month.localeCompare(a.month) || a.a.localeCompare(b.a)
   ), [view]);
@@ -48,10 +48,10 @@ function PeopleBody() {
 
   const distRows = m.rows.filter((r) => def.area !== "soc" || r.person.shift);
   const dist = useCallback((t) => stripOption(t, {
-    groups: m.groups.map((g) => g.fa),
+    groups: m.groups.map((g) => teamText(g.name)),
     points: distRows.map((r) => ({ id: r.person.id, name: r.person.name, value: r.cur[metric], groupIndex: m.groups.findIndex((g) => g.name === r.person.group) })),
     kind: def.kind, median: median(distRows.map((r) => r.cur[metric])),
-  }), [m, metric]); // eslint-disable-line react-hooks/exhaustive-deps
+  }), [m, metric, a.locale]); // eslint-disable-line react-hooks/exhaustive-deps
 
 
 
@@ -66,24 +66,24 @@ function PeopleBody() {
           <DataTable dense columns={[
             { key: "month", label: __extraTr("ماه ارزیابی"), value: (r) => r.month },
             { key: "name", label: __analyticsTr("کارشناس"), value: (r) => m.rows.find((p) => p.person.id === r.a)?.person.name ?? "—" },
-            { key: "rating", label: __extraTr("نتیجه"), value: (r) => QUAL_FA[r.rating] ?? r.rating },
+            { key: "rating", label: __extraTr("نتیجه"), value: (r) => __analyticsTr(QUAL_FA[r.rating] ?? r.rating) },
             { key: "note", label: __extraTr("توضیحات ارزیابی"), value: (r) => r.note || "—" },
           ]} rows={reviews.map((r, i) => ({ ...r, id: `${r.a}-${r.month}-${i}` }))} caption="سوابق ارزیابی کارشناسان" />
         )}
       </Panel>
 
       <ChartPanel
-        title={`توزیع «${def.label}» میان کارشناسان`}
+        title={a.locale === "fa" ? `توزیع «${def.label}» میان کارشناسان` : `${__analyticsTr(def.label)} distribution among analysts`}
         question="پراکندگی را نشان می‌دهد، نه رتبه را: هر نقطه یک نفر، خط عمودی میانه. روی نقطه کلیک کنید."
         build={dist}
         height={80 + 56 * Math.max(1, m.groups.length)}
         onChartClick={(e) => e.data?.id && setParam("person", e.data.id)}
         actions={
           <select className="input input-sm" style={{ width: 170 }} value={metric} onChange={(e) => setParam("metric", e.target.value)} aria-label={__analyticsTr("شاخص توزیع")}>
-            {DIST_METRICS.filter((k) => METRICS[k].area !== "soc" || m.shift).map((k) => <option key={k} value={k}>{METRICS[k].label}</option>)}
+            {DIST_METRICS.filter((k) => METRICS[k].area !== "soc" || m.shift).map((k) => <option key={k} value={k}>{__analyticsTr(METRICS[k].label)}</option>)}
           </select>
         }
-        table={{ columns: [{ key: "n", label: __analyticsTr("کارشناس"), value: (r) => r.person.name }, { key: "t", label: __analyticsTr("تیم"), value: (r) => groupFa(r.person.group) }, { key: "v", label: def.label, kind: def.kind, value: (r) => r.cur[metric] }], rows: distRows }}
+        table={{ columns: [{ key: "n", label: __analyticsTr("کارشناس"), value: (r) => r.person.name }, { key: "t", label: __analyticsTr("تیم"), value: (r) => teamText(r.person.group) }, { key: "v", label: __analyticsTr(def.label), kind: def.kind, value: (r) => r.cur[metric] }], rows: distRows }}
         fileName={`distribution-${metric}`}
       />
       {person && m.rows.some((r) => r.person.id === person) && <PersonDrawer id={person} onClose={() => setParam("person", "")} />}
@@ -95,7 +95,7 @@ function PeopleBody() {
 // employee metrics, and the province's history do not rerender per keystroke.
 const PeopleSearchTable = memo(function PeopleSearchTable({ m, setParam }) {
   const { t: __extraTr } = useExtraI18n();
-  const { t: __analyticsTr } = useAnalyticsI18n();
+  const { t: __analyticsTr, locale, team: teamText, role: roleText, province: provinceText, number } = useAnalyticsI18n();
   const [q, setQ] = useState("");
   const deferredQ = useDeferredValue(q);
   const shown = useMemo(() => {
@@ -104,7 +104,7 @@ const PeopleSearchTable = memo(function PeopleSearchTable({ m, setParam }) {
   }, [deferredQ, m.rows]);
 
   const columns = [
-    { key: "name", label: __analyticsTr("کارشناس"), value: (r) => r.person.name, render: (r) => <span className="an-person">{r.person.name}<small>{[r.person.province || "استان تعیین‌نشده", groupFa(r.person.group), r.person.level, ROLE_FA[r.person.role], r.person.active ? null : "غیرفعال"].filter(Boolean).join(" · ")}</small></span> },
+    { key: "name", label: __analyticsTr("کارشناس"), value: (r) => r.person.name, render: (r) => <span className="an-person">{r.person.name}<small>{[r.person.province ? provinceText(r.person.province) : __analyticsTr("استان تعیین‌نشده"), teamText(r.person.group), r.person.level, roleText(r.person.role), r.person.active ? null : __analyticsTr("غیرفعال")].filter(Boolean).join(" · ")}</small></span> },
     { key: "c", label: __extraTr("تکمیل‌شده"), kind: "count", value: (r) => r.cur.completed },
     { key: "good", label: __extraTr("عالی/خوب"), kind: "count", value: (r) => r.cur.quality[0] + r.cur.quality[1] },
     { key: "needs", label: __extraTr("نیاز بهبود"), kind: "count", value: (r) => r.cur.quality[3] },
@@ -131,7 +131,7 @@ const PeopleSearchTable = memo(function PeopleSearchTable({ m, setParam }) {
   return (
       <Panel
         title={__analyticsTr("همه کارشناسان")}
-        meta={`${faDigits(shown.length)} نفر · الفبایی؛ مرتب‌سازی با کلیک روی سرستون`}
+        meta={locale === "fa" ? `${number(shown.length)} نفر · الفبایی؛ مرتب‌سازی با کلیک روی سرستون` : `${number(shown.length)} people · alphabetical; select a column heading to sort`}
         actions={
           <div className="search an-no-print" style={{ width: 220 }}>
             <Icon name="search" />

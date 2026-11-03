@@ -110,7 +110,7 @@ test.describe("fresh install", () => {
       await dialog.getByLabel("Work email").fill(u.email);
       await dialog.getByLabel("Role").selectOption(u.role);
       await dialog.getByLabel("Primary team").selectOption(u.team);
-      await dialog.getByLabel("Province").fill("قم");
+      await dialog.getByRole("combobox", { name: "Province", exact: true }).fill("قم");
       await dialog.getByRole("option", { name: "Qom", exact: true }).click();
       await dialog.getByLabel("Initial password").fill(PW);
       await dialog.getByRole("button", { name: "Add Member" }).click();
@@ -441,8 +441,8 @@ test.describe("members and accounts", () => {
     const dialog = page.getByRole("dialog", { name: "Add member" });
     await dialog.getByLabel("Full name").fill("Parisa Ahmadi");
     await dialog.getByLabel("Work email").fill("parisa@corp.test");
-    await dialog.getByLabel("استان").fill("قم");
-      await dialog.getByRole("option", { name: "قم", exact: true }).click();
+    await dialog.getByRole("combobox", { name: "Province", exact: true }).fill("قم");
+    await dialog.getByRole("option", { name: "Qom", exact: true }).click();
     await dialog.getByLabel("Initial password").fill(PW);
     await dialog.getByRole("button", { name: "Add Member" }).click();
     await expect(page.locator("tbody")).toContainText("Parisa Ahmadi");
@@ -473,6 +473,9 @@ test.describe("members and accounts", () => {
 });
 
 test.describe("analytics (management dashboard)", () => {
+  test.beforeEach(async ({ context, baseURL }) => {
+    await context.addCookies([{ name: "so.locale", value: "fa", url: baseURL }]);
+  });
   test("security manager sees real figures; status changes are recorded as structured history", async ({ page }) => {
     await signIn(page, "admin");
     const facts = await (await page.request.get("/api/analytics")).json();
@@ -492,7 +495,7 @@ test.describe("analytics (management dashboard)", () => {
     await expect(page.getByTestId("status")).toBeVisible();
     await expect(page.getByTestId("kpi-completed")).toContainText("۱");
     await expect(page.getByTestId("team-table")).toContainText("SOC");
-    await expect(page.locator(".sidebar")).toContainText("Analytics");
+    await expect(page.locator(".sidebar")).toContainText("تحلیل‌ها");
   });
 
   test("demo data is opt-in and clearly labelled", async ({ page }) => {

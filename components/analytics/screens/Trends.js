@@ -12,7 +12,7 @@ import { useAnalytics } from "@/components/analytics/AnalyticsContext";
 import { calendarOption, hbarOption, lineOption } from "@/components/analytics/chartOptions";
 import { ChartPanel } from "@/components/analytics/ui";
 import Segmented from "@/components/ui/Segmented";
-import { J_MONTHS, WEEKDAYS, addDays, diffDays, faDate, maxIso, toJalali, weekStart, weekdayIndex } from "@/lib/analytics/calendar";
+import { J_MONTHS, J_MONTHS_EN, WEEKDAYS, addDays, diffDays, localDate, maxIso, toJalali, weekStart, weekdayIndex } from "@/lib/analytics/calendar";
 import { fmtNum } from "@/lib/analytics/format";
 import { GRAN_LABEL, buckets } from "@/lib/analytics/periods";
 import { METRICS, backlogSeries, bucketStats, dailySeries, groupsIn, idsOf } from "@/lib/analytics/metrics";
@@ -35,8 +35,9 @@ export default function Trends() {
 function TrendsBody() {
   const { t: __extraTr } = useExtraI18n();
   const { fmtNum } = useAnalyticsFormat();
-  const { t: __analyticsTr } = useAnalyticsI18n();
+  const { t: __analyticsTr, team: teamText } = useAnalyticsI18n();
   const a = useAnalytics();
+  const weekdays = a.locale === "fa" ? WEEKDAYS : ["Saturday", "Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday"];
   const { view, range, cmp, gran, params, setParam, today } = a;
   const hasShift = view.people.some((p) => p.shift);
   const keys = Object.keys(METRICS).filter((k) => METRICS[k].area !== "soc" || hasShift);
@@ -51,9 +52,9 @@ function TrendsBody() {
     const b = buckets(range.from, range.end, gran, a.locale);
     const pb = cmp ? buckets(cmp.from, cmp.to, gran, a.locale) : [];
     const parts = by === "team"
-      ? groups.map((g) => ({ name: g.fa, ids: idsOf(view.people.filter((p) => p.group === g.name)) }))
+      ? groups.map((g) => ({ name: teamText(g.name), ids: idsOf(view.people.filter((p) => p.group === g.name)) }))
       : by === "level" ? levels.map((l) => ({ name: l, ids: idsOf(view.people.filter((p) => p.level === l)) }))
-        : [{ name: def.label, ids: null }];
+        : [{ name: __analyticsTr(def.label), ids: null }];
     const series = parts.map((p) => bucketStats(view, p.ids, b).map((x) => x[metric]));
     const prev = by === "all" && cmp ? bucketStats(view, null, pb).map((x) => x[metric]) : null;
     // Twelve months of daily completions for the calendar, whatever the period.
@@ -64,13 +65,13 @@ function TrendsBody() {
     const sum = Array(7).fill(0), count = Array(7).fill(0);
     for (const [d, v] of days) { const w = weekdayIndex(d); if (v !== null) { sum[w] += v; count[w] += 1; } }
     return { b, pb, parts, series, prev, year, yFrom, weekday: sum.map((s, i) => (count[i] ? s / count[i] : null)), backlog: backlogSeries(view, null, b) };
-  }, [view, range, cmp, gran, by, metric]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [view, range, cmp, gran, by, metric, a.locale]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const asBars = by === "all" && def.kind === "count" && m.b.length <= 31;
   const main = useCallback((t) => lineOption(t, {
     labels: m.b.map((x) => x.label), partial: m.b.map((x) => x.partial), kind: def.kind, bars: asBars,
     series: m.parts.map((p, i) => ({ name: p.name, data: m.series[i], color: by === "all" ? (asBars ? undefined : t.primary) : t.cat[i], area: by === "all" && !asBars })),
-    prev: m.prev ? { name: `${def.label} — ${cmp.label}`, data: m.prev, labels: m.pb.map((x) => x.label) } : null,
+    prev: m.prev ? { name: `${__analyticsTr(def.label)} — ${cmp.label}`, data: m.prev, labels: m.pb.map((x) => x.label) } : null,
   }), [m, by, def, asBars, cmp]);
   const backlog = useCallback((t) => lineOption(t, {
     labels: m.b.map((x) => x.label), series: [{ name: __extraTr("صف باز در پایان بازه"), data: m.backlog, color: t["cat-2"], area: true }],
@@ -82,27 +83,27 @@ function TrendsBody() {
     const weekLabels = Array.from({ length: weeks }, (_, w) => {
       const d = addDays(start, w * 7);
       const j = toJalali(d);
-      return w === 0 || toJalali(addDays(d, -7)).jm !== j.jm ? J_MONTHS[j.jm - 1] : "";
+      return w === 0 || toJalali(addDays(d, -7)).jm !== j.jm ? (a.locale === "fa" ? J_MONTHS : J_MONTHS_EN)[j.jm - 1] : "";
     });
-    const cells = m.year.map(([d, v]) => ({ week: Math.floor(diffDays(start, d) / 7), day: weekdayIndex(d), date: d, value: v, label: `${WEEKDAYS[weekdayIndex(d)]} ${faDate(d)}` }));
+    const cells = m.year.map(([d, v]) => ({ week: Math.floor(diffDays(start, d) / 7), day: weekdayIndex(d), date: d, value: v, label: `${weekdays[weekdayIndex(d)]} ${localDate(d, a.locale)}` }));
     return { weekLabels, cells, cell: Math.max(11, Math.min(20, Math.floor(1050 / weeks))) };
-  }, [m, today]);
-  const calendar = useCallback((t) => calendarOption(t, { cells: cal.cells, weekLabels: cal.weekLabels, dayLabels: WEEKDAYS, name: __analyticsTr("تسک تکمیل‌شده"), cell: cal.cell }), [cal]);
-  const weekday = useCallback((t) => hbarOption(t, { rows: WEEKDAYS.map((label, i) => ({ label, value: m.weekday[i] })), kind: def.kind === "count" ? "avg" : def.kind }), [m, def]);
+  }, [m, today, a.locale]);
+  const calendar = useCallback((t) => calendarOption(t, { cells: cal.cells, weekLabels: cal.weekLabels, dayLabels: weekdays, name: __analyticsTr("تسک تکمیل‌شده"), cell: cal.cell }), [cal, a.locale]);
+  const weekday = useCallback((t) => hbarOption(t, { rows: weekdays.map((label, i) => ({ label, value: m.weekday[i] })), kind: def.kind === "count" ? "avg" : def.kind }), [m, def, a.locale]);
 
   return (
     <>
       <ChartPanel
-        title={`روند «${def.label}»`}
-        question={`${GRAN_LABEL[gran]}${by === "all" && cmp ? `؛ خط خاکستری: ${cmp.label}` : ""}. ${def.hint ?? ""}`}
+        title={a.locale === "fa" ? `روند «${def.label}»` : `${__analyticsTr(def.label)} trend`}
+        question={`${__analyticsTr(GRAN_LABEL[gran])}${by === "all" && cmp ? `${a.locale === "fa" ? "؛ خط خاکستری" : "; grey line"}: ${cmp.label}` : ""}. ${def.hint ? __analyticsTr(def.hint) : ""}`}
         build={main}
         height={320}
         actions={
           <>
             <select className="input input-sm" style={{ width: 190 }} value={metric} onChange={(e) => setParam("metric", e.target.value)} aria-label={__analyticsTr("شاخص")} data-testid="trend-metric">
-              {keys.map((k) => <option key={k} value={k}>{METRICS[k].label}</option>)}
+              {keys.map((k) => <option key={k} value={k}>{__analyticsTr(METRICS[k].label)}</option>)}
             </select>
-            {byOptions.length > 1 && <Segmented label={__analyticsTr("تفکیک")} value={by} onChange={(v) => setParam("by", v === "all" ? "" : v)} options={byOptions} />}
+            {byOptions.length > 1 && <Segmented label={__analyticsTr("تفکیک")} value={by} onChange={(v) => setParam("by", v === "all" ? "" : v)} options={byOptions.map((o) => ({ ...o, label: __analyticsTr(o.label) }))} />}
           </>
         }
         table={{
@@ -117,8 +118,8 @@ function TrendsBody() {
         <ChartPanel title={__analyticsTr("صف کار باز در طول زمان")} question="کار انجام‌نشده (همه وضعیت‌های باز) در پایان هر بازه؛ از تاریخ ایجاد و بسته‌شدن تسک‌ها بازسازی شده." build={backlog} height={240}
           table={{ columns: [{ key: "b", label: __analyticsTr("بازه"), value: (r) => r.label }, { key: "v", label: __extraTr("صف باز"), kind: "count", value: (r) => r.v }], rows: m.b.map((x, i) => ({ id: x.from, label: x.label, v: m.backlog[i] })) }}
           fileName="backlog-over-time" />
-        <ChartPanel title={`میانگین «${def.label}» در روزهای هفته`} question="کدام روزهای هفته پرکارترند؟ (میانگین در بازه انتخاب‌شده)" build={weekday} height={240}
-          table={{ columns: [{ key: "d", label: __extraTr("روز"), value: (r) => r.label }, { key: "v", label: __extraTr("میانگین"), kind: "avg", value: (r) => r.v }], rows: WEEKDAYS.map((label, i) => ({ id: i, label, v: m.weekday[i] })) }}
+        <ChartPanel title={a.locale === "fa" ? `میانگین «${def.label}» در روزهای هفته` : `Average ${__analyticsTr(def.label)} by weekday`} question="کدام روزهای هفته پرکارترند؟ (میانگین در بازه انتخاب‌شده)" build={weekday} height={240}
+          table={{ columns: [{ key: "d", label: __extraTr("روز"), value: (r) => r.label }, { key: "v", label: __extraTr("میانگین"), kind: "avg", value: (r) => r.v }], rows: weekdays.map((label, i) => ({ id: i, label, v: m.weekday[i] })) }}
           fileName="weekday-average" />
       </div>
 

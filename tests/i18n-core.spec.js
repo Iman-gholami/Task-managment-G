@@ -28,3 +28,31 @@ test("language persists, changes direction and preserves a user-authored task ti
   await expect(page.getByText("Task brief", { exact: true })).toBeVisible();
   await expect(page.getByRole("heading", { name: "Work", exact: true })).toBeVisible();
 });
+
+test("dashboard and analytics load in both languages after switching", async ({ page }) => {
+  expect((await page.request.post("/api/auth/login", { data: ADMIN })).ok()).toBeTruthy();
+  const errors = [];
+  page.on("pageerror", (error) => errors.push(error.message));
+
+  await page.goto("/dashboard");
+  await expect(page.locator("h1")).toHaveText("Security Department");
+  await page.getByRole("button", { name: "فارسی", exact: true }).click();
+  await expect(page.locator("h1")).toHaveText("واحد امنیت");
+  await expect(page.locator("html")).toHaveAttribute("dir", "rtl");
+
+  for (const path of ["/analytics/alerts", "/analytics/trends", "/analytics/soc", "/analytics/report"]) {
+    await page.goto(`${path}?demo=1`);
+    await expect(page.locator(".an-body")).toBeVisible();
+  }
+  await page.goto("/analytics/alerts?demo=1");
+  await expect(page.locator("h1")).toHaveText("هشدارها و بینش‌ها");
+  await page.getByRole("button", { name: "English", exact: true }).click();
+  await expect(page.locator("h1")).toHaveText("Alerts and insights");
+  await expect(page.locator("html")).toHaveAttribute("dir", "ltr");
+  await expect(page.getByRole("heading", { name: "Alert rules" })).toBeVisible();
+  for (const path of ["/analytics/trends", "/analytics/soc", "/analytics/report"]) {
+    await page.goto(`${path}?demo=1`);
+    await expect(page.locator(".an-body")).toBeVisible();
+  }
+  expect(errors).toEqual([]);
+});

@@ -16,7 +16,7 @@ import { DataTable, Delta, Kpi } from "@/components/analytics/ui";
 import Icon from "@/components/ui/Icon";
 import { MetricGrid } from "@/components/ui/Metric";
 import { buildAlerts, LEVELS, overallStatus } from "@/lib/analytics/alerts";
-import { faDate, faDigits, faRange } from "@/lib/analytics/calendar";
+import { faDigits, localDate, localRange } from "@/lib/analytics/calendar";
 import { fmtInt, fmtNum, fmtPct } from "@/lib/analytics/format";
 import { buildInsights } from "@/lib/analytics/insights";
 import { GROUP_BY_KEY, ROLE_FA, groupFa } from "@/lib/analytics/labels";
@@ -26,10 +26,23 @@ import { buckets } from "@/lib/analytics/periods";
 const SCOPE_FA = { department: "کل واحد امنیت", soc: "تیم SOC" };
 
 /** Next steps derived from the alerts (rule-based; the manager edits or adds in the notes). */
-function suggestedActions(alerts) {
-  const n = (x) => faDigits(x);
-  const names = (a) => a.items.slice(0, 3).map((i) => i.label).join("، ");
+function suggestedActions(alerts, locale = "fa") {
+  const n = (x) => locale === "fa" ? faDigits(x) : String(x);
+  const names = (a) => a.items.slice(0, 3).map((i) => i.label).join(locale === "fa" ? "، " : ", ");
   return alerts.map((a) => {
+    if (locale === "en") {
+      if (a.id === "overdue-high") return `Follow up ${n(a.count)} high-priority overdue tasks: set realistic deadlines or redistribute work.`;
+      if (a.id === "overdue-old") return `Review ${n(a.count)} long-overdue tasks: continue, reassign or cancel.`;
+      if (a.id === "missed-logs") return `Follow up ${n(a.count)} incomplete shift logs with the analysts concerned.`;
+      if (a.id === "blocked-long") return `Remove the blockers from ${n(a.count)} blocked tasks.`;
+      if (a.id === "review-waiting") return `Review ${n(a.count)} tasks awaiting approval.`;
+      if (a.id.startsWith("growth-")) return `${a.title}: prioritize incoming work or defer lower-priority tasks.`;
+      if (a.id.startsWith("load-")) return `Redistribute some open work from ${names(a)}.`;
+      if (a.id === "overdue") return `Follow up ${n(a.count)} other overdue tasks.`;
+      if (a.id === "idle") return `Assign new work to ${n(a.count)} analysts with available capacity.`;
+      if (a.id === "ioc-drop") return "Investigate the drop in IOCs recorded per shift.";
+      return null;
+    }
     if (a.id === "overdue-high") return `پیگیری ${n(a.count)} تسک معوق با اولویت بالا: ددلاین واقع‌بینانه یا بازتوزیع.`;
     if (a.id === "overdue-old") return `بازبینی ${n(a.count)} تسک با تأخیر طولانی: ادامه، بازتوزیع یا لغو.`;
     if (a.id === "missed-logs") return `پیگیری ${n(a.count)} شیفت‌لاگ کامل‌نشده با تحلیلگران مربوط.`;
@@ -56,7 +69,7 @@ export default function Report() {
 function ReportBody() {
   const { t: __extraTr } = useExtraI18n();
   const { fmtInt, fmtNum, fmtPct } = useAnalyticsFormat();
-  const { t: __analyticsTr } = useAnalyticsI18n();
+  const { t: __analyticsTr, team: teamText, role: roleText } = useAnalyticsI18n();
   const a = useAnalytics();
   const { view, range, cmp, gran, filters, params, setParam } = a;
   const full = params.get("full") === "1";
@@ -87,7 +100,7 @@ function ReportBody() {
       socPrev: shiftIds.length && cmp ? stats(view, shiftIds, cmp) : null,
       people: full ? peopleRows(view, range, cmp) : [],
     };
-  }, [view, range, cmp, gran, full]);
+  }, [view, range, cmp, gran, full, a.locale]);
   const flow = useCallback((t) => lineOption(t, {
     labels: m.b.map((x) => x.label),
     series: [{ name: __extraTr("تکمیل‌شده"), data: m.bs.map((x) => x.completed), color: t["cat-1"] }, { name: __extraTr("ایجادشده"), data: m.bs.map((x) => x.created), color: t["cat-2"] }],
@@ -95,8 +108,8 @@ function ReportBody() {
   }), [m, cmp]);
   const { cur, prev, open, soc, socPrev } = m;
   const short = cmp?.short;
-  const actions = suggestedActions(m.alerts);
-  const scope = filters.team ? `تیم ${GROUP_BY_KEY[filters.team].fa}` : SCOPE_FA[view.scope?.kind] ?? "";
+  const actions = suggestedActions(m.alerts, a.locale);
+  const scope = filters.team ? `${a.locale === "fa" ? "تیم" : "Team"} ${teamText(GROUP_BY_KEY[filters.team].name)}` : a.locale === "fa" ? SCOPE_FA[view.scope?.kind] ?? "" : ({ department: "Security department", soc: "SOC team" }[view.scope?.kind] ?? "");
 
   return (
     <>
@@ -111,12 +124,12 @@ function ReportBody() {
           <div>
             <span className="muted small">{"" + __analyticsTr("Sentinel Ops · واحد امنیت") + ""}</span>
             <h2>{"" + __analyticsTr("گزارش مدیریتی") + " "}{range.label}</h2>
-            <p className="muted">{scope}{a.demo ? " · داده نمایشی (ساختگی)" : ""}</p>
+            <p className="muted">{scope}{a.demo ? (a.locale === "fa" ? " · داده نمایشی (ساختگی)" : " · Demo data") : ""}</p>
           </div>
           <dl>
-            <dt>{"" + __analyticsTr("بازه") + ""}</dt><dd>{faRange(range.from, range.end)}</dd>
-            <dt>{"" + __analyticsTr("مقایسه با") + ""}</dt><dd>{cmp ? `${cmp.label} (${faRange(cmp.from, cmp.to)})` : "—"}</dd>
-            <dt>{"" + __analyticsTr("تاریخ تهیه") + ""}</dt><dd>{faDate(a.today)}</dd>
+            <dt>{"" + __analyticsTr("بازه") + ""}</dt><dd>{localRange(range.from, range.end, a.locale)}</dd>
+            <dt>{"" + __analyticsTr("مقایسه با") + ""}</dt><dd>{cmp ? `${cmp.label} (${localRange(cmp.from, cmp.to, a.locale)})` : "—"}</dd>
+            <dt>{"" + __analyticsTr("تاریخ تهیه") + ""}</dt><dd>{localDate(a.today, a.locale)}</dd>
             <dt>{"" + __analyticsTr("تهیه‌کننده") + ""}</dt><dd>{a.me.name}</dd>
           </dl>
         </header>
@@ -127,10 +140,10 @@ function ReportBody() {
           <Kpi label={__analyticsTr("تسک‌های تکمیل‌شده")} value={fmtInt(cur.completed)} delta={prev && <Delta now={cur.completed} before={prev.completed} label={short} />} />
           <Kpi label={__analyticsTr("حجم کار وزن‌دار")} value={fmtInt(cur.units)} delta={prev && <Delta now={cur.units} before={prev.units} label={short} />} />
           <Kpi label={__analyticsTr("ساعت ثبت‌شده")} value={fmtNum(cur.hours, 0)} unit={__extraTr("ساعت")} delta={prev && <Delta now={cur.hours} before={prev.hours} label={short} />} />
-          <Kpi label={__analyticsTr("تحویل به‌موقع")} value={fmtPct(cur.onTimeRate)} delta={prev && cur.onTimeRate !== null && <Delta now={cur.onTimeRate} before={prev.onTimeRate} kind="rate" label={short} />} foot={`از ${faDigits(cur.onTimeN)} تسک دارای ددلاین`} />
-          <Kpi label={__analyticsTr("صف کار باز (اکنون)")} value={fmtInt(open.open)} tone={open.overdue ? "alert" : undefined} foot={`${faDigits(open.overdue)} معوق · ${faDigits(open.blocked)} مسدود`} />
+          <Kpi label={__analyticsTr("تحویل به‌موقع")} value={fmtPct(cur.onTimeRate)} delta={prev && cur.onTimeRate !== null && <Delta now={cur.onTimeRate} before={prev.onTimeRate} kind="rate" label={short} />} foot={a.locale === "fa" ? `از ${fmtInt(cur.onTimeN)} تسک دارای ددلاین` : `Of ${fmtInt(cur.onTimeN)} tasks with deadlines`} />
+          <Kpi label={__analyticsTr("صف کار باز (اکنون)")} value={fmtInt(open.open)} tone={open.overdue ? "alert" : undefined} foot={a.locale === "fa" ? `${fmtInt(open.overdue)} معوق · ${fmtInt(open.blocked)} مسدود` : `${fmtInt(open.overdue)} overdue · ${fmtInt(open.blocked)} blocked`} />
           {soc
-            ? <Kpi label={__analyticsTr("بسته‌شدن شیفت‌لاگ SOC")} value={fmtPct(soc.closureRate)} delta={socPrev && soc.closureRate !== null && <Delta now={soc.closureRate} before={socPrev.closureRate} kind="rate" label={short} />} foot={`تیکت ${faDigits(soc.tickets)} · IOC ${faDigits(soc.iocs)}`} />
+            ? <Kpi label={__analyticsTr("بسته‌شدن شیفت‌لاگ SOC")} value={fmtPct(soc.closureRate)} delta={socPrev && soc.closureRate !== null && <Delta now={soc.closureRate} before={socPrev.closureRate} kind="rate" label={short} />} foot={`${a.locale === "fa" ? "تیکت" : "Tickets"} ${fmtInt(soc.tickets)} · IOC ${fmtInt(soc.iocs)}`} />
             : <Kpi label={__analyticsTr("تسک‌های ایجادشده")} value={fmtInt(cur.created)} delta={prev && <Delta now={cur.created} before={prev.created} label={short} />} />}
         </MetricGrid>
 
@@ -144,7 +157,7 @@ function ReportBody() {
             {m.alerts.filter((x) => x.level !== "info").length ? (
               <ul className="an-report-alerts">
                 {m.alerts.filter((x) => x.level !== "info").slice(0, 6).map((x) => (
-                  <li key={x.id} data-level={x.level}><b>{LEVELS[x.level].fa}</b><span>{x.title}{x.detail ? ` — ${x.detail}` : ""}</span></li>
+                  <li key={x.id} data-level={x.level}><b>{__analyticsTr(LEVELS[x.level].fa)}</b><span>{x.title}{x.detail ? ` — ${x.detail}` : ""}</span></li>
                 ))}
               </ul>
             ) : <p className="muted">{"" + __analyticsTr("موردی برای اقدام فوری نیست.") + ""}</p>}
@@ -159,7 +172,7 @@ function ReportBody() {
         <section>
           <h3>{"" + __analyticsTr("تیم‌ها") + ""}</h3>
           <DataTable dense columns={[
-            { key: "t", label: __analyticsTr("تیم"), value: (r) => r.fa, sort: false },
+            { key: "t", label: __analyticsTr("تیم"), value: (r) => teamText(r.group), sort: false },
             { key: "n", label: __analyticsTr("کارشناسان"), kind: "count", value: (r) => r.headcount, sort: false },
             { key: "c", label: __extraTr("تکمیل‌شده"), kind: "count", value: (r) => r.cur.completed, sort: false },
             { key: "d", label: __extraTr("تغییر"), value: () => null, sort: false, render: (r) => (r.prev ? <Delta now={r.cur.completed} before={r.prev.completed} /> : "—") },
@@ -175,7 +188,7 @@ function ReportBody() {
           <section>
             <h3>{"" + __analyticsTr("کارشناسان") + ""}</h3>
             <DataTable dense columns={[
-              { key: "n", label: __extraTr("نام"), value: (r) => r.person.name, render: (r) => <span className="an-person">{r.person.name}<small>{[groupFa(r.person.group), r.person.level, ROLE_FA[r.person.role]].filter(Boolean).join(" · ")}</small></span> },
+              { key: "n", label: __extraTr("نام"), value: (r) => r.person.name, render: (r) => <span className="an-person">{r.person.name}<small>{[teamText(r.person.group), r.person.level, roleText(r.person.role)].filter(Boolean).join(" · ")}</small></span> },
               { key: "c", label: __extraTr("تکمیل‌شده"), kind: "count", value: (r) => r.cur.completed },
               { key: "u", label: __extraTr("حجم وزن‌دار"), kind: "count", value: (r) => r.cur.units },
               { key: "h", label: __extraTr("ساعت"), kind: "count", value: (r) => r.cur.hours },

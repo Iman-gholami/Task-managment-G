@@ -14,19 +14,19 @@ import { lineOption } from "@/components/analytics/chartOptions";
 import { personModel, StatusFa } from "@/components/analytics/model";
 import { Delta, Drawer, Stat } from "@/components/analytics/ui";
 import Icon from "@/components/ui/Icon";
-import { faDate, faDigits } from "@/lib/analytics/calendar";
+import { localDate } from "@/lib/analytics/calendar";
 import { fmtDays, fmtInt, fmtNum, fmtPct } from "@/lib/analytics/format";
 import { ROLE_FA, groupFa } from "@/lib/analytics/labels";
 
-const med = (m, k, f) => (m && m[k] !== null && m[k] !== undefined ? `میانه تیم: ${f(m[k])}` : null);
+const med = (m, k, f, locale) => (m && m[k] !== null && m[k] !== undefined ? `${locale === "fa" ? "میانه تیم" : "Team median"}: ${f(m[k])}` : null);
 
 /** Quick look at one expert: key figures against the comparison period and the team median. */
 export default function PersonDrawer({ id, onClose }) {
   const { t: __extraTr } = useExtraI18n();
   const { fmtInt, fmtNum, fmtPct, fmtDays } = useAnalyticsFormat();
-  const { t: __analyticsTr } = useAnalyticsI18n();
+  const { t: __analyticsTr, team: teamText, role: roleText } = useAnalyticsI18n();
   const a = useAnalytics();
-  const m = useMemo(() => personModel(a.view, id, a.range, a.cmp, a.gran, a.locale), [a.view, id, a.range, a.cmp, a.gran]);
+  const m = useMemo(() => personModel(a.view, id, a.range, a.cmp, a.gran, a.locale), [a.view, id, a.range, a.cmp, a.gran, a.locale]);
   const build = useCallback((t) => lineOption(t, {
     labels: m.b.map((x) => x.label), bars: true,
     series: [{ name: __extraTr("تکمیل‌شده"), data: m.bs.map((x) => x.completed) }],
@@ -38,9 +38,9 @@ export default function PersonDrawer({ id, onClose }) {
   return (
     <Drawer
       title={p.name}
-      subtitle={[groupFa(p.group), p.level, ROLE_FA[p.role], p.active ? null : "غیرفعال"].filter(Boolean).join(" · ")}
+      subtitle={[teamText(p.group), p.level, roleText(p.role), p.active ? null : __analyticsTr("غیرفعال")].filter(Boolean).join(" · ")}
       onClose={onClose}
-      label={`خلاصه ${p.name}`}
+      label={a.locale === "fa" ? `خلاصه ${p.name}` : `${p.name}'s summary`}
       width={500}
       footer={
         <>
@@ -50,32 +50,32 @@ export default function PersonDrawer({ id, onClose }) {
       }
     >
       <div className="an-stats">
-        <Stat label={__analyticsTr("تسک تکمیل‌شده")} value={fmtInt(cur.completed)} sub={prev ? <Delta now={cur.completed} before={prev.completed} label={short} /> : med(medians, "completed", fmtNum)} />
-        <Stat label={__analyticsTr("حجم کار وزن‌دار")} value={fmtInt(cur.units)} sub={med(medians, "units", fmtNum)} />
-        <Stat label={__analyticsTr("ساعت ثبت‌شده")} value={fmtNum(cur.hours, 0)} sub={med(medians, "hours", (v) => fmtNum(v, 0))} />
-        <Stat label={__analyticsTr("تحویل به‌موقع")} value={fmtPct(cur.onTimeRate)} sub={cur.onTimeRate === null ? `${faDigits(cur.onTimeN)} تسک دارای ددلاین` : med(medians, "onTimeRate", fmtPct)} />
-        <Stat label={__analyticsTr("میانه زمان انجام")} value={fmtDays(cur.cycleMedian)} sub={med(medians, "cycleMedian", fmtDays)} />
-        <Stat label={__analyticsTr("صف باز (اکنون)")} value={fmtInt(open.open)} sub={`${faDigits(open.overdue)} معوق · ${faDigits(open.blocked)} مسدود`} />
+        <Stat label={__analyticsTr("تسک تکمیل‌شده")} value={fmtInt(cur.completed)} sub={prev ? <Delta now={cur.completed} before={prev.completed} label={short} /> : med(medians, "completed", fmtNum, a.locale)} />
+        <Stat label={__analyticsTr("حجم کار وزن‌دار")} value={fmtInt(cur.units)} sub={med(medians, "units", fmtNum, a.locale)} />
+        <Stat label={__analyticsTr("ساعت ثبت‌شده")} value={fmtNum(cur.hours, 0)} sub={med(medians, "hours", (v) => fmtNum(v, 0), a.locale)} />
+        <Stat label={__analyticsTr("تحویل به‌موقع")} value={fmtPct(cur.onTimeRate)} sub={cur.onTimeRate === null ? `${fmtInt(cur.onTimeN)} ${a.locale === "fa" ? "تسک دارای ددلاین" : "tasks with deadlines"}` : med(medians, "onTimeRate", fmtPct, a.locale)} />
+        <Stat label={__analyticsTr("میانه زمان انجام")} value={fmtDays(cur.cycleMedian)} sub={med(medians, "cycleMedian", fmtDays, a.locale)} />
+        <Stat label={__analyticsTr("صف باز (اکنون)")} value={fmtInt(open.open)} sub={a.locale === "fa" ? `${fmtInt(open.overdue)} معوق · ${fmtInt(open.blocked)} مسدود` : `${fmtInt(open.overdue)} overdue · ${fmtInt(open.blocked)} blocked`} />
         {p.shift && (
           <>
-            <Stat label={__analyticsTr("شیفت")} value={fmtInt(cur.shifts)} sub={`بسته‌شدن لاگ ${fmtPct(cur.closureRate)}`} />
-            <Stat label={__analyticsTr("انجام روتین")} value={fmtPct(cur.routineRate)} sub={`IOC ${faDigits(cur.iocs)} · تیکت ${faDigits(cur.tickets)}`} />
+            <Stat label={__analyticsTr("شیفت")} value={fmtInt(cur.shifts)} sub={`${__extraTr("بسته‌شدن لاگ")} ${fmtPct(cur.closureRate)}`} />
+            <Stat label={__analyticsTr("انجام روتین")} value={fmtPct(cur.routineRate)} sub={`IOC ${fmtInt(cur.iocs)} · ${__analyticsTr("تیکت")} ${fmtInt(cur.tickets)}`} />
           </>
         )}
       </div>
       <div>
         <p className="an-subhead">{"" + __analyticsTr("تسک‌های تکمیل‌شده در هر بازه") + ""}</p>
-        <Chart build={build} height={170} label={`روند تسک‌های تکمیل‌شده ${p.name}`} />
+        <Chart build={build} height={170} label={a.locale === "fa" ? `روند تسک‌های تکمیل‌شده ${p.name}` : `${p.name}'s completed task trend`} />
       </div>
       {m.openTasks.length > 0 && (
         <div>
-          <p className="an-subhead">{"" + __analyticsTr("کار باز (") + ""}{faDigits(m.openTasks.length)})</p>
+          <p className="an-subhead">{a.locale === "fa" ? "کار باز" : "Open work"} ({fmtInt(m.openTasks.length)})</p>
           <ul className="an-mini-list">
             {m.openTasks.slice(0, 6).map((t) => (
               <li key={t.id}>
                 <span className="truncate">{t.title}</span>
                 <StatusFa s={t.status} />
-                {t.due && <span className={t.due < a.today ? "overdue" : "muted"}>{faDate(t.due, { year: false })}</span>}
+                {t.due && <span className={t.due < a.today ? "overdue" : "muted"}>{localDate(t.due, a.locale, { year: false })}</span>}
               </li>
             ))}
           </ul>

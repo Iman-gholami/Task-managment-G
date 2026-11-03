@@ -35,12 +35,13 @@ export default function Alerts() {
 function AlertsBody() {
   const { t: __extraTr } = useExtraI18n();
   const { t: __analyticsTr } = useAnalyticsI18n();
-  const { view, range, cmp } = useAnalytics();
+  const { view, range, cmp, locale } = useAnalytics();
+  const countText = (value) => locale === "fa" ? faDigits(value) : String(value);
   const [level, setLevel] = useState("all");
   const m = useMemo(() => {
-    const alerts = buildAlerts(view, { range, cmp, locale: a.locale });
-    return { alerts, status: overallStatus(alerts), insights: buildInsights(view, { range, cmp, locale: a.locale }) };
-  }, [view, range, cmp]);
+    const alerts = buildAlerts(view, { range, cmp, locale });
+    return { alerts, status: overallStatus(alerts), insights: buildInsights(view, { range, cmp, locale }) };
+  }, [view, range, cmp, locale]);
   const count = (l) => m.alerts.filter((x) => x.level === l).length;
   const shown = level === "all" ? m.alerts : m.alerts.filter((x) => x.level === level);
 
@@ -58,10 +59,10 @@ function AlertsBody() {
               value={level}
               onChange={setLevel}
               options={[
-                { value: "all", label: __analyticsTr("همه"), count: n(m.alerts.length) },
-                { value: "critical", label: __extraTr("بحرانی"), count: n(count("critical")) },
-                { value: "warning", label: __extraTr("نیازمند توجه"), count: n(count("warning")) },
-                { value: "info", label: __extraTr("اطلاع"), count: n(count("info")) },
+                { value: "all", label: __analyticsTr("همه"), count: countText(m.alerts.length) },
+                { value: "critical", label: __extraTr("بحرانی"), count: countText(count("critical")) },
+                { value: "warning", label: __extraTr("نیازمند توجه"), count: countText(count("warning")) },
+                { value: "info", label: __extraTr("اطلاع"), count: countText(count("info")) },
               ]}
             />
           }
@@ -74,7 +75,11 @@ function AlertsBody() {
       </div>
       <Panel title={__analyticsTr("قواعد هشدار")} meta={__analyticsTr("هشدار و بینش با قاعده‌های ثابت و قابل بررسی ساخته می‌شوند، نه با حدس")}>
         <dl className="an-rules">
-          {RULES.map(([k, v]) => (<div key={k}><dt>{k}</dt><dd>{v}</dd></div>))}
+          {(locale === "fa" ? RULES : [
+            ["Critical", `High-priority or critical overdue tasks; tasks overdue by more than ${ALERTS.overdueOldDays} days; incomplete shift logs in the last ${ALERTS.missedLogDays} days`],
+            ["Needs attention", `Tasks blocked for more than ${ALERTS.blockedDays} days or awaiting review for more than ${ALERTS.reviewDays} days; incoming work exceeding completed work for ${ALERTS.growthWeeks} full weeks; one person's open queue at least ${ALERTS.loadFactor} times the team median and at least ${ALERTS.loadMin}; other overdue tasks`],
+            ["Information", `Analysts without open tasks, excluding shift analysts; IOC per shift at least ${Math.round(ALERTS.iocDrop * 100)}% below the comparison period (minimum ${ALERTS.iocMinShifts} shifts)`],
+          ]).map(([k, v]) => (<div key={k}><dt>{k}</dt><dd>{v}</dd></div>))}
           <div><dt>{"" + __analyticsTr("بینش") + ""}</dt><dd>{"" + __analyticsTr("تغییر محسوس نسبت به دوره مقایسه (با حداقل نمونه)، روند سه‌هفته‌ای پیوسته، حجم بیشتر با کیفیت کمتر، تمرکز صف کار روی یک نفر، فعالیت روتینی که کمتر انجام می‌شود، روز غیرعادی تیکت. ارزیابی افراد در آن نیست.") + ""}</dd></div>
         </dl>
       </Panel>

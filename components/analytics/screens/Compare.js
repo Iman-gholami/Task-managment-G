@@ -17,6 +17,7 @@ import { fmtNum, fmtPct, isNum } from "@/lib/analytics/format";
 import { GROUPS, groupFa } from "@/lib/analytics/labels";
 import { METRICS, bucketStats, experts, headcount, idsOf, openStats, stats } from "@/lib/analytics/metrics";
 import { buckets, PRESETS, resolveRange } from "@/lib/analytics/periods";
+import useAnalyticsFormat from "@/components/analytics/useAnalyticsFormat";
 
 const MODES = [
   { value: "people", label: "کارشناسان" },
@@ -28,19 +29,17 @@ const SOC_KEYS = ["shifts", "closureRate", "routineRate", "iocs", "iocPerShift",
 const TREND_KEYS = ["completed", "units", "hours", "created", "onTimeRate", "tickets", "iocs", "routineRate"];
 const PERIOD_CHOICES = PRESETS.filter(([k]) => k !== "custom");
 
-const fmtKind = (kind, v) => (!isNum(v) ? "—" : kind === "rate" ? fmtPct(v) : kind === "days" ? `${fmtNum(v)} روز` : fmtNum(v));
-
 export default function Compare() {
-  const { t: __analyticsTr } = useAnalyticsI18n();
+  const { t: __analyticsTr, locale, number } = useAnalyticsI18n();
   return (
-    <AnalyticsFrame title={__analyticsTr("مقایسه و رتبه‌بندی")} subtitle={`مقایسه دستی تا ${faDigits(MAX_COMPARE)} مورد + امتیاز وزن‌دار کارشناسان هم‌سطح`}>
+    <AnalyticsFrame title={__analyticsTr("مقایسه و رتبه‌بندی")} subtitle={locale === "fa" ? `مقایسه دستی تا ${number(MAX_COMPARE)} مورد + امتیاز وزن‌دار کارشناسان هم‌سطح` : `Compare up to ${number(MAX_COMPARE)} items and see peer weighted scores`}>
       <CompareBody />
     </AnalyticsFrame>
   );
 }
 
 function CompareBody() {
-  const { t: __analyticsTr } = useAnalyticsI18n();
+  const { t: __analyticsTr, team: teamText, number } = useAnalyticsI18n();
   const a = useAnalytics();
   const { view, range, gran, params, setParam, setParams } = a;
   const mode = MODES.some((x) => x.value === params.get("mode")) ? params.get("mode") : "people";
@@ -51,9 +50,9 @@ function CompareBody() {
   const people = useMemo(() => experts(view).filter((p) => p.active || stats(view, [p.id], range).completed), [view, range]);
   const teams = useMemo(() => GROUPS.filter((g) => view.people.some((p) => p.group === g.name && !p.manager)), [view]);
   const options = mode === "people"
-    ? people.map((p) => ({ key: p.id, label: p.name, sub: [groupFa(p.group), p.level].filter(Boolean).join(" · ") }))
-    : mode === "teams" ? teams.map((g) => ({ key: g.key, label: g.fa }))
-      : PERIOD_CHOICES.map(([k, l]) => ({ key: k, label: l }));
+    ? people.map((p) => ({ key: p.id, label: p.name, sub: [teamText(p.group), p.level].filter(Boolean).join(" · ") }))
+    : mode === "teams" ? teams.map((g) => ({ key: g.key, label: teamText(g.name) }))
+      : PERIOD_CHOICES.map(([k, l]) => ({ key: k, label: __analyticsTr(l) }));
   const defaults = mode === "periods" ? ["month", "prev-month"] : mode === "teams" ? teams.map((g) => g.key) : [];
   const chosen = (picked.length ? picked : defaults).filter((k) => options.some((o) => o.key === k)).slice(0, MAX_COMPARE);
 
@@ -65,11 +64,11 @@ function CompareBody() {
     if (mode === "teams") {
       const g = teams.find((x) => x.key === k);
       const members = view.people.filter((p) => p.group === g.name);
-      return { key: k, label: g.fa, ids: idsOf(members), range, members, color: i };
+      return { key: k, label: teamText(g.name), ids: idsOf(members), range, members, color: i };
     }
-    const r = resolveRange({ p: k }, a.today);
-    return { key: k, label: `${PERIOD_CHOICES.find(([x]) => x === k)[1]} (${r.label})`, ids: null, range: r, color: i };
-  }), [chosen.join(","), mode, view, range, a.today]); // eslint-disable-line react-hooks/exhaustive-deps
+    const r = resolveRange({ p: k }, a.today, a.locale);
+    return { key: k, label: `${__analyticsTr(PERIOD_CHOICES.find(([x]) => x === k)[1])} (${r.label})`, ids: null, range: r, color: i };
+  }), [chosen.join(","), mode, view, range, a.today, a.locale]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const showSoc = mode === "periods" ? view.people.some((p) => p.shift) : items.some((it) => (it.person ? it.person.shift : it.members?.some((p) => p.shift)));
   const keys = [...TASK_KEYS, ...(showSoc ? SOC_KEYS : [])];
@@ -88,9 +87,9 @@ function CompareBody() {
     const g = gran === "auto" ? "day" : gran;
     const lists = data.map((d) => buckets(d.range.from, d.range.end, g, a.locale));
     const len = Math.max(0, ...lists.map((l) => l.length));
-    const unit = { day: "روز", week: "هفته", month: "ماه", season: "فصل", year: "سال" }[g];
-    return { labels: Array.from({ length: len }, (_, i) => `${unit} ${faDigits(i + 1)}`), series: lists.map((l) => bucketStats(view, null, l).map((x) => x[metric])) };
-  }, [mode, data, view, range, gran, metric]);
+    const unit = (a.locale === "fa" ? { day: "روز", week: "هفته", month: "ماه", season: "فصل", year: "سال" } : { day: "Day", week: "Week", month: "Month", season: "Season", year: "Year" })[g];
+    return { labels: Array.from({ length: len }, (_, i) => `${unit} ${number(i + 1)}`), series: lists.map((l) => bucketStats(view, null, l).map((x) => x[metric])) };
+  }, [mode, data, view, range, gran, metric, a.locale]);
   const trendBuild = useCallback((t) => lineOption(t, {
     labels: trend.labels, kind: METRICS[metric].kind,
     series: data.map((d, i) => ({ name: d.label, data: trend.series[i], color: t.cat[d.color] })),
@@ -104,18 +103,18 @@ function CompareBody() {
     <>
       <Panel>
         <div className="panel-body an-compare-pick">
-          <Segmented label={__analyticsTr("نوع مقایسه")} value={mode} onChange={(v) => setParams({ mode: v, ids: "" })} options={MODES} />
+          <Segmented label={__analyticsTr("نوع مقایسه")} value={mode} onChange={(v) => setParams({ mode: v, ids: "" })} options={MODES.map((o) => ({ ...o, label: __analyticsTr(o.label) }))} />
           <div className="an-compare-chips" aria-label={__analyticsTr("موارد انتخاب‌شده")}>
             {data.map((d) => (
               <span key={d.key} className="an-chip">
                 <i className="an-chip-dot" style={{ background: `var(--cat-${d.color + 1})` }} aria-hidden="true" />
                 {d.label}
-                <button type="button" aria-label={`حذف ${d.label}`} onClick={() => setIds(chosen.filter((k) => k !== d.key))}><Icon name="x" size="sm" /></button>
+                <button type="button" aria-label={a.locale === "fa" ? `حذف ${d.label}` : `Remove ${d.label}`} onClick={() => setIds(chosen.filter((k) => k !== d.key))}><Icon name="x" size="sm" /></button>
               </span>
             ))}
             {chosen.length < MAX_COMPARE && remaining.length > 0 && (
               <select className="input input-sm" style={{ width: 220 }} value="" onChange={(e) => e.target.value && setIds([...chosen, e.target.value])} aria-label={__analyticsTr("افزودن مورد برای مقایسه")} data-testid="compare-add">
-                <option value="">{"" + __analyticsTr("+ افزودن") + " "}{mode === "people" ? __analyticsTr("کارشناس") : mode === "teams" ? __analyticsTr("تیم") : "دوره"}…</option>
+                <option value="">{"" + __analyticsTr("+ افزودن") + " "}{mode === "people" ? __analyticsTr("کارشناس") : mode === "teams" ? __analyticsTr("تیم") : __analyticsTr("دوره")}…</option>
                 {remaining.map((o) => <option key={o.key} value={o.key}>{o.label}{o.sub ? ` — ${o.sub}` : ""}</option>)}
               </select>
             )}
@@ -129,22 +128,22 @@ function CompareBody() {
       </Panel>
 
       {data.length < 2 ? (
-        <Panel><AnEmpty icon="bars" title={__analyticsTr("دو مورد یا بیشتر انتخاب کنید")}>{mode === "people" ? "برای مقایسه، کارشناسان هم‌نقش و هم‌سطح را انتخاب کنید." : "از فهرست «افزودن» موردی اضافه کنید."}</AnEmpty></Panel>
+        <Panel><AnEmpty icon="bars" title={__analyticsTr("دو مورد یا بیشتر انتخاب کنید")}>{__analyticsTr(mode === "people" ? "برای مقایسه، کارشناسان هم‌نقش و هم‌سطح را انتخاب کنید." : "از فهرست «افزودن» موردی اضافه کنید.")}</AnEmpty></Panel>
       ) : (
         <>
           <div className="an-mini-grid" data-testid="compare-grid">
             {mode === "teams" && <MiniBars title={__analyticsTr("سرانه تسک تکمیل‌شده")} kind="avg" data={data} value={(d) => d.pc} />}
-            {keys.map((k) => <MiniBars key={k} title={METRICS[k].label} kind={METRICS[k].kind} data={data} value={(d) => d.s[k]} n={METRICS[k].n ? (d) => d.s[METRICS[k].n] : null} />)}
+            {keys.map((k) => <MiniBars key={k} title={__analyticsTr(METRICS[k].label)} kind={METRICS[k].kind} data={data} value={(d) => d.s[k]} n={METRICS[k].n ? (d) => d.s[METRICS[k].n] : null} />)}
             {mode !== "periods" && <MiniBars title={__analyticsTr("صف کار باز (اکنون)")} kind="count" data={data} value={(d) => d.open.open} />}
           </div>
           <ChartPanel
-            title={`روند «${METRICS[metric].label}»`}
+            title={a.locale === "fa" ? `روند «${METRICS[metric].label}»` : `${__analyticsTr(METRICS[metric].label)} trend`}
             question={mode === "periods" ? "دوره‌ها روی هم: بازه اول هر دوره کنار بازه اول دوره دیگر." : "تفاوت‌ها در طول دوره ثابت است یا در چند بازه رخ داده؟"}
             build={trendBuild}
             height={280}
             actions={
               <select className="input input-sm" style={{ width: 170 }} value={metric} onChange={(e) => setParam("metric", e.target.value)} aria-label={__analyticsTr("شاخص روند")}>
-                {TREND_KEYS.filter((k) => METRICS[k].area !== "soc" || showSoc).map((k) => <option key={k} value={k}>{METRICS[k].label}</option>)}
+                {TREND_KEYS.filter((k) => METRICS[k].area !== "soc" || showSoc).map((k) => <option key={k} value={k}>{__analyticsTr(METRICS[k].label)}</option>)}
               </select>
             }
             table={{ columns: [{ key: "b", label: __analyticsTr("بازه"), value: (r) => r.label }, ...data.map((d, i) => ({ key: d.key, label: d.label, kind: METRICS[metric].kind, value: (r) => r.v[i] }))], rows: trend.labels.map((label, j) => ({ id: j, label, v: trend.series.map((s) => s[j]) })) }}
@@ -159,6 +158,9 @@ function CompareBody() {
 
 /** One metric for every compared item: its own scale, values printed, colours fixed per item. */
 function MiniBars({ title, kind, data, value, n }) {
+  const { fmtNum, fmtPct, fmtDays } = useAnalyticsFormat();
+  const { number } = useAnalyticsI18n();
+  const fmtKind = (type, v) => (!isNum(v) ? "—" : type === "rate" ? fmtPct(v) : type === "days" ? fmtDays(v) : fmtNum(v));
   const vals = data.map(value);
   const top = Math.max(...vals.filter(isNum).map(Math.abs), kind === "rate" ? 1 : 1e-9);
   return (
@@ -169,7 +171,7 @@ function MiniBars({ title, kind, data, value, n }) {
           <div key={d.key} className="an-mini-row">
             <span title={d.label}>{d.person ? d.person.name : d.label}</span>
             <span className="an-mini-track">{isNum(vals[i]) && <span style={{ width: `${(Math.abs(vals[i]) / top) * 100}%`, background: `var(--cat-${d.color + 1})` }} />}</span>
-            <b>{fmtKind(kind, vals[i])}{n && isNum(vals[i]) ? <small className="muted"> (n={faDigits(n(d))})</small> : null}</b>
+            <b>{fmtKind(kind, vals[i])}{n && isNum(vals[i]) ? <small className="muted"> (n={number(n(d))})</small> : null}</b>
           </div>
         ))}
       </div>

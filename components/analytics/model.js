@@ -1,7 +1,9 @@
 "use client";
 
 import Link from "next/link";
-import { diffDays, faDate } from "@/lib/analytics/calendar";
+import { useI18n } from "@/components/I18nProvider";
+import { translate } from "@/lib/i18n/messages";
+import { diffDays, localDate } from "@/lib/analytics/calendar";
 import { fmtInt } from "@/lib/analytics/format";
 import { CX_FA, OPEN_STATUSES, PRIO_FA, QUAL_FA, STATUS_FA } from "@/lib/analytics/labels";
 import { METRICS, bucketStats, openStats, peerMedian, stats } from "@/lib/analytics/metrics";
@@ -30,13 +32,14 @@ export function personModel(facts, id, range, cmp, gran, locale = "fa") {
   };
 }
 
-export const StatusFa = ({ s }) => <span className="status" data-s={s}>{STATUS_FA[s]}</span>;
-export const PrioFa = ({ p }) => <span className="prio" data-p={p}><i aria-hidden="true">{p === "critical" ? "!" : <><b /><b /><b /></>}</i>{PRIO_FA[p]}</span>;
-export const CxFa = ({ c }) => <span className="cx" data-c={c}><i aria-hidden="true"><b /><b /><b /><b /></i>{CX_FA[c - 1]}</span>;
+export const StatusFa = ({ s }) => { const { t } = useI18n(); return <span className="status" data-s={s}>{t(STATUS_FA[s])}</span>; };
+export const PrioFa = ({ p }) => { const { t } = useI18n(); return <span className="prio" data-p={p}><i aria-hidden="true">{p === "critical" ? "!" : <><b /><b /><b /></>}</i>{t(PRIO_FA[p])}</span>; };
+export const CxFa = ({ c }) => { const { t } = useI18n(); return <span className="cx" data-c={c}><i aria-hidden="true"><b /><b /><b /><b /></i>{t(CX_FA[c - 1])}</span>; };
 
 /** Columns for task lists (open work, completed in period). Task pages exist only for real data. */
-export function taskColumns({ demo, today, done = false }) {
+export function taskColumns({ demo, today, done = false, locale = "fa" }) {
   const title = (t) => (demo ? t.title : <Link href={`/tasks/${t.id}`}>{t.title}</Link>);
+  const text = (value) => translate(locale, value);
   return [
     { key: "title", label: "تسک", value: (t) => t.title, render: (t) => <span className="an-person"><span className="mono muted">{t.id}</span>{title(t)}</span> },
     ...(done ? [] : [{ key: "status", label: "وضعیت", value: (t) => STATUS_FA[t.status], render: (t) => <StatusFa s={t.status} /> }]),
@@ -44,14 +47,14 @@ export function taskColumns({ demo, today, done = false }) {
     { key: "cx", label: "پیچیدگی", value: (t) => t.cx, render: (t) => <CxFa c={t.cx} /> },
     ...(done
       ? [
-        { key: "completed", label: "تأیید", value: (t) => t.completed, render: (t) => faDate(t.completed, { year: false }) },
-        { key: "quality", label: "کیفیت", value: (t) => (t.quality ? QUAL_FA[t.quality] : null) },
+        { key: "completed", label: "تأیید", value: (t) => t.completed, render: (t) => localDate(t.completed, locale, { year: false }) },
+        { key: "quality", label: "کیفیت", value: (t) => (t.quality ? text(QUAL_FA[t.quality]) : null) },
         { key: "hours", label: "ساعت", kind: "count", value: (t) => t.hours },
         { key: "cycle", label: "زمان انجام", kind: "days", value: (t) => t.cycle },
-        { key: "late", label: "به‌موقع", value: (t) => (t.due ? (t.completed <= t.due ? "بله" : "خیر") : null) },
+        { key: "late", label: "به‌موقع", value: (t) => (t.due ? text(t.completed <= t.due ? "بله" : "خیر") : null) },
       ]
       : [
-        { key: "due", label: "ددلاین", value: (t) => t.due, render: (t) => (t.due ? <span className={t.due < today ? "overdue" : ""}>{faDate(t.due, { year: false })}{t.due < today ? ` · ${fmtInt(diffDays(t.due, today))} روز تأخیر` : ""}</span> : <span className="muted">بدون ددلاین</span>) },
+        { key: "due", label: "ددلاین", value: (t) => t.due, render: (t) => (t.due ? <span className={t.due < today ? "overdue" : ""}>{localDate(t.due, locale, { year: false })}{t.due < today ? ` · ${fmtInt(diffDays(t.due, today), locale)} ${locale === "fa" ? "روز تأخیر" : "days overdue"}` : ""}</span> : <span className="muted">{text("بدون ددلاین")}</span>) },
       ]),
-  ];
+  ].map((column) => ({ ...column, label: text(column.label) }));
 }

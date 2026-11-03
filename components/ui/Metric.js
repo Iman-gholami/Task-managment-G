@@ -6,14 +6,13 @@ import Link from "next/link";
 import { Children, Fragment } from "react";
 import Icon from "@/components/ui/Icon";
 
-const NUM = new Intl.NumberFormat("en-US", { maximumFractionDigits: 1 });
-
 /**
  * KPI card: label, value, and one quiet line of context (comparison or explanation).
  * `tone="alert"` colours the value when it needs action. `href` makes the whole card a link.
  * `loading` keeps the card's height while data is on its way. `icon` adds a small tile before the label.
  */
 export function Metric({ label, value, unit, foot, tone, href, onClick, aside, loading, hint, testId, icon }) {
+  const { number } = useSharedI18n();
   const body = (
     <>
       <div className="metric-label">
@@ -23,7 +22,7 @@ export function Metric({ label, value, unit, foot, tone, href, onClick, aside, l
         {(href || onClick) && <Icon name="chev" size="sm" />}
       </div>
       <div className="metric-body">
-        {loading ? <div className="sk sk-late" aria-hidden="true" /> : <div className="metric-value">{typeof value === "number" ? NUM.format(value) : value}{unit && <small>{unit}</small>}</div>}
+        {loading ? <div className="sk sk-late" aria-hidden="true" /> : <div className="metric-value">{typeof value === "number" ? number(value, { maximumFractionDigits: 1 }) : value}{unit && <small>{unit}</small>}</div>}
         {!loading && aside}
       </div>
       <div className="metric-foot">{loading ? " " : foot}</div>
@@ -54,7 +53,7 @@ export function MetricGrid({ children, label }) {
  * `goodWhen="up"` colours an increase as positive; decreases stay neutral (not every drop is a problem).
  */
 export function Delta({ now, before, label, goodWhen = "up" }) {
-  const { t: __sharedTr } = useSharedI18n();
+  const { t: __sharedTr, number } = useSharedI18n();
   if (before === null || before === undefined || now === null || now === undefined) return null;
   const d = Math.round((now - before) * 10) / 10;
   if (d === 0) return <><span className="delta">{"" + __sharedTr("No change") + ""}</span><span>{label}</span></>;
@@ -63,9 +62,9 @@ export function Delta({ now, before, label, goodWhen = "up" }) {
     <>
       <span className={`delta ${up && goodWhen === "up" ? "up" : ""}`}>
         <Icon name={up ? "arrowUp" : "arrowDown"} />
-        {Math.abs(d)}
+        {number(Math.abs(d))}
       </span>
-      <span>{label}</span>
+      <span>{__sharedTr(label)}</span>
     </>
   );
 }
