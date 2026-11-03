@@ -27,7 +27,7 @@ test("province member setup and observer access to provincial analytics, but not
   await dialog.getByRole("option", { name: "Qom", exact: true }).click();
   await dialog.getByRole("button", { name: "Add member" }).click();
   await expect(dialog).toBeHidden();
-  await expect(page.locator("tr", { hasText: "Qom Provincial Analyst" })).toContainText("Qom");
+  await expect(page.getByRole("row").filter({ hasText: "Qom Provincial Analyst" })).toContainText("Qom");
 
   const t = await page.request.post("/api/members", { data: {
     name: "Tehran Provincial Analyst", email: "tehran@province-analytics.test",

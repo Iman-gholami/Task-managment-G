@@ -35,9 +35,9 @@ test("dashboard and analytics load in both languages after switching", async ({ 
   page.on("pageerror", (error) => errors.push(error.message));
 
   await page.goto("/dashboard");
-  await expect(page.locator("h1")).toHaveText("Security Department");
+  await expect(page.getByRole("heading", { level: 1 })).toHaveText("Security Department");
   await page.getByRole("button", { name: "فارسی", exact: true }).click();
-  await expect(page.locator("h1")).toHaveText("واحد امنیت");
+  await expect(page.getByRole("heading", { level: 1 })).toHaveText("واحد امنیت");
   await expect(page.locator("html")).toHaveAttribute("dir", "rtl");
 
   for (const path of ["/analytics/alerts", "/analytics/trends", "/analytics/soc", "/analytics/report"]) {
@@ -45,9 +45,9 @@ test("dashboard and analytics load in both languages after switching", async ({ 
     await expect(page.locator(".an-body")).toBeVisible();
   }
   await page.goto("/analytics/alerts?demo=1");
-  await expect(page.locator("h1")).toHaveText("هشدارها و بینش‌ها");
+  await expect(page.getByRole("heading", { level: 1 })).toHaveText("هشدارها و بینش‌ها");
   await page.getByRole("button", { name: "English", exact: true }).click();
-  await expect(page.locator("h1")).toHaveText("Alerts and insights");
+  await expect(page.getByRole("heading", { level: 1 })).toHaveText("Alerts and insights");
   await expect(page.locator("html")).toHaveAttribute("dir", "ltr");
   await expect(page.getByRole("heading", { name: "Alert rules" })).toBeVisible();
   for (const path of ["/analytics/trends", "/analytics/soc", "/analytics/report"]) {
@@ -71,10 +71,10 @@ test("report and checklist screens localize while preserving authored content", 
   await expect(page.getByRole("columnheader", { name: "عنوان تسک" })).toBeVisible();
   await expect(page.getByRole("row").filter({ hasText: "I18N report sentinel" })).toContainText("Simple");
   await page.goto("/shift/checklists");
-  await expect(page.locator("h1")).toHaveText("چک‌لیست‌های گزارش شیفت");
+  await expect(page.getByRole("heading", { level: 1 })).toHaveText("چک‌لیست‌های گزارش شیفت");
   await expect(page.getByRole("button", { name: "چک‌لیست جدید", exact: true }).first()).toBeVisible();
   await page.getByRole("button", { name: "English", exact: true }).click();
-  await expect(page.locator("h1")).toHaveText("Shift Log checklists");
+  await expect(page.getByRole("heading", { level: 1 })).toHaveText("Shift Log checklists");
   expect(errors).toEqual([]);
 });
 
@@ -87,7 +87,7 @@ test("both language layouts remain usable on desktop and mobile", async ({ page,
       await page.setViewportSize({ width, height });
       await page.goto("/dashboard");
       await expect(page.locator("html")).toHaveAttribute("dir", direction);
-      await expect(page.locator("h1")).toBeVisible();
+      await expect(page.getByRole("heading", { level: 1 })).toBeVisible();
       await expect(page.locator(".metrics").first()).toBeVisible();
       await expect(page.locator('.metrics .metric[aria-busy="true"]')).toHaveCount(0);
       await expect(page.getByRole("heading", { name: locale === "fa" ? "مقایسه تیم‌ها" : "Team comparison" })).toBeVisible();

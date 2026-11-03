@@ -50,12 +50,12 @@ test.describe("fresh install", () => {
     await page.getByLabel("Work email").fill(ADMIN.email);
     await page.getByLabel("Password").fill(ADMIN.password);
     await page.getByRole("button", { name: "Sign in" }).click();
-    await expect(page.locator("h1")).toHaveText("Security Department");
+    await expect(page.getByRole("heading", { level: 1 })).toHaveText("Security Department");
     const users = (await (await page.request.get("/api/members")).json()).users;
     expect(users.map((u) => u.email)).toEqual([ADMIN.email]);
     expect((await (await page.request.get("/api/tasks")).json()).tasks).toEqual([]);
     await page.goto("/team");
-    await expect(page.locator("tbody tr")).toHaveCount(1);
+    await expect(page.locator("tbody:visible tr:visible")).toHaveCount(1);
   });
 
   test("wrong password shows an error; unauthenticated users go to login", async ({ page }) => {
@@ -115,7 +115,7 @@ test.describe("fresh install", () => {
       await dialog.getByLabel("Initial password").fill(PW);
       await dialog.getByRole("button", { name: "Add Member" }).click();
       await expect(dialog).toBeHidden();
-      await expect(page.locator("tbody")).toContainText(u.name);
+      await expect(page.locator("tbody:visible")).toContainText(u.name);
     }
     for (const u of (await (await page.request.get("/api/members")).json()).users) {
       const key = Object.keys(U).find((k) => U[k].email === u.email);
@@ -129,7 +129,7 @@ test.describe("shift logs for rostered staff", () => {
   test("SOC manager has shift scheduling but no personal shift log", async ({ page }) => {
     await signIn(page, "soc");
     await page.goto("/dashboard", { waitUntil: "domcontentloaded" });
-    await expect(page.locator("h1")).toHaveText("SOC overview");
+    await expect(page.getByRole("heading", { level: 1 })).toHaveText("SOC overview");
     await expect(page.locator(".sidebar")).toContainText("Shift Schedule");
     await expect(page.locator(".sidebar")).not.toContainText("Shift Log");
     await expect(page.locator(".content")).not.toContainText("Shift Log");
@@ -164,7 +164,7 @@ test.describe("shift logs for rostered staff", () => {
 
     await signIn(page, "sara");
     await page.goto("/shift");
-    await expect(page.locator("h1")).toContainText("Shift Log —");
+    await expect(page.getByRole("heading", { level: 1 })).toContainText("Shift Log —");
     for (const n of [1, 2, 3, 4, 5, 7, 8]) await page.locator(`#act-${n} .toggle-done`).click();
     await page.getByRole("button", { name: "Increase IOC count" }).click();
     await page.getByLabel("IOC count", { exact: true }).fill("12");
@@ -203,7 +203,7 @@ test.describe("shift logs for rostered staff", () => {
     expect(correctedActivity.note).toBe("Manager correction");
 
     await page.goto("/shift/manage");
-    await expect(page.locator("h1")).toHaveText("Shift log corrections");
+    await expect(page.getByRole("heading", { level: 1 })).toHaveText("Shift log corrections");
     await page.getByLabel("Analyst").selectOption(ids.sara);
     await page.getByText("Review or correct a Shift Log").click();
     await expect(page.getByText("Submitted & locked")).toBeVisible();
@@ -244,10 +244,10 @@ test.describe("manager assigns and follows up tasks", () => {
     await page.reload();
     await expect(page.getByTestId(`group-${ids.sara}`)).toContainText("2 tasks");
     await expect(page.getByTestId(`group-${ids.arash}`)).toContainText("1 task");
-    await expect(page.locator("tbody")).toContainText("Tune Splunk correlation rule");
+    await expect(page.locator("tbody:visible")).toContainText("Tune Splunk correlation rule");
 
     await page.locator("select[aria-label=Assignee]").selectOption(ids.arash);
-    await expect(page.locator("tbody tr:not(.group-row)")).toHaveCount(1);
+    await expect(page.locator("tbody:visible tr:not(.group-row):visible")).toHaveCount(1);
     await page.getByRole("button", { name: "Reset" }).click();
     await page.getByRole("tab", { name: /Needs review/ }).click();
     await expect(page.getByText("Nothing waiting for review")).toBeVisible();
@@ -256,7 +256,7 @@ test.describe("manager assigns and follows up tasks", () => {
   test("analysts see their assigned tasks and a notification", async ({ page }) => {
     await signIn(page, "sara");
     await page.goto("/tasks/my", { waitUntil: "domcontentloaded" });
-    await expect(page.locator("tbody tr")).toHaveCount(2);
+    await expect(page.locator("tbody:visible tr:visible")).toHaveCount(2);
     await page.getByRole("button", { name: "Notifications" }).click();
     await expect(page.locator(".pop")).toContainText("New task assigned");
   });
@@ -298,7 +298,7 @@ test.describe("task workflow", () => {
     await signIn(page, "soc");
     await page.goto("/tasks/assigned");
     await page.getByRole("tab", { name: /Needs review/ }).click();
-    await page.locator("tr", { hasText: ids.t1 }).locator("td.title").click();
+    await page.getByRole("row").filter({ has: page.locator("span.id", { hasText: new RegExp(`^${ids.t1}$`) }) }).locator("td.title").click();
     await page.getByRole("radio", { name: "Excellent" }).check();
     await expect(page.getByLabel("Confirm complexity")).toHaveValue("2");
     await page.getByLabel("Confirm complexity").selectOption("3");
@@ -312,7 +312,7 @@ test.describe("task workflow", () => {
     expect((await page.request.patch(`/api/tasks/${ids.t1}`, { data: { quality: "good" } })).status()).toBe(400);
     await page.goto("/tasks/assigned");
     await page.getByRole("tab", { name: /Done/ }).click();
-    await page.locator("tr", { hasText: ids.t1 }).locator('[data-edit="status"]').click();
+    await page.getByRole("row").filter({ has: page.locator("span.id", { hasText: new RegExp(`^${ids.t1}$`) }) }).getByLabel("Change status").click();
     await expect(page.getByRole("menuitem")).toHaveText([/Reopen/]);
   });
 
@@ -375,22 +375,22 @@ test.describe("performance", () => {
   test("each employee has their own page with their own numbers", async ({ page }) => {
     await signIn(page, "soc");
     await page.goto("/performance/overview");
-    await page.locator("tr", { hasText: "Sara Rahimi" }).locator("td.title").click();
+    await page.getByRole("row").filter({ hasText: "Sara Rahimi" }).locator("td.title").click();
     await expect(page).toHaveURL(new RegExp(`/performance/employees/${ids.sara}$`));
-    await expect(page.locator("h1")).toHaveText("Sara Rahimi");
+    await expect(page.getByRole("heading", { level: 1 })).toHaveText("Sara Rahimi");
     await expect(page.locator(".metric", { hasText: "Completed tasks" })).toContainText("1");
     await expect(page.locator(".metric", { hasText: "MISP IOCs" })).toContainText("12");
-    await expect(page.locator("tbody")).toContainText("Tune Splunk correlation rule");
+    await expect(page.locator("tbody:visible")).toContainText("Tune Splunk correlation rule");
 
     await page.getByLabel("Employee", { exact: true }).selectOption(ids.arash);
     await expect(page).toHaveURL(new RegExp(`/performance/employees/${ids.arash}$`));
-    await expect(page.locator("h1")).toHaveText("Arash Moradi");
+    await expect(page.getByRole("heading", { level: 1 })).toHaveText("Arash Moradi");
     await expect(page.locator(".metric", { hasText: "Completed tasks" })).toContainText("0");
     await expect(page.getByText("Tune Splunk correlation rule")).toHaveCount(0);
 
     await page.goto("/team");
-    await page.locator("tr", { hasText: "Mina Sadeghi" }).locator("td.title").click();
-    await expect(page.locator("h1")).toHaveText("Mina Sadeghi");
+    await page.getByRole("row").filter({ hasText: "Mina Sadeghi" }).locator("td.title").click();
+    await expect(page.getByRole("heading", { level: 1 })).toHaveText("Mina Sadeghi");
     await expect(page.getByText("Routine Activity")).toHaveCount(1); // Design engineers may cover SOC shifts
   });
 
@@ -416,7 +416,7 @@ test.describe("reports", () => {
   test("ticket report lists registered tickets", async ({ page }) => {
     await signIn(page, "soc");
     await page.goto("/reports/tickets");
-    await expect(page.locator("tbody")).toContainText("INC-2026-4480");
+    await expect(page.locator("tbody:visible")).toContainText("INC-2026-4480");
   });
 });
 
@@ -430,7 +430,7 @@ test.describe("members and accounts", () => {
     await expect(dialog.getByLabel("Role").locator("option")).toHaveText(["Analyst"]);
     await dialog.getByLabel("Primary team").selectOption("SOC · L3");
     await dialog.getByRole("button", { name: "Save changes" }).click();
-    await expect(page.locator("tr", { hasText: "Arash Moradi" })).toContainText("SOC · L3");
+    await expect(page.getByRole("row").filter({ hasText: "Arash Moradi" })).toContainText("SOC · L3");
     expect((await page.request.patch(`/api/members/${ids.arash}`, { data: { role: "soc_manager" } })).status()).toBe(403);
   });
 
@@ -445,13 +445,13 @@ test.describe("members and accounts", () => {
     await dialog.getByRole("option", { name: "Qom", exact: true }).click();
     await dialog.getByLabel("Initial password").fill(PW);
     await dialog.getByRole("button", { name: "Add Member" }).click();
-    await expect(page.locator("tbody")).toContainText("Parisa Ahmadi");
+    await expect(page.locator("tbody:visible")).toContainText("Parisa Ahmadi");
     const other = await browser.newContext();
     const url = (p) => new URL(p, page.url()).href;
     expect((await other.request.post(url("/api/auth/login"), { data: { email: "parisa@corp.test", password: PW } })).ok()).toBeTruthy();
     await page.getByRole("button", { name: "Remove Parisa Ahmadi" }).click();
     await page.getByRole("dialog", { name: "Remove member" }).getByRole("button", { name: "Remove member" }).click();
-    await expect(page.locator("tbody")).not.toContainText("Parisa Ahmadi");
+    await expect(page.locator("tbody:visible")).not.toContainText("Parisa Ahmadi");
     expect((await other.request.get(url("/api/tasks"))).status()).toBe(401);
     await other.close();
   });
@@ -491,7 +491,7 @@ test.describe("analytics (management dashboard)", () => {
     expect(facts.shifts.some((s) => s.a === ids.sara && s.closed)).toBeTruthy();
 
     await page.goto("/analytics", { waitUntil: "domcontentloaded" });
-    await expect(page.locator("h1")).toHaveText("داشبورد مدیریتی");
+    await expect(page.getByRole("heading", { level: 1 })).toHaveText("داشبورد مدیریتی");
     await expect(page.getByTestId("status")).toBeVisible();
     await expect(page.getByTestId("kpi-completed")).toContainText("۱");
     await expect(page.getByTestId("team-table")).toContainText("SOC");
@@ -557,7 +557,7 @@ test.describe("analytics (management dashboard)", () => {
     await signIn(page, "arash");
     await page.goto("/analytics");
     await expect(page).toHaveURL(new RegExp(`/analytics/people/${ids.arash}`));
-    await expect(page.locator("h1")).toHaveText("Arash Moradi");
+    await expect(page.getByRole("heading", { level: 1 })).toHaveText("Arash Moradi");
     await page.goto(`/analytics/people/${ids.sara}`);
     await expect(page).toHaveURL(new RegExp(`/analytics/people/${ids.arash}`));
     const facts = await (await page.request.get("/api/analytics")).json();
@@ -576,7 +576,7 @@ test.describe("analytics (management dashboard)", () => {
     for (const demo of ["", "demo=1"]) {
       for (const path of ["/analytics", "/analytics/teams", "/analytics/teams?team=soc", "/analytics/people", "/analytics/compare", "/analytics/trends", "/analytics/soc", "/analytics/alerts", "/analytics/report", `/analytics/people/${demo ? "d-srh" : ids.sara}`]) {
         await page.goto(`${path}${path.includes("?") ? "&" : "?"}${demo}`, { waitUntil: "domcontentloaded" });
-        await expect(page.locator("h1").first()).toBeVisible();
+        await expect(page.getByRole("heading", { level: 1 }).first()).toBeVisible();
         await expect(page.locator(".an-body, .an .empty").first()).toBeVisible();
       }
     }
@@ -599,7 +599,7 @@ test.describe("every screen renders without console errors", () => {
       page.on("console", (m) => m.type() === "error" && errors.push(`${page.url()} ${m.text()}`));
       for (const path of paths) {
         await page.goto(path, { waitUntil: "domcontentloaded" });
-        await expect(page.locator("h1").first()).toBeVisible();
+        await expect(page.getByRole("heading", { level: 1 }).first()).toBeVisible();
       }
       expect(errors).toEqual([]);
     });

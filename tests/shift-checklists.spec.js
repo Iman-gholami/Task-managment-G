@@ -92,7 +92,7 @@ test("SOC manager builds a Layer 3 checklist in the editor and assigns it to SOC
     expect(changed.status()).toBe(201);
   }
   await page.goto("/shift/checklists");
-  await expect(page.locator("h1")).toHaveText("Shift Log checklists");
+  await expect(page.getByRole("heading", { level: 1 })).toHaveText("Shift Log checklists");
   await expect(page.locator(".sidebar")).toContainText("Log checklists");
   for (const team of ["SOC · L1", "SOC · L2", "SOC · L3"]) {
     await expect(page.locator(`[data-group="${team}"]`).getByLabel(`Checklist for ${team}`, { exact: true })).toHaveValue(/\d+/);
@@ -342,7 +342,7 @@ test("checklist screens render without console errors", async ({ page }) => {
     await signIn(page, who);
     for (const path of paths) {
       await page.goto(path, { waitUntil: "domcontentloaded" });
-      await expect(page.locator("h1").first()).toBeVisible();
+      await expect(page.getByRole("heading", { level: 1 }).first()).toBeVisible();
     }
   }
   expect(errors).toEqual([]);

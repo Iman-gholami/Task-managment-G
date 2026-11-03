@@ -110,7 +110,7 @@ test("refreshing while a task creation response is delayed never duplicates the 
     await page.waitForTimeout(300);
     releaseResponse();
     await expect(dialog).toBeHidden();
-    await expect(page.locator("tr", { hasText: "Refresh race task" })).toHaveCount(1);
+    await expect(page.getByRole("row").filter({ hasText: "Refresh race task" })).toHaveCount(1);
   } finally {
     releaseResponse();
     await page.unroute("**/api/tasks");
