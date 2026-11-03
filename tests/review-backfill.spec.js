@@ -119,7 +119,7 @@ test("SOC Manager can waive review and grant four auditable missed L2 shift days
   await firstRemaining.click();
   await expect(page).toHaveURL(/\/shift\/manage\?user=/);
   await expect(page.getByLabel("Shift date")).toHaveValue(dates[1]);
-  await expect(page.locator("#shift-log-details")).toBeInViewport();
+  await expect(page.locator("#shift-log-details:visible")).toBeInViewport();
   expect((await page.request.post("/api/shift/backfill", { data: {
     userId: analystId, dates: [dates[0]], enabled: true,
   } })).status()).toBe(409);
@@ -165,7 +165,7 @@ test("a returned extended L3 shift can be ticked and completed from homepage wit
   for (const activity of historic.activities) {
     const saved = page.waitForResponse((response) =>
       response.url().endsWith("/api/shift") && response.request().method() === "PATCH");
-    await page.locator(`#act-${activity.n} .toggle-done`).click();
+    await page.locator(`#act-${activity.n}:visible .toggle-done`).click();
     expect((await saved).status()).toBe(200);
   }
   await expect(page.getByRole("region", { name: "Shift summary" }))
@@ -251,7 +251,7 @@ test("switching analysts never shows the previous person's log under the new sel
   }
   await page.request.post("/api/auth/login", { data: ADMIN });
   await page.goto(`/shift/manage?user=${people[0].id}&date=${dateToday()}`);
-  await expect(page.locator(".facts")).toContainText(people[0].name);
+  await expect(page.locator(".facts:visible")).toContainText(people[0].name);
 
   let release;
   const gate = new Promise((resolve) => { release = resolve; });
@@ -259,10 +259,10 @@ test("switching analysts never shows the previous person's log under the new sel
     async (route) => { await gate; await route.continue(); }, { times: 1 });
   try {
     await page.getByLabel("Analyst").selectOption(people[1].id);
-    await expect(page.locator(".facts")).toHaveCount(0);
+    await expect(page.locator(".facts:visible")).toHaveCount(0);
   } finally {
     release();
   }
-  await expect(page.locator(".facts")).toContainText(people[1].name);
-  await expect(page.locator(".facts")).not.toContainText(people[0].name);
+  await expect(page.locator(".facts:visible")).toContainText(people[1].name);
+  await expect(page.locator(".facts:visible")).not.toContainText(people[0].name);
 });

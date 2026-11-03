@@ -165,12 +165,12 @@ test.describe("shift logs for rostered staff", () => {
     await signIn(page, "sara");
     await page.goto("/shift");
     await expect(page.getByRole("heading", { level: 1 })).toContainText("Shift Log —");
-    for (const n of [1, 2, 3, 4, 5, 7, 8]) await page.locator(`#act-${n} .toggle-done`).click();
+    for (const n of [1, 2, 3, 4, 5, 7, 8]) await page.locator(`#act-${n}:visible .toggle-done`).click();
     await page.getByRole("button", { name: "Increase IOC count" }).click();
     await page.getByLabel("IOC count", { exact: true }).fill("12");
-    await page.locator("#act-6").getByRole("button", { name: "Report an issue" }).click();
-    await page.locator("#act-6").getByLabel("Issue summary").fill("Security Center login page returned 502");
-    await page.locator("#act-6").getByRole("button", { name: "Save issue" }).click();
+    await page.locator("#act-6:visible").getByRole("button", { name: "Report an issue" }).click();
+    await page.locator("#act-6:visible").getByLabel("Issue summary").fill("Security Center login page returned 502");
+    await page.locator("#act-6:visible").getByRole("button", { name: "Save issue" }).click();
     await page.getByRole("button", { name: "Add Ticket" }).click();
     await page.getByRole("button", { name: "Save", exact: true }).click();
     await expect(page.getByText("Ticket number is required.")).toBeVisible();
@@ -246,7 +246,7 @@ test.describe("manager assigns and follows up tasks", () => {
     await expect(page.getByTestId(`group-${ids.arash}`)).toContainText("1 task");
     await expect(page.locator("tbody:visible")).toContainText("Tune Splunk correlation rule");
 
-    await page.locator("select[aria-label=Assignee]").selectOption(ids.arash);
+    await page.getByRole("combobox", { name: "Assignee" }).selectOption(ids.arash);
     await expect(page.locator("tbody:visible tr:not(.group-row):visible")).toHaveCount(1);
     await page.getByRole("button", { name: "Reset" }).click();
     await page.getByRole("tab", { name: /Needs review/ }).click();
@@ -341,11 +341,11 @@ test.describe("task workflow", () => {
     await page.getByText("Checklist", { exact: true }).first().click();
     await page.getByLabel("New checklist item").fill("Export scanner inventory");
     await page.getByLabel("New checklist item").press("Enter");
-    await page.locator("label.check-item", { hasText: "Export scanner inventory" }).locator("input").check();
+    await page.locator("label.check-item:visible", { hasText: "Export scanner inventory" }).locator("input").check();
     await page.getByText("Conversation", { exact: true }).click();
     await page.getByLabel("New comment").fill("Started on this, @Leila Nouri FYI");
     await page.getByRole("button", { name: /^Comment/ }).click();
-    await expect(page.locator(".mention", { hasText: "@Leila Nouri" })).toBeVisible();
+    await expect(page.locator(".mention:visible", { hasText: "@Leila Nouri" })).toBeVisible();
     await page.getByText("Attachments", { exact: true }).first().click();
     await page.getByTestId("attach-input").setInputFiles({ name: "inventory.txt", mimeType: "text/plain", buffer: Buffer.from("hello") });
     await expect(page.getByRole("link", { name: /inventory\.txt/ })).toBeVisible();
@@ -353,7 +353,7 @@ test.describe("task workflow", () => {
     await page.getByText("Checklist", { exact: true }).first().click();
     await page.getByText("Conversation", { exact: true }).click();
     await page.getByText("Attachments", { exact: true }).first().click();
-    await expect(page.locator("label.check-item", { hasText: "Export scanner inventory" }).locator("input")).toBeChecked();
+    await expect(page.locator("label.check-item:visible", { hasText: "Export scanner inventory" }).locator("input")).toBeChecked();
     await expect(page.getByText("Started on this")).toBeVisible();
     const [download] = await Promise.all([page.waitForEvent("download"), page.getByRole("link", { name: /inventory\.txt/ }).click()]);
     expect(download.suggestedFilename()).toBe("inventory.txt");
@@ -378,14 +378,14 @@ test.describe("performance", () => {
     await page.getByRole("row").filter({ hasText: "Sara Rahimi" }).locator("td.title").click();
     await expect(page).toHaveURL(new RegExp(`/performance/employees/${ids.sara}$`));
     await expect(page.getByRole("heading", { level: 1 })).toHaveText("Sara Rahimi");
-    await expect(page.locator(".metric", { hasText: "Completed tasks" })).toContainText("1");
-    await expect(page.locator(".metric", { hasText: "MISP IOCs" })).toContainText("12");
+    await expect(page.locator(".metric:visible", { hasText: "Completed tasks" })).toContainText("1");
+    await expect(page.locator(".metric:visible", { hasText: "MISP IOCs" })).toContainText("12");
     await expect(page.locator("tbody:visible")).toContainText("Tune Splunk correlation rule");
 
     await page.getByLabel("Employee", { exact: true }).selectOption(ids.arash);
     await expect(page).toHaveURL(new RegExp(`/performance/employees/${ids.arash}$`));
     await expect(page.getByRole("heading", { level: 1 })).toHaveText("Arash Moradi");
-    await expect(page.locator(".metric", { hasText: "Completed tasks" })).toContainText("0");
+    await expect(page.locator(".metric:visible", { hasText: "Completed tasks" })).toContainText("0");
     await expect(page.getByText("Tune Splunk correlation rule")).toHaveCount(0);
 
     await page.goto("/team");
@@ -503,7 +503,7 @@ test.describe("analytics (management dashboard)", () => {
     await page.goto("/analytics", { waitUntil: "domcontentloaded" });
     await page.getByTestId("demo-toggle").click();
     await expect(page).toHaveURL(/demo=1/);
-    await expect(page.locator(".an-demo")).toContainText("داده نمایشی");
+    await expect(page.locator(".an-demo:visible")).toContainText("داده نمایشی");
     await page.getByRole("link", { name: "کارشناسان" }).click();
     await expect(page).toHaveURL(/\/analytics\/people\?.*demo=1/);
     await expect(page.getByTestId("people-table")).toContainText("سارا رحیمی");
@@ -513,7 +513,7 @@ test.describe("analytics (management dashboard)", () => {
     await signIn(page, "admin");
     await page.goto("/analytics?demo=1", { waitUntil: "domcontentloaded" });
     // Let the demo response and initial client render settle before opening the anchored menu.
-    await expect(page.locator(".an-demo")).toBeVisible();
+    await expect(page.locator(".an-demo:visible")).toBeVisible();
     await page.getByTestId("period").click();
     await page.getByRole("button", { name: "ماه گذشته" }).click();
     await expect(page).toHaveURL(/p=prev-month/);
