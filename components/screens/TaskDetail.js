@@ -20,6 +20,7 @@ import { EmptyState, ErrorState, Loading } from "@/components/ui/states";
 import { Avatar, Complexity, Due, Priority, Quality, Status, Who } from "@/components/ui/indicators";
 import { STATUS } from "@/lib/format";
 import { taskWhen } from "@/lib/task-date";
+import { taskActivityText } from "@/lib/i18n/task-activity";
 import TaskDateInput from "@/components/ui/TaskDateInput";
 import { cxItems, peopleItems } from "@/components/ui/menus";
 import { canAssignTask, canDeleteOwnTask, isManager } from "@/lib/roles";
@@ -32,7 +33,7 @@ const EXT_KIND = { DOC: "doc", DOCX: "doc", XLS: "sheet", XLSX: "sheet", CSV: "s
 const QUIET = ["cancelled", "blocked"];
 
 export default function TaskDetail({ id }) {
-  const { t: __taskTr, locale } = useTaskI18n();
+  const { t: __taskTr, locale, number } = useTaskI18n();
   const { tasks, updateTask, deleteTask, toast, me, peopleMap, openPopover, members } = useApp();
   const when = (timestamp) => taskWhen(timestamp, locale);
   const router = useRouter();
@@ -92,7 +93,7 @@ export default function TaskDetail({ id }) {
     const form = new FormData();
     form.append("file", file);
     setUploading(true);
-    if (await run(`/api/tasks/${id}/attachments`, { method: "POST", body: form })) toast(`${file.name} attached`);
+    if (await run(`/api/tasks/${id}/attachments`, { method: "POST", body: form })) toast(locale === "fa" ? `فایل ${file.name} پیوست شد` : `${file.name} attached`);
     setUploading(false);
     if (fileRef.current) fileRef.current.value = "";
   };
@@ -112,7 +113,7 @@ export default function TaskDetail({ id }) {
     if (deleting) return;
     setDeleting(true);
     setDeleteError("");
-    try { await deleteTask(id); toast(`${id} deleted`); router.push("/tasks/my"); }
+    try { await deleteTask(id); toast(locale === "fa" ? `${id} حذف شد` : `${id} deleted`); router.push("/tasks/my"); }
     catch (error) { setDeleteError(error.message); setDeleting(false); }
   };
 
@@ -147,8 +148,8 @@ export default function TaskDetail({ id }) {
       ) : <p className="muted small">{"" + __taskTr("No files attached.") + ""}</p>) : <div className="files">{d.attachments.map((a) => (
         <span key={a.id} className="file"><span className="ext" data-kind={EXT_KIND[ext(a.name)]} aria-hidden="true">{ext(a.name)}</span>
           <a href={`/api/tasks/${id}/attachments/${a.id}`} download>{a.name}<small>{size(a.size)} · {peopleMap[a.by]?.name}</small></a>
-          {canEdit && <button type="button" className="btn btn-ghost icon-btn btn-sm" aria-label={`Remove ${a.name}`} data-tooltip={__taskTr("Remove file")}
-            onClick={() => setConfirm({ title: `Remove ${a.name}?`, body: __taskTr("The file is deleted for everyone on this task."), action: __taskTr("Remove file"), run: () => run(`/api/tasks/${id}/attachments/${a.id}`, { method: "DELETE" }) })}><Icon name="x" /></button>}
+          {canEdit && <button type="button" className="btn btn-ghost icon-btn btn-sm" aria-label={locale === "fa" ? `حذف ${a.name}` : `Remove ${a.name}`} data-tooltip={__taskTr("Remove file")}
+            onClick={() => setConfirm({ title: locale === "fa" ? `فایل ${a.name} حذف شود؟` : `Remove ${a.name}?`, body: __taskTr("The file is deleted for everyone on this task."), action: __taskTr("Remove file"), run: () => run(`/api/tasks/${id}/attachments/${a.id}`, { method: "DELETE" }) })}><Icon name="x" /></button>}
         </span>
       ))}</div>}
     </section>
@@ -189,7 +190,7 @@ export default function TaskDetail({ id }) {
             <dl className="task-outcome-facts">
               {t.reviewRequired && t.quality && <div><dt>{"" + __taskTr("Quality") + ""}</dt><dd><Quality q={t.quality} /></dd></div>}
               {reviewer && <div><dt>{"" + __taskTr("Approved by") + ""}</dt><dd>{reviewer.name}</dd></div>}
-              <div><dt>{"" + __taskTr("Total time") + ""}</dt><dd>{t.hours.toFixed(1)}{" " + __taskTr("hrs") + ""}</dd></div>
+              <div><dt>{"" + __taskTr("Total time") + ""}</dt><dd>{number(t.hours, { minimumFractionDigits: 1, maximumFractionDigits: 1 })}{" " + __taskTr("hrs") + ""}</dd></div>
               {d?.completedAt && <div><dt>{"" + __taskTr("Completed") + ""}</dt><dd><time dateTime={`${d.completedAt.replace(" ", "T")}Z`}>{when(d.completedAt)}</time></dd></div>}
             </dl>
           </section>
@@ -224,7 +225,7 @@ export default function TaskDetail({ id }) {
         ) : d && (
           <>
             <details className="task-extra" open={commentsOpen} onToggle={(e) => setCommentsOpen(e.currentTarget.open)}>
-              <summary><span>{"" + __taskTr("Conversation") + ""}</span><span>{d.comments.length} {d.comments.length === 1 ? __taskTr("comment") : __taskTr("comments")}</span></summary>
+              <summary><span>{"" + __taskTr("Conversation") + ""}</span><span>{number(d.comments.length)} {d.comments.length === 1 ? __taskTr("comment") : __taskTr("comments")}</span></summary>
               <section className="task-extra-body task-conversation" aria-label={__taskTr("Comments")}>
               <SectionHeader icon="chat" title={__taskTr("Comments")} meta={d.comments.length || null} />
               {!d.comments.length && <p className="conversation-empty">{"" + __taskTr("No comments yet.") + ""}</p>}
@@ -255,7 +256,7 @@ export default function TaskDetail({ id }) {
 
             <details className="task-extra"><summary><span>{"" + __taskTr("Checklist") + ""}</span><span>{doneCount} / {d.checklist.length}{" " + __taskTr("completed") + ""}</span></summary>
             <section className="task-extra-body" aria-label={__taskTr("Checklist")}>
-              <SectionHeader icon="checkCircle" title={__taskTr("Checklist")} meta={d.checklist.length ? `${doneCount} of ${d.checklist.length}` : null}>
+              <SectionHeader icon="checkCircle" title={__taskTr("Checklist")} meta={d.checklist.length ? `${number(doneCount)} ${__taskTr("of")} ${number(d.checklist.length)}` : null}>
                 {d.checklist.length > 0 && <span className="progress ok" style={{ width: 88 }} role="progressbar" aria-label={__taskTr("Checklist progress")} aria-valuenow={doneCount} aria-valuemin={0} aria-valuemax={d.checklist.length}><span style={{ width: `${(doneCount / d.checklist.length) * 100}%` }} /></span>}
               </SectionHeader>
               {d.checklist.map((c) => (
@@ -263,7 +264,7 @@ export default function TaskDetail({ id }) {
                   <input type="checkbox" className="cb" checked={c.done} disabled={!canEdit || closed}
                     onChange={() => { merge({ checklist: d.checklist.map((x) => (x.id === c.id ? { ...x, done: !x.done } : x)) }); run(`/api/tasks/${id}/checklist/${c.id}`, { method: "PATCH", body: { done: !c.done } }); }} />
                   <span>{c.label}</span>
-                  {canEdit && !closed && <button type="button" className="btn btn-ghost icon-btn btn-sm grip" aria-label={`Delete ${c.label}`} data-tooltip={__taskTr("Delete item")} onClick={(e) => { e.preventDefault(); run(`/api/tasks/${id}/checklist/${c.id}`, { method: "DELETE" }); }}><Icon name="x" /></button>}
+                  {canEdit && !closed && <button type="button" className="btn btn-ghost icon-btn btn-sm grip" aria-label={locale === "fa" ? `حذف ${c.label}` : `Delete ${c.label}`} data-tooltip={__taskTr("Delete item")} onClick={(e) => { e.preventDefault(); run(`/api/tasks/${id}/checklist/${c.id}`, { method: "DELETE" }); }}><Icon name="x" /></button>}
                 </label>
               ))}
               {canEdit && !closed && (
@@ -279,7 +280,7 @@ export default function TaskDetail({ id }) {
         <details className="task-overview"><summary><Icon name="list" /><span>{"" + __taskTr("Task overview & activity") + ""}</span></summary>
         {!transitions.length && data && <p className="side-note">{t.status === "review" ? __taskTr("Waiting for a reviewer.") : closed ? __taskTr("This task is closed.") : __taskTr("No workflow actions are available to you.")}</p>}
         <dl className="kv">
-          <dt>{"" + __taskTr("Status") + ""}</dt><dd>{isAssignee ? <Status s={t.status} /> : <span className="cell-edit" role="button" tabIndex={0} aria-label={`Status: ${STATUS[t.status]}. Change status`} onClick={(e) => edit(e.currentTarget, "status", t)} onKeyDown={(e) => (e.key === "Enter" || e.key === " ") && (e.preventDefault(), edit(e.currentTarget, "status", t))}><Status s={t.status} /></span>}</dd>
+          <dt>{"" + __taskTr("Status") + ""}</dt><dd>{isAssignee ? <Status s={t.status} /> : <span className="cell-edit" role="button" tabIndex={0} aria-label={locale === "fa" ? `وضعیت: ${__taskTr(STATUS[t.status])}. تغییر وضعیت` : `Status: ${STATUS[t.status]}. Change status`} onClick={(e) => edit(e.currentTarget, "status", t)} onKeyDown={(e) => (e.key === "Enter" || e.key === " ") && (e.preventDefault(), edit(e.currentTarget, "status", t))}><Status s={t.status} /></span>}</dd>
           <dt>{"" + __taskTr("Assignee") + ""}</dt><dd>{canDetail ? <span className="cell-edit" role="button" tabIndex={0} aria-label={__taskTr("Reassign")} onClick={(e) => openPopover(e.currentTarget, { label: __taskTr("Reassign to"), title: __taskTr("Reassign to"), width: 340, render: (close) => <div style={{ padding: 12 }}><AssigneePicker id="task-reassign" value={t.a} people={assignableMembers} autoFocus onSelect={(a) => { if (a !== t.a) updateTask(t, { a }); close(); }} /></div> })} onKeyDown={(e) => (e.key === "Enter" || e.key === " ") && (e.preventDefault(), e.currentTarget.click())}><Who id={t.a} /></span> : <Who id={t.a} />}</dd>
           <dt>{"" + __taskTr("Priority") + ""}</dt><dd><span className="cell-edit" role="button" tabIndex={0} aria-label={__taskTr("Change priority")} onClick={(e) => edit(e.currentTarget, "prio", t)} onKeyDown={(e) => (e.key === "Enter" || e.key === " ") && (e.preventDefault(), e.currentTarget.click())}><Priority p={t.prio} /></span></dd>
           <dt>{"" + __taskTr("Complexity") + ""}</dt><dd>{canDetail ? <span className="cell-edit" role="button" tabIndex={0} aria-label={__taskTr("Change complexity")} onClick={(e) => openPopover(e.currentTarget, { title: __taskTr("Complexity"), items: cxItems(), onPick: (cx) => updateTask(t, { cx }) })} onKeyDown={(e) => (e.key === "Enter" || e.key === " ") && (e.preventDefault(), e.currentTarget.click())}><Complexity c={t.cx} /></span> : <Complexity c={t.cx} />}</dd>
@@ -294,7 +295,7 @@ export default function TaskDetail({ id }) {
                 <input aria-label={__taskTr("Actual hours")} defaultValue={t.hours} key={t.hours} inputMode="decimal" onBlur={(e) => { const h = Number(e.target.value); if (Number.isFinite(h) && h >= 0 && h !== t.hours) updateTask(t, { hours: h }); else e.target.value = t.hours; }} />
                 <button type="button" aria-label={__taskTr("Increase hours")} onClick={() => updateTask(t, { hours: t.hours + 0.5 })}>+</button>
               </span>
-            ) : <span className="num">{t.hours.toFixed(1)}</span>}
+            ) : <span className="num">{number(t.hours, { minimumFractionDigits: 1, maximumFractionDigits: 1 })}</span>}
           </dd>
           <dt>{"" + __taskTr("Started") + ""}</dt><dd className="num">{when(d?.startedAt)}</dd>
           <dt>{"" + __taskTr("Created by") + ""}</dt><dd>{d?.createdBy ? <Who id={d.createdBy} /> : <span className="muted">—</span>}</dd>
@@ -309,7 +310,7 @@ export default function TaskDetail({ id }) {
         </dl>
         <div className="side-h">{"" + __taskTr("Activity") + ""}</div>
         <ol className="timeline" data-testid="activity">
-          {d?.events.length ? d.events.map((e) => <li key={e.id}><b>{peopleMap[e.by]?.name ?? __taskTr("System")}</b> {e.text}<time>{when(e.at)}</time></li>) : <li>{"" + __taskTr("No activity yet.") + ""}</li>}
+          {d?.events.length ? d.events.map((e) => <li key={e.id}><b>{peopleMap[e.by]?.name ?? __taskTr("System")}</b> {taskActivityText(e.text, locale)}<time>{when(e.at)}</time></li>) : <li>{"" + __taskTr("No activity yet.") + ""}</li>}
         </ol>
         {!!d?.reviewReturns.length && <><div className="side-h">{"" + __taskTr("Review feedback") + ""}</div><ol className="task-return-history">{d.reviewReturns.map((item) => <li key={item.id}><strong>{peopleMap[item.by]?.name ?? __taskTr("Manager")}</strong><time>{when(item.at)}</time><p dir="auto">{item.reason}</p></li>)}</ol></>}
         </details>
@@ -324,7 +325,7 @@ export default function TaskDetail({ id }) {
         </Dialog>
       )}
       {deleteConfirm && (
-        <Dialog label={__taskTr("Delete task")} title={`Delete ${t.id}?`} description={__taskTr("This removes the task from lists and reports. Its history and files are retained for audit.")} onClose={() => !deleting && setDeleteConfirm(false)} width={440} dismissible={!deleting}>
+        <Dialog label={__taskTr("Delete task")} title={locale === "fa" ? `تسک ${t.id} حذف شود؟` : `Delete ${t.id}?`} description={__taskTr("This removes the task from lists and reports. Its history and files are retained for audit.")} onClose={() => !deleting && setDeleteConfirm(false)} width={440} dismissible={!deleting}>
           {deleteError && <p role="alert" className="task-delete-error">{deleteError}</p>}
           <div className="modal-foot">
             <button type="button" className="btn btn-secondary" onClick={() => setDeleteConfirm(false)} disabled={deleting}>{"" + __taskTr("Keep task") + ""}</button>

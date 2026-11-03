@@ -10,12 +10,14 @@ import { PageHeader, Panel } from "@/components/ui/layout";
 import { EmptyState, Loading } from "@/components/ui/states";
 import { longDate, weekday } from "@/lib/format";
 import { SHIFT_TYPES } from "@/lib/shifts";
+import { dashboardDay } from "@/lib/i18n/presentation";
+import { shiftActivityText } from "@/lib/i18n/shift-content";
 import L2AnalyzedTickets from "@/components/screens/L2AnalyzedTickets";
 import { ManagerReturnedQueue } from "@/components/screens/dashboard/ReturnedShifts";
 import styles from "@/components/screens/ShiftBackfill.module.css";
 
 export default function ShiftLogManager({ initialSelection = {} }) {
-  const { t: __shiftFaTr } = useEngShiftI18n();
+  const { t: __shiftFaTr, locale, number, team: teamText } = useEngShiftI18n();
   const { members, shiftDate, toast } = useApp();
   const params = useSearchParams();
   const selectedUser = params.get("user") || initialSelection.user || "";
@@ -161,7 +163,7 @@ export default function ShiftLogManager({ initialSelection = {} }) {
     <div className={`page mid shift-page ${styles.managerPage}`}>
       <PageHeader
         title={__shiftFaTr("Shift log corrections")}
-        meta={["Manager-only", "Return missed days or correct a recorded log"]}
+        meta={[__shiftFaTr("Manager-only"), __shiftFaTr("Return missed days or correct a recorded log")]}
       />
 
       <ManagerReturnedQueue showEmpty refreshKey={returnedRevision} disabled={backfillBusy} onPick={(item) => { chooseAnalyst(item.userId); setDate(item.date); setShowCorrection(true); }} />
@@ -169,16 +171,16 @@ export default function ShiftLogManager({ initialSelection = {} }) {
       <Panel title={__shiftFaTr("Staff member")} meta={__shiftFaTr("Choose whose shift logs you want to manage")}>
         <div className={`panel-body ${styles.analystPicker}`}>
           <label className="field">
-            <span className="label">Analyst</span>
-            <select className="input" value={userId} disabled={backfillBusy} onChange={(event) => chooseAnalyst(event.target.value)} aria-label="Analyst">
+            <span className="label">{__shiftFaTr("Analyst")}</span>
+            <select className="input" value={userId} disabled={backfillBusy} onChange={(event) => chooseAnalyst(event.target.value)} aria-label={__shiftFaTr("Analyst")}>
               {!analysts.length && <option value="">{"" + __shiftFaTr("No analysts available") + ""}</option>}
-              {analysts.map((member) => <option key={member.id} value={member.id}>{member.name} · {member.team}</option>)}
+              {analysts.map((member) => <option key={member.id} value={member.id}>{member.name} · {teamText(member.team)}</option>)}
             </select>
           </label>
         </div>
       </Panel>
 
-      <Panel title={__shiftFaTr("Return missed Shift Logs")} meta={backfillLoading ? "Loading shifts…" : backfillError ? "Couldn't load shifts" : `${missedDays.length} unsubmitted`}>
+      <Panel title={__shiftFaTr("Return missed Shift Logs")} meta={backfillLoading ? __shiftFaTr("Loading shifts…") : backfillError ? __shiftFaTr("Couldn't load shifts") : `${number(missedDays.length)} ${locale === "fa" ? "ارسال‌نشده" : "unsubmitted"}`}>
         <div className={`panel-body ${styles.missedBody}`} aria-busy={backfillLoading}>
           <p className={styles.missedIntro}>{"" + __shiftFaTr("Select past scheduled days to return. The analyst can open and complete them from their dashboard.") + ""}</p>
           {backfillError ? <p className={styles.backfillError} role="alert">{backfillError} <button type="button" className="btn btn-ghost btn-sm" onClick={refreshBackfills}>{"" + __shiftFaTr("Retry") + ""}</button></p> : (
@@ -187,15 +189,15 @@ export default function ShiftLogManager({ initialSelection = {} }) {
               !missedDays.length ? <p className={styles.missedEmpty}>{"" + __shiftFaTr("No unsubmitted scheduled shifts in the last 120 days.") + ""}</p> :
               missedDays.map((day) => (
                 <label key={day.date} className={styles.missedRow}>
-                  <input type="checkbox" className="cb" aria-label={`Select missed shift ${day.date}`}
+                  <input type="checkbox" className="cb" aria-label={locale === "fa" ? `انتخاب شیفت ثبت‌نشده ${dashboardDay(day.date, locale)}` : `Select missed shift ${day.date}`}
                     checked={selectedMissed.includes(day.date)}
                     disabled={backfillBusy || (selectedMissed.length >= 31 && !selectedMissed.includes(day.date))}
                     onChange={(e) => setSelectedMissed((prev) =>
                       e.target.checked ? [...prev, day.date] : prev.filter((item) => item !== day.date))} />
-                  <span><strong><time dateTime={day.date}>{longDate(day.date)}</time></strong></span>
-                  <span className="sec small">{SHIFT_TYPES[day.shiftType]?.label ?? day.shiftType}</span>
+                  <span><strong><time dateTime={day.date}>{dashboardDay(day.date, locale)}</time></strong></span>
+                  <span className="sec small">{__shiftFaTr(SHIFT_TYPES[day.shiftType]?.label ?? day.shiftType)}</span>
                   <span className={`${styles.missedStatus} badge dot ${day.granted ? "info" : ""}`}>
-                    {day.granted ? <><span className={styles.statusLong}>{"" + __shiftFaTr("Returned · awaiting completion") + ""}</span><span className={styles.statusShort}>Returned</span></> : day.hasLog ? __shiftFaTr("Incomplete") : __shiftFaTr("Not recorded")}
+                    {day.granted ? <><span className={styles.statusLong}>{"" + __shiftFaTr("Returned · awaiting completion") + ""}</span><span className={styles.statusShort}>{__shiftFaTr("Returned")}</span></> : day.hasLog ? __shiftFaTr("Incomplete") : __shiftFaTr("Not recorded")}
                   </span>
                 </label>
               ))}
@@ -210,7 +212,7 @@ export default function ShiftLogManager({ initialSelection = {} }) {
             </label>
             <button type="button" className="btn btn-primary" disabled={backfillBusy || backfillLoading || !!backfillError || !selectedMissed.length}
               aria-busy={backfillAction === "return"}
-              onClick={() => grantBackfills(true)}>{"" + __shiftFaTr("Return selected days (") + ""}{selectedMissed.length})
+              onClick={() => grantBackfills(true)}>{"" + __shiftFaTr("Return selected days (") + ""}{number(selectedMissed.length)})
             </button>
             <button type="button" className="btn btn-secondary"
               aria-busy={backfillAction === "revoke"}
@@ -245,23 +247,23 @@ export default function ShiftLogManager({ initialSelection = {} }) {
           <div className="panel">
             <div className="shift-head">
               <dl className="facts">
-                <div><dt><small>Analyst</small></dt><dd>{person?.name ?? userId}</dd></div>
-                <div><dt><small>{"" + __shiftFaTr("Date") + ""}</small></dt><dd>{longDate(log.date)} · {weekday(log.date)}</dd></div>
-                <div><dt><small>{"" + __shiftFaTr("Shift") + ""}</small></dt><dd>{log.shift?.label ?? log.shiftType}</dd></div>
-                {log.mode !== "ticket_analysis" && <div><dt><small>{"" + __shiftFaTr("Checklist") + ""}</small></dt><dd dir="auto">{log.checklist ? `${log.checklist.name}${log.checklist.version ? ` · v${log.checklist.version}` : ""}` : "None assigned"}</dd></div>}
+                <div><dt><small>{__shiftFaTr("Analyst")}</small></dt><dd>{person?.name ?? userId}</dd></div>
+                <div><dt><small>{"" + __shiftFaTr("Date") + ""}</small></dt><dd>{dashboardDay(log.date, locale)}</dd></div>
+                <div><dt><small>{"" + __shiftFaTr("Shift") + ""}</small></dt><dd>{__shiftFaTr(log.shift?.label ?? log.shiftType)}</dd></div>
+                {log.mode !== "ticket_analysis" && <div><dt><small>{"" + __shiftFaTr("Checklist") + ""}</small></dt><dd dir="auto">{log.checklist ? `${log.checklist.builtIn ? __shiftFaTr(log.checklist.name) : log.checklist.name}${log.checklist.version ? ` · v${log.checklist.version}` : ""}` : __shiftFaTr("None assigned")}</dd></div>}
                 <div><dt><small>{"" + __shiftFaTr("Status") + ""}</small></dt><dd>{log.completedAt ? <span className="badge dot success">{"" + __shiftFaTr("Submitted & locked") + ""}</span> : <span className="badge dot info">{"" + __shiftFaTr("Incomplete") + ""}</span>}</dd></div>
-                {log.mode !== "ticket_analysis" && <div><dt><small>{"" + __shiftFaTr("Activities") + ""}</small></dt><dd>{done}{" " + __shiftFaTr("of") + " "}{log.activities.length}</dd></div>}
+                {log.mode !== "ticket_analysis" && <div><dt><small>{"" + __shiftFaTr("Activities") + ""}</small></dt><dd>{number(done)}{" " + __shiftFaTr("of") + " "}{number(log.activities.length)}</dd></div>}
                 <div><dt><small>{"" + __shiftFaTr("Correction policy") + ""}</small></dt><dd>{"" + __shiftFaTr("Manager-only after submission") + ""}</dd></div>
               </dl>
             </div>
           </div>
 
           {log.mode !== "ticket_analysis" && <Panel
-            title={log.mode === "engineering" ? "Engineering daily work" : "SOC shift duties"}
-            meta={log.completedAt ? "Manager corrections do not unlock this log for the analyst" : "You may correct the log and complete it when all activities are done"}
+            title={__shiftFaTr(log.mode === "engineering" ? "Engineering daily work" : "SOC shift duties")}
+            meta={__shiftFaTr(log.completedAt ? "Manager corrections do not unlock this log for the analyst" : "You may correct the log and complete it when all activities are done")}
           >
             {log.activities.map((activity) => (
-              <ManagerActivity key={`${activity.n}-${activity.itemId ?? "built-in"}`} activity={activity} onPatch={(patch) => patchActivity(activity, patch)} />
+              <ManagerActivity key={`${activity.n}-${activity.itemId ?? "built-in"}`} activity={activity} checklist={log.checklist} onPatch={(patch) => patchActivity(activity, patch)} />
             ))}
           </Panel>}
 
@@ -272,7 +274,7 @@ export default function ShiftLogManager({ initialSelection = {} }) {
             />
           )}
 
-          {log.mode === "operational" && <Panel title={__shiftFaTr("Created tickets")} meta={`${log.tickets.length} ticket${log.tickets.length === 1 ? "" : "s"}`}>
+          {log.mode === "operational" && <Panel title={__shiftFaTr("Created tickets")} meta={locale === "fa" ? `${number(log.tickets.length)} تیکت` : `${log.tickets.length} ticket${log.tickets.length === 1 ? "" : "s"}`}>
             {!log.tickets.length ? <p className="panel-body muted small">{"" + __shiftFaTr("No tickets were recorded in this shift log.") + ""}</p> : (
               <div role="table" aria-label={__shiftFaTr("Tickets")}>
                 <div className="ticket head" role="row"><span role="columnheader">{"" + __shiftFaTr("Ticket number") + ""}</span><span role="columnheader">{"" + __shiftFaTr("Related reference") + ""}</span><span role="columnheader">{"" + __shiftFaTr("Description") + ""}</span></div>
@@ -301,8 +303,9 @@ export default function ShiftLogManager({ initialSelection = {} }) {
   );
 }
 
-function ManagerActivity({ activity, onPatch }) {
-  const { t: __shiftFaTr } = useEngShiftI18n();
+function ManagerActivity({ activity, checklist, onPatch }) {
+  const { t: __shiftFaTr, locale, number } = useEngShiftI18n();
+  const content = shiftActivityText(activity, checklist, locale);
   const [iocs, setIocs] = useState(activity.iocs ?? 0);
   const [mispRef, setMispRef] = useState(activity.mispRef ?? "");
   const [note, setNote] = useState(activity.note ?? "");
@@ -316,23 +319,23 @@ function ManagerActivity({ activity, onPatch }) {
   return (
     <div className={`act ${activity.done ? "done" : ""}`}>
       <div className="act-row">
-        <span className="n">{activity.n}</span>
+        <span className="n">{number(activity.n)}</span>
         <input
           type="checkbox"
           className="cb"
           checked={activity.done}
           onChange={() => onPatch({ done: !activity.done })}
-          aria-label={`${activity.title} done`}
+          aria-label={locale === "fa" ? `${content.title} انجام شد` : `${content.title} done`}
         />
         <div className="t" dir="auto">
-          {activity.title}
-          {activity.hint && <small>{activity.hint}</small>}
+          {content.title}
+          {content.hint && <small>{content.hint}</small>}
           {activity.issue && <small>{"" + __shiftFaTr("Issue:") + " "}{activity.issue.summary}</small>}
           {activity.correctedAt && <small>{"" + __shiftFaTr("Corrected by a manager") + ""}</small>}
         </div>
         <div className="act-tools">
           <button type="button" className={`toggle-done ${activity.done ? "on" : ""}`} onClick={() => onPatch({ done: !activity.done })}>
-            <Icon name="check" />{activity.done ? "Done" : "Mark done"}
+            <Icon name="check" />{__shiftFaTr(activity.done ? "Done" : "Mark done")}
           </button>
         </div>
       </div>

@@ -6,6 +6,8 @@ import { minIso } from "@/lib/analytics/calendar";
 import { applyFilters, parseFilters } from "@/lib/analytics/filters";
 import { comparisonRange, resolveRange } from "@/lib/analytics/periods";
 import { today } from "@/lib/server/repo";
+import { cookies } from "next/headers";
+import { normalizeLocale } from "@/lib/i18n/messages";
 
 /**
  * GET /api/analytics/export?kind=full|teams|person[&id=<person>]&<the dashboard's filters>
@@ -16,6 +18,7 @@ export async function GET(request) {
   const [user, denied] = await requireUser();
   if (denied) return denied;
   const params = new URL(request.url).searchParams;
+  const locale = normalizeLocale(params.get("lang") ?? (await cookies()).get("so.locale")?.value);
   const kind = ["full", "teams", "person"].includes(params.get("kind")) ? params.get("kind") : "full";
   const filters = parseFilters(params);
   const scope = scopeFor(user);
@@ -23,8 +26,8 @@ export async function GET(request) {
   const personId = scope.kind === "self" ? user.id : params.get("id");
 
   const now = today();
-  const range = resolveRange(filters, now);
-  const cmp = comparisonRange(range, filters.cmp);
+  const range = resolveRange(filters, now, locale);
+  const cmp = comparisonRange(range, filters.cmp, locale);
   const facts = factsFor(user, {
     wf: minIso(range.from, cmp?.from), wt: now, demo: filters.demo,
     rf: range.from, rt: range.end, cf: cmp?.from, ct: cmp?.to,
@@ -33,7 +36,7 @@ export async function GET(request) {
   const view = applyFilters(facts, filters);
   if (kind === "person" && !view.people.some((p) => p.id === personId && !p.manager)) return err(404, "Employee not found in this view.");
 
-  const file = await analyticsWorkbook({ kind, facts: view, filters, range, cmp, viewer: user, personId });
+  const file = await analyticsWorkbook({ kind, facts: view, filters, range, cmp, viewer: user, personId, locale });
   return new Response(file, {
     headers: {
       "Content-Type": "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",

@@ -56,3 +56,39 @@ test("dashboard and analytics load in both languages after switching", async ({ 
   }
   expect(errors).toEqual([]);
 });
+
+test("report and checklist screens localize while preserving authored content", async ({ page }) => {
+  const login = await page.request.post("/api/auth/login", { data: ADMIN });
+  const admin = (await login.json()).user;
+  expect((await page.request.post("/api/tasks", { data: { title: "I18N report sentinel", description: "Simple", a: admin.id } })).status()).toBe(201);
+  const errors = [];
+  page.on("pageerror", (error) => errors.push(error.message));
+  await page.goto("/reports/task");
+  await expect(page.getByRole("heading", { name: "Task Report", exact: true })).toBeVisible();
+  await expect(page.getByRole("row").filter({ hasText: "I18N report sentinel" })).toContainText("Simple");
+  await page.getByRole("button", { name: "فارسی", exact: true }).click();
+  await expect(page.getByRole("heading", { name: "گزارش تسک‌ها", exact: true })).toBeVisible();
+  await expect(page.getByRole("columnheader", { name: "عنوان تسک" })).toBeVisible();
+  await expect(page.getByRole("row").filter({ hasText: "I18N report sentinel" })).toContainText("Simple");
+  await page.goto("/shift/checklists");
+  await expect(page.locator("h1")).toHaveText("چک‌لیست‌های گزارش شیفت");
+  await expect(page.getByRole("button", { name: "چک‌لیست جدید", exact: true }).first()).toBeVisible();
+  await page.getByRole("button", { name: "English", exact: true }).click();
+  await expect(page.locator("h1")).toHaveText("Shift Log checklists");
+  expect(errors).toEqual([]);
+});
+
+test("both language layouts remain usable on desktop and mobile", async ({ page, baseURL }, testInfo) => {
+  expect((await page.request.post("/api/auth/login", { data: ADMIN })).ok()).toBeTruthy();
+  for (const [locale, direction] of [["en", "ltr"], ["fa", "rtl"]]) {
+    await page.context().addCookies([{ name: "so.locale", value: locale, url: baseURL }]);
+    for (const [size, width, height] of [["desktop", 1440, 900], ["mobile", 390, 844]]) {
+      await page.setViewportSize({ width, height });
+      await page.goto("/dashboard");
+      await expect(page.locator("html")).toHaveAttribute("dir", direction);
+      await expect(page.locator("h1")).toBeVisible();
+      await expect(page.locator(".metrics").first()).toBeVisible();
+      if (process.env.CI) await page.screenshot({ path: testInfo.outputPath(`dashboard-${locale}-${size}.png`), fullPage: true });
+    }
+  }
+});

@@ -10,6 +10,12 @@ import { mockFacts } from "../lib/analytics/mock.js";
 import { buildAlerts } from "../lib/analytics/alerts.js";
 import { buildInsights } from "../lib/analytics/insights.js";
 import { addDays } from "../lib/analytics/calendar.js";
+import { toXlsx } from "../lib/server/reports.js";
+import { analyticsWorkbook } from "../lib/server/analytics-export.js";
+import { parseFilters } from "../lib/analytics/filters.js";
+import { shiftImportMessage } from "../lib/i18n/shift-import-copy.js";
+import { taskActivityText } from "../lib/i18n/task-activity.js";
+import ExcelJS from "exceljs";
 
 test("interface translation supports both selected languages", () => {
   assert.equal(normalizeLocale("fa"), "fa");
@@ -62,6 +68,63 @@ test("only unchanged built-in shift activities are translated", () => {
   const engineering = { itemId: -301, title: "Manage and maintain security systems", hint: "Review platform health and perform routine maintenance" };
   assert.equal(shiftActivityText(engineering, { builtIn: true }, "fa").title, "مدیریت و نگهداری سامانه‌های امنیتی");
   assert.equal(shiftActivityText(engineering, { builtIn: false }, "fa").title, engineering.title);
+});
+
+test("localized report workbooks translate product labels while preserving user data", async () => {
+  const report = { title: "Task Report", sheets: [{ name: "Tasks", columns: [
+    { key: "title", header: "Task Title", width: 20 },
+    { key: "description", header: "Work Description", width: 20 },
+    { key: "complexity", header: "Complexity", width: 12 },
+    { key: "start", header: "Start Time", width: 20 },
+  ], rows: [{ title: "Work", description: "Simple", complexity: "Simple", start: "2026-03-21 12:00:00" }] }] };
+  const period = { from: "2026-03-21", to: "2026-03-21" };
+  for (const locale of ["fa", "en"]) {
+    const workbook = new ExcelJS.Workbook();
+    await workbook.xlsx.load(await toXlsx(report, period, locale));
+    const sheet = workbook.getWorksheet(locale === "fa" ? "تسک‌ها" : "Tasks");
+    assert.ok(sheet);
+    assert.equal(sheet.getCell("A1").value, locale === "fa" ? "عنوان تسک" : "Task Title");
+    assert.equal(sheet.getCell("A2").value, "Work");
+    assert.equal(sheet.getCell("B2").value, "Simple");
+    assert.equal(sheet.getCell("C2").value, locale === "fa" ? "ساده" : "Simple");
+    assert.match(sheet.getCell("D2").value, locale === "fa" ? /^۱۴۰۵\/۰۱\/۰۱/ : /^1405\/01\/01/);
+    assert.equal(sheet.views[0].rightToLeft, locale === "fa");
+  }
+});
+
+test("analytics workbooks follow locale without translating task titles", async () => {
+  const today = "2026-10-06";
+  const facts = mockFacts({ today, window: { from: addDays(today, -45), to: today } });
+  facts.tasks.forEach((task) => { task.title = "Simple"; });
+  const filters = parseFilters(new URLSearchParams());
+  for (const locale of ["fa", "en"]) {
+    const range = resolveRange(filters, today, locale);
+    const cmp = comparisonRange(range, filters.cmp, locale);
+    const file = await analyticsWorkbook({ facts, filters, range, cmp, viewer: { name: "Work" }, locale });
+    const workbook = new ExcelJS.Workbook();
+    await workbook.xlsx.load(file);
+    const sheet = workbook.getWorksheet(locale === "fa" ? "تسک‌ها (خام)" : "Tasks (raw)");
+    assert.ok(sheet);
+    assert.equal(sheet.getCell("B1").value, locale === "fa" ? "عنوان" : "Title");
+    assert.equal(sheet.getCell("B2").value, "Simple");
+    assert.equal(sheet.views[0].rightToLeft, locale === "fa");
+    assert.ok(workbook.getWorksheet(locale === "fa" ? "فیلترها" : "Filters"));
+  }
+});
+
+test("shift import diagnostics keep filenames and names while changing language", () => {
+  const source = "Work.xlsx، ردیف 4: توضیح کنار نام «Simple»؛ وضعیت بر اساس ستون فایل خوانده شد.";
+  assert.equal(shiftImportMessage(source, "en"), "Work.xlsx, row 4: Annotation beside “Simple”; the status was read from its column.");
+  assert.equal(shiftImportMessage(source, "fa"), source);
+  assert.equal(shiftImportMessage("Cannot read Excel file: Work.xlsx", "fa"), "خواندن فایل اکسل ممکن نشد: Work.xlsx");
+});
+
+test("task activity translates known events without changing names or filenames", () => {
+  assert.equal(taskActivityText("attached Work.txt", "fa"), "فایل Work.txt را پیوست کرد");
+  assert.equal(taskActivityText("reassigned to Simple", "fa"), "به Simple واگذار شد");
+  assert.equal(taskActivityText("deadline → 2026-03-21", "fa"), "سررسید ← ۱۴۰۵/۰۱/۰۱");
+  assert.equal(taskActivityText("approved it · quality: Excellent · complexity: Medium → Complex", "en"), "approved it · quality: Excellent · complexity: Medium → Complex");
+  assert.equal(taskActivityText("custom historical message", "fa"), "custom historical message");
 });
 
 test("English analytics alerts and insights keep their values and person-authored text", () => {

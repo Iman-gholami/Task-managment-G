@@ -5,17 +5,16 @@ import { useI18n as useShiftI18n } from "@/components/I18nProvider";
 import { useMemo, useState } from "react";
 import Dialog from "@/components/ui/Dialog";
 import Icon from "@/components/ui/Icon";
+import { localDate } from "@/lib/analytics/calendar";
+import { shiftImportMessage } from "@/lib/i18n/shift-import-copy";
 import styles from "./ShiftExcelImport.module.css";
 
 const SHIFT_TYPES = ["morning", "evening", "night", "off", "leave"];
 const SHIFT_LABELS = { morning: "عادی", evening: "تا ۲۰", night: "شب", off: "تعطیل شیفت", leave: "مرخصی" };
-const faNum = (v) => new Intl.NumberFormat("fa-IR").format(v);
-const formatDate = (date) => new Intl.DateTimeFormat("fa-IR-u-ca-persian", {
-  year: "numeric", month: "short", day: "numeric", timeZone: "UTC",
-}).format(new Date(date + "T00:00:00Z"));
-
 export default function ShiftExcelImport({ onClose, onImported }) {
-  const { t: __shiftTr } = useShiftI18n();
+  const { t: __shiftTr, locale, number: faNum, team: teamText } = useShiftI18n();
+  const formatDate = (date) => localDate(date, locale);
+  const message = (value) => shiftImportMessage(value, locale);
   const [files, setFiles] = useState([]);
   const [preview, setPreview] = useState(null);
   const [mapping, setMapping] = useState({});
@@ -84,10 +83,10 @@ export default function ShiftExcelImport({ onClose, onImported }) {
             onChange={(e) => { setFiles([...e.target.files]); setPreview(null); setEnabled([]); setDone(null); setError(""); }} />
           <span>{"" + __shiftTr("می‌توانید چند ماه را هم‌زمان انتخاب کنید؛ ستون‌های «عادی»، «تا ۲۰»، «تعطیل شیفت» و «مرخصی» خوانده می‌شوند.") + ""}</span>
           <button type="button" className="btn btn-secondary btn-sm" onClick={upload} disabled={busy || !files.length}>
-            <Icon name="search" /> {busy && !preview ? "در حال خواندن..." : "بررسی و پیش‌نمایش"}
+            <Icon name="search" /> {__shiftTr(busy && !preview ? "در حال خواندن..." : "بررسی و پیش‌نمایش")}
           </button>
         </div>
-        {error && <p className={styles.error} role="alert">{error}</p>}
+        {error && <p className={styles.error} role="alert">{message(error)}</p>}
         {preview && (
           <>
             <div className={styles.summary}>
@@ -99,7 +98,7 @@ export default function ShiftExcelImport({ onClose, onImported }) {
             <p className={styles.warning}>{"" + __shiftTr("ثبت، برنامه فعلی روزهای انتخاب‌شده را جایگزین می‌کند. روزهای دارای تداخل انتخاب نشده‌اند. اگر برای شیفتی فعالیت ثبت شده باشد، هیچ روزی از این نوبت وارد نمی‌شود.") + ""}</p>
             <details className={styles.warningDetails}>
               <summary>{"" + __shiftTr("توضیحات و هشدارهای خواندن فایل (") + ""}{faNum(preview.warnings.length)})</summary>
-              <ul>{preview.warnings.map((warning, i) => <li key={i}>{warning}</li>)}</ul>
+              <ul>{preview.warnings.map((warning, i) => <li key={i}>{message(warning)}</li>)}</ul>
             </details>
 
             <div className={styles.mappingHead}>
@@ -112,7 +111,7 @@ export default function ShiftExcelImport({ onClose, onImported }) {
                   <span>{item.name}</span>
                   <select className="input input-sm" value={mapping[item.name] ?? ""} onChange={(e) => setMapping((m) => ({ ...m, [item.name]: e.target.value }))}>
                     <option value="">{"" + __shiftTr("انتخاب کارشناس...") + ""}</option>
-                    {preview.people.map((person) => <option key={person.id} value={person.id}>{person.name} · {person.team}</option>)}
+                    {preview.people.map((person) => <option key={person.id} value={person.id}>{person.name} · {teamText(person.team)}</option>)}
                   </select>
                 </label>
               ))}
@@ -127,14 +126,14 @@ export default function ShiftExcelImport({ onClose, onImported }) {
                   <input className="cb" type="checkbox" disabled={day.issues.length > 0} checked={checked.has(day.date) && !day.issues.length}
                     onChange={(e) => setEnabled((values) => e.target.checked ? [...values, day.date] : values.filter((date) => date !== day.date))} />
                   <span className={styles.date}>{formatDate(day.date)}</span>
-                  <span className={styles.dayCount}>{faNum(day.entries.length)}{" " + __shiftTr("نفر ·") + " "}{day.entries.map((x) => SHIFT_LABELS[x.shiftType]).filter((x, j, arr) => arr.indexOf(x) === j).join("، ")}</span>
+                  <span className={styles.dayCount}>{faNum(day.entries.length)}{" " + __shiftTr("نفر ·") + " "}{day.entries.map((x) => __shiftTr(SHIFT_LABELS[x.shiftType])).filter((x, j, arr) => arr.indexOf(x) === j).join(locale === "fa" ? "، " : ", ")}</span>
                   {day.holidayNote !== null && <b className={styles.holiday}>{"" + __shiftTr("تعطیلی مرکز") + ""}</b>}
-                  {day.issues.length > 0 && <span className={styles.issue} title={day.issues.join(" | ")}>{day.issues.join("؛ ")}</span>}
+                  {day.issues.length > 0 && <span className={styles.issue} title={day.issues.map(message).join(" | ")}>{day.issues.map(message).join(locale === "fa" ? "؛ " : "; ")}</span>}
                 </label>
               ))}
             </div>
-            {!!unresolved.length && <p className={styles.error}>{"" + __shiftTr("نام‌های تطبیق‌داده‌نشده در روزهای انتخابی:") + " "}{unresolved.join("، ")}</p>}
-            {!!collisions.length && <p className={styles.error}>{"" + __shiftTr("یک کارشناس در چند وضعیت یک روز انتخاب شده:") + " "}{collisions.map(formatDate).join("، ")}</p>}
+            {!!unresolved.length && <p className={styles.error}>{"" + __shiftTr("نام‌های تطبیق‌داده‌نشده در روزهای انتخابی:") + " "}{unresolved.join(locale === "fa" ? "، " : ", ")}</p>}
+            {!!collisions.length && <p className={styles.error}>{"" + __shiftTr("یک کارشناس در چند وضعیت یک روز انتخاب شده:") + " "}{collisions.map(formatDate).join(locale === "fa" ? "، " : ", ")}</p>}
           </>
         )}
       </div>
@@ -142,7 +141,7 @@ export default function ShiftExcelImport({ onClose, onImported }) {
         {done && <span>{"" + __shiftTr("ثبت انجام شد:") + " "}{faNum(done.importedDays)}{" " + __shiftTr("روز") + ""}</span>}
         <button className="btn btn-ghost" type="button" onClick={onClose}>{"" + __shiftTr("بستن") + ""}</button>
         <button className="btn btn-primary" type="button" onClick={save} disabled={busy || !preview || !selected.length || unresolved.length > 0 || collisions.length > 0}>
-          {busy && preview ? "در حال ذخیره..." : `ثبت ${faNum(selected.length)} روز در تقویم`}
+          {busy && preview ? __shiftTr("در حال ذخیره...") : locale === "fa" ? `ثبت ${faNum(selected.length)} روز در تقویم` : `Import ${faNum(selected.length)} days to calendar`}
         </button>
       </div>
     </Dialog>

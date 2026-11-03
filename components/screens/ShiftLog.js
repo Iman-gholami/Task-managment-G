@@ -21,6 +21,7 @@ import L2AnalyzedTickets from "@/components/screens/L2AnalyzedTickets";
 import { TODAY, fmtDate, fmtRange, longDate, plural, weekday } from "@/lib/format";
 import { localDate } from "@/lib/analytics/calendar";
 import { shiftActivityText } from "@/lib/i18n/shift-content";
+import { dashboardDay, dashboardRange } from "@/lib/i18n/presentation";
 
 const HINTS = { misp: "The IOC count feeds monthly reports", report: "Prepare and share the daily traffic report" };
 const SAVE_LABEL = { saved: "Autosaved", saving: "Saving…", failed: "Not saved — try again" };
@@ -429,7 +430,7 @@ function Tickets({ readOnly, list: tickets, date = null, onUpdate = null }) {
 
 /** The analyst's own shift logs for a period. Today's log opens the editable Shift Log. */
 export function ShiftHistory() {
-  const { t: __shiftFaTr } = useEngShiftI18n();
+  const { t: __shiftFaTr, locale, number } = useEngShiftI18n();
   const { t: __shiftTr } = useShiftI18n();
   const { me } = useApp();
   const router = useRouter();
@@ -441,7 +442,7 @@ export function ShiftHistory() {
     <div className="page">
       <PageHeader
         title={__shiftFaTr("Shift Log history")}
-        meta={[me.name, data ? fmtRange(data.period.from, data.period.to) : null]}
+        meta={[me.name, data ? dashboardRange(data.period.from, data.period.to, locale) : null]}
         actions={<Link className="btn btn-primary" href="/shift">{"" + __shiftFaTr("Open today's log") + ""}</Link>}
       />
       <div className="page-toolbar"><PeriodSelector value={period} onChange={setPeriod} /></div>
@@ -468,15 +469,15 @@ export function ShiftHistory() {
                     return (
                       <tr key={entry.date} className={accessible ? "is-link" : ""}
                         onClick={() => accessible && router.push(isToday ? "/shift" : `/shift?date=${entry.date}`)}>
-                        <td className="title">{isToday ? <Link href="/shift">Today</Link> : entry.backfill
-                          ? <Link href={`/shift?date=${entry.date}`}>{fmtDate(entry.date)}{" " + __shiftFaTr("· Enter missed log") + ""}</Link>
-                          : fmtDate(entry.date)} <span className="muted">· {weekday(entry.date)}</span></td>
-                        <td>{entry.absence ? "—" : entry.shiftType === "night" ? "Night" : entry.shiftType === "evening" ? "Until 20:00" : "Morning"}</td>
-                        <td>{entry.absence ? <span className="badge">{entry.shiftType === "off" ? "Day off" : "Leave"}</span> :
+                        <td className="title">{isToday ? <Link href="/shift">{__shiftFaTr("Today")}</Link> : entry.backfill
+                          ? <Link href={`/shift?date=${entry.date}`}>{dashboardDay(entry.date, locale)}{" " + __shiftFaTr("· Enter missed log") + ""}</Link>
+                          : dashboardDay(entry.date, locale)}</td>
+                        <td>{entry.absence ? "—" : __shiftFaTr(entry.shiftType === "night" ? "Night" : entry.shiftType === "evening" ? "Until 20:00" : "Morning")}</td>
+                        <td>{entry.absence ? <span className="badge">{__shiftFaTr(entry.shiftType === "off" ? "Day off" : "Leave")}</span> :
                           entry.completed ? <Status s="done" label={__shiftFaTr("Completed")} /> :
                           isToday ? <Status s="progress" label={__shiftFaTr("In progress")} /> : <Status s="returned" label={__shiftFaTr("Incomplete")} />}</td>
-                        <td className="r">{entry.absence ? "—" : entry.mode === "ticket_analysis" ? entry.analyzedTickets ?? 0 : "—"}</td>
-                        <td className="r">{entry.absence ? "—" : entry.mode === "operational" ? `${entry.done}/${entry.total}` : "—"}</td>
+                        <td className="r">{entry.absence ? "—" : entry.mode === "ticket_analysis" ? number(entry.analyzedTickets ?? 0) : "—"}</td>
+                        <td className="r">{entry.absence ? "—" : entry.mode === "operational" ? `${number(entry.done)}/${number(entry.total)}` : "—"}</td>
                       </tr>
                     );
                   })}
@@ -491,17 +492,17 @@ export function ShiftHistory() {
                   return (
                     <tr key={r.date} className={today || r.backfill ? "is-link" : ""}
                       onClick={() => (today || r.backfill) && router.push(today ? "/shift" : `/shift?date=${r.date}`)}>
-                      <td className="title">{today ? <Link href="/shift">Today</Link> : r.backfill
-                        ? <Link href={`/shift?date=${r.date}`}>{fmtDate(r.date)}{" " + __shiftFaTr("· Enter missed log") + ""}</Link>
-                        : fmtDate(r.date)} <span className="muted" style={{ fontWeight: 400 }}>· {weekday(r.date)}</span></td>
+                      <td className="title">{today ? <Link href="/shift">{__shiftFaTr("Today")}</Link> : r.backfill
+                        ? <Link href={`/shift?date=${r.date}`}>{dashboardDay(r.date, locale)}{" " + __shiftFaTr("· Enter missed log") + ""}</Link>
+                        : dashboardDay(r.date, locale)}</td>
                       <td>{r.absence ? <span className="badge">{r.shiftType === "off" ? __shiftTr("تعطیل شیفت") : __shiftTr("مرخصی")}</span> : r.completed ? <Status s="done" label={__shiftFaTr("Completed")} /> : today ? <Status s="progress" label={__shiftFaTr("In progress")} /> : <Status s="returned" label={__shiftFaTr("Incomplete")} />}</td>
                       <td className="sec" dir="auto">{r.checklist ?? <span className="muted">{"" + __shiftFaTr("None") + ""}</span>}{r.checklistVersion ? <span className="muted"> · v{r.checklistVersion}</span> : null}</td>
-                      <td>{r.absence ? <span className="muted">—</span> : <Meter value={r.done} max={r.total} label={`Activities done on ${fmtDate(r.date)}`} tone="ok" readout={`${r.done}/${r.total}`} />}</td>
-                      <td className="r">{r.iocs}</td>
-                      <td className="r">{r.tickets || <span className="zero">0</span>}</td>
+                      <td>{r.absence ? <span className="muted">—</span> : <Meter value={r.done} max={r.total} label={locale === "fa" ? `فعالیت‌های انجام‌شده در ${dashboardDay(r.date, locale)}` : `Activities done on ${dashboardDay(r.date, locale)}`} tone="ok" readout={`${number(r.done)}/${number(r.total)}`} />}</td>
+                      <td className="r">{number(r.iocs)}</td>
+                      <td className="r">{r.tickets ? number(r.tickets) : <span className="zero">{number(0)}</span>}</td>
                       {me.team === "SOC · L2" && <td className="r">{r.analyzedTickets ?? 0}</td>}
-                      <td className="r">{r.issues || <span className="zero">0</span>}</td>
-                      <td>{r.absence ? <span className="muted">—</span> : r.report ? <span className="sec">Done</span> : <span className="muted">{"" + __shiftFaTr("Not done") + ""}</span>}</td>
+                      <td className="r">{r.issues ? number(r.issues) : <span className="zero">{number(0)}</span>}</td>
+                      <td>{r.absence ? <span className="muted">—</span> : r.report ? <span className="sec">{__shiftFaTr("Done")}</span> : <span className="muted">{"" + __shiftFaTr("Not done") + ""}</span>}</td>
                     </tr>
                   );
                 })}

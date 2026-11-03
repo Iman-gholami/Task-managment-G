@@ -100,7 +100,7 @@ export function AnalyticsProvider({ children }) {
     return q ? `${path}?${q}` : path;
   }, [filters]);
 
-  const exportUrl = useCallback((kind, more = {}) => `/api/analytics/export?${filterQuery(filters, { kind, ...more })}`, [filters]);
+  const exportUrl = useCallback((kind, more = {}) => `/api/analytics/export?${filterQuery(filters, { kind, lang: locale, ...more })}`, [filters, locale]);
 
   const value = useMemo(() => ({
     me, manager, filters, setFilters, setParam, setParams, params, href, exportUrl,
