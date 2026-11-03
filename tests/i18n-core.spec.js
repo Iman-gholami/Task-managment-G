@@ -92,6 +92,11 @@ test("both language layouts remain usable on desktop and mobile", async ({ page,
       await expect(page.locator('.metrics .metric[aria-busy="true"]')).toHaveCount(0);
       await expect(page.getByRole("heading", { name: locale === "fa" ? "مقایسه تیم‌ها" : "Team comparison" })).toBeVisible();
       expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true);
+      if (size === "mobile") {
+        expect(await page.locator(".metrics .metric-label > span:not(.metric-icon):not(.metric-hint), .metrics .metric-foot").evaluateAll(
+          (elements) => elements.every((element) => element.scrollWidth <= element.clientWidth + 1)
+        )).toBe(true);
+      }
       if (process.env.CI) await page.screenshot({ path: testInfo.outputPath(`dashboard-${locale}-${size}.png`), fullPage: true, animations: "disabled" });
     }
   }

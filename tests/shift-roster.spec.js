@@ -75,7 +75,7 @@ test("a manager sets all three shifts with one save, including a Design engineer
   // Any scheduled Design engineer on extended duty follows shared SOC cover.
   expect(log.activities.length).toBeGreaterThan(0);
   await page.goto("/shift");
-  await expect(page.getByText(/گزارش شیفت —/)).toBeVisible();
+  await expect(page.getByRole("heading", { name: /گزارش شیفت —/ })).toBeVisible();
 
   // Re-open the same date and replace work assignments with off/leave,
   // while retaining the unrelated night shift.
