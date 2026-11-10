@@ -1,5 +1,7 @@
 "use client";
 
+import { useI18n as useSharedI18n } from "@/components/I18nProvider";
+
 import { useId } from "react";
 import useFocusTrap from "@/components/useFocusTrap";
 import Icon from "@/components/ui/Icon";
@@ -11,6 +13,7 @@ import Icon from "@/components/ui/Icon";
  * Children are the body and footer (`.modal-body`, `.modal-foot`).
  */
 export default function Dialog({ label, title, description, onClose, children, width = 520, onKeyDown, dismissible = true, className = "", scrimClassName = "" }) {
+  const { t: __sharedTr } = useSharedI18n();
   const ref = useFocusTrap(onClose);
   const descId = useId();
   return (
@@ -27,7 +30,7 @@ export default function Dialog({ label, title, description, onClose, children, w
         )}
         {children}
         {/* Last in the DOM so initial focus lands on the form or the safe action, not on Close. */}
-        <button type="button" className="btn btn-ghost icon-btn btn-sm modal-close" aria-label="Close" data-tooltip="Close (Esc)" onClick={onClose}>
+        <button type="button" className="btn btn-ghost icon-btn btn-sm modal-close" aria-label={__sharedTr("Close")} data-tooltip={__sharedTr("Close (Esc)")} onClick={onClose}>
           <Icon name="x" />
         </button>
       </div>

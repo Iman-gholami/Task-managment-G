@@ -3,6 +3,7 @@
 import { forwardRef, useEffect, useImperativeHandle, useRef } from "react";
 import echarts from "@/components/analytics/echarts";
 import { lightTokens, useChartTokens } from "@/components/analytics/chartTheme";
+import { useI18n } from "@/components/I18nProvider";
 
 // Every mounted chart, so printing can repaint them all synchronously in the light theme
 // before the browser lays out the print copy (see usePrintTheme in AnalyticsFrame).
@@ -27,6 +28,9 @@ export function downloadUrl(url, name) {
  * The ref exposes `png(fileName)`: a 2× PNG in the light theme on a white background.
  */
 const Chart = forwardRef(function Chart({ build, height = 260, label, onClick }, ref) {
+  const { locale, dir } = useI18n();
+  const localeRef = useRef(locale);
+  localeRef.current = locale;
   const el = useRef(null);
   const inst = useRef(null);
   const buildRef = useRef(build);
@@ -49,7 +53,7 @@ const Chart = forwardRef(function Chart({ build, height = 260, label, onClick },
     const entry = {
       repaint: (t) => {
         if (chart.isDisposed()) return;
-        chart.setOption({ ...buildRef.current(t), animation: false }, { notMerge: true, lazyUpdate: false });
+        chart.setOption({ ...buildRef.current({ ...t, locale: localeRef.current }), animation: false }, { notMerge: true, lazyUpdate: false });
         // The on-screen SVG has fixed pixel dimensions; a viewBox lets the print copy scale it to the page.
         node.querySelector("svg")?.setAttribute("viewBox", `0 0 ${chart.getWidth()} ${chart.getHeight()}`);
       },
@@ -65,8 +69,8 @@ const Chart = forwardRef(function Chart({ build, height = 260, label, onClick },
   }, []);
 
   useEffect(() => {
-    if (tokens && inst.current) inst.current.setOption(build(tokens), { notMerge: true });
-  }, [tokens, build]);
+    if (tokens && inst.current) inst.current.setOption(build({ ...tokens, locale }), { notMerge: true });
+  }, [tokens, build, locale]);
 
   useEffect(() => {
     const chart = inst.current;
@@ -81,16 +85,16 @@ const Chart = forwardRef(function Chart({ build, height = 260, label, onClick },
       const node = el.current;
       const off = document.createElement("div");
       off.style.cssText = `position:fixed;left:-10000px;top:0;width:${node.clientWidth}px;height:${node.clientHeight}px`;
-      off.dir = "rtl";
+      off.dir = dir;
       document.body.appendChild(off);
       const c = echarts.init(off, null, { renderer: "canvas" });
-      c.setOption({ ...buildRef.current(lightTokens()), animation: false });
+      c.setOption({ ...buildRef.current({ ...lightTokens(), locale: localeRef.current }), animation: false });
       const url = c.getDataURL({ type: "png", pixelRatio: 2, backgroundColor: "#FFFFFF" });
       c.dispose();
       off.remove();
       downloadUrl(url, name);
     },
-  }), []);
+  }), [dir]);
 
   return <div ref={el} className="an-chart" style={{ height }} role="img" aria-label={label} />;
 });

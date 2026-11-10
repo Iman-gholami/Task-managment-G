@@ -92,10 +92,10 @@ test("SOC manager builds a Layer 3 checklist in the editor and assigns it to SOC
     expect(changed.status()).toBe(201);
   }
   await page.goto("/shift/checklists");
-  await expect(page.locator("h1")).toHaveText("Shift Log checklists");
-  await expect(page.locator(".sidebar")).toContainText("Log checklists");
+  await expect(page.getByRole("heading", { level: 1 })).toHaveText("Shift Log checklists");
+  await expect(page.locator(".sidebar")).not.toContainText("Log checklists");
   for (const team of ["SOC · L1", "SOC · L2", "SOC · L3"]) {
-    await expect(page.locator(`[data-group="${team}"]`).getByLabel(`Checklist for ${team}`, { exact: true })).toHaveValue(/\d+/);
+    await expect(page.locator(`[data-group="${team}"]:visible`).getByLabel(`Checklist for ${team}`, { exact: true })).toHaveValue(/\d+/);
   }
 
   await page.getByRole("button", { name: "New checklist", exact: true }).click();
@@ -121,8 +121,8 @@ test("SOC manager builds a Layer 3 checklist in the editor and assigns it to SOC
   await page.getByLabel("Item 2 guidance").fill("Escalate to L3 when blocked");
   await page.getByRole("button", { name: "Move item 4 up" }).click();
   await expect(page.getByLabel("Item 3 title")).toHaveValue(L2_ITEMS[2]);
-  await page.locator('[data-item="4"]').getByRole("button", { name: "Night" }).click();
-  await expect(page.locator('[data-item="4"]').getByRole("button", { name: "Night" })).toHaveAttribute("aria-pressed", "false");
+  await page.locator('[data-item="4"]:visible').getByRole("button", { name: "Night" }).click();
+  await expect(page.locator('[data-item="4"]:visible').getByRole("button", { name: "Night" })).toHaveAttribute("aria-pressed", "false");
   await expect(page.getByText("Unsaved: 4 added")).toBeVisible();
 
   // Validation happens before anything is sent.
@@ -137,7 +137,7 @@ test("SOC manager builds a Layer 3 checklist in the editor and assigns it to SOC
   await expect(page.getByText("All changes saved · v2")).toBeVisible();
 
   // Assign it to Layer 3 (replaces the standard routine there, so it asks first).
-  const card = page.locator('[data-group="SOC · L3"]');
+  const card = page.locator('[data-group="SOC · L3"]:visible');
   await card.getByLabel("Checklist for SOC · L3", { exact: true }).selectOption({ label: L2 });
   const confirm = page.getByRole("dialog", { name: `Switch SOC · L3 to “${L2}”?` });
   await expect(confirm).toContainText("Logs already in progress keep");
@@ -147,23 +147,23 @@ test("SOC manager builds a Layer 3 checklist in the editor and assigns it to SOC
 
   // Everything survives a reload, in the saved order.
   await page.reload();
-  await page.locator(".cl-list").getByRole("button", { name: new RegExp(L2) }).click();
+  await page.locator(".cl-list:visible").getByRole("button", { name: new RegExp(L2) }).click();
   await expect(page.getByLabel("Checklist name")).toHaveValue(L2);
   for (let i = 0; i < L2_ITEMS.length; i++) await expect(page.getByLabel(`Item ${i + 1} title`)).toHaveValue(L2_ITEMS[i]);
-  await expect(page.locator('[data-group="SOC · L3"]').getByLabel("Checklist for SOC · L3", { exact: true })).toHaveValue(/\d+/);
-  await expect(page.locator('[data-group="SOC · L1"]').locator("select")).not.toHaveValue(await page.locator('[data-group="SOC · L3"]').locator("select").inputValue());
-  await expect(page.locator(".cl-history")).toContainText("Assigned to SOC · L3, replacing “Standard SOC routine”");
+  await expect(page.locator('[data-group="SOC · L3"]:visible').getByLabel("Checklist for SOC · L3", { exact: true })).toHaveValue(/\d+/);
+  await expect(page.locator('[data-group="SOC · L1"]:visible').locator("select")).not.toHaveValue(await page.locator('[data-group="SOC · L3"]:visible').locator("select").inputValue());
+  await expect(page.locator(".cl-history:visible")).toContainText("Assigned to SOC · L3, replacing “Standard SOC routine”");
 });
 
 test("unsaved edits are protected when switching checklists or leaving the page", async ({ page }) => {
   await signIn(page, "manager");
   await page.goto("/shift/checklists");
-  await page.locator(".cl-list").getByRole("button", { name: new RegExp(L2) }).click();
+  await page.locator(".cl-list:visible").getByRole("button", { name: new RegExp(L2) }).click();
   await expect(page.getByLabel("Checklist name")).toHaveValue(L2);
   await page.getByLabel("Item 1 title").fill("Review escalated incidents — edited");
   await expect(page.getByText("Unsaved: 1 edited")).toBeVisible();
 
-  await page.locator(".cl-list").getByRole("button", { name: /Standard SOC routine/ }).click();
+  await page.locator(".cl-list:visible").getByRole("button", { name: /Standard SOC routine/ }).click();
   const discard = page.getByRole("dialog", { name: "Discard unsaved changes?" });
   await expect(discard).toBeVisible();
   await discard.getByRole("button", { name: "Cancel" }).click();
@@ -183,17 +183,17 @@ test("Layer 3 analysts see their own checklist and complete it individually; Lay
   await signIn(page, "kian");
   await page.goto("/shift");
   await expect(page.getByTestId("shift-checklist")).toHaveText(`${L2} · v2`);
-  for (let i = 0; i < L2_ITEMS.length; i++) await expect(page.locator(`#act-${i + 1} .t`)).toContainText(L2_ITEMS[i]);
-  await expect(page.locator("#act-2 .t")).toContainText("Escalate to L3 when blocked");
-  await expect(page.locator("#act-5")).toHaveCount(0);
+  for (let i = 0; i < L2_ITEMS.length; i++) await expect(page.locator(`#act-${i + 1}:visible .t`)).toContainText(L2_ITEMS[i]);
+  await expect(page.locator("#act-2:visible .t")).toContainText("Escalate to L3 when blocked");
+  await expect(page.locator("#act-5:visible")).toHaveCount(0);
 
-  await Promise.all([savedToggle(page), page.locator("#act-1 .toggle-done").click()]);
-  await Promise.all([savedToggle(page), page.locator("#act-3 .toggle-done").click()]);
-  await expect(page.locator("#act-1")).toHaveClass(/done/);
+  await Promise.all([savedToggle(page), page.locator("#act-1:visible .toggle-done").click()]);
+  await Promise.all([savedToggle(page), page.locator("#act-3:visible .toggle-done").click()]);
+  await expect(page.locator("#act-1:visible")).toHaveClass(/done/);
   await page.reload();
-  await expect(page.locator("#act-1 .cb")).toBeChecked();
-  await expect(page.locator("#act-3 .cb")).toBeChecked();
-  await expect(page.locator("#act-2 .cb")).not.toBeChecked();
+  await expect(page.locator("#act-1:visible .cb")).toBeChecked();
+  await expect(page.locator("#act-3:visible .cb")).toBeChecked();
+  await expect(page.locator("#act-2:visible .cb")).not.toBeChecked();
   await expect(page.getByText("2 of 4 done")).toBeVisible();
 
   // The same items stay open for a colleague in the same group.
@@ -202,7 +202,7 @@ test("Layer 3 analysts see their own checklist and complete it individually; Lay
   expect(roya.checklist.name).toBe(L2);
   expect(roya.activities.map((a) => a.done)).toEqual([false, false, false, false]);
   await page.goto("/shift");
-  await expect(page.locator("#act-1 .cb")).not.toBeChecked();
+  await expect(page.locator("#act-1:visible .cb")).not.toBeChecked();
 
   // Layer 1 keeps the standard routine, untouched by the Layer 3 work.
   await signIn(page, "dariush");
@@ -211,7 +211,7 @@ test("Layer 3 analysts see their own checklist and complete it individually; Lay
   expect(l1.activities).toHaveLength(8);
   expect(l1.activities.every((a) => !a.done)).toBeTruthy();
   await page.goto("/shift");
-  await expect(page.locator("#act-8 .t")).toContainText("Add IOCs to MISP");
+  await expect(page.locator("#act-8:visible .t")).toContainText("Add IOCs to MISP");
 
   // A manager reviewing the logs sees the same separation.
   await signIn(page, "manager");
@@ -263,7 +263,7 @@ test("editing a checklist never rewrites a started log; stale pages cannot tick 
 test("turning off a custom L3 checklist reverts new daytime logs to the engineering default", async ({ page }) => {
   await signIn(page, "manager");
   await page.goto("/shift/checklists");
-  const card = page.locator('[data-group="SOC · L3"]');
+  const card = page.locator('[data-group="SOC · L3"]:visible');
   await card.getByRole("switch", { name: "Use the checklist for SOC · L3" }).click();
   const confirm = page.getByRole("dialog", { name: "Turn off the checklist for SOC · L3?" });
   await confirm.getByRole("button", { name: "Turn off" }).click();
@@ -291,8 +291,8 @@ test("manager corrections show the log's own checklist version and are stamped",
   await page.goto("/shift/manage");
   await page.getByLabel("Analyst").selectOption(ids.kian);
   await page.getByText("Review or correct a Shift Log").click();
-  await expect(page.locator(".facts")).toContainText(`${L2} · v2`);
-  await expect(page.locator(".act .t").first()).toContainText(L2_ITEMS[0]);
+  await expect(page.locator(".facts:visible")).toContainText(`${L2} · v2`);
+  await expect(page.locator(".act:visible .t").first()).toContainText(L2_ITEMS[0]);
 
   const log = await (await page.request.get(`/api/shift?user=${ids.kian}&date=${tehranDate()}`)).json();
   const item = log.activities[1];
@@ -319,7 +319,7 @@ test("checklist screens work on a phone", async ({ page }) => {
 
   await signIn(page, "manager");
   await page.goto("/shift/checklists", { waitUntil: "domcontentloaded" });
-  await page.locator(".cl-list").getByRole("button", { name: new RegExp(L2) }).click();
+  await page.locator(".cl-list:visible").getByRole("button", { name: new RegExp(L2) }).click();
   await expect(page.getByLabel("Item 1 title")).toBeVisible();
   expect(await noSideScroll()).toBeTruthy();
   await page.getByLabel("Item 1 title").fill("Review escalated incidents, P1 first");
@@ -329,8 +329,8 @@ test("checklist screens work on a phone", async ({ page }) => {
   await signIn(page, "roya");
   await page.goto("/shift", { waitUntil: "domcontentloaded" });
   expect(await noSideScroll()).toBeTruthy();
-  await Promise.all([savedToggle(page), page.locator("#act-1 .toggle-done").click()]);
-  await expect(page.locator("#act-1 .cb")).toBeChecked();
+  await Promise.all([savedToggle(page), page.locator("#act-1:visible .toggle-done").click()]);
+  await expect(page.locator("#act-1:visible .cb")).toBeChecked();
   expect(errors).toEqual([]);
 });
 
@@ -342,7 +342,7 @@ test("checklist screens render without console errors", async ({ page }) => {
     await signIn(page, who);
     for (const path of paths) {
       await page.goto(path, { waitUntil: "domcontentloaded" });
-      await expect(page.locator("h1").first()).toBeVisible();
+      await expect(page.getByRole("heading", { level: 1 }).first()).toBeVisible();
     }
   }
   expect(errors).toEqual([]);

@@ -4,6 +4,10 @@ const { test, expect } = require("@playwright/test");
 const ADMIN = { email: "test-admin@local.invalid", password: "E2E-Only-Admin-2026!" };
 const PASSWORD = "Calendar-View-2026!";
 
+test.beforeEach(async ({ context, baseURL }) => {
+  await context.addCookies([{ name: "so.locale", value: "fa", url: baseURL }]);
+});
+
 function tehranDate() {
   const parts = new Intl.DateTimeFormat("en-CA", {
     timeZone: "Asia/Tehran", year: "numeric", month: "2-digit", day: "2-digit",

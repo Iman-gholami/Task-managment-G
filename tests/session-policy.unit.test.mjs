@@ -2,9 +2,11 @@ import test from "node:test";
 import assert from "node:assert/strict";
 import { SESSION_ABSOLUTE_MS, SESSION_IDLE_MS, isSessionExpired } from "../lib/session-policy.js";
 
-test("session is valid before either deadline, and expires exactly at 30 minutes idle", () => {
+test("session stays valid for over five idle hours and expires at eight hours", () => {
   const start = 1_700_000_000_000;
   const session = { expires_at: start + SESSION_ABSOLUTE_MS, last_activity_at: start };
+  assert.equal(isSessionExpired(session, start + 5 * 60 * 60 * 1000), false);
+  assert.equal(SESSION_IDLE_MS, 8 * 60 * 60 * 1000);
   assert.equal(isSessionExpired(session, start + SESSION_IDLE_MS - 1), false);
   assert.equal(isSessionExpired(session, start + SESSION_IDLE_MS), true);
 });

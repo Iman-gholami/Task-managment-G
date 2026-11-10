@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { CX } from "@/lib/format";
+import { useI18n } from "@/components/I18nProvider";
 
 const CX_LABELS = CX.slice(1);
 // Categories take the ramp steps out of order (strong, light, strongest, mid) so neighbours always contrast.
@@ -13,7 +14,8 @@ const catColor = (i) => `var(--viz-${CAT[i % 4]})`;
  * accessible label, so colour is never the only carrier of the data.
  */
 export function Distribution({ parts, labels = CX_LABELS, name = "Complexity mix" }) {
-  const text = labels.map((l, i) => `${l} ${parts[i] ?? 0}`).join(" · ");
+  const { t, number } = useI18n();
+  const text = labels.map((l, i) => `${labels === CX_LABELS ? t(l) : l} ${number(parts[i] ?? 0)}`).join(" · ");
   return (
     <div className="dist" role="img" aria-label={`${name}: ${text}`} data-tooltip={text}>
       {parts.map((n, i) => (n > 0 ? <span key={i} style={{ flex: n, background: `var(--viz-${i + 1})` }} /> : null))}
@@ -23,10 +25,11 @@ export function Distribution({ parts, labels = CX_LABELS, name = "Complexity mix
 
 /** Legend for the complexity ramp; pass `counts` to show totals next to each step. */
 export function CxLegend({ counts }) {
+  const { t, number } = useI18n();
   return (
     <div className="legend">
       {CX_LABELS.map((c, i) => (
-        <span key={c}><i style={{ background: `var(--viz-${i + 1})` }} aria-hidden="true" />{c}{counts && <b>{counts[i]}</b>}</span>
+        <span key={c}><i style={{ background: `var(--viz-${i + 1})` }} aria-hidden="true" />{t(c)}{counts && <b>{number(counts[i])}</b>}</span>
       ))}
     </div>
   );
@@ -55,13 +58,14 @@ export function Bars({ values, labels, max, name, unit = "", size }) {
 
 /** Labelled progress bar with a numeric readout. */
 export function Meter({ value, max = 100, label, tone, readout }) {
+  const { locale, number } = useI18n();
   const pct = max ? Math.min(100, Math.round((value / max) * 100)) : 0;
   return (
     <span className="meter">
       <span className={`progress ${tone ?? ""}`} role="progressbar" aria-label={label} aria-valuemin={0} aria-valuemax={max} aria-valuenow={value}>
         <span style={{ width: `${pct}%` }} />
       </span>
-      <span className="num">{readout ?? `${pct}%`}</span>
+      <span className="num">{readout ?? `${number(pct)}${locale === "fa" ? "٪" : "%"}`}</span>
     </span>
   );
 }
@@ -71,6 +75,7 @@ export function Meter({ value, max = 100, label, tone, readout }) {
  * its legend row highlights the pair and shows that category's value in the centre.
  */
 export function DonutBreakdown({ rows, name = "Breakdown", unit = " tasks" }) {
+  const { t } = useI18n();
   const [active, setActive] = useState(null);
   const radius = 46;
   const circumference = 2 * Math.PI * radius;
@@ -116,7 +121,7 @@ export function DonutBreakdown({ rows, name = "Breakdown", unit = " tasks" }) {
         </svg>
         <div className="donut-chart__center">
           <b className="num">{focus ? Math.max(0, Number(focus.value) || 0) : total}</b>
-          <span>{focus ? focus.label : "completed"}</span>
+          <span>{focus ? focus.label : t("Completed")}</span>
         </div>
       </div>
       <div className="donut-chart__legend">

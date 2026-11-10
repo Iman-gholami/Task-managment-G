@@ -1,5 +1,7 @@
 "use client";
 
+import { useI18n as useUiI18n } from "@/components/I18nProvider";
+
 import Link from "next/link";
 import { useMemo, useState } from "react";
 import { useApp } from "@/components/AppProvider";
@@ -9,6 +11,7 @@ import { Panel } from "@/components/ui/layout";
 import { Notice } from "@/components/ui/states";
 import { Who } from "@/components/ui/indicators";
 import { TODAY, dueLabel, isOpen, plural } from "@/lib/format";
+import { deadlineReason } from "@/lib/i18n/presentation";
 
 // Reasons a task needs a manager, most urgent first. Only states the product records are used.
 const REASONS = {
@@ -50,6 +53,7 @@ export const countReason = (items, reason) => items.filter((e) => e.reasons.incl
 
 /** Operational priority list. Compact one-line state when nothing needs attention. */
 export function AttentionList({ items, limit = 6 }) {
+  const { t: __uiTr, locale, number } = useUiI18n();
   const [filter, setFilter] = useState("all");
   const [expanded, setExpanded] = useState(false);
   const available = Object.keys(REASONS).filter((r) => countReason(items, r) > 0);
@@ -59,20 +63,20 @@ export function AttentionList({ items, limit = 6 }) {
 
   return (
     <Panel
-      title="Needs your attention"
-      meta={items.length ? plural(items.length, "task") : null}
+      title={__uiTr("Needs your attention")}
+      meta={items.length ? locale === "fa" ? `${number(items.length)} تسک` : plural(items.length, "task") : null}
       actions={available.length > 1 && (
         <Segmented
-          label="Filter attention items"
+          label={__uiTr("Filter attention items")}
           value={current}
           onChange={(v) => { setFilter(v); setExpanded(false); }}
-          options={[{ value: "all", label: "All", count: items.length }, ...available.map((r) => ({ value: r, label: REASONS[r].filter, count: countReason(items, r) }))]}
+          options={[{ value: "all", label: __uiTr("All"), count: number(items.length) }, ...available.map((r) => ({ value: r, label: __uiTr(REASONS[r].filter), count: number(countReason(items, r)) }))]}
         />
       )}
       className="attn-list"
     >
       {items.length === 0 ? (
-        <Notice><b>All clear.</b> No reviews waiting, nothing overdue or blocked.</Notice>
+        <Notice><b>{"" + __uiTr("All clear.") + ""}</b>{" " + __uiTr("No reviews waiting, nothing overdue or blocked.") + ""}</Notice>
       ) : (
         <>
           <div role="list">
@@ -84,9 +88,9 @@ export function AttentionList({ items, limit = 6 }) {
                   <span className="attn-title"><span className="id">{t.id}</span><span className="t">{t.title}</span></span>
                   <span className="attn-who"><Who id={t.a} size="sm" /></span>
                   <span className="attn-why">
-                    {reasons.map((r) => <span key={r} className={`badge ${REASONS[r].tone}`}>{REASONS[r].label(t)}</span>)}
+                    {reasons.map((r) => <span key={r} className={`badge ${REASONS[r].tone}`}>{r === "overdue" ? deadlineReason(t.due, TODAY, locale) : __uiTr(REASONS[r].label(t))}</span>)}
                   </span>
-                  <span className="attn-go"><span className="btn btn-ghost btn-sm">{reasons.includes("review") ? "Review" : "Open"}</span></span>
+                  <span className="attn-go"><span className="btn btn-ghost btn-sm">{__uiTr(reasons.includes("review") ? "Review" : "Open")}</span></span>
                 </Link>
               );
             })}
@@ -94,7 +98,7 @@ export function AttentionList({ items, limit = 6 }) {
           {list.length > limit && (
             <div className="attn-more">
               <button type="button" className="btn btn-ghost btn-sm" onClick={() => setExpanded((x) => !x)} aria-expanded={expanded}>
-                {expanded ? "Show fewer" : `Show all ${list.length}`}<Icon name={expanded ? "up" : "down"} />
+                {expanded ? __uiTr("Show fewer") : locale === "fa" ? `نمایش همه ${number(list.length)} مورد` : `Show all ${list.length}`}<Icon name={expanded ? "up" : "down"} />
               </button>
             </div>
           )}

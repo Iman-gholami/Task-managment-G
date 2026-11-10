@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { useI18n } from "@/components/I18nProvider";
 import { useRouter } from "next/navigation";
 import { Fragment, useRef, useState } from "react";
 import { api, useApp } from "@/components/AppProvider";
@@ -23,6 +24,7 @@ const PRIMARY = new Set(["title", "status", "prio", "due", "a"]);
  * Only transitions the current user is allowed to make are offered; approving asks for quality.
  */
 export function useTaskActions() {
+  const { t, locale } = useI18n();
   const { openPopover, updateTask, toast, me, dispatch } = useApp();
   const router = useRouter();
   const pendingRef = useRef(new Set());
@@ -39,13 +41,13 @@ export function useTaskActions() {
     try {
       const result = await api(`/api/tasks/${task.id}`, { method: "PATCH", body: { status: "done", quality, cx } });
       sync(result);
-      toast(`${task.id} approved · ${QUAL[quality]} · ${CX[cx]}`);
+      toast(locale === "fa" ? `${task.id} تأیید شد · ${t(QUAL[quality])} · ${t(CX[cx])}` : `${task.id} approved · ${QUAL[quality]} · ${CX[cx]}`);
     } catch (error) {
       if (error.kind === "network" || error.status >= 500 || error.status === 409) {
         try {
           const current = await api(`/api/tasks/${task.id}`);
           sync(current);
-          if (current.task.status === "done") toast(`${task.id} is ${current.task.reviewRequired && current.task.quality ? "approved" : "completed"}`, "info");
+          if (current.task.status === "done") toast(locale === "fa" ? `${task.id} ${current.task.reviewRequired && current.task.quality ? "تأیید" : "تکمیل"} شده است` : `${task.id} is ${current.task.reviewRequired && current.task.quality ? "approved" : "completed"}`, "info");
           else toast(error.status === 409 ? error.message : "Approval could not be confirmed. Check the current task before trying again.", "error");
         } catch {
           toast("Approval could not be confirmed. Refresh the task before trying again.", "error");
@@ -66,22 +68,22 @@ export function useTaskActions() {
       toast(task.status === "review" ? "Review the report on the task page." : "Complete your report on the task page.", "info");
       return;
     }
-    if (await updateTask(task, { status: to })) toast(`${task.id} moved to ${STATUS[to]}`);
+    if (await updateTask(task, { status: to })) toast(locale === "fa" ? `${task.id} به وضعیت ${t(STATUS[to])} منتقل شد` : `${task.id} moved to ${STATUS[to]}`);
   };
 
   const edit = (anchor, field, task) => {
     if (field === "prio") {
       if (["done", "cancelled"].includes(task.status)) return toast("Closed tasks can't be changed.", "info");
       if (task.a !== me.id && !isManager(me)) return toast("You can only edit your own tasks.", "info");
-      return openPopover(anchor, { title: "Priority", items: prioItems(), onPick: async (v) => { if (await updateTask(task, { prio: v })) toast(`${task.id} priority set to ${PRIO[v]}`); } });
+      return openPopover(anchor, { title: t("Priority"), items: prioItems(), onPick: async (v) => { if (await updateTask(task, { prio: v })) toast(locale === "fa" ? `اولویت ${task.id} به ${t(PRIO[v])} تغییر کرد` : `${task.id} priority set to ${PRIO[v]}`); } });
     }
     const next = allowedTransitions(me, task);
     if (!next.length) {
       return toast(task.status === "done" ? "Approved tasks are closed. A manager can reopen them." : task.status === "review" ? "Waiting for a reviewer." : "No status changes are available to you.", "info");
     }
     openPopover(anchor, {
-      title: "Move task",
-      items: next.map((s, i) => ({ value: s, label: <Status s={s} />, hint: actionLabel(task.status, s), kbd: String(i + 1) })),
+      title: t("Move task"),
+      items: next.map((s, i) => ({ value: s, label: <Status s={s} />, hint: t(actionLabel(task.status, s)), kbd: String(i + 1) })),
       onPick: (to) => move(anchor, task, to),
     });
   };
@@ -97,11 +99,18 @@ export const useInlineEdit = () => useTaskActions().edit;
  * Sortable when `onSort` is given. Rows open the task on click; the title is a real link for keyboard users.
  */
 export default function TaskTable({ list, groups, cols, kb = -1, sort, onSort, empty }) {
+  const { t, locale, team: teamText, number } = useI18n();
+  const relative = (value) => {
+    if (locale !== "fa") return value;
+    if (value === "now") return "اکنون";
+    const match = /^(\d+)(m|h|d)$/.exec(value ?? "");
+    return match ? `${number(Number(match[1]))} ${{ m: "دقیقه", h: "ساعت", d: "روز" }[match[2]]} پیش` : value;
+  };
   const router = useRouter();
   const { edit } = useTaskActions();
 
   const editable = (field, task, node) => (
-    <span className="cell-edit" data-edit={field} role="button" tabIndex={-1} aria-label={`Change ${field === "prio" ? "priority" : "status"}`} onClick={(e) => { e.stopPropagation(); edit(e.currentTarget, field, task); }}>
+    <span className="cell-edit" data-edit={field} role="button" tabIndex={-1} aria-label={t(field === "prio" ? "Change priority" : "Change status")} onClick={(e) => { e.stopPropagation(); edit(e.currentTarget, field, task); }}>
       {node}
     </span>
   );
@@ -111,14 +120,14 @@ export default function TaskTable({ list, groups, cols, kb = -1, sort, onSort, e
     switch (c) {
       case "title": return <td key={c} className="title" data-col={c} title={t.title}><span className="id">{t.id}</span><Link href={`/tasks/${t.id}`}>{t.title}</Link></td>;
       case "a": return <td key={c} data-col={c}><Who id={t.a} /></td>;
-      case "team": return <td key={c} className={cls} data-col={c}>{t.team}</td>;
+      case "team": return <td key={c} className={cls} data-col={c}>{teamText(t.team)}</td>;
       case "status": return <td key={c} data-col={c}>{editable("status", t, <Status s={t.status} />)}</td>;
       case "prio": return <td key={c} data-col={c}>{editable("prio", t, <Priority p={t.prio} />)}</td>;
       case "cx": return <td key={c} className={cls} data-col={c}><Complexity c={t.cx} /></td>;
       case "due": return <td key={c} data-col={c}><Due task={t} /></td>;
-      case "hours": return <td key={c} className={`r ${cls}`} data-col={c}>{t.hours ? t.hours.toFixed(1) : <span className="zero">—</span>}</td>;
+      case "hours": return <td key={c} className={`r ${cls}`} data-col={c}>{t.hours ? number(t.hours, { minimumFractionDigits: 1, maximumFractionDigits: 1 }) : <span className="zero">—</span>}</td>;
       case "quality": return <td key={c} className={cls} data-col={c}><Quality q={t.quality} /></td>;
-      case "upd": return <td key={c} className={`muted ${cls}`} data-col={c}>{t.upd}</td>;
+      case "upd": return <td key={c} className={`muted ${cls}`} data-col={c}>{relative(t.upd)}</td>;
       default: return null;
     }
   };
@@ -132,7 +141,7 @@ export default function TaskTable({ list, groups, cols, kb = -1, sort, onSort, e
 
   const header = (c) => {
     const sorted = sort?.k === c;
-    const label = HEAD[c];
+    const label = t(HEAD[c]);
     return (
       <th key={c} scope="col" className={c === "hours" ? "r" : ""} aria-sort={sorted ? (sort.dir > 0 ? "ascending" : "descending") : undefined}>
         {onSort ? (
@@ -163,7 +172,7 @@ export default function TaskTable({ list, groups, cols, kb = -1, sort, onSort, e
           {!hasRows && (
             <tr>
               <td colSpan={cols.length} style={{ height: "auto", whiteSpace: "normal" }}>
-                <EmptyState compact icon="checkCircle" title={empty?.title ?? "No tasks here"}>{empty?.body ?? "No tasks match this view."}</EmptyState>
+                <EmptyState compact icon="checkCircle" title={empty?.title ?? t("No tasks here")}>{empty?.body ?? t("No tasks match this view.")}</EmptyState>
               </td>
             </tr>
           )}

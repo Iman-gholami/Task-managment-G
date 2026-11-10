@@ -1,5 +1,7 @@
 "use client";
 
+import { useI18n as useAnalyticsI18n } from "@/components/I18nProvider";
+
 import Link from "next/link";
 import { useState } from "react";
 import { useAnalytics } from "@/components/analytics/AnalyticsContext";
@@ -11,18 +13,21 @@ const LEVEL_ICON = { critical: "alert", warning: "flag", info: "info" };
 
 /** Answers "is everything all right?" in one sentence, from the alerts. */
 export function StatusBanner({ status, compact }) {
+  const { t: __analyticsTr, locale, number } = useAnalyticsI18n();
   const { href } = useAnalytics();
   const text = status.level === "ok"
-    ? "هشدار بحرانی یا مورد نیازمند توجهی وجود ندارد."
-    : [status.critical ? `${faDigits(status.critical)} مورد بحرانی` : null, status.warning ? `${faDigits(status.warning)} مورد نیازمند توجه` : null].filter(Boolean).join(" و ") + `؛ مهم‌ترین: ${status.lead.title}.`;
+    ? __analyticsTr("هشدار بحرانی یا مورد نیازمند توجهی وجود ندارد.")
+    : locale === "fa"
+      ? [status.critical ? `${number(status.critical)} مورد بحرانی` : null, status.warning ? `${number(status.warning)} مورد نیازمند توجه` : null].filter(Boolean).join(" و ") + `؛ مهم‌ترین: ${status.lead.title}.`
+      : [status.critical ? `${number(status.critical)} critical` : null, status.warning ? `${number(status.warning)} needing attention` : null].filter(Boolean).join(" and ") + `; most urgent: ${status.lead.title}.`;
   return (
-    <section className="an-status" data-level={status.level} aria-label="وضعیت کلی" data-testid="status">
+    <section className="an-status" data-level={status.level} aria-label={__analyticsTr("وضعیت کلی")} data-testid="status">
       <span className="an-status-icon" aria-hidden="true"><Icon name={status.level === "ok" ? "checkCircle" : status.level === "critical" ? "alert" : "flag"} /></span>
       <div>
-        <b>وضعیت: {status.fa}</b>
+        <b>{__analyticsTr("وضعیت:")} {__analyticsTr(status.fa)}</b>
         <p>{text}</p>
       </div>
-      {!compact && status.level !== "ok" && <Link className="btn btn-secondary btn-sm an-no-print" href={href("/analytics/alerts")}>همه هشدارها<Icon name="left" /></Link>}
+      {!compact && status.level !== "ok" && <Link className="btn btn-secondary btn-sm an-no-print" href={href("/analytics/alerts")}>{"" + __analyticsTr("همه هشدارها") + ""}<Icon name="left" /></Link>}
     </section>
   );
 }
@@ -39,6 +44,7 @@ function useItemHref() {
 
 /** One alert: level, title, detail and its records (first few, then "show all"). */
 export function AlertCard({ alert, open: startOpen = false, limit = 5 }) {
+  const { t: __analyticsTr, locale, number } = useAnalyticsI18n();
   const { href } = useAnalytics();
   const itemHref = useItemHref();
   const [open, setOpen] = useState(startOpen);
@@ -52,7 +58,7 @@ export function AlertCard({ alert, open: startOpen = false, limit = 5 }) {
           <b>{alert.title}</b>
           {alert.detail && <span>{alert.detail}</span>}
         </span>
-        <span className={`badge ${alert.level === "critical" ? "danger" : alert.level === "warning" ? "warning" : "info"}`}>{ALERT_LEVELS[alert.level].fa}</span>
+        <span className={`badge ${alert.level === "critical" ? "danger" : alert.level === "warning" ? "warning" : "info"}`}>{__analyticsTr(ALERT_LEVELS[alert.level].fa)}</span>
         {(alert.items.length > 0 || alert.link) && <Icon name={open ? "up" : "down"} />}
       </button>
       {open && (
@@ -71,8 +77,8 @@ export function AlertCard({ alert, open: startOpen = false, limit = 5 }) {
             </ul>
           )}
           <div className="row">
-            {alert.items.length > limit && <button type="button" className="btn btn-ghost btn-sm" onClick={() => setAll(!all)}>{all ? "نمایش کمتر" : `نمایش همه (${faDigits(alert.items.length)})`}</button>}
-            {alert.link && <Link className="btn btn-ghost btn-sm" href={href(alert.link.path, alert.link.params)}>بررسی بیشتر<Icon name="left" /></Link>}
+            {alert.items.length > limit && <button type="button" className="btn btn-ghost btn-sm" onClick={() => setAll(!all)}>{all ? __analyticsTr("نمایش کمتر") : locale === "fa" ? `نمایش همه (${number(alert.items.length)})` : `Show all (${number(alert.items.length)})`}</button>}
+            {alert.link && <Link className="btn btn-ghost btn-sm" href={href(alert.link.path, alert.link.params)}>{"" + __analyticsTr("بررسی بیشتر") + ""}<Icon name="left" /></Link>}
           </div>
         </div>
       )}
@@ -81,9 +87,10 @@ export function AlertCard({ alert, open: startOpen = false, limit = 5 }) {
 }
 
 export function AlertList({ alerts, limit, emptyText = "موردی برای پیگیری نیست." }) {
+  const { t } = useAnalyticsI18n();
   const shown = limit ? alerts.slice(0, limit) : alerts;
   if (!alerts.length) {
-    return <div className="notice"><span className="glyph" aria-hidden="true"><Icon name="checkCircle" /></span><span>{emptyText}</span></div>;
+    return <div className="notice"><span className="glyph" aria-hidden="true"><Icon name="checkCircle" /></span><span>{t(emptyText)}</span></div>;
   }
   return <div className="an-alerts">{shown.map((a) => <AlertCard key={a.id} alert={a} />)}</div>;
 }
@@ -92,10 +99,11 @@ const TONE_ICON = { up: "arrowUp", down: "arrowDown", neutral: "sparkle" };
 
 /** Automatic insights: one sentence each, with a link to the evidence. */
 export function InsightList({ insights, limit }) {
+  const { t: __analyticsTr, locale } = useAnalyticsI18n();
   const { href } = useAnalytics();
   const shown = limit ? insights.slice(0, limit) : insights;
   if (!insights.length) {
-    return <div className="notice neutral"><span className="glyph" aria-hidden="true"><Icon name="info" /></span><span>در این دوره تغییر یا الگوی قابل توجهی دیده نشد.</span></div>;
+    return <div className="notice neutral"><span className="glyph" aria-hidden="true"><Icon name="info" /></span><span>{"" + __analyticsTr("در این دوره تغییر یا الگوی قابل توجهی دیده نشد.") + ""}</span></div>;
   }
   return (
     <ul className="an-insights">
@@ -103,7 +111,7 @@ export function InsightList({ insights, limit }) {
         <li key={i.id} data-attention={i.attention || undefined}>
           <span className="an-insight-icon" aria-hidden="true"><Icon name={TONE_ICON[i.tone] ?? "sparkle"} /></span>
           <p>{i.text}</p>
-          {i.link && <Link className="an-insight-link an-no-print" href={href(i.link.path, i.link.params)} aria-label={`شواهد: ${i.text}`}><Icon name="left" /></Link>}
+          {i.link && <Link className="an-insight-link an-no-print" href={href(i.link.path, i.link.params)} aria-label={`${locale === "fa" ? "شواهد" : "Evidence"}: ${i.text}`}><Icon name="left" /></Link>}
         </li>
       ))}
     </ul>
@@ -112,8 +120,9 @@ export function InsightList({ insights, limit }) {
 
 /** In-page breadcrumb for drill-down (department › team › level › person). items: [{ label, href? | onClick? }] */
 export function Trail({ items }) {
+  const { t: __analyticsTr } = useAnalyticsI18n();
   return (
-    <nav className="an-trail an-no-print" aria-label="مسیر">
+    <nav className="an-trail an-no-print" aria-label={__analyticsTr("مسیر")}>
       {items.map((it, i) => (
         <span key={i}>
           {i > 0 && <Icon name="left" size="sm" />}
