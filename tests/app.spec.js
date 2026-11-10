@@ -503,7 +503,7 @@ test.describe("analytics (management dashboard)", () => {
     await page.getByTestId("demo-toggle").click();
     await expect(page).toHaveURL(/demo=1/);
     await expect(page.locator(".an-demo:visible")).toContainText("داده نمایشی");
-    await page.getByRole("link", { name: "کارشناسان" }).click();
+    await page.getByRole("link", { name: "افراد و تیم‌ها" }).click();
     await expect(page).toHaveURL(/\/analytics\/people\?.*demo=1/);
     await expect(page.getByTestId("people-table")).toContainText("سارا رحیمی");
   });
@@ -534,7 +534,8 @@ test.describe("analytics (management dashboard)", () => {
     await days.nth(2).click();
     await page.getByRole("button", { name: "اعمال" }).click();
     await expect(page).toHaveURL(/p=custom&from=\d{4}-\d{2}-\d{2}&to=\d{4}-\d{2}-\d{2}/);
-    await page.getByRole("link", { name: "روندها" }).click();
+    await page.getByRole("link", { name: "مقایسه و روندها" }).click();
+    await page.getByRole("link", { name: "روندها", exact: true }).click();
     await expect(page).toHaveURL(/\/analytics\/trends\?p=custom/);
     await expect(page.getByTestId("chart-trend")).toBeVisible();
   });

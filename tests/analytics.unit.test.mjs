@@ -4,7 +4,7 @@ import { addDays, dayNum, faDate, fromJalali, isoOfDay, jalaliMonthLength, toJal
 import { autoGranularity, buckets, comparisonRange, resolveRange } from "../lib/analytics/periods.js";
 import { applyFilters, filterQuery, parseFilters } from "../lib/analytics/filters.js";
 import { change, fmtPct } from "../lib/analytics/format.js";
-import { backlogSeries, openStats, peopleRows, stats, teamRows } from "../lib/analytics/metrics.js";
+import { backlogSeries, expertCompletedPerCapita, openStats, peopleRows, stats, teamRows } from "../lib/analytics/metrics.js";
 import { buildAlerts, overallStatus } from "../lib/analytics/alerts.js";
 import { buildInsights } from "../lib/analytics/insights.js";
 import { mockFacts } from "../lib/analytics/mock.js";
@@ -146,6 +146,7 @@ test("teams count managers' work in totals but not in headcount; people rows exc
   assert.equal(soc.cur.completed, 3);
   assert.equal(soc.headcount, 2);
   assert.equal(soc.pc.completed, 1.5);
+  assert.equal(expertCompletedPerCapita(f, soc.people, range), 1);
   assert.equal(da.cur.completed, 0);
   assert.deepEqual(peopleRows(f, range, null).map((r) => r.person.id), ["a", "b", "e"]);
   const open = openStats(f, null);

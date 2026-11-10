@@ -22,8 +22,9 @@ import { buildAlerts } from "@/lib/analytics/alerts";
 import { faDigits, localDate, localMonth, jalaliMonthKey, jalaliMonthsInRange } from "@/lib/analytics/calendar";
 import { fmtInt, fmtNum, fmtPct } from "@/lib/analytics/format";
 import { ACTIVITIES_FA, ACTIVITIES_EN, QUAL_FA, QUAL_KEYS, SHIFT_FA, SHIFT_KEYS } from "@/lib/analytics/labels";
-import { bucketStats, dailySeries, idsOf, stats } from "@/lib/analytics/metrics";
+import { bucketStats, canReviewMonth, dailySeries, idsOf, stats } from "@/lib/analytics/metrics";
 import { buckets } from "@/lib/analytics/periods";
+import { isManager } from "@/lib/roles";
 
 // Short column labels for the heatmap; the full activity name is in the tooltip and the table.
 const ACT_SHORT = ["Splunk", "فایل IP", "اسکنر و سنسور", "گزارش ترافیک", "Grafana", "سایت مرکز", "اخبار امنیتی", "MISP و IOC"];
@@ -47,7 +48,7 @@ function ReviewEditor({ analytics, person, month, review, eligible }) {
   useEffect(() => { setRating(review?.rating ?? ""); setNote(review?.note ?? ""); }, [review?.rating, review?.note, month]);
 
   if (!eligible) return <span className="muted">{"" + __analyticsTr("شیفت‌لاگی با چک‌لیست ندارد") + ""}</span>;
-  if (analytics.demo) return (
+  if (analytics.demo || !isManager(analytics.me)) return (
     <span>{review ? __analyticsTr(QUAL_FA[review.rating]) : "—"}{review?.note ? <small className="muted"> · {review.note}</small> : null}</span>
   );
 
@@ -102,7 +103,7 @@ function MonthlyShiftReviews({ analytics, analysts }) {
   const reviews = view.reviews ?? [];
   const rows = analysts.map((person) => {
     const cur = stats(view, [person.id], range);
-    const eligible = view.shifts.some((s) => s.a === person.id && s.date >= bounds.from && s.date <= bounds.to && s.log && s.total > 0);
+    const eligible = canReviewMonth(person, view.shifts, bounds.from, bounds.to);
     return { id: person.id, person, cur, eligible, review: reviews.find((r) => r.a === person.id && r.month === month) ?? null };
   });
   const columns = [
@@ -211,6 +212,7 @@ function SocBody() {
         <Kpi label={__analyticsTr("انجام روتین")} icon="checkCircle" value={fmtPct(cur.routineRate)} delta={prev && cur.routineRate !== null && <Delta now={cur.routineRate} before={prev.routineRate} kind="rate" label={short} />} spark={<Sparkline values={m.series.map((x) => x.routineRate)} />} />
         <Kpi label={__analyticsTr("IOC ثبت‌شده")} icon="shield" value={fmtInt(cur.iocs)} delta={prev && <Delta now={cur.iocs} before={prev.iocs} label={short} />} foot={`${fmtNum(cur.iocPerShift)} ${a.locale === "fa" ? "به ازای هر شیفت‌لاگ" : "per shift log"}`} spark={<Sparkline values={m.series.map((x) => x.iocs)} />} />
         <Kpi label={__analyticsTr("تیکت (تعداد)")} icon="inbox" value={fmtInt(cur.tickets)} delta={prev && <Delta now={cur.tickets} before={prev.tickets} label={short} />} foot={`${fmtNum(cur.ticketsPerShift)} ${a.locale === "fa" ? "به ازای هر شیفت‌لاگ" : "per shift log"}`} spark={<Sparkline values={m.series.map((x) => x.tickets)} />} />
+        {m.rows.some((r) => r.person.level === "L2") && <Kpi label={a.locale === "fa" ? "تیکت تحلیل‌شده L2" : "L2 analyzed tickets"} icon="inbox" value={fmtInt(cur.analyzed)} foot={`FP ${fmtInt(cur.falsePositive)} · TP ${fmtInt(cur.truePositive)} · ${a.locale === "fa" ? "نرخ FP" : "FP rate"} ${fmtPct(cur.fpRate)}`} />}
         <Kpi label={__analyticsTr("گزارش ترافیک و Issue")} icon="report" value={fmtInt(cur.reports)} unit={a.locale === "fa" ? "گزارش" : "reports"} foot={`${fmtInt(cur.issues)} ${a.locale === "fa" ? "Issue گزارش‌شده" : "issues reported"}`} />
       </MetricGrid>
 

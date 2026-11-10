@@ -23,7 +23,8 @@ export function PeopleTable({ list, onRemove, onEdit }) {
   const { t: __uiTr, locale, role: roleText, team: teamText, province: provinceText } = useUiI18n();
   const router = useRouter();
   const { me } = useApp();
-  const canView = (p) => p.id === me.id || canViewManagementAnalytics(me);
+  const canView = (p) => p.id === me.id || (canViewManagementAnalytics(me) && p.role !== "security_manager" && p.role !== "observer" && (me.role !== "soc_manager" || p.team.startsWith("SOC")));
+  const profile = (p) => p.role === "security_manager" ? `/performance/employees/${p.id}` : `/analytics/people/${encodeURIComponent(p.id)}`;
   const hasActions = list.some((p) => canView(p) || (onEdit && canManageMember(me, p)));
   return (
     <div className="table-wrap">
@@ -41,8 +42,8 @@ export function PeopleTable({ list, onRemove, onEdit }) {
         </thead>
         <tbody>
           {list.map((p) => (
-            <tr key={p.id} data-member={p.id} className={canView(p) ? "is-link" : ""} onClick={(e) => canView(p) && !e.target.closest("a, button") && router.push(`/performance/employees/${p.id}`)}>
-              <td className="title">{canView(p) ? <Link href={`/performance/employees/${p.id}`}><Who id={p.id} /></Link> : <Who id={p.id} />}</td>
+            <tr key={p.id} data-member={p.id} className={canView(p) ? "is-link" : ""} onClick={(e) => canView(p) && !e.target.closest("a, button") && router.push(profile(p))}>
+              <td className="title">{canView(p) ? <Link href={profile(p)}><Who id={p.id} /></Link> : <Who id={p.id} />}</td>
               <td>{roleText(p.role)}</td>
               <td>{teamText(p.team)}{p.assist && <span className="muted"> · {locale === "fa" ? "همکاری با" : "assisting"} {teamText(p.assist)}</span>}</td>
               <td>{p.province ? provinceText(p.province) : <span className="muted">{__uiTr("تعیین‌نشده")}</span>}</td>
@@ -51,7 +52,7 @@ export function PeopleTable({ list, onRemove, onEdit }) {
               {hasActions && (
                 <td className="actions">
                   <span>
-                    {canView(p) && <Link className="btn btn-ghost btn-sm" href={`/performance/employees/${p.id}`}>{__uiTr("Performance")}</Link>}
+                    {canView(p) && <Link className="btn btn-ghost btn-sm" href={profile(p)}>{__uiTr("Performance")}</Link>}
                     {onEdit && canManageMember(me, p) && <button type="button" className="btn btn-ghost btn-sm" onClick={() => onEdit(p)} aria-label={locale === "fa" ? `ویرایش ${p.name}` : `Edit ${p.name}`}>{__uiTr("Edit")}</button>}
                     {onRemove && canManageMember(me, p) && <button type="button" className="btn btn-ghost btn-sm danger" onClick={() => onRemove(p)} aria-label={locale === "fa" ? `حذف ${p.name}` : `Remove ${p.name}`}>{__uiTr("Remove")}</button>}
                   </span>

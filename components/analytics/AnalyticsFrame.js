@@ -10,19 +10,16 @@ import { useAnalytics } from "@/components/analytics/AnalyticsContext";
 import { repaintCharts } from "@/components/analytics/Chart";
 import { currentTokens, lightTokens } from "@/components/analytics/chartTheme";
 import FilterBar from "@/components/analytics/FilterBar";
+import MonthlyReportButton from "@/components/analytics/MonthlyReport";
 import { AnError, PanelSkeleton } from "@/components/analytics/ui";
 import Icon from "@/components/ui/Icon";
 import { faDigits, localRange } from "@/lib/analytics/calendar";
 
 export const TABS = [
   ["/analytics", "نمای کلی", "home"],
-  ["/analytics/teams", "تیم‌ها", "team"],
-  ["/analytics/people", "کارشناسان", "user"],
-  ["/analytics/compare", "مقایسه", "bars"],
-  ["/analytics/trends", "روندها", "perf"],
+  ["/analytics/people", "افراد و تیم‌ها", "user"],
   ["/analytics/soc", "عملیات SOC", "activity"],
-  ["/analytics/alerts", "هشدارها و بینش‌ها", "alert"],
-  ["/analytics/report", "گزارش مدیریتی", "report"],
+  ["/analytics/compare", "مقایسه و روندها", "bars"],
 ];
 
 const SCOPE_FA = { department: "کل واحد امنیت", soc: "تیم SOC", self: "آمار شخصی" };
@@ -90,6 +87,8 @@ export default function AnalyticsFrame({ title, subtitle, actions, exportKind = 
   usePrintTheme();
   const scope = a.facts?.scope?.kind ?? (a.manager ? null : "self");
   const visibleTabs = TABS.filter(([href]) => href !== "/analytics/soc" || !a.facts || a.facts.people.some((p) => p.shift));
+  const inPeople = path.startsWith("/analytics/people") || path.startsWith("/analytics/teams");
+  const inCompare = path.startsWith("/analytics/compare") || path.startsWith("/analytics/trends");
 
   const openExport = (e) => openPopover(e.currentTarget, {
     label: __analyticsTr("خروجی"), width: 280, align: "end", dir,
@@ -140,6 +139,7 @@ export default function AnalyticsFrame({ title, subtitle, actions, exportKind = 
         </div>
         <div className="page-actions an-no-print">
           {actions}
+          <MonthlyReportButton personId={exportKind === "person" ? exportId : undefined} />
           <button type="button" className="btn btn-ghost icon-btn" aria-label={__analyticsTr("بارگذاری دوباره")} data-tooltip={__analyticsTr("بارگذاری دوباره داده")} onClick={a.reload} aria-busy={a.loading || undefined}><Icon name="refresh" /></button>
           {a.manager && (
             <button type="button" className={`btn btn-ghost ${a.demo ? "is-on" : ""}`} aria-pressed={a.demo} onClick={() => a.setFilters({ demo: a.demo ? "" : "1" })} data-tooltip={__analyticsTr("داده ساختگی برای ارائه و آشنایی")} data-testid="demo-toggle">
@@ -153,7 +153,7 @@ export default function AnalyticsFrame({ title, subtitle, actions, exportKind = 
       {tabs && a.manager && (
         <nav className="an-tabs an-no-print" aria-label={__analyticsTr("بخش‌های داشبورد")}>
           {visibleTabs.map(([href, label, icon]) => {
-            const on = href === "/analytics" ? path === href : path.startsWith(href);
+            const on = href === "/analytics" ? ["/analytics", "/analytics/alerts", "/analytics/report"].includes(path) : href === "/analytics/people" ? inPeople : href === "/analytics/compare" ? inCompare : path.startsWith(href);
             return (
               <Link key={href} href={a.href(href)} className={on ? "on" : ""} aria-current={on ? "page" : undefined}>
                 <Icon name={icon} />{__analyticsTr(label)}
@@ -163,6 +163,9 @@ export default function AnalyticsFrame({ title, subtitle, actions, exportKind = 
         </nav>
       )}
 
+      {tabs && a.manager && (inPeople || inCompare) && <nav className="an-subtabs an-no-print" aria-label={locale === "fa" ? "نمای بخش" : "Section views"}>
+        {(inPeople ? [["/analytics/people", "کارشناسان", "People"], ["/analytics/teams", "تیم‌ها", "Teams"]] : [["/analytics/compare", "مقایسه", "Comparison"], ["/analytics/trends", "روندها", "Trends"]]).map(([href, fa, en]) => <Link key={href} href={a.href(href)} className={path.startsWith(href) ? "on" : ""} aria-current={path.startsWith(href) ? "page" : undefined}>{locale === "fa" ? fa : en}</Link>)}
+      </nav>}
       <FilterBar hideTeam={hideTeamFilter} />
 
       {a.error && !a.facts ? (

@@ -77,7 +77,7 @@ export default function SocDashboard() {
             <div role="list">
               {soc.map((p) => (
                 <div key={p.id} className="hbar" role="listitem">
-                  <Link href={`/performance/employees/${p.id}`} className="who">
+                  <Link href={p.team.startsWith("SOC") ? `/analytics/people/${encodeURIComponent(p.id)}` : `/performance/employees/${p.id}`} className="who">
                     <Avatar id={p.id} />
                     <span>{p.name}</span>
                     {p.assist && <span className="badge" data-tooltip={`${__uiTr("Primary team")}: ${teamText(p.team)}`}>{"" + __uiTr("Assisting") + ""}</span>}

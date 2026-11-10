@@ -50,8 +50,8 @@ export default function CommandMenu({ onClose }) {
         }))]);
       }
       if (manager) {
-        const people = members.filter((p) => p.role !== "security_manager" && match(p.name)).slice(0, 5);
-        if (people.length) out.push(["People", people.map((p) => ({ key: p.id, label: <span className="title">{p.name}</span>, lead: <Avatar id={p.id} size="sm" />, hint: teamText(p.team), run: () => router.push(`/performance/employees/${p.id}`) }))]);
+        const people = members.filter((p) => p.role !== "security_manager" && p.role !== "observer" && (me.role !== "soc_manager" || p.team.startsWith("SOC")) && match(p.name)).slice(0, 5);
+        if (people.length) out.push(["People", people.map((p) => ({ key: p.id, label: <span className="title">{p.name}</span>, lead: <Avatar id={p.id} size="sm" />, hint: teamText(p.team), run: () => router.push(`/analytics/people/${encodeURIComponent(p.id)}`) }))]);
       }
     }
     const pages = pagesFor(me).map((p) => ({ ...p, translatedLabel: p.label.split(" · ").map(__uiTr).join(" · ") })).filter((p) => match(p.label) || match(p.translatedLabel)).slice(0, term ? 6 : 20);

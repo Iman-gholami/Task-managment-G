@@ -13,7 +13,6 @@ export function navFor(me, counts = {}) {
     return [
       { id: "insights", label: "نظارت و ارزیابی", items: [
         { href: "/analytics", match: "/analytics", label: "Analytics · استان‌ها و عملکرد", icon: "bars" },
-        { href: "/performance/overview", match: "/performance", label: "عملکرد نیروها", icon: "perf" },
         { href: "/reports/employee", match: "/reports", label: "گزارش‌ها و Excel", icon: "report" },
       ] },
     ];
@@ -49,9 +48,6 @@ export function navFor(me, counts = {}) {
         manager
           ? { href: "/analytics", match: "/analytics", label: "Analytics", icon: "bars" }
           : { href: `/analytics/people/${encodeURIComponent(me.id)}`, match: "/analytics", label: "My statistics", icon: "bars" },
-        manager
-          ? { href: "/performance/overview", match: "/performance", label: "Performance", icon: "perf" }
-          : { href: `/performance/employees/${me.id}`, match: "/performance", label: "My performance", icon: "perf" },
         { href: "/reports/employee", match: "/reports", label: "Reports", icon: "report" },
       ],
     },

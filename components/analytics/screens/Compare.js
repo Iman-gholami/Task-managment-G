@@ -6,6 +6,7 @@ import { useCallback, useMemo } from "react";
 import AnalyticsFrame from "@/components/analytics/AnalyticsFrame";
 import { useAnalytics } from "@/components/analytics/AnalyticsContext";
 import PeerLeaderboard from "@/components/analytics/PeerLeaderboard";
+import AutomaticComparison from "@/components/analytics/AutomaticComparison";
 import { lineOption } from "@/components/analytics/chartOptions";
 import { AnEmpty, ChartPanel } from "@/components/analytics/ui";
 import Icon from "@/components/ui/Icon";
@@ -32,7 +33,7 @@ const PERIOD_CHOICES = PRESETS.filter(([k]) => k !== "custom");
 export default function Compare() {
   const { t: __analyticsTr, locale, number } = useAnalyticsI18n();
   return (
-    <AnalyticsFrame title={__analyticsTr("مقایسه و رتبه‌بندی")} subtitle={locale === "fa" ? `مقایسه دستی تا ${number(MAX_COMPARE)} مورد + امتیاز وزن‌دار کارشناسان هم‌سطح` : `Compare up to ${number(MAX_COMPARE)} items and see peer weighted scores`}>
+    <AnalyticsFrame title={__analyticsTr("مقایسه و رتبه‌بندی")} subtitle={locale === "fa" ? "نمای خودکار تیم‌ها و کارشناسان در بازه و دامنه انتخاب‌شده" : "Automatic team and people comparison for the selected period and scope"}>
       <CompareBody />
     </AnalyticsFrame>
   );
@@ -101,6 +102,8 @@ function CompareBody() {
 
   return (
     <>
+      <AutomaticComparison />
+      <details className="an-manual-comparison"><summary>{a.locale === "fa" ? "مقایسه انتخابی و مقایسه دوره‌ها" : "Compare selected items or periods"}</summary>
       <Panel>
         <div className="panel-body an-compare-pick">
           <Segmented label={__analyticsTr("نوع مقایسه")} value={mode} onChange={(v) => setParams({ mode: v, ids: "" })} options={MODES.map((o) => ({ ...o, label: __analyticsTr(o.label) }))} />
@@ -151,6 +154,7 @@ function CompareBody() {
           />
         </>
       )}
+      </details>
       <PeerLeaderboard />
     </>
   );

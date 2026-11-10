@@ -51,7 +51,7 @@ export default function AnalystDashboard() {
         <Metric label={__uiTr("Assigned to me")} icon="tasks" value={mine.length} href="/tasks/my" foot={inReview ? `${number(inReview)} ${locale === "fa" ? "در انتظار بازبینی" : "awaiting review"}` : __uiTr("Open tasks")} />
         <Metric label={__uiTr("Due within 48h")} icon="cal" value={dueSoon} foot={__uiTr(dueSoon ? "Due in the next 2 days" : "Nothing due soon")} />
         <Metric label={__uiTr("Overdue")} icon="flag" value={overdue} tone={overdue ? "alert" : undefined} foot={__uiTr(overdue ? "Past their deadline" : "All on schedule")} />
-        <Metric label={`${__uiTr("Completed")} · ${month}`} icon="checkCircle" value={stats.my.completed} href={`/performance/employees/${me.id}`} foot={__uiTr("Approved this month")} />
+        <Metric label={`${__uiTr("Completed")} · ${month}`} icon="checkCircle" value={stats.my.completed} href={`/analytics/people/${encodeURIComponent(me.id)}`} foot={__uiTr("Approved this month")} />
         {shift && <Metric label={`MISP IOCs · ${month}`} icon="shield" value={stats.my.iocs} foot={__uiTr("From your shift logs")} />}
         {shift && <Metric label={`${__uiTr("Tickets")} · ${month}`} icon="inbox" value={stats.my.tickets} foot={__uiTr("Registered in shift logs")} />}
       </MetricGrid>
