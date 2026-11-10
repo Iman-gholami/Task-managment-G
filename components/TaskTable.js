@@ -9,7 +9,7 @@ import Icon from "@/components/ui/Icon";
 import { Complexity, Due, Priority, Quality, Status, Who } from "@/components/ui/indicators";
 import { EmptyState } from "@/components/ui/states";
 import { prioItems } from "@/components/ui/menus";
-import { CX, PRIO, QUAL, STATUS } from "@/lib/format";
+import { CX, PRIO, QUAL, STATUS, TODAY, isOpen } from "@/lib/format";
 import { isManager } from "@/lib/roles";
 import { actionLabel, allowedTransitions } from "@/lib/workflow";
 
@@ -133,8 +133,15 @@ export default function TaskTable({ list, groups, cols, kb = -1, sort, onSort, e
   };
 
   const open = (e, t) => { if (!e.target.closest("a, button, [data-edit]")) router.push(`/tasks/${t.id}`); };
+  // Rows that wait on someone get a coloured edge: review (a manager), returned (the assignee), blocked or late.
+  const attention = (t) => {
+    if (t.status === "blocked" || (isOpen(t) && t.due !== "—" && t.due < TODAY)) return "danger";
+    if (t.status === "returned") return "warning";
+    if (t.status === "review") return "review";
+    return undefined;
+  };
   const row = (t, i) => (
-    <tr key={t.id} className={`is-link ${i >= 0 && i === kb ? "kb" : ""}`} onClick={(e) => open(e, t)}>
+    <tr key={t.id} className={`is-link ${i >= 0 && i === kb ? "kb" : ""}`} data-attn={attention(t)} onClick={(e) => open(e, t)}>
       {cols.map((c) => cell(t, c))}
     </tr>
   );

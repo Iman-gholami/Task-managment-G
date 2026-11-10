@@ -640,3 +640,95 @@ button.task-flow-heading:hover .task-flow-edit { background: var(--hover); color
   .cl-savebar .btn { flex: 1; }
   .cl-savebar .spacer { display: none; }
 }
+
+/* ---------- Task lists (My / Team / Assigned by me) ----------
+   One workflow strip above the tabs, underline tabs whose counts carry a tone when they ask for action,
+   assignee lanes with a status mix, and a coloured edge only on rows that wait on someone. */
+.pipeline {
+  display: grid; grid-template-columns: minmax(0, 1fr) auto; align-items: center; gap: 14px var(--s-4);
+  margin-bottom: var(--s-5); padding: 14px var(--s-5) 16px;
+  border: 1px solid var(--border); border-radius: var(--r-lg);
+  background: var(--surface-card); box-shadow: var(--shadow-card), inset 0 1px 0 var(--edge);
+}
+.pipeline-flow { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 0; margin: 0; padding: 0; list-style: none; }
+.pipeline-flow li { display: inline-flex; align-items: center; gap: 9px; }
+/* A chevron between stages: the flow reads To Do → In Progress → Review → Done. */
+.pipeline-flow li + li::before { content: ""; flex: none; width: 6px; height: 6px; margin: 0 20px 0 16px; border: solid var(--border-strong); border-width: 1.5px 1.5px 0 0; transform: rotate(45deg); opacity: .8; }
+[dir="rtl"] .pipeline-flow li + li::before { margin: 0 16px 0 20px; transform: rotate(-135deg); }
+.pipeline-flow b { font: var(--fw-semibold) var(--fs-22)/1 var(--font-sans); letter-spacing: -0.02em; color: var(--text); font-variant-numeric: tabular-nums; }
+.pipeline-flow li[data-empty] b { color: var(--text-3); font-weight: var(--fw-medium); }
+.pipeline-flow .status { color: var(--text-2); }
+.pipeline-flags { display: flex; flex-wrap: wrap; justify-content: flex-end; gap: 6px; }
+.pipeline-flags .badge { height: 24px; padding: 0 10px; border-radius: var(--r-full); font-size: var(--fs-12); }
+.pipeline-clear { display: inline-flex; align-items: center; gap: 6px; font: var(--type-caption); color: var(--text-3); }
+.pipeline-clear svg.i { color: var(--success); }
+.pipeline > .mix-bar { grid-column: 1 / -1; }
+
+/* Proportional status bar; the colours match the status indicators. */
+.mix-bar { display: inline-flex; gap: 2px; width: 84px; height: 6px; flex: none; overflow: hidden; border-radius: var(--r-full); background: var(--viz-track); }
+.mix-bar.lg { display: flex; width: 100%; height: 8px; gap: 3px; }
+.mix-bar > span { min-width: 4px; background: var(--neutral); }
+.mix-bar > [data-s="progress"] { background: var(--info); }
+.mix-bar > [data-s="review"] { background: var(--violet); }
+.mix-bar > [data-s="returned"] { background: var(--warning); }
+.mix-bar > [data-s="blocked"] { background: var(--danger); }
+.mix-bar > [data-s="done"] { background: var(--success); }
+
+/* Underline tabs. */
+.seg.seg-line { width: 100%; height: auto; gap: var(--s-1); padding: 0; border: 0; border-radius: 0; background: none; box-shadow: inset 0 -1px 0 var(--divider); }
+.seg.seg-line > button { position: relative; height: 40px; padding: 0 12px; border-radius: var(--r-sm) var(--r-sm) 0 0; }
+.seg.seg-line > button:hover:not(.on) { background: var(--hover); }
+.seg.seg-line > button.on { background: none; box-shadow: none; color: var(--text); }
+.seg.seg-line > button::after { content: ""; position: absolute; inset: auto 8px 0; height: 2px; border-radius: 2px 2px 0 0; background: var(--grad-signal); opacity: 0; transform: scaleX(.3); transition: opacity var(--t-base), transform var(--t-slow) var(--ease-out); }
+.seg.seg-line > button.on::after { opacity: 1; transform: none; }
+.seg.seg-line .count { display: inline-grid; place-items: center; min-width: 20px; height: 18px; padding: 0 6px; border-radius: var(--r-full); background: var(--hover); color: var(--text-3); font-size: var(--fs-12); }
+.seg.seg-line > button.on .count { background: var(--primary-soft); color: var(--link); }
+.seg.seg-line .count[data-tone="violet"] { background: var(--violet-soft); color: var(--violet); }
+.seg.seg-line .count[data-tone="danger"] { background: var(--danger-soft); color: var(--danger); }
+.tabs-row:has(.seg-line) { margin-bottom: var(--s-4); }
+
+/* Table */
+.task-list { overflow: hidden; }
+.task-list .dt thead th { height: 38px; background: var(--surface-card); }
+.task-list .dt td { height: 50px; }
+.task-list .dt td.title .id { display: inline-block; margin: 0; margin-inline-end: 10px; padding: 2px 6px; border-radius: var(--r-xs); background: var(--hover); font-size: 11.5px; line-height: 1.4; }
+.task-list .dt .status { height: 24px; padding: 0; padding-inline: 8px 10px; border-radius: var(--r-full); background: color-mix(in oklab, var(--st) 13%, transparent); color: color-mix(in oklab, var(--st) 72%, var(--text)); font-weight: var(--fw-medium); }
+.task-list .dt .status[data-s="cancelled"] { background: var(--hover); }
+.task-list .dt tbody tr[data-attn] { --attn: var(--violet); }
+.task-list .dt tbody tr[data-attn="warning"] { --attn: var(--warning); }
+.task-list .dt tbody tr[data-attn="danger"] { --attn: var(--danger); }
+.task-list .dt tbody tr[data-attn] td:first-child,
+.task-list .dt tbody tr[data-attn].is-link:hover td:first-child { box-shadow: inset 3px 0 0 var(--attn); }
+[dir="rtl"] .task-list .dt tbody tr[data-attn] td:first-child,
+[dir="rtl"] .task-list .dt tbody tr[data-attn].is-link:hover td:first-child { box-shadow: inset -3px 0 0 var(--attn); }
+.task-list .dt tbody tr[data-attn="danger"]:not(:hover) td { background: color-mix(in oklab, var(--danger) 4%, transparent); }
+
+/* Assignee lanes */
+.task-list .dt .group-row td { height: 56px; border-top: 1px solid var(--divider); background: color-mix(in oklab, var(--surface-inset) 60%, var(--surface-card)); }
+.task-list .dt tbody tr.group-row:first-child td { border-top: 0; }
+.lane { display: flex; align-items: center; gap: var(--s-4); min-width: 0; }
+.lane-who { display: inline-flex; align-items: center; gap: 10px; min-width: 0; }
+.lane-name { overflow: hidden; text-overflow: ellipsis; font-size: var(--fs-14); font-weight: var(--fw-semibold); color: var(--text); }
+.lane-team { flex: none; padding: 1px 8px; border: 1px solid var(--border); border-radius: var(--r-full); font: var(--type-caption); color: var(--text-3); }
+.lane-facts { display: inline-flex; align-items: center; gap: 10px; margin-inline-start: auto; font-weight: var(--fw-regular); }
+.lane-count, .lane-hours { font: var(--type-caption); color: var(--text-2); font-variant-numeric: tabular-nums; white-space: nowrap; }
+.lane-hours { padding-inline-start: 10px; border-inline-start: 1px solid var(--border); }
+.lane .badge { border-radius: var(--r-full); }
+.avatar.md { width: 28px; height: 28px; font-size: 10.5px; }
+
+@media (max-width: 767px) {
+  .pipeline { grid-template-columns: minmax(0, 1fr); padding: 12px var(--s-4) 14px; }
+  .pipeline-flags { justify-content: flex-start; }
+  .pipeline-flow li + li::before { margin: 0 12px 0 10px; }
+  [dir="rtl"] .pipeline-flow li + li::before { margin: 0 10px 0 12px; }
+  .pipeline-flow b { font-size: var(--fs-18); }
+}
+@media (max-width: 639px) {
+  .task-list .dt.cards .group-row td { height: auto; min-height: 52px; padding: 8px var(--s-4); }
+  .lane { flex-wrap: wrap; gap: 6px var(--s-3); }
+  .lane-facts { margin-inline-start: 0; flex-wrap: wrap; }
+  .lane-team, .lane-hours, .lane .mix-bar { display: none; }
+  .task-list .dt.cards tbody tr[data-attn]:not(.group-row) { box-shadow: inset 3px 0 0 var(--attn); }
+  [dir="rtl"] .task-list .dt.cards tbody tr[data-attn]:not(.group-row) { box-shadow: inset -3px 0 0 var(--attn); }
+  .task-list .dt.cards tbody tr[data-attn] td:first-child { box-shadow: none; }
+}

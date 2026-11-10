@@ -37,7 +37,7 @@ const VIEWS = {
 };
 
 export default function Tasks({ scope }) {
-  const { t: __taskTr, locale } = useTaskI18n();
+  const { t: __taskTr, locale, team: teamText, number } = useTaskI18n();
   const { tasks, setCreateOpen, me, peopleMap } = useApp();
   const router = useRouter();
   const params = useSearchParams();
@@ -123,16 +123,30 @@ export default function Tasks({ scope }) {
     body = (
       <TaskTable cols={cols} sort={sort} onSort={onSort} groups={groups.map(([id, items]) => {
         const review = items.filter((t) => t.status === "review").length;
+        const returned = items.filter((t) => t.status === "returned").length;
+        const blocked = items.filter((t) => t.status === "blocked").length;
         const late = items.filter(overdue).length;
+        const hours = items.reduce((s, t) => s + (t.hours || 0), 0);
+        const person = peopleMap[id];
         return {
           key: id,
           items,
           label: (
-            <span className="who">
-              <Avatar id={id} />
-              <span>{peopleMap[id]?.name ?? "Unknown"}</span>
-              <span className="muted">{locale === "fa" ? `${items.length} تسک` : plural(items.length, "task")}{review > 0 && (locale === "fa" ? ` · ${review} در حال بازبینی` : ` · ${review} in review`)}</span>
-              {late > 0 && <span className="overdue" style={{ fontWeight: 400 }}>· {late}{" " + __taskTr("overdue") + ""}</span>}
+            <span className="lane">
+              <span className="lane-who">
+                <Avatar id={id} size="md" />
+                <span className="lane-name">{person?.name ?? "Unknown"}</span>
+                {person?.team && <span className="lane-team">{teamText(person.team)}</span>}
+              </span>
+              <span className="lane-facts">
+                <MixBar items={items} />
+                <span className="lane-count">{locale === "fa" ? `${number(items.length)} تسک` : plural(items.length, "task")}</span>
+                {review > 0 && <span className="badge violet">{locale === "fa" ? `${number(review)} در انتظار بازبینی` : `${review} in review`}</span>}
+                {returned > 0 && <span className="badge warning">{locale === "fa" ? `${number(returned)} بازگشت‌خورده` : `${returned} returned`}</span>}
+                {blocked > 0 && <span className="badge danger">{locale === "fa" ? `${number(blocked)} متوقف` : `${blocked} blocked`}</span>}
+                {late > 0 && <span className="badge danger">{locale === "fa" ? `${number(late)} سررسید گذشته` : `${late} overdue`}</span>}
+                {hours > 0 && <span className="lane-hours">{locale === "fa" ? `${number(hours, { maximumFractionDigits: 1 })} ساعت ثبت‌شده` : `${number(hours, { maximumFractionDigits: 1 })} h logged`}</span>}
+              </span>
             </span>
           ),
         };
@@ -157,13 +171,18 @@ export default function Tasks({ scope }) {
 
       {base.length > 0 && (
         <>
+          <Pipeline base={base} />
           <div className="tabs-row">
             <Segmented
               kind="tabs"
+              className="seg-line"
               label={__taskTr("Task status")}
               value={tab}
               onChange={(k) => { setTab(k); setKb(0); }}
-              options={TABS.filter(([k]) => k !== "review" || manager || scope === "my").map(([k, label, pred]) => ({ value: k, label: __taskTr(label), count: base.filter(pred).length }))}
+              options={TABS.filter(([k]) => k !== "review" || manager || scope === "my").map(([k, label, pred]) => {
+                const count = base.filter(pred).length;
+                return { value: k, label: __taskTr(label), count: number(count), tone: count > 0 ? TAB_TONE[k] : undefined };
+              })}
             />
           </div>
           <div className="toolbar" role="search" aria-label={__taskTr("Filter tasks")}>
@@ -193,8 +212,65 @@ export default function Tasks({ scope }) {
         </>
       )}
 
-      {view === "board" && list.length > 0 ? body : <div className="panel">{body}</div>}
+      {view === "board" && list.length > 0 ? body : <div className="panel task-list">{body}</div>}
     </div>
+  );
+}
+
+// Tabs whose count asks for action get a tint: review waits on a manager, attention is late or stuck work.
+const TAB_TONE = { review: "violet", attention: "danger" };
+
+// Status buckets in workflow order. Backlog sits with To Do; cancelled work is left out.
+const BUCKETS = [
+  ["todo", (t) => t.status === "todo" || t.status === "backlog"],
+  ["progress", (t) => t.status === "progress"],
+  ["review", (t) => t.status === "review"],
+  ["returned", (t) => t.status === "returned"],
+  ["blocked", (t) => t.status === "blocked"],
+  ["done", (t) => t.status === "done"],
+];
+const bucketCounts = (items) => BUCKETS.map(([s, pred]) => [s, items.filter(pred).length]);
+
+/** Proportional status bar. Decorative: the same counts are always written next to it. */
+function MixBar({ items, className = "" }) {
+  return (
+    <span className={`mix-bar ${className}`} aria-hidden="true">
+      {bucketCounts(items).map(([s, n]) => n > 0 && <span key={s} data-s={s} style={{ flexGrow: n }} />)}
+    </span>
+  );
+}
+
+/**
+ * Where the work in this view sits: the main flow (To Do → In Progress → Review → Done) on the left,
+ * the exceptions that need a manager (returned, blocked, overdue) on the right, and one bar for the mix.
+ */
+function Pipeline({ base }) {
+  const { t: __taskTr, locale, number } = useTaskI18n();
+  const live = base.filter((t) => t.status !== "cancelled");
+  const counts = Object.fromEntries(bucketCounts(live));
+  const late = base.filter(overdue).length;
+  const flags = [
+    ["returned", counts.returned, locale === "fa" ? "بازگشت‌خورده" : "returned", "warning"],
+    ["blocked", counts.blocked, locale === "fa" ? "متوقف" : "blocked", "danger"],
+    ["overdue", late, locale === "fa" ? "سررسید گذشته" : "overdue", "danger"],
+  ].filter(([, n]) => n > 0);
+  return (
+    <section className="pipeline" aria-label={__taskTr("Workflow overview")}>
+      <ol className="pipeline-flow">
+        {["todo", "progress", "review", "done"].map((s) => (
+          <li key={s} data-s={s} data-empty={counts[s] === 0 ? "" : undefined}>
+            <b className="num">{number(counts[s])}</b>
+            <Status s={s} />
+          </li>
+        ))}
+      </ol>
+      <div className="pipeline-flags">
+        {flags.length === 0
+          ? <span className="pipeline-clear"><Icon name="checkCircle" size="sm" />{locale === "fa" ? "مورد معوق یا متوقفی نیست" : "Nothing late or stuck"}</span>
+          : flags.map(([k, n, label, tone]) => <span key={k} className={`badge dot ${tone}`}>{number(n)} {label}</span>)}
+      </div>
+      <MixBar items={live} className="lg" />
+    </section>
   );
 }
 
