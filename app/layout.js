@@ -1,6 +1,5 @@
 import localFont from "next/font/local";
 import ThemeBootstrap from "@/components/ThemeBootstrap";
-import { Vazirmatn } from "next/font/google";
 import { cookies } from "next/headers";
 import I18nProvider from "@/components/I18nProvider";
 import { normalizeLocale } from "@/lib/i18n/messages";
@@ -17,9 +16,12 @@ import "@/styles/motion.css";
 
 const geist = localFont({ src: "../styles/fonts/Geist-Variable.woff2", variable: "--font-geist", weight: "100 900", display: "swap" });
 const geistMono = localFont({ src: "../styles/fonts/GeistMono-Variable.woff2", variable: "--font-geist-mono", weight: "100 900", display: "swap" });
-const vazirmatn = Vazirmatn({
-  subsets: ["arabic", "latin"],
-  variable: "--font-vazirmatn",
+const persian = localFont({
+  src: [
+    { path: "../styles/fonts/NotoSansArabic-Regular.ttf", weight: "400", style: "normal" },
+    { path: "../styles/fonts/NotoSansArabic-Bold.ttf", weight: "700", style: "normal" },
+  ],
+  variable: "--font-persian",
   display: "swap",
   adjustFontFallback: false,
 });
@@ -43,7 +45,7 @@ export const viewport = {
 export default async function RootLayout({ children }) {
   const locale = normalizeLocale((await cookies()).get("so.locale")?.value);
   return (
-    <html lang={locale} dir={locale === "fa" ? "rtl" : "ltr"} className={`${geist.variable} ${geistMono.variable} ${vazirmatn.variable}`} suppressHydrationWarning>
+    <html lang={locale} dir={locale === "fa" ? "rtl" : "ltr"} className={`${geist.variable} ${geistMono.variable} ${persian.variable}`} suppressHydrationWarning>
       <body>
         <ThemeBootstrap />
         <I18nProvider initialLocale={locale}>{children}</I18nProvider>

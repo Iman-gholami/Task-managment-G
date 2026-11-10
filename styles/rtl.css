@@ -1,10 +1,10 @@
 /* Persian / RTL presentation layer.
-   The shell stays English on Geist; RTL screens (Shift Schedule, Shift changes) use Vazirmatn.
+   RTL screens use the locally bundled Noto Sans Arabic.
    The semantic type tokens are redefined here, so every component that uses `font: var(--type-*)`
    renders in Persian with the same hierarchy as the rest of the app. Arabic script reads smaller and
    needs more leading than Latin at the same size, so sizes go up half a step and line heights open up. */
 [dir="rtl"] {
-  --font-fa: var(--font-vazirmatn), Tahoma, Arial, sans-serif;
+  --font-fa: var(--font-persian), Tahoma, Arial, sans-serif;
   --type-page-title: var(--fw-semibold) var(--fs-24)/1.45 var(--font-fa);
   --type-section:    var(--fw-semibold) var(--fs-15)/1.6 var(--font-fa);
   --type-card-title: var(--fw-semibold) 13.5px/1.6 var(--font-fa);

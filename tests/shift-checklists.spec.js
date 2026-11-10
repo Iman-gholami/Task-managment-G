@@ -93,7 +93,7 @@ test("SOC manager builds a Layer 3 checklist in the editor and assigns it to SOC
   }
   await page.goto("/shift/checklists");
   await expect(page.getByRole("heading", { level: 1 })).toHaveText("Shift Log checklists");
-  await expect(page.locator(".sidebar")).toContainText("Log checklists");
+  await expect(page.locator(".sidebar")).not.toContainText("Log checklists");
   for (const team of ["SOC · L1", "SOC · L2", "SOC · L3"]) {
     await expect(page.locator(`[data-group="${team}"]:visible`).getByLabel(`Checklist for ${team}`, { exact: true })).toHaveValue(/\d+/);
   }
