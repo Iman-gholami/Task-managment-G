@@ -183,13 +183,13 @@ Cross-team scope (SOC, Design & Automation, Threat Intelligence). Adds **Team** 
 | | |
 |---|---|
 | **Primary users** | Assignee and reviewer, with actions constrained by the server-side role and workflow |
-| **Hierarchy** | Brief and key facts → vertical task journey → conversation, checklist and task overview |
+| **Hierarchy** | Brief with progress ring and lifecycle → step rail (assignee) or submitted report and decision (reviewer) → "At a glance" sidebar |
 | **Assignee** | Start, save one draft report, record work performed, outcome and manual total hours, attach optional files, then review and send; a manager can waive the review step |
 | **Reviewer** | Read the submitted report and files; approve with quality and confirmed complexity, or return with a required reason |
 | **Returned** | Show the latest return reason prominently; preserve the report while the assignee resumes, revises and resubmits |
 | **Existing tasks** | Display historical comments, files, hours and history as recorded; do not fabricate a structured report or block approval of work already in review |
 | **Recovery** | Retain unsaved input on request failure; check the current server state before retrying an uncertain mutation; warn before leaving a changed draft |
-| **Secondary** | Conversation, attachments, checklist, properties and activity remain available in expandable sections |
+| **Secondary** | Checklist, attachments, conversation, activity and properties are always open in the sidebar, which moves below the report on narrow screens. Rules and states: [`TASK_WORKSPACE.md`](TASK_WORKSPACE.md) |
 
 ## 10. Shift Log: Active Shift  ▶ `/shift`
 | | |

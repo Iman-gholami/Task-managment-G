@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import AssigneePicker from "@/components/ui/AssigneePicker";
 import TaskWorkPanel, { TaskReportSummary } from "@/components/screens/TaskWorkPanel";
 import TaskReviewPanel from "@/components/screens/TaskReviewPanel";
+import { SideCard, TaskLifecycle, TaskProgressPanel } from "@/components/screens/TaskJourney";
 import { useEffect, useRef, useState } from "react";
 import { api, useApp } from "@/components/AppProvider";
 import { useTaskActions } from "@/components/TaskTable";
@@ -19,12 +20,15 @@ import { STATUS, when } from "@/lib/format";
 import { cxItems, peopleItems } from "@/components/ui/menus";
 import { canAssignTask, canDeleteOwnTask, isManager } from "@/lib/roles";
 import { actionLabel, allowedTransitions } from "@/lib/workflow";
+import { reportProgress } from "@/lib/task-journey";
 
 const size = (n) => (n > 1048576 ? `${(n / 1048576).toFixed(1)} MB` : `${Math.max(1, Math.round(n / 1024))} KB`);
 const ext = (name) => (name.split(".").pop() || "file").slice(0, 4).toUpperCase();
 const EXT_KIND = { DOC: "doc", DOCX: "doc", XLS: "sheet", XLSX: "sheet", CSV: "sheet", PDF: "pdf" };
 // Workflow moves that step away from the happy path are offered quietly.
 const QUIET = ["cancelled", "blocked"];
+// The sidebar shows the latest activity first; older entries are one click away.
+const RECENT_EVENTS = 5;
 
 export default function TaskDetail({ id }) {
   const { tasks, updateTask, deleteTask, toast, me, peopleMap, openPopover, members } = useApp();
@@ -41,7 +45,7 @@ export default function TaskDetail({ id }) {
   const [deleting, setDeleting] = useState(false);
   const [deleteError, setDeleteError] = useState("");
   const [posting, setPosting] = useState(false);
-  const [commentsOpen, setCommentsOpen] = useState(false);
+  const [allEvents, setAllEvents] = useState(false);
   const [commentReset, setCommentReset] = useState(0);
   const fileRef = useRef(null);
   const commentDraftRef = useRef("");
@@ -122,31 +126,40 @@ export default function TaskDetail({ id }) {
   const reviewed = t.reviewRequired && (!!t.quality || !!d?.approvedBy);
   const showReviewPanel = !isAssignee && t.status === "review" && transitions.includes("done");
   const evidenceInFlow = (isAssignee && ["progress", "review"].includes(t.status)) || showReviewPanel;
+  const showReportCard = t.status === "done" || t.status === "cancelled" || (!isAssignee && !showReviewPanel);
+  const assigneeName = peopleMap[t.a]?.name ?? "The assignee";
+  const journey = { task: t, details: d, isAssignee, canReview: showReviewPanel, assigneeName, creatorName: d?.createdBy ? (d.createdBy === me.id ? "you" : peopleMap[d.createdBy]?.name) : null, reviewerName: reviewer?.name };
   const showComments = () => {
-    setCommentsOpen(true);
-    window.setTimeout(() => document.querySelector(editingCommentRef.current ? ".comment-edit textarea" : "#task-comment-input")?.focus(), 0);
+    window.setTimeout(() => {
+      const target = document.querySelector(editingCommentRef.current ? ".comment-edit textarea" : "#task-comment-input");
+      target?.scrollIntoView({ block: "center", behavior: "smooth" });
+      target?.focus({ preventScroll: true });
+    }, 0);
   };
+  const fileInput = canEdit && <input ref={fileRef} type="file" hidden onChange={(e) => upload(e.target.files[0])} aria-label="Upload attachment" data-testid="attach-input" />;
+  const attachButton = canEdit && <button type="button" className="btn btn-ghost btn-sm" disabled={uploading} aria-busy={uploading} onClick={() => fileRef.current?.click()}><Icon name="clip" />Attach file</button>;
+  const fileList = d && (d.attachments.length === 0 ? (canEdit ? (
+    <button type="button" className={`dropzone ${dragOver ? "over" : ""}`} disabled={uploading} onClick={() => fileRef.current?.click()}
+      onDragOver={(e) => { e.preventDefault(); setDragOver(true); }} onDragLeave={(e) => { if (!e.currentTarget.contains(e.relatedTarget)) setDragOver(false); }}
+      onDrop={(e) => { e.preventDefault(); setDragOver(false); const f = e.dataTransfer.files?.[0]; if (f) upload(f); }}>
+      <span className="glyph"><Icon name="clip" /></span><span><b>No files yet — drop one here or browse</b><small>Optional · up to 20 MB per file</small></span>
+    </button>
+  ) : <p className="muted small">No files attached.</p>) : <div className="files">{d.attachments.map((a) => (
+    <span key={a.id} className="file"><span className="ext" data-kind={EXT_KIND[ext(a.name)]} aria-hidden="true">{ext(a.name)}</span>
+      <a href={`/api/tasks/${id}/attachments/${a.id}`} download>{a.name}<small>{size(a.size)} · {peopleMap[a.by]?.name}</small></a>
+      {canEdit && <button type="button" className="btn btn-ghost icon-btn btn-sm" aria-label={`Remove ${a.name}`} data-tooltip="Remove file"
+        onClick={() => setConfirm({ title: `Remove ${a.name}?`, body: "The file is deleted for everyone on this task.", action: "Remove file", run: () => run(`/api/tasks/${id}/attachments/${a.id}`, { method: "DELETE" }) })}><Icon name="x" /></button>}
+    </span>
+  ))}</div>);
+  // Files that belong to the report step or the review are managed there; one set of controls per file.
   const evidence = d && (
     <section className="task-evidence" aria-label="Attachments">
-      <SectionHeader icon="clip" title="Attachments" meta={d.attachments.length || null} actions={canEdit && <>
-        <input ref={fileRef} type="file" hidden onChange={(e) => upload(e.target.files[0])} aria-label="Upload attachment" data-testid="attach-input" />
-        <button type="button" className="btn btn-ghost btn-sm" disabled={uploading} aria-busy={uploading} onClick={() => fileRef.current?.click()}><Icon name="clip" />Attach file</button>
-      </>} />
-      {d.attachments.length === 0 ? (canEdit ? (
-        <button type="button" className={`dropzone ${dragOver ? "over" : ""}`} disabled={uploading} onClick={() => fileRef.current?.click()}
-          onDragOver={(e) => { e.preventDefault(); setDragOver(true); }} onDragLeave={(e) => { if (!e.currentTarget.contains(e.relatedTarget)) setDragOver(false); }}
-          onDrop={(e) => { e.preventDefault(); setDragOver(false); const f = e.dataTransfer.files?.[0]; if (f) upload(f); }}>
-          <span className="glyph"><Icon name="clip" /></span><span><b>No files yet — drop one here or browse</b><small>Optional · up to 20 MB per file</small></span>
-        </button>
-      ) : <p className="muted small">No files attached.</p>) : <div className="files">{d.attachments.map((a) => (
-        <span key={a.id} className="file"><span className="ext" data-kind={EXT_KIND[ext(a.name)]} aria-hidden="true">{ext(a.name)}</span>
-          <a href={`/api/tasks/${id}/attachments/${a.id}`} download>{a.name}<small>{size(a.size)} · {peopleMap[a.by]?.name}</small></a>
-          {canEdit && <button type="button" className="btn btn-ghost icon-btn btn-sm" aria-label={`Remove ${a.name}`} data-tooltip="Remove file"
-            onClick={() => setConfirm({ title: `Remove ${a.name}?`, body: "The file is deleted for everyone on this task.", action: "Remove file", run: () => run(`/api/tasks/${id}/attachments/${a.id}`, { method: "DELETE" }) })}><Icon name="x" /></button>}
-        </span>
-      ))}</div>}
+      <SectionHeader icon="clip" title="Attachments" meta={d.attachments.length || null} actions={<>{fileInput}{attachButton}</>} />
+      {fileList}
     </section>
   );
+  const events = d?.events ?? [];
+  const shownEvents = allEvents ? events : events.slice(0, RECENT_EVENTS);
 
   return (
     <div className="detail">
@@ -189,124 +202,156 @@ export default function TaskDetail({ id }) {
           </section>
         )}
 
-        {editingDetails ? (
-          <TaskBriefEditor task={t} onCancel={() => setEditingDetails(false)} onSave={async (patch) => {
-            if (!(await updateTask(t, patch))) return false;
-            setEditingDetails(false); toast("Task updated"); return true;
-          }} />
-        ) : (
-          <div className="task-brief">
-            <div className="task-brief-label"><Icon name="tasks" />Task brief</div>
-            <h1 dir="auto">{t.title}</h1>
-            <p className="prose" dir="auto">{t.description || <span className="muted">No description yet.</span>}</p>
-            <div className="task-brief-meta"><Status s={t.status} /><span>Priority <Priority p={t.prio} /></span><span>Deadline <Due task={t} /></span><span>Assignee <Who id={t.a} /></span></div>
+        <section className="task-hero" aria-label="Task summary">
+          <div className="task-hero-top">
+            {editingDetails ? (
+              <TaskBriefEditor task={t} onCancel={() => setEditingDetails(false)} onSave={async (patch) => {
+                if (!(await updateTask(t, patch))) return false;
+                setEditingDetails(false); toast("Task updated"); return true;
+              }} />
+            ) : (
+              <div className="task-brief">
+                <div className="task-brief-label"><Icon name="tasks" />Task brief</div>
+                <h1 dir="auto">{t.title}</h1>
+                <p className="prose" dir="auto">{t.description || <span className="muted">No description yet.</span>}</p>
+                <div className="task-brief-meta"><Status s={t.status} /><span>Priority <Priority p={t.prio} /></span><span>Complexity <Complexity c={t.cx} /></span><span>Deadline <Due task={t} /></span><span>Assignee <Who id={t.a} /></span></div>
+              </div>
+            )}
+            {d && <TaskProgressPanel task={t} progress={reportProgress(t, d)} isAssignee={isAssignee} canReview={showReviewPanel} assigneeName={assigneeName} />}
           </div>
-        )}
+          <TaskLifecycle {...journey} />
+        </section>
 
-        {isAssignee && d && t.status !== "done" && <TaskWorkPanel key={id} task={t} details={d} transitions={transitions} onMove={doMove} setData={setData} commentDraftRef={commentDraftRef} editingCommentRef={editingCommentRef} posting={posting} uploading={uploading} attachments={evidenceInFlow ? evidence : null} onShowComments={showComments} />}
-        {showReviewPanel && d && <TaskReviewPanel key={id} task={t} details={d} setData={setData} onApprove={(task, quality, cx) => approve(task, quality, cx, (result) => setData((current) => current ? { ...current, details: result.details, transitions: result.transitions } : current))} approving={approving} attachments={evidence} />}
-        {t.status === "returned" && !isAssignee && (
-          <div className="callout" style={{ "--tone": "var(--warning)" }} role="status">
-            <strong>Returned for changes</strong>
-            <span>Waiting for the assignee to update and resubmit the report.</span>
-          </div>
-        )}
-        {d && (t.status === "done" || (!isAssignee && t.status !== "review")) && <details className="task-extra"><summary><span>Work report</span><span>{d.report.workPerformed || d.report.outcome ? "View report" : "No structured report"}</span></summary><div className="task-extra-body"><TaskReportSummary task={t} details={d} /></div></details>}
-        {loading && !d ? <div className="detail-section"><Loading label="Loading task details" rows={5} /></div> : error ? (
-          <div className="detail-section panel"><ErrorState error={error} title="Couldn't load task details" onRetry={reload} compact /></div>
-        ) : d && (
-          <>
-            <details className="task-extra" open={commentsOpen} onToggle={(e) => setCommentsOpen(e.currentTarget.open)}>
-              <summary><span>Conversation</span><span>{d.comments.length} {d.comments.length === 1 ? "comment" : "comments"}</span></summary>
-              <section className="task-extra-body task-conversation" aria-label="Comments">
-              <SectionHeader icon="chat" title="Comments" meta={d.comments.length || null} />
-              {!d.comments.length && <p className="conversation-empty">No comments yet.</p>}
-              {d.comments.map((c) => (
-                <div key={c.id} className="comment">
-                  <Avatar id={c.by} />
-                  <div>
-                    <div className="h">
-                      <b>{peopleMap[c.by]?.name}</b><span className="muted">{when(c.at)}{c.edited ? " · edited" : ""}</span>
-                      {c.by === me.id && editing !== c.id && (
-                        <span className="tools">
-                          <button type="button" className="btn btn-ghost btn-sm" onClick={() => { editingCommentRef.current = { id: c.id, body: c.body }; setEditing(c.id); }}>Edit</button>
-                          <button type="button" className="btn btn-ghost btn-sm danger" onClick={() => setConfirm({ title: "Delete this comment?", body: "It is removed for everyone. This can't be undone.", action: "Delete comment", run: () => run(`/api/tasks/${id}/comments/${c.id}`, { method: "DELETE" }) })}>Delete</button>
-                        </span>
-                      )}
-                    </div>
-                    {editing === c.id ? <CommentEditor commentId={c.id} draftRef={editingCommentRef} onCancel={() => { editingCommentRef.current = null; setEditing(null); }}
-                      onSave={async (body) => { if (await run(`/api/tasks/${id}/comments/${c.id}`, { method: "PATCH", body: { body } })) { editingCommentRef.current = null; setEditing(null); } }} />
-                      : <p dir="auto">{highlight(c.body)}</p>}
-                  </div>
-                </div>
-              ))}
-              <CommentComposer draftRef={commentDraftRef} onPost={postComment} posting={posting} resetVersion={commentReset} />
+        <div className="task-layout">
+          <div className="task-layout-main">
+            {isAssignee && d && t.status !== "done" && <TaskWorkPanel key={id} task={t} details={d} transitions={transitions} onMove={doMove} setData={setData} commentDraftRef={commentDraftRef} editingCommentRef={editingCommentRef} posting={posting} uploading={uploading} attachments={evidenceInFlow ? evidence : null} onShowComments={showComments} />}
+            {showReviewPanel && d && <TaskReviewPanel key={id} task={t} details={d} setData={setData} onApprove={(task, quality, cx) => approve(task, quality, cx, (result) => setData((current) => current ? { ...current, details: result.details, transitions: result.transitions } : current))} approving={approving} attachments={evidence} />}
+            {t.status === "returned" && !isAssignee && (
+              <div className="callout" style={{ "--tone": "var(--warning)" }} role="status">
+                <strong>Returned for changes</strong>
+                <span>Waiting for the assignee to update and resubmit the report.</span>
+              </div>
+            )}
+            {d && showReportCard && (
+              <section className="task-card" aria-label="Work report">
+                <div className="task-card-head"><div>
+                  <span className="eyebrow">{closed ? "Final report" : `${assigneeName} · ${STATUS[t.status]}`}</span>
+                  <h2>Work report</h2>
+                  {!closed && t.status !== "review" && <p>This is the latest saved draft. It can change until it is submitted.</p>}
+                </div></div>
+                <div className="task-card-body"><TaskReportSummary task={t} details={d} emptyText={closed || t.status === "review" ? undefined : "Nothing has been saved to the report yet."} /></div>
               </section>
-            </details>
+            )}
+            {loading && !d && <div className="task-card task-card-pad"><Loading label="Loading task details" rows={5} /></div>}
+            {!loading && error && !d && <div className="task-card task-card-pad"><ErrorState error={error} title="Couldn't load task details" onRetry={reload} compact /></div>}
+          </div>
 
-            {!evidenceInFlow && <details className="task-extra"><summary><span>Attachments</span><span>{d.attachments.length} files</span></summary><div className="task-extra-body">{evidence}</div></details>}
+          <aside className="task-side" aria-label="Task at a glance">
+            <div className="task-side-label">At a glance</div>
+            {error && d ? (
+              <div className="side-card"><ErrorState error={error} title="Couldn't load task details" onRetry={reload} compact /></div>
+            ) : d && (
+              <>
+                <SideCard icon="checkCircle" title="Checklist" meta={d.checklist.length ? `${doneCount} of ${d.checklist.length} done` : null}>
+                  {d.checklist.length > 0 && <span className="progress ok side-progress" role="progressbar" aria-label="Checklist progress" aria-valuenow={doneCount} aria-valuemin={0} aria-valuemax={d.checklist.length}><span style={{ width: `${(doneCount / d.checklist.length) * 100}%` }} /></span>}
+                  <div className="side-checklist" aria-label="Checklist">
+                    {d.checklist.map((c) => (
+                      <label key={c.id} className={`check-item ${c.done ? "done" : ""}`}>
+                        <input type="checkbox" className="cb" checked={c.done} disabled={!canEdit || closed}
+                          onChange={() => { merge({ checklist: d.checklist.map((x) => (x.id === c.id ? { ...x, done: !x.done } : x)) }); run(`/api/tasks/${id}/checklist/${c.id}`, { method: "PATCH", body: { done: !c.done } }); }} />
+                        <span dir="auto">{c.label}</span>
+                        {canEdit && !closed && <button type="button" className="btn btn-ghost icon-btn btn-sm grip" aria-label={`Delete ${c.label}`} data-tooltip="Delete item" onClick={(e) => { e.preventDefault(); run(`/api/tasks/${id}/checklist/${c.id}`, { method: "DELETE" }); }}><Icon name="x" /></button>}
+                      </label>
+                    ))}
+                    {canEdit && !closed && (
+                      <ChecklistAdder draftRef={checklistDraftRef} onAdd={(label) => run(`/api/tasks/${id}/checklist`, { method: "POST", body: { label } })} />
+                    )}
+                    {!d.checklist.length && (!canEdit || closed) && <p className="muted small">No checklist for this task.</p>}
+                  </div>
+                </SideCard>
 
-            <details className="task-extra"><summary><span>Checklist</span><span>{doneCount} / {d.checklist.length} completed</span></summary>
-            <section className="task-extra-body" aria-label="Checklist">
-              <SectionHeader icon="checkCircle" title="Checklist" meta={d.checklist.length ? `${doneCount} of ${d.checklist.length}` : null}>
-                {d.checklist.length > 0 && <span className="progress ok" style={{ width: 88 }} role="progressbar" aria-label="Checklist progress" aria-valuenow={doneCount} aria-valuemin={0} aria-valuemax={d.checklist.length}><span style={{ width: `${(doneCount / d.checklist.length) * 100}%` }} /></span>}
-              </SectionHeader>
-              {d.checklist.map((c) => (
-                <label key={c.id} className={`check-item ${c.done ? "done" : ""}`}>
-                  <input type="checkbox" className="cb" checked={c.done} disabled={!canEdit || closed}
-                    onChange={() => { merge({ checklist: d.checklist.map((x) => (x.id === c.id ? { ...x, done: !x.done } : x)) }); run(`/api/tasks/${id}/checklist/${c.id}`, { method: "PATCH", body: { done: !c.done } }); }} />
-                  <span>{c.label}</span>
-                  {canEdit && !closed && <button type="button" className="btn btn-ghost icon-btn btn-sm grip" aria-label={`Delete ${c.label}`} data-tooltip="Delete item" onClick={(e) => { e.preventDefault(); run(`/api/tasks/${id}/checklist/${c.id}`, { method: "DELETE" }); }}><Icon name="x" /></button>}
-                </label>
-              ))}
-              {canEdit && !closed && (
-                <ChecklistAdder draftRef={checklistDraftRef} onAdd={(label) => run(`/api/tasks/${id}/checklist`, { method: "POST", body: { label } })} />
-              )}
-              {!d.checklist.length && (!canEdit || closed) && <p className="muted small">No checklist for this task.</p>}
-            </section></details>
-          </>
-        )}
+                {evidenceInFlow ? (
+                  <SideCard icon="clip" title="Attachments" meta={d.attachments.length || null}>
+                    {d.attachments.length ? <ul className="side-files">{d.attachments.map((a) => (
+                      <li key={a.id}><span className="ext" data-kind={EXT_KIND[ext(a.name)]} aria-hidden="true">{ext(a.name)}</span><span className="side-file-name">{a.name}</span></li>
+                    ))}</ul> : <p className="muted small">No files yet.</p>}
+                    <p className="side-card-note">{isAssignee ? (t.status === "review" ? "Shown with your submitted report." : "Add or remove files in the Outcome & evidence step.") : "Shown with the submitted report."}</p>
+                  </SideCard>
+                ) : (
+                  <SideCard icon="clip" title="Attachments" meta={d.attachments.length || null} actions={<>{fileInput}{attachButton}</>}>
+                    {fileList}
+                  </SideCard>
+                )}
+
+                <SideCard icon="chat" title="Conversation" meta={`${d.comments.length} ${d.comments.length === 1 ? "comment" : "comments"}`} className="task-conversation">
+                  {!d.comments.length && <p className="conversation-empty">No comments yet.</p>}
+                  {d.comments.map((c) => (
+                    <div key={c.id} className="comment">
+                      <Avatar id={c.by} />
+                      <div>
+                        <div className="h">
+                          <b>{peopleMap[c.by]?.name}</b><span className="muted">{when(c.at)}{c.edited ? " · edited" : ""}</span>
+                          {c.by === me.id && editing !== c.id && (
+                            <span className="tools">
+                              <button type="button" className="btn btn-ghost btn-sm" onClick={() => { editingCommentRef.current = { id: c.id, body: c.body }; setEditing(c.id); }}>Edit</button>
+                              <button type="button" className="btn btn-ghost btn-sm danger" onClick={() => setConfirm({ title: "Delete this comment?", body: "It is removed for everyone. This can't be undone.", action: "Delete comment", run: () => run(`/api/tasks/${id}/comments/${c.id}`, { method: "DELETE" }) })}>Delete</button>
+                            </span>
+                          )}
+                        </div>
+                        {editing === c.id ? <CommentEditor commentId={c.id} draftRef={editingCommentRef} onCancel={() => { editingCommentRef.current = null; setEditing(null); }}
+                          onSave={async (body) => { if (await run(`/api/tasks/${id}/comments/${c.id}`, { method: "PATCH", body: { body } })) { editingCommentRef.current = null; setEditing(null); } }} />
+                          : <p dir="auto">{highlight(c.body)}</p>}
+                      </div>
+                    </div>
+                  ))}
+                  <CommentComposer draftRef={commentDraftRef} onPost={postComment} posting={posting} resetVersion={commentReset} />
+                </SideCard>
+
+                <SideCard icon="activity" title="Activity">
+                  <ol className="timeline" data-testid="activity">
+                    {shownEvents.length ? shownEvents.map((e) => <li key={e.id}><b>{peopleMap[e.by]?.name ?? "System"}</b> {e.text}<time>{when(e.at)}</time></li>) : <li>No activity yet.</li>}
+                  </ol>
+                  {events.length > RECENT_EVENTS && <button type="button" className="btn btn-ghost btn-sm side-more" aria-expanded={allEvents} onClick={() => setAllEvents((value) => !value)}>{allEvents ? "Show recent only" : `Show all ${events.length}`}</button>}
+                  {!!d.reviewReturns.length && <><div className="side-h">Review feedback</div><ol className="task-return-history">{d.reviewReturns.map((item) => <li key={item.id}><strong>{peopleMap[item.by]?.name ?? "Manager"}</strong><time>{when(item.at)}</time><p dir="auto">{item.reason}</p></li>)}</ol></>}
+                </SideCard>
+              </>
+            )}
+
+            <SideCard icon="list" title="Details" className="task-details-card">
+              {!transitions.length && data && <p className="side-note">{t.status === "review" ? "Waiting for a reviewer." : closed ? "This task is closed." : "No workflow actions are available to you."}</p>}
+              <dl className="kv">
+                <dt>Status</dt><dd>{isAssignee ? <Status s={t.status} /> : <span className="cell-edit" role="button" tabIndex={0} aria-label={`Status: ${STATUS[t.status]}. Change status`} onClick={(e) => edit(e.currentTarget, "status", t)} onKeyDown={(e) => (e.key === "Enter" || e.key === " ") && (e.preventDefault(), edit(e.currentTarget, "status", t))}><Status s={t.status} /></span>}</dd>
+                <dt>Assignee</dt><dd>{canDetail ? <span className="cell-edit" role="button" tabIndex={0} aria-label="Reassign" onClick={(e) => openPopover(e.currentTarget, { label: "Reassign to", title: "Reassign to", width: 340, render: (close) => <div style={{ padding: 12 }}><AssigneePicker id="task-reassign" value={t.a} people={assignableMembers} autoFocus onSelect={(a) => { if (a !== t.a) updateTask(t, { a }); close(); }} /></div> })} onKeyDown={(e) => (e.key === "Enter" || e.key === " ") && (e.preventDefault(), e.currentTarget.click())}><Who id={t.a} /></span> : <Who id={t.a} />}</dd>
+                <dt>Priority</dt><dd><span className="cell-edit" role="button" tabIndex={0} aria-label="Change priority" onClick={(e) => edit(e.currentTarget, "prio", t)} onKeyDown={(e) => (e.key === "Enter" || e.key === " ") && (e.preventDefault(), e.currentTarget.click())}><Priority p={t.prio} /></span></dd>
+                <dt>Complexity</dt><dd>{canDetail ? <span className="cell-edit" role="button" tabIndex={0} aria-label="Change complexity" onClick={(e) => openPopover(e.currentTarget, { title: "Complexity", items: cxItems(), onPick: (cx) => updateTask(t, { cx }) })} onKeyDown={(e) => (e.key === "Enter" || e.key === " ") && (e.preventDefault(), e.currentTarget.click())}><Complexity c={t.cx} /></span> : <Complexity c={t.cx} />}</dd>
+                <dt>Deadline</dt><dd>{canDetail
+                  ? <input type="date" className="input" defaultValue={t.due === "—" ? "" : t.due} key={t.due} aria-label="Deadline" onChange={(e) => updateTask(t, { due: e.target.value })} />
+                  : <Due task={t} />}</dd>
+                <dt>Actual hours</dt>
+                <dd>
+                  {canEdit && !closed && !isAssignee ? (
+                    <span className="stepper">
+                      <button type="button" aria-label="Decrease hours" onClick={() => updateTask(t, { hours: Math.max(0, t.hours - 0.5) })}>−</button>
+                      <input aria-label="Actual hours" defaultValue={t.hours} key={t.hours} inputMode="decimal" onBlur={(e) => { const h = Number(e.target.value); if (Number.isFinite(h) && h >= 0 && h !== t.hours) updateTask(t, { hours: h }); else e.target.value = t.hours; }} />
+                      <button type="button" aria-label="Increase hours" onClick={() => updateTask(t, { hours: t.hours + 0.5 })}>+</button>
+                    </span>
+                  ) : <span className="num">{t.hours.toFixed(1)}</span>}
+                </dd>
+                <dt>Started</dt><dd className="num">{when(d?.startedAt)}</dd>
+                <dt>Created by</dt><dd>{d?.createdBy ? <Who id={d.createdBy} /> : <span className="muted">—</span>}</dd>
+                <dt>Manager review</dt><dd>{manager && !closed && t.status !== "review"
+                  ? <label className="row" style={{ gap: 8 }}>
+                      <input className="cb" type="checkbox" aria-label="Manager review required" checked={t.reviewRequired}
+                        onChange={async (e) => { if (await updateTask(t, { reviewRequired: e.target.checked })) toast("Review requirement updated"); }} />
+                      <span>{t.reviewRequired ? "Required" : "Not required"}</span>
+                    </label>
+                  : <span className="muted">{t.reviewRequired ? "Required" : "Not required"}</span>}</dd>
+                <dt>Quality</dt><dd>{t.quality ? <Quality q={t.quality} /> : <span className="muted">{t.reviewRequired ? "Set on approval" : "Not rated · no review"}</span>}</dd>
+              </dl>
+            </SideCard>
+          </aside>
+        </div>
       </div>
-
-      <aside className="detail-side" aria-label="Task properties">
-        <details className="task-overview"><summary><Icon name="list" /><span>Task overview & activity</span></summary>
-        {!transitions.length && data && <p className="side-note">{t.status === "review" ? "Waiting for a reviewer." : closed ? "This task is closed." : "No workflow actions are available to you."}</p>}
-        <dl className="kv">
-          <dt>Status</dt><dd>{isAssignee ? <Status s={t.status} /> : <span className="cell-edit" role="button" tabIndex={0} aria-label={`Status: ${STATUS[t.status]}. Change status`} onClick={(e) => edit(e.currentTarget, "status", t)} onKeyDown={(e) => (e.key === "Enter" || e.key === " ") && (e.preventDefault(), edit(e.currentTarget, "status", t))}><Status s={t.status} /></span>}</dd>
-          <dt>Assignee</dt><dd>{canDetail ? <span className="cell-edit" role="button" tabIndex={0} aria-label="Reassign" onClick={(e) => openPopover(e.currentTarget, { label: "Reassign to", title: "Reassign to", width: 340, render: (close) => <div style={{ padding: 12 }}><AssigneePicker id="task-reassign" value={t.a} people={assignableMembers} autoFocus onSelect={(a) => { if (a !== t.a) updateTask(t, { a }); close(); }} /></div> })} onKeyDown={(e) => (e.key === "Enter" || e.key === " ") && (e.preventDefault(), e.currentTarget.click())}><Who id={t.a} /></span> : <Who id={t.a} />}</dd>
-          <dt>Priority</dt><dd><span className="cell-edit" role="button" tabIndex={0} aria-label="Change priority" onClick={(e) => edit(e.currentTarget, "prio", t)} onKeyDown={(e) => (e.key === "Enter" || e.key === " ") && (e.preventDefault(), e.currentTarget.click())}><Priority p={t.prio} /></span></dd>
-          <dt>Complexity</dt><dd>{canDetail ? <span className="cell-edit" role="button" tabIndex={0} aria-label="Change complexity" onClick={(e) => openPopover(e.currentTarget, { title: "Complexity", items: cxItems(), onPick: (cx) => updateTask(t, { cx }) })} onKeyDown={(e) => (e.key === "Enter" || e.key === " ") && (e.preventDefault(), e.currentTarget.click())}><Complexity c={t.cx} /></span> : <Complexity c={t.cx} />}</dd>
-          <dt>Deadline</dt><dd>{canDetail
-            ? <input type="date" className="input" defaultValue={t.due === "—" ? "" : t.due} key={t.due} aria-label="Deadline" onChange={(e) => updateTask(t, { due: e.target.value })} />
-            : <Due task={t} />}</dd>
-          <dt>Actual hours</dt>
-          <dd>
-            {canEdit && !closed && !isAssignee ? (
-              <span className="stepper">
-                <button type="button" aria-label="Decrease hours" onClick={() => updateTask(t, { hours: Math.max(0, t.hours - 0.5) })}>−</button>
-                <input aria-label="Actual hours" defaultValue={t.hours} key={t.hours} inputMode="decimal" onBlur={(e) => { const h = Number(e.target.value); if (Number.isFinite(h) && h >= 0 && h !== t.hours) updateTask(t, { hours: h }); else e.target.value = t.hours; }} />
-                <button type="button" aria-label="Increase hours" onClick={() => updateTask(t, { hours: t.hours + 0.5 })}>+</button>
-              </span>
-            ) : <span className="num">{t.hours.toFixed(1)}</span>}
-          </dd>
-          <dt>Started</dt><dd className="num">{when(d?.startedAt)}</dd>
-          <dt>Created by</dt><dd>{d?.createdBy ? <Who id={d.createdBy} /> : <span className="muted">—</span>}</dd>
-          <dt>Manager review</dt><dd>{manager && !closed && t.status !== "review"
-            ? <label className="row" style={{ gap: 8 }}>
-                <input className="cb" type="checkbox" aria-label="Manager review required" checked={t.reviewRequired}
-                  onChange={async (e) => { if (await updateTask(t, { reviewRequired: e.target.checked })) toast("Review requirement updated"); }} />
-                <span>{t.reviewRequired ? "Required" : "Not required"}</span>
-              </label>
-            : <span className="muted">{t.reviewRequired ? "Required" : "Not required"}</span>}</dd>
-          <dt>Quality</dt><dd>{t.quality ? <Quality q={t.quality} /> : <span className="muted">{t.reviewRequired ? "Set on approval" : "Not rated · no review"}</span>}</dd>
-        </dl>
-        <div className="side-h">Activity</div>
-        <ol className="timeline" data-testid="activity">
-          {d?.events.length ? d.events.map((e) => <li key={e.id}><b>{peopleMap[e.by]?.name ?? "System"}</b> {e.text}<time>{when(e.at)}</time></li>) : <li>No activity yet.</li>}
-        </ol>
-        {!!d?.reviewReturns.length && <><div className="side-h">Review feedback</div><ol className="task-return-history">{d.reviewReturns.map((item) => <li key={item.id}><strong>{peopleMap[item.by]?.name ?? "Manager"}</strong><time>{when(item.at)}</time><p dir="auto">{item.reason}</p></li>)}</ol></>}
-        </details>
-      </aside>
 
       {confirm && (
         <Dialog label={confirm.action} title={confirm.title} description={confirm.body} onClose={() => setConfirm(null)} width={420}>
