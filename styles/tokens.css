@@ -8,9 +8,10 @@
 
 :root {
   /* ---- Typography ------------------------------------------------------ */
-  /* Persian glyphs use the bundled Noto Sans Arabic; Latin stays on Geist. */
-  --font-sans: var(--font-geist), "Geist", var(--font-persian), ui-sans-serif, system-ui, sans-serif;
-  --font-mono: var(--font-geist-mono), "Geist Mono", ui-monospace, SFMono-Regular, monospace;
+  /* Persian glyphs use the bundled Vazirmatn, limited to Arabic script by unicode-range (app/layout.js),
+     so it comes first: Geist's Arial fallback would otherwise draw Persian text. Latin stays on Geist. */
+  --font-sans: var(--font-persian), var(--font-geist), "Geist", ui-sans-serif, system-ui, sans-serif;
+  --font-mono: var(--font-persian), var(--font-geist-mono), "Geist Mono", ui-monospace, SFMono-Regular, monospace;
 
   --fs-11: 11px; --fs-12: 12px; --fs-13: 13px; --fs-14: 14px; --fs-15: 15px;
   --fs-16: 16px; --fs-18: 18px; --fs-20: 20px; --fs-22: 22px; --fs-24: 24px; --fs-26: 26px; --fs-28: 28px; --fs-32: 32px; --fs-36: 36px;

@@ -45,7 +45,7 @@ export default function Segmented({ label, value, onChange, options, kind = "rad
           >
             {o.icon && <Icon name={o.icon} />}
             {o.label}
-            {o.count !== undefined && <span className="count">{o.count}</span>}
+            {o.count !== undefined && <span className="count" data-tone={o.tone}>{o.count}</span>}
           </button>
         );
       })}
