@@ -14,8 +14,9 @@ const VARS = [
 function read(el) {
   const cs = getComputedStyle(el);
   const t = Object.fromEntries(VARS.map((v) => [v, cs.getPropertyValue(`--${v}`).trim()]));
-  const fa = cs.getPropertyValue("--font-vazirmatn").trim();
-  t.font = `${fa ? `${fa}, ` : ""}Tahoma, sans-serif`;
+  // The same stack as the page: Vazirmatn for Persian, Geist for Latin labels and figures.
+  const fonts = ["--font-persian", "--font-geist"].map((v) => cs.getPropertyValue(v).trim()).filter(Boolean);
+  t.font = [...fonts, "Tahoma", "sans-serif"].join(", ");
   t.cat = [t["cat-1"], t["cat-2"], t["cat-3"], t["cat-4"]];
   t.ramp = [t["viz-1"], t["viz-2"], t["viz-3"], t["viz-4"]];
   return t;
