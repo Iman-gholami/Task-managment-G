@@ -3,11 +3,22 @@
 import { useRef, useState } from "react";
 import { api, useApp } from "@/components/AppProvider";
 import { Field, FormAlert } from "@/components/ui/Field";
-import { TaskFlowStep, TaskReportSummary } from "@/components/screens/TaskWorkPanel";
+import Icon from "@/components/ui/Icon";
 import { CX, QUAL } from "@/lib/format";
 
+/** One part of the submitted report, ticked when it was provided. */
+function ReportRow({ label, provided, children }) {
+  return (
+    <div className={`task-review-row ${provided ? "is-provided" : "is-missing"}`}>
+      <span className="task-review-mark" aria-hidden="true">{provided ? <Icon name="check" size="sm" /> : "–"}</span>
+      <dt>{label}</dt>
+      <dd>{children}{!provided && <span className="sr-only"> (not provided)</span>}</dd>
+    </div>
+  );
+}
+
 export default function TaskReviewPanel({ task, details, setData, onApprove, approving, attachments }) {
-  const { dispatch } = useApp();
+  const { dispatch, peopleMap } = useApp();
   const [quality, setQuality] = useState("");
   const [complexity, setComplexity] = useState(task.cx);
   const [returning, setReturning] = useState(false);
@@ -51,24 +62,37 @@ export default function TaskReviewPanel({ task, details, setData, onApprove, app
     if (!quality) { setError("Choose a quality rating to approve."); qualityRef.current?.focus(); return; }
     setError(""); onApprove(task, quality, complexity);
   };
+  const report = details.report;
+  const complete = Boolean(report.workPerformed && report.outcome && report.hoursRecorded);
+  const locked = busy || uncertain || approving;
+  const time = report.hoursRecorded ? `${task.hours} hrs` : task.hours ? `${task.hours} hrs (existing total)` : "Not recorded";
   return (
-    <section className="task-flow-section" aria-label="Manager review">
-      <div className="task-flow-intro"><div><span className="eyebrow">MANAGER REVIEW</span><h2>Review the submitted work</h2><p>Read the report, then approve it or request changes.</p></div></div>
-      <ol className="task-flow-list">
-        <TaskFlowStep number={1} title="Task received" note="Brief above" done />
-        <TaskFlowStep number={2} title="Work submitted" note="Analyst report" active done>
-          <TaskReportSummary task={task} details={details} attachments={attachments} />
-        </TaskFlowStep>
-        <TaskFlowStep number={3} title="Review work" note="Your decision" active>
+    <div className="task-review">
+      <section className="task-card" aria-label="Submitted report">
+        <div className="task-card-head">
+          <div><span className="eyebrow">Submitted by {peopleMap[task.a]?.name ?? "the assignee"}</span><h2>Review the submitted work</h2><p>Read the report, then approve it or request changes.</p></div>
+          {complete && <span className="task-chip is-ok"><Icon name="check" size="sm" />All required parts provided</span>}
+        </div>
+        <dl className="task-review-rows">
+          <ReportRow label="Work performed" provided={!!report.workPerformed}><span dir="auto">{report.workPerformed || "Not recorded"}</span></ReportRow>
+          <ReportRow label="Outcome" provided={!!report.outcome}><span dir="auto">{report.outcome || "Not recorded"}</span></ReportRow>
+          <ReportRow label="Total time" provided={report.hoursRecorded}><span className="num">{time}</span></ReportRow>
+        </dl>
+        {!complete && <p className="task-card-note">Parts marked – were not recorded. Older tasks may not have a structured report; check the conversation and files.</p>}
+        {attachments && <div className="task-card-section">{attachments}</div>}
+      </section>
+      <section className="task-card is-focus" aria-label="Your decision">
+        <div className="task-card-head"><div><span className="eyebrow">Your decision</span><h2>Approve or request changes</h2></div></div>
+        <div className="task-card-body">
           <fieldset className="task-quality-field"><legend>Quality <span className="required-mark">*</span> <span className="muted small">Required for approval</span></legend><div className="task-quality-options">
             {Object.entries(QUAL).map(([value, label], index) => (
-              <label key={value} className="task-quality-option"><input ref={index === 0 ? qualityRef : null} type="radio" name="task-review-quality" value={value} checked={quality === value} disabled={busy || uncertain || approving} onChange={() => { setQuality(value); setError(""); }} /><span>{label}</span></label>
+              <label key={value} className="task-quality-option"><input ref={index === 0 ? qualityRef : null} type="radio" name="task-review-quality" value={value} checked={quality === value} disabled={locked} onChange={() => { setQuality(value); setError(""); }} /><span>{label}</span>{value === "excellent" && <span className="task-quality-star" aria-hidden="true">★</span>}</label>
             ))}
           </div></fieldset>
           <Field label="Confirm complexity" htmlFor="task-review-complexity">
-            <select id="task-review-complexity" className="input task-complexity-input" value={complexity} disabled={busy || uncertain || approving} onChange={(event) => setComplexity(Number(event.target.value))}>{CX.slice(1).map((label, index) => <option key={label} value={index + 1}>{label}</option>)}</select>
+            <select id="task-review-complexity" className="input task-complexity-input" value={complexity} disabled={locked} onChange={(event) => setComplexity(Number(event.target.value))}>{CX.slice(1).map((label, index) => <option key={label} value={index + 1}>{label}</option>)}</select>
           </Field>
-          {!returning && <div className="task-flow-actions"><button type="button" className="btn btn-secondary" disabled={busy || uncertain || approving} onClick={() => { setReturning(true); setError(""); window.setTimeout(() => reasonRef.current?.focus(), 0); }}>Return for changes</button><button type="button" className="btn btn-primary" disabled={busy || uncertain || approving} aria-busy={approving} onClick={approve}>{approving ? "Approving…" : "Approve"}</button></div>}
+          {!returning && <div className="task-flow-actions task-decision-actions"><span className="task-decision-hint">Approving closes the task. Returning sends it back with your reason.</span><button type="button" className="btn btn-secondary" disabled={locked} onClick={() => { setReturning(true); setError(""); window.setTimeout(() => reasonRef.current?.focus(), 0); }}>Return for changes</button><button type="button" className="btn btn-primary" disabled={locked} aria-busy={approving} onClick={approve}>{approving ? "Approving…" : "Approve"}</button></div>}
           {returning && <div className="task-return-form">
             <Field label={<>What needs to change? <span className="required-mark">*</span></>} htmlFor="task-return-reason" hint="Explain what the assignee needs to change." error={error === "Enter a reason for returning the task." ? error : null}>
               <textarea ref={reasonRef} id="task-return-reason" className="textarea" dir="auto" value={reason} maxLength={5000} required disabled={busy || uncertain} onChange={(event) => { setReason(event.target.value); setError(""); }} />
@@ -76,9 +100,8 @@ export default function TaskReviewPanel({ task, details, setData, onApprove, app
             <div className="task-flow-actions"><button type="button" className="btn btn-secondary" disabled={busy || uncertain} onClick={() => { setReturning(false); setError(""); }}>Cancel</button><button type="button" className="btn btn-primary" disabled={busy || uncertain} aria-busy={busy} onClick={sendBack}>{busy ? "Sending…" : "Send back"}</button></div>
           </div>}
           {error && error !== "Enter a reason for returning the task." && <div className="task-flow-error"><FormAlert>{error}</FormAlert>{uncertain && <button type="button" className="btn btn-secondary btn-sm" disabled={busy} onClick={checkCurrent}>Check task</button>}</div>}
-        </TaskFlowStep>
-        <TaskFlowStep number={4} title="Complete" note="After approval" />
-      </ol>
-    </section>
+        </div>
+      </section>
+    </div>
   );
 }

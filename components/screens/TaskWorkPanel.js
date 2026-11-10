@@ -6,6 +6,8 @@ import { api, useApp } from "@/components/AppProvider";
 import Dialog from "@/components/ui/Dialog";
 import { Field, FormAlert } from "@/components/ui/Field";
 import Icon from "@/components/ui/Icon";
+import { when } from "@/lib/format";
+import { reportProgress } from "@/lib/task-journey";
 import { actionLabel } from "@/lib/workflow";
 
 // Hours are the total for this task, not an increment or a running timer.
@@ -19,28 +21,35 @@ export function parseTaskHours(value) {
   return Number.isFinite(result) && result >= 0 && result <= 1000 ? result : null;
 }
 
-export function TaskFlowStep({ number, title, note, active, done, onOpen, children }) {
+/** One step of the report rail: done (ticked, with what was saved), active (open) or upcoming. */
+export function TaskFlowStep({ number, title, note, state, onOpen, preview, children }) {
+  const active = state === "active";
+  const done = state === "done";
+  const label = <>
+    <span className="task-flow-title">{title}</span>
+    {done ? <span className="task-flow-done">Done</span> : <span className="task-flow-note">{note}</span>}
+    {done && onOpen && <span className="task-flow-edit"><Icon name="edit" size="sm" />Edit</span>}
+  </>;
   return (
-    <li className={`task-flow-step ${active ? "is-active" : ""} ${done ? "is-done" : ""}`}>
+    <li className={`task-flow-step is-${state}`} aria-current={active ? "step" : undefined}>
       <span className="task-flow-node" aria-hidden="true">{done ? <Icon name="check" size="sm" /> : number}</span>
       <div className="task-flow-card">
-        {onOpen ? (
-          <button type="button" className="task-flow-heading" aria-expanded={active} onClick={onOpen}>
-            <span>{title}</span><span className="task-flow-note">{note}</span>
-          </button>
-        ) : <div className="task-flow-heading"><span>{title}</span><span className="task-flow-note">{note}</span></div>}
+        {onOpen ? <button type="button" className="task-flow-heading" aria-expanded={active} onClick={onOpen}>{label}</button>
+          : <div className="task-flow-heading">{label}</div>}
+        {done && <span className="sr-only">Completed</span>}
+        {done && preview && <div className="task-flow-preview">{preview}</div>}
         {active && children && <div className="task-flow-body">{children}</div>}
       </div>
     </li>
   );
 }
 
-export function TaskReportSummary({ task, details, attachments }) {
+export function TaskReportSummary({ task, details, attachments, emptyText }) {
   const report = details.report;
   const hasReport = report.workPerformed || report.outcome || report.hoursRecorded;
   return (
     <div className="task-report-summary">
-      {!hasReport && <p className="muted small">No structured report was recorded for this task. See the conversation and attachments for earlier work.</p>}
+      {!hasReport && <p className="muted small">{emptyText ?? "No structured report was recorded for this task. See the conversation and attachments for earlier work."}</p>}
       <dl className="task-report-facts">
         <div><dt>Work performed</dt><dd dir="auto">{report.workPerformed || "Not recorded"}</dd></div>
         <div><dt>Outcome</dt><dd dir="auto">{report.outcome || "Not recorded"}</dd></div>
@@ -174,54 +183,78 @@ export default function TaskWorkPanel({ task, details, transitions, onMove, setD
   const disabled = busy || uncertain || posting || uploading;
   const canStart = transitions.includes("progress");
   const finalStatus = task.reviewRequired ? "review" : "done";
+  const progress = reportProgress(task, details);
+  const isDone = (key) => progress.steps.find((step) => step.key === key).done;
+  // The panel calls the final check "handover"; the journey model calls it "submit".
+  const stepState = (key) => (working && stage === key ? "active" : isDone(key === "handover" ? "submit" : key) ? "done" : "upcoming");
+  // On the final check everything is shown in full, so the rail does not repeat it.
+  const showPreview = !(working && stage === "handover");
+  const savedReport = details.report;
+  const fileCount = details.attachments.length;
+  const open = (key) => (working ? () => setStage(key) : undefined);
+  const startButton = canStart && <button type="button" className="btn btn-primary" disabled={disabled} onClick={(event) => onMove(event.currentTarget, "progress")}>{actionLabel(task.status, "progress")}<Icon name="arrowRight" size="sm" /></button>;
 
   if (task.status === "review") return (
     <section className="task-flow-section" aria-label="Your work">
       <div className="task-flow-intro"><div><span className="eyebrow">YOUR WORK</span><h2>Waiting for review</h2><p>Your report has been sent to a manager.</p></div></div>
-      <TaskReportSummary task={task} details={details} attachments={attachments} />
+      <ul className="task-flow-chips" aria-label="Report steps">
+        {progress.steps.map((step) => <li key={step.key} className={step.done ? "is-done" : ""}>{step.done ? <Icon name="check" size="sm" /> : <span className="task-flow-chip-dot" aria-hidden="true" />}{step.label}{!step.done && <span className="sr-only"> · not recorded</span>}</li>)}
+      </ul>
+      <div className="task-card task-card-pad"><TaskReportSummary task={task} details={details} attachments={attachments} /></div>
     </section>
   );
   if (task.status === "cancelled") return null;
 
+  const notStarted = !isDone("start");
+  const heading = working ? "Your task journey" : task.status === "returned" ? "Changes requested" : task.status === "blocked" ? "Work is blocked" : "Ready to start";
+  const intro = working ? "Complete each step. Save a draft whenever you need to pause."
+    : task.status === "returned" ? "Read the feedback, then resume work to update your report."
+    : task.status === "blocked" ? "Unblock the task to continue your report."
+    : "Review the brief, then start the task.";
+
   return (
     <section className="task-flow-section" aria-label="Your work">
-      <div className="task-flow-intro"><div><span className="eyebrow">YOUR WORK</span><h2>{working ? "Your task journey" : task.status === "returned" ? "Changes requested" : task.status === "blocked" ? "Work is blocked" : "Ready to start"}</h2><p>{working ? "Complete your report one step at a time. Save a draft whenever you need to pause." : "Review the task brief and supporting information."}</p></div></div>
-      {showReturn && <div className="task-review-feedback" role="status"><strong>Manager feedback</strong><p dir="auto">{latestReturn.reason}</p></div>}
-      {!working && canStart && <div className="task-flow-start"><button type="button" className="btn btn-primary" disabled={disabled} onClick={(event) => onMove(event.currentTarget, "progress")}>{actionLabel(task.status, "progress")}<Icon name="arrowRight" size="sm" /></button></div>}
-      {working && <>
-        <ol className="task-flow-list">
-          <TaskFlowStep number={1} title="Task started" note="Brief above" done />
-          <TaskFlowStep number={2} title="Work performed" note="Required" active={stage === "work"} onOpen={() => setStage("work")}>
-            <Field label={<>What did you do? <span className="required-mark">*</span></>} htmlFor="task-report-work" hint="Describe the actions you took." error={invalidField === "work" ? error : null}>
-              <textarea ref={workRef} id="task-report-work" className="textarea" dir="auto" maxLength={10000} required value={work} disabled={disabled} onChange={(event) => { setWork(event.target.value); setInvalidField(""); setError(""); setMessage(""); }} />
-            </Field>
-            <div className="task-flow-actions"><button type="button" className="btn btn-secondary" disabled={disabled} onClick={() => saveDraft()}>Save draft</button><button type="button" className="btn btn-primary" disabled={disabled} onClick={() => saveDraft("outcome")}>Continue<Icon name="arrowRight" size="sm" /></button></div>
+      <div className="task-flow-intro">
+        <div><span className="eyebrow">YOUR WORK</span><h2>{heading}</h2><p>{intro}</p></div>
+        {working && <p className="task-flow-status" role="status">{message || (dirty ? "Unsaved changes" : saved.current.revision ? "All changes saved" : "No draft saved yet")}</p>}
+      </div>
+      {showReturn && <div className="task-review-feedback" role="status"><strong>Manager feedback</strong><p dir="auto">{latestReturn.reason}</p>{task.status === "returned" && startButton && <div className="task-flow-resume">{startButton}</div>}</div>}
+      {task.status === "blocked" && startButton && <div className="task-flow-paused"><span>Your report is kept while the task is blocked.</span>{startButton}</div>}
+      {task.status === "returned" && !showReturn && startButton && <div className="task-flow-paused"><span>Resume work to update your report.</span>{startButton}</div>}
+      <ol className="task-flow-list" aria-label="Report steps">
+        {notStarted ? (
+          <TaskFlowStep number={1} title="Start the task" note="First step" state="active">
+            <p className="task-flow-lead">Read the brief and the details on this page. Once you start, the report steps below open one at a time.</p>
+            {startButton && <div className="task-flow-actions is-start">{startButton}</div>}
           </TaskFlowStep>
-          <TaskFlowStep number={3} title="Outcome & evidence" note="Result required · File optional" active={stage === "outcome"} onOpen={() => setStage("outcome")}>
-            <Field label={<>What was the outcome? <span className="required-mark">*</span></>} htmlFor="task-report-outcome" hint="Summarize the result of your work." error={invalidField === "outcome" ? error : null}>
-              <textarea ref={outcomeRef} id="task-report-outcome" className="textarea" dir="auto" maxLength={10000} required value={outcome} disabled={disabled} onChange={(event) => { setOutcome(event.target.value); setInvalidField(""); setError(""); setMessage(""); }} />
-            </Field>
-            {attachments}
-            <div className="task-flow-actions"><button type="button" className="btn btn-secondary" disabled={disabled} onClick={() => setStage("work")}>Back</button><button type="button" className="btn btn-primary" disabled={disabled} onClick={() => saveDraft("hours")}>Continue<Icon name="arrowRight" size="sm" /></button></div>
-          </TaskFlowStep>
-          <TaskFlowStep number={4} title="Time spent" note="Enter total hours manually" active={stage === "hours"} onOpen={() => setStage("hours")}>
-            <Field label={<>Total hours <span className="required-mark">*</span></>} htmlFor="task-report-hours" hint="Total time spent on this task · 1.5 = 1 hour 30 minutes." error={invalidField === "hours" ? error : null}>
-              <input ref={hoursRef} id="task-report-hours" className="input task-hours-input" type="text" inputMode="decimal" required value={hours} disabled={disabled} onChange={(event) => { setHours(event.target.value); setInvalidField(""); setError(""); setMessage(""); }} />
-            </Field>
-            <div className="task-flow-actions"><button type="button" className="btn btn-secondary" disabled={disabled} onClick={() => saveDraft()}>Save draft</button><button type="button" className="btn btn-primary" disabled={disabled} onClick={() => { if (validateHandover()) saveDraft("handover"); }}>Review submission<Icon name="arrowRight" size="sm" /></button></div>
-          </TaskFlowStep>
-          <TaskFlowStep number={5} title={task.reviewRequired ? "Review & submit" : "Review & complete"} note="Check your handover" active={stage === "handover"} onOpen={() => { if (validateHandover()) setStage("handover"); }}>
-            <dl className="task-report-facts"><div><dt>Work performed</dt><dd dir="auto">{work}</dd></div><div><dt>Outcome</dt><dd dir="auto">{outcome}</dd></div><div><dt>Total time</dt><dd>{parsedHours} hrs</dd></div><div><dt>Attachments</dt><dd>{details.attachments.length}</dd></div><div><dt>Checklist</dt><dd>{details.checklist.filter((item) => item.done).length} / {details.checklist.length}</dd></div></dl>
-            {draftComment && <div className="handoff-warning"><Icon name="alert" /><div><strong>Unposted comment</strong><p>Your comment has not been posted and will not be included.</p><button type="button" className="btn btn-ghost btn-sm" onClick={onShowComments}>Back to comment</button></div></div>}
-            <div className="task-flow-actions"><button type="button" className="btn btn-secondary" disabled={disabled} onClick={() => setStage("hours")}>Back</button><button type="button" className="btn btn-primary" disabled={disabled} aria-busy={busy} onClick={() => { if (validateHandover()) commit(payload(finalStatus)); }}>{task.reviewRequired ? "Submit for review" : "Complete task"}</button></div>
-          </TaskFlowStep>
-          {task.reviewRequired && <TaskFlowStep number={6} title="Manager review" note="After submission" />}
-          <TaskFlowStep number={task.reviewRequired ? 7 : 6} title="Complete" note={task.reviewRequired ? "After approval" : "After completion"} />
-        </ol>
-        {error && !invalidField && <div className="task-flow-error"><FormAlert>{error}</FormAlert>{uncertain && <button type="button" className="btn btn-secondary btn-sm" disabled={busy} onClick={checkCurrent}>Check task</button>}</div>}
-        {conflict && <details className="task-extra task-conflict" open><summary><span>Current saved report</span><span>Your draft is still editable</span></summary><div className="task-extra-body"><dl className="task-report-facts"><div><dt>Work performed</dt><dd dir="auto">{conflict.report.workPerformed || "Not recorded"}</dd></div><div><dt>Outcome</dt><dd dir="auto">{conflict.report.outcome || "Not recorded"}</dd></div><div><dt>Total time</dt><dd>{conflict.report.hoursRecorded || conflict.hours ? `${conflict.hours} hrs` : "Not recorded"}</dd></div></dl></div></details>}
-        <p className="task-flow-status" role="status">{message || (dirty ? "Unsaved changes" : saved.current.revision ? "All changes saved" : "No draft saved yet")}</p>
-      </>}
+        ) : <TaskFlowStep number={1} title="Task started" state="done" preview={details.startedAt ? `Started ${when(details.startedAt)}` : null} />}
+        <TaskFlowStep number={2} title="Work performed" note="Required" state={stepState("work")} onOpen={open("work")} preview={showPreview && savedReport.workPerformed && <p dir="auto">{savedReport.workPerformed}</p>}>
+          <Field label={<>What did you do? <span className="required-mark">*</span></>} htmlFor="task-report-work" hint="Describe the actions you took." error={invalidField === "work" ? error : null}>
+            <textarea ref={workRef} id="task-report-work" className="textarea" dir="auto" maxLength={10000} required value={work} disabled={disabled} onChange={(event) => { setWork(event.target.value); setInvalidField(""); setError(""); setMessage(""); }} />
+          </Field>
+          <div className="task-flow-actions"><button type="button" className="btn btn-secondary" disabled={disabled} onClick={() => saveDraft()}>Save draft</button><button type="button" className="btn btn-primary" disabled={disabled} onClick={() => saveDraft("outcome")}>Continue<Icon name="arrowRight" size="sm" /></button></div>
+        </TaskFlowStep>
+        <TaskFlowStep number={3} title="Outcome & evidence" note="Result required · File optional" state={stepState("outcome")} onOpen={open("outcome")} preview={showPreview && savedReport.outcome && <><p dir="auto">{savedReport.outcome}</p>{fileCount > 0 && <span className="task-flow-preview-meta"><Icon name="clip" size="sm" />{fileCount === 1 ? "1 file attached" : `${fileCount} files attached`}</span>}</>}>
+          <Field label={<>What was the outcome? <span className="required-mark">*</span></>} htmlFor="task-report-outcome" hint="Summarize the result of your work." error={invalidField === "outcome" ? error : null}>
+            <textarea ref={outcomeRef} id="task-report-outcome" className="textarea" dir="auto" maxLength={10000} required value={outcome} disabled={disabled} onChange={(event) => { setOutcome(event.target.value); setInvalidField(""); setError(""); setMessage(""); }} />
+          </Field>
+          {attachments}
+          <div className="task-flow-actions"><button type="button" className="btn btn-secondary" disabled={disabled} onClick={() => setStage("work")}>Back</button><button type="button" className="btn btn-primary" disabled={disabled} onClick={() => saveDraft("hours")}>Continue<Icon name="arrowRight" size="sm" /></button></div>
+        </TaskFlowStep>
+        <TaskFlowStep number={4} title="Time spent" note="Enter total hours manually" state={stepState("hours")} onOpen={open("hours")} preview={showPreview && savedReport.hoursRecorded && `Recorded: ${task.hours} hrs`}>
+          <Field label={<>Total hours <span className="required-mark">*</span></>} htmlFor="task-report-hours" hint="Total time spent on this task · 1.5 = 1 hour 30 minutes." error={invalidField === "hours" ? error : null}>
+            <input ref={hoursRef} id="task-report-hours" className="input task-hours-input" type="text" inputMode="decimal" required value={hours} disabled={disabled} onChange={(event) => { setHours(event.target.value); setInvalidField(""); setError(""); setMessage(""); }} />
+          </Field>
+          <div className="task-flow-actions"><button type="button" className="btn btn-secondary" disabled={disabled} onClick={() => saveDraft()}>Save draft</button><button type="button" className="btn btn-primary" disabled={disabled} onClick={() => { if (validateHandover()) saveDraft("handover"); }}>Review submission<Icon name="arrowRight" size="sm" /></button></div>
+        </TaskFlowStep>
+        <TaskFlowStep number={5} title={task.reviewRequired ? "Review & submit" : "Review & complete"} note={task.reviewRequired ? "Check, then send to your manager" : "Check, then complete"} state={stepState("handover")} onOpen={working ? () => { if (validateHandover()) setStage("handover"); } : undefined}>
+          <dl className="task-report-facts"><div><dt>Work performed</dt><dd dir="auto">{work}</dd></div><div><dt>Outcome</dt><dd dir="auto">{outcome}</dd></div><div><dt>Total time</dt><dd>{parsedHours} hrs</dd></div><div><dt>Attachments</dt><dd>{details.attachments.length}</dd></div><div><dt>Checklist</dt><dd>{details.checklist.filter((item) => item.done).length} / {details.checklist.length}</dd></div></dl>
+          {draftComment && <div className="handoff-warning"><Icon name="alert" /><div><strong>Unposted comment</strong><p>Your comment has not been posted and will not be included.</p><button type="button" className="btn btn-ghost btn-sm" onClick={onShowComments}>Back to comment</button></div></div>}
+          <div className="task-flow-actions"><button type="button" className="btn btn-secondary" disabled={disabled} onClick={() => setStage("hours")}>Back</button><button type="button" className="btn btn-primary" disabled={disabled} aria-busy={busy} onClick={() => { if (validateHandover()) commit(payload(finalStatus)); }}>{task.reviewRequired ? "Submit for review" : "Complete task"}</button></div>
+        </TaskFlowStep>
+      </ol>
+      {working && error && !invalidField && <div className="task-flow-error"><FormAlert>{error}</FormAlert>{uncertain && <button type="button" className="btn btn-secondary btn-sm" disabled={busy} onClick={checkCurrent}>Check task</button>}</div>}
+      {working && conflict && <details className="task-extra task-conflict" open><summary><span>Current saved report</span><span>Your draft is still editable</span></summary><div className="task-extra-body"><dl className="task-report-facts"><div><dt>Work performed</dt><dd dir="auto">{conflict.report.workPerformed || "Not recorded"}</dd></div><div><dt>Outcome</dt><dd dir="auto">{conflict.report.outcome || "Not recorded"}</dd></div><div><dt>Total time</dt><dd>{conflict.report.hoursRecorded || conflict.hours ? `${conflict.hours} hrs` : "Not recorded"}</dd></div></dl></div></details>}
       {leaveTarget && <Dialog label="Unsaved work report" title="Leave without saving?" description="Your latest report changes have not been saved." onClose={() => setLeaveTarget(null)} width={440}>
         <div className="modal-foot"><button type="button" className="btn btn-secondary" onClick={() => setLeaveTarget(null)}>Keep editing</button><button type="button" className="btn btn-danger" onClick={() => {
           allowLeave.current = true;

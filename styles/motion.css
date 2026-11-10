@@ -13,7 +13,6 @@
 .content > .route { animation: none; }
 .page > :not(.scrim),
 .detail-main > *,
-.detail-side,
 .split-nav {
   animation: enter 420ms var(--ease-out) backwards;
 }
@@ -22,7 +21,6 @@
 .page > :nth-child(4), .detail-main > :nth-child(4) { animation-delay: 120ms; }
 .page > :nth-child(5), .detail-main > :nth-child(5) { animation-delay: 160ms; }
 .page > :nth-child(n + 6), .detail-main > :nth-child(n + 6) { animation-delay: 200ms; }
-.detail-side { animation-delay: 60ms; }
 /* Stacked sections inside a page follow on. */
 .stack-lg > * { animation: enter 420ms var(--ease-out) backwards; }
 .stack-lg > :nth-child(2) { animation-delay: 60ms; }
