@@ -304,7 +304,6 @@ test.describe("task workflow", () => {
     await page.getByLabel("Confirm complexity").selectOption("3");
     await page.getByRole("button", { name: "Approve" }).click();
     await expect(page.getByRole("status", { name: "Task approval" }).getByRole("heading", { name: "Task approved" })).toBeVisible();
-    await page.getByText("Task overview & activity").click();
     await expect(page.getByTestId("activity")).toContainText("approved it · quality: Excellent · complexity: Medium → Complex");
     await expect(page.getByRole("button", { name: "Approve" })).toHaveCount(0);
     await expect(page.getByRole("button", { name: "Return for changes" })).toHaveCount(0);

@@ -24,6 +24,9 @@ test("a SOC manager's review shows the eligible security manager and cannot be s
   await expect(journey).toContainText("Manager review");
   await expect(journey).toContainText("E2E Administrator");
   await expect(journey).toContainText("no individual is assigned");
+  await page.getByRole("button", { name: "فارسی", exact: true }).click();
+  await expect(page.getByRole("region", { name: "پیشرفت تسک" })).toContainText("E2E Administrator");
+  await expect(page.getByRole("region", { name: "پیشرفت تسک" })).toContainText("بازبینی مدیر");
   expect((await page.request.patch(`/api/tasks/${task.id}`, { data: { status: "done", quality: "good" } })).status()).toBe(409);
 });
 
@@ -32,7 +35,6 @@ test("a Solar Hijri deadline can be typed and chosen with the calendar", async (
   const created = await page.request.post("/api/tasks", { data: { title: "Solar calendar task", a: admin.id, due: "2026-03-21" } });
   const task = (await created.json()).task;
   await page.goto(`/tasks/${task.id}`);
-  await page.getByText("Task overview & activity").click();
   const date = page.getByLabel("Deadline (Solar Hijri)");
   await expect(date).toHaveValue("1405/01/01");
   await date.fill("۱۴۰۵/۰۱/۰۲");

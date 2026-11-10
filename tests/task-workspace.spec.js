@@ -37,7 +37,6 @@ test("both managers may waive review within their scope; only the assignee can c
   expect((await page.request.patch(`/api/tasks/${regularTask.id}`, { data: { reviewRequired: false } })).status()).toBe(200);
   expect((await page.request.patch(`/api/tasks/${regularTask.id}`, { data: { reviewRequired: true } })).status()).toBe(200);
   await page.goto(`/tasks/${regularTask.id}`);
-  await page.getByText("Task overview & activity").click();
   const reviewSetting = page.getByRole("checkbox", { name: "Manager review required" });
   const changed = page.waitForResponse((response) => response.url().endsWith(`/api/tasks/${regularTask.id}`) && response.request().method() === "PATCH");
   await reviewSetting.uncheck();

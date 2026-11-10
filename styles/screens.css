@@ -14,8 +14,7 @@
 
 /* ---------- Task details ---------- */
 .detail { display: block; flex: 1; min-width: 0; }
-.detail-main { width: 100%; max-width: 1040px; min-width: 0; margin: 0 auto; padding: var(--s-5) var(--s-8) var(--s-4); }
-.detail-side { width: 100%; max-width: 1040px; margin: 0 auto; padding: 0 var(--s-8) var(--s-10); }
+.detail-main { width: 100%; max-width: 1240px; min-width: 0; margin: 0 auto; padding: var(--s-5) var(--s-8) var(--s-10); }
 .detail-bar { display: flex; align-items: center; flex-wrap: wrap; gap: var(--s-2); min-height: var(--control-h); margin-bottom: var(--s-5); }
 .detail-bar .back { display: inline-flex; align-items: center; gap: 4px; font-size: var(--fs-13); color: var(--text-3); }
 .detail-bar .back:hover { color: var(--text); }
@@ -38,15 +37,114 @@
 .detail-section { margin-top: var(--s-8); }
 .side-h { margin: var(--s-6) 0 var(--s-3); font: var(--type-overline); letter-spacing: var(--tracking-caps); text-transform: uppercase; color: var(--text-3); }
 .side-note { margin-bottom: var(--s-3); font-size: var(--fs-12); color: var(--text-3); }
-.detail-side .kv dd .cell-edit { margin: 0 -6px; }
-.detail-side .input[type="date"] { width: 156px; height: var(--control-h-sm); }
 
 /* Task workspace: a distinct brief, grouped work surfaces and a clear activity rail. */
-.task-brief { padding: var(--s-5); border: 1px solid var(--border); border-radius: var(--r-lg); background: var(--surface-card); box-shadow: var(--shadow-card), inset 0 1px 0 var(--edge); }
+/* Hero: the brief, where the task stands for the viewer, and its lifecycle, in one card. */
+.task-hero { margin-bottom: var(--s-6); overflow: hidden; border: 1px solid var(--border); border-radius: var(--r-lg); background: var(--surface-card); box-shadow: var(--shadow-card), inset 0 1px 0 var(--edge); }
+.task-hero-top { display: flex; flex-wrap: wrap; align-items: flex-start; gap: var(--s-5) var(--s-8); padding: var(--s-6) var(--s-6) var(--s-5); }
+.task-hero-top > .task-brief, .task-hero-top > .detail-edit { flex: 999 1 420px; min-width: 0; }
+.task-hero .detail-edit { margin-bottom: 0; }
+.task-progress { flex: 1 1 260px; max-width: 380px; display: flex; align-items: center; gap: var(--s-4); padding: var(--s-4) var(--s-5) var(--s-4) var(--s-4); border-radius: var(--r-lg); background: var(--surface-inset); }
+.task-progress > div { display: grid; gap: 2px; min-width: 0; }
+.task-progress-label { color: var(--text-3); font: var(--type-overline); letter-spacing: var(--tracking-caps); text-transform: uppercase; }
+.task-progress strong { color: var(--text); font: var(--type-section); }
+.task-progress-next { color: var(--text-3); font: var(--type-caption); }
+.task-progress-mark { width: 48px; height: 48px; flex: none; display: grid; place-items: center; border: 1.5px solid currentColor; border-radius: var(--r-full); }
+.task-progress-mark svg { width: 22px; height: 22px; }
+.task-progress.is-sent .task-progress-mark, .task-progress.is-sent .task-progress-label { color: var(--success); }
+.task-progress.is-turn { background: var(--violet-soft); box-shadow: inset 0 0 0 1px color-mix(in oklab, var(--violet) 35%, transparent); }
+.task-progress.is-turn .task-progress-mark, .task-progress.is-turn .task-progress-label { color: var(--violet); }
+.task-ring { position: relative; width: 84px; height: 84px; flex: none; }
+.task-ring svg { display: block; width: 100%; height: 100%; }
+.task-ring-track { fill: none; stroke: var(--viz-track); stroke-width: 9; }
+.task-ring-fill { fill: none; stroke-width: 9; stroke-linecap: round; transition: stroke-dasharray var(--t-slow) var(--ease-out); }
+.task-ring-value { position: absolute; inset: 0; display: grid; place-items: center; color: var(--text); font: var(--fw-semibold) var(--fs-18)/1 var(--font-sans); font-variant-numeric: tabular-nums; }
+.task-lifecycle { display: grid; grid-auto-flow: column; grid-auto-columns: minmax(0, 1fr); margin: 0; padding: var(--s-4) var(--s-6) var(--s-5); border-top: 1px solid var(--divider); list-style: none; }
+.task-stage { display: grid; gap: var(--s-2); min-width: 0; }
+.task-stage-track { display: flex; align-items: center; }
+.task-stage-node { width: 22px; height: 22px; flex: none; display: grid; place-items: center; box-sizing: border-box; border: 1.5px solid var(--border-strong); border-radius: var(--r-full); color: var(--text-on-primary); }
+.task-stage-node svg { width: 13px; height: 13px; }
+.task-stage-line { flex: 1; height: 0; margin: 0 var(--s-3); border-top: 2px dashed var(--border); }
+.task-stage:last-child .task-stage-line { display: none; }
+.task-stage.is-done .task-stage-node { border-color: var(--success); background: var(--success); }
+.task-stage.is-done .task-stage-line { border-top-style: solid; border-top-color: var(--success); }
+.task-stage.is-current .task-stage-node { border: 0; background: var(--grad-signal); box-shadow: 0 0 0 4px var(--primary-soft); }
+.task-stage-text { display: grid; gap: 1px; min-width: 0; padding-right: var(--s-3); }
+.task-stage-text strong { color: var(--text-2); font: var(--type-card-title); }
+.task-stage.is-done .task-stage-text strong { color: var(--text); }
+.task-stage.is-current .task-stage-text strong { color: var(--link); }
+.task-stage-text > span { color: var(--text-3); font: var(--type-caption); overflow-wrap: anywhere; }
+@media (max-width: 640px) {
+  .task-hero-top { padding: var(--s-5); }
+  .task-progress { max-width: none; }
+  .task-lifecycle { grid-auto-flow: row; gap: var(--s-3); padding: var(--s-4) var(--s-5); }
+  .task-stage { grid-template-columns: 22px minmax(0, 1fr); align-items: start; gap: var(--s-3); }
+  .task-stage-line { display: none; }
+}
+
+/* Main column and the always-open "At a glance" sidebar; the sidebar moves below on narrow screens. */
+.task-layout { display: flex; flex-wrap: wrap; align-items: flex-start; gap: var(--s-6); }
+.task-layout-main { flex: 999 1 560px; min-width: 0; display: grid; gap: var(--s-4); }
+.task-layout-main > .callout { margin: 0; }
+.task-side { flex: 1 1 300px; min-width: 0; display: grid; gap: var(--s-3); }
+.task-side-label { color: var(--text-3); font: var(--type-overline); letter-spacing: var(--tracking-caps); text-transform: uppercase; }
+.side-card { min-width: 0; padding: var(--s-4); border: 1px solid var(--border); border-radius: var(--r-lg); background: var(--surface-card); box-shadow: var(--shadow-card), inset 0 1px 0 var(--edge); }
+.side-card-head { display: flex; align-items: center; gap: var(--s-2); min-height: 28px; margin-bottom: var(--s-2); }
+.side-card-head > svg { width: 16px; height: 16px; flex: none; color: var(--text-3); }
+.side-card-head h3 { flex: 1; min-width: 0; margin: 0; color: var(--text); font: var(--type-card-title); }
+.side-card-meta { color: var(--text-3); font: var(--type-caption); font-variant-numeric: tabular-nums; }
+.side-card-note { margin: var(--s-3) 0 0; color: var(--text-3); font: var(--type-caption); }
+.side-progress { display: block; margin: var(--s-1) 0 var(--s-2); }
+.side-checklist .check-item { min-height: 34px; font: var(--type-body-sm); }
+.side-card .files { display: grid; }
+.side-card .file { width: 100%; box-sizing: border-box; }
+.side-card .dropzone { padding: var(--s-3); }
+.side-files { display: grid; gap: var(--s-2); margin: 0; padding: 0; list-style: none; }
+.side-files li { display: flex; align-items: center; gap: var(--s-2); min-width: 0; color: var(--text); font: var(--type-body-sm); }
+.side-file-name { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.side-more { margin: var(--s-2) 0 0 -8px; }
+.task-side .timeline { gap: var(--s-3); }
+.task-side .side-h { margin: var(--s-4) 0 var(--s-2); }
+.task-side .task-return-history { padding-bottom: 0; }
+.task-side .kv { grid-template-columns: 104px minmax(0, 1fr); }
+.task-side .kv dd .cell-edit { margin: 0 -6px; }
+.task-side .input[type="date"] { width: 156px; height: var(--control-h-sm); }
+.task-side .task-conversation .composer textarea, .task-side .composer textarea { min-height: 88px; }
+.task-side .composer .bar { flex-wrap: wrap; }
+
+/* Cards in the main column: report, review and decision. */
+.task-card { min-width: 0; overflow: hidden; border: 1px solid var(--border); border-radius: var(--r-lg); background: var(--surface-card); box-shadow: var(--shadow-card), inset 0 1px 0 var(--edge); }
+.task-card.is-focus { border-color: color-mix(in oklab, var(--primary) 65%, var(--border)); box-shadow: 0 0 0 3px var(--primary-soft), var(--shadow-card); }
+.task-card-pad { padding: var(--s-5); }
+.task-card-head { display: flex; flex-wrap: wrap; align-items: flex-start; justify-content: space-between; gap: var(--s-3); padding: var(--s-4) var(--s-5); border-bottom: 1px solid var(--divider); }
+.task-card-head h2 { margin: 3px 0 0; color: var(--text); font: var(--fw-semibold) var(--fs-18)/1.35 var(--font-sans); }
+.task-card-head p { margin: 4px 0 0; color: var(--text-2); font: var(--type-body-sm); }
+.task-card-body { padding: var(--s-5); }
+.task-card-section { padding: 0 var(--s-5) var(--s-5); }
+.task-card-section .task-evidence { margin-top: 0; }
+.task-card-note { margin: 0; padding: 0 var(--s-5) var(--s-4); color: var(--text-3); font: var(--type-caption); }
+.task-chip { display: inline-flex; align-items: center; gap: 6px; min-height: 26px; padding: 0 var(--s-3); border-radius: var(--r-full); font: var(--type-caption); font-weight: var(--fw-medium); }
+.task-chip.is-ok { background: var(--success-soft); color: var(--success); }
+.task-review { display: grid; gap: var(--s-4); }
+.task-review-rows { margin: 0; padding: var(--s-1) var(--s-5) var(--s-2); }
+.task-review-row { display: grid; grid-template-columns: 22px 140px minmax(0, 1fr); gap: var(--s-3); padding: var(--s-4) 0; border-bottom: 1px solid var(--divider); }
+.task-review-row:last-child { border-bottom: 0; }
+.task-review-row dt { padding-top: 2px; color: var(--text-3); font: var(--type-label); }
+.task-review-row dd { color: var(--text); font: var(--type-body); white-space: pre-wrap; overflow-wrap: anywhere; }
+.task-review-mark { width: 22px; height: 22px; display: grid; place-items: center; border-radius: var(--r-full); }
+.task-review-row.is-provided .task-review-mark { background: var(--success-soft); color: var(--success); }
+.task-review-row.is-missing .task-review-mark { background: var(--surface-inset); color: var(--text-3); }
+.task-review-row.is-missing dd { color: var(--text-3); }
+.task-decision-actions { align-items: center; padding-top: var(--s-4); border-top: 1px solid var(--divider); }
+.task-decision-hint { margin-right: auto; color: var(--text-3); font: var(--type-caption); }
+.task-quality-star { color: var(--warning); }
+@media (max-width: 640px) { .task-review-row { grid-template-columns: 22px minmax(0, 1fr); } .task-review-row dd { grid-column: 2; } }
+
+.task-brief { min-width: 0; }
 .task-brief-label { display: flex; align-items: center; gap: var(--s-2); margin-bottom: var(--s-3); color: var(--link); font: var(--type-label); }
 .task-brief-label svg { width: 15px; height: 15px; }
 .task-brief .prose { max-width: none; white-space: pre-wrap; overflow-wrap: anywhere; }
-.task-brief-meta { display: flex; flex-wrap: wrap; align-items: center; gap: var(--s-3) var(--s-5); margin-top: var(--s-5); padding-top: var(--s-4); border-top: 1px solid var(--divider); color: var(--text-2); font: var(--type-caption); }
+.task-brief-meta { display: flex; flex-wrap: wrap; align-items: center; gap: var(--s-3) var(--s-5); margin-top: var(--s-4); color: var(--text-2); font: var(--type-caption); }
 .task-brief-meta > span { display: inline-flex; align-items: center; gap: var(--s-2); }
 .task-brief-meta .who .avatar { width: 22px; height: 22px; font-size: var(--fs-11); }
 
@@ -81,30 +179,47 @@
 .task-calendar-day:focus-visible { outline: 2px solid var(--focus); outline-offset: -2px; }
 
 /* A single chronological workspace; the expanded card is the current action. */
-.task-flow-section { margin-top: var(--s-6); }
-.task-flow-intro { margin: 0 0 var(--s-4); }
+.task-flow-section { min-width: 0; }
+.task-flow-intro { display: flex; flex-wrap: wrap; align-items: flex-end; justify-content: space-between; gap: var(--s-2) var(--s-4); margin: 0 0 var(--s-4); }
 .task-flow-intro h2 { margin: 3px 0 0; font: var(--fw-semibold) var(--fs-18)/1.35 var(--font-sans); }
 .task-flow-intro p { margin: 4px 0 0; color: var(--text-2); font: var(--type-body-sm); }
-.task-flow-start { margin-top: var(--s-4); }
 .task-flow-list { position: relative; display: grid; gap: var(--s-3); margin: 0; padding: 0; list-style: none; }
-.task-flow-list::before { content: ""; position: absolute; left: 14px; top: 16px; bottom: 16px; width: 1px; background: var(--border); }
+/* Each step draws the rail down to the next one; finished steps colour it. */
+.task-flow-step:not(:last-child)::after { content: ""; position: absolute; left: 14px; top: 46px; bottom: -19px; width: 2px; border-radius: 2px; background: var(--border); }
+.task-flow-step.is-done:not(:last-child)::after { background: color-mix(in oklab, var(--success) 55%, transparent); }
 .task-flow-step { position: relative; display: grid; grid-template-columns: 30px minmax(0, 1fr); align-items: start; gap: var(--s-3); }
 .task-flow-node { z-index: 1; display: grid; place-items: center; width: 29px; height: 29px; margin-top: 11px; border: 1px solid var(--border-strong); border-radius: var(--r-full); background: var(--surface); color: var(--text-2); font: var(--type-label); }
 .task-flow-node svg { width: 15px; height: 15px; }
-.task-flow-step.is-done .task-flow-node { border-color: var(--primary); background: var(--primary-soft); color: var(--link); }
-.task-flow-step.is-active:not(.is-done) .task-flow-node { border-color: var(--primary); background: var(--grad-signal); color: var(--text-on-primary); }
+.task-flow-step.is-done .task-flow-node { border: 1.5px solid var(--success); background: var(--success-soft); color: var(--success); }
+.task-flow-step.is-active .task-flow-node { border-color: var(--primary); background: var(--grad-signal); color: var(--text-on-primary); box-shadow: 0 0 0 4px var(--primary-soft); }
 .task-flow-card { min-width: 0; overflow: hidden; border: 1px solid var(--border); border-radius: var(--r-lg); background: var(--surface-card); box-shadow: var(--shadow-card), inset 0 1px 0 var(--edge); }
-.task-flow-step.is-active .task-flow-card { border-color: color-mix(in oklab, var(--primary) 65%, var(--border)); }
-.task-flow-heading { display: flex; align-items: center; justify-content: space-between; gap: var(--s-3); width: 100%; min-height: 50px; padding: var(--s-3) var(--s-4); border: 0; background: transparent; color: var(--text); font: var(--type-section); text-align: left; }
+.task-flow-step.is-active .task-flow-card { border-color: color-mix(in oklab, var(--primary) 65%, var(--border)); box-shadow: 0 0 0 3px var(--primary-soft), var(--shadow-card); }
+.task-flow-step.is-upcoming .task-flow-title { color: var(--text-2); }
+.task-flow-heading { display: flex; align-items: center; gap: var(--s-3); width: 100%; min-height: 50px; padding: var(--s-3) var(--s-4); border: 0; background: transparent; color: var(--text); font: var(--type-section); text-align: left; }
 button.task-flow-heading { cursor: pointer; }
 button.task-flow-heading:hover { background: var(--hover); }
-button.task-flow-heading:focus-visible, .task-extra > summary:focus-visible, .task-overview > summary:focus-visible { outline: 2px solid var(--focus); outline-offset: -3px; }
+button.task-flow-heading:focus-visible, .task-extra > summary:focus-visible { outline: 2px solid var(--focus); outline-offset: -3px; }
+.task-flow-title { flex: 1; min-width: 0; }
 .task-flow-note { color: var(--text-3); font: var(--type-caption); text-align: right; }
+.task-flow-done { color: var(--success); font: var(--type-caption); font-weight: var(--fw-medium); }
+.task-flow-edit { display: inline-flex; align-items: center; gap: 4px; padding: 2px 8px; border-radius: var(--r-sm); color: var(--text-2); font: var(--type-caption); }
+button.task-flow-heading:hover .task-flow-edit { background: var(--hover); color: var(--text); }
+.task-flow-preview { margin-top: calc(var(--s-2) * -1); padding: 0 var(--s-4) var(--s-3); color: var(--text-2); font: var(--type-body-sm); }
+.task-flow-preview p { margin: 0; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; white-space: pre-wrap; overflow-wrap: anywhere; }
+.task-flow-preview-meta { display: inline-flex; align-items: center; gap: 4px; margin-top: 4px; color: var(--text-3); font: var(--type-caption); }
+.task-flow-lead { margin: 0; color: var(--text-2); font: var(--type-body-sm); }
+.task-flow-actions.is-start { justify-content: flex-start; margin-top: var(--s-4); }
+.task-flow-paused { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: var(--s-3); margin: 0 0 var(--s-4); padding: var(--s-3) var(--s-4); border-radius: var(--r-md); background: var(--surface-inset); color: var(--text-2); font: var(--type-body-sm); }
+.task-flow-resume { margin-top: var(--s-3); }
+.task-flow-chips { display: flex; flex-wrap: wrap; gap: var(--s-2); margin: 0 0 var(--s-4); padding: 0; list-style: none; }
+.task-flow-chips li { display: inline-flex; align-items: center; gap: 6px; min-height: 28px; padding: 0 var(--s-3); border-radius: var(--r-full); background: var(--surface-inset); color: var(--text-2); font: var(--type-caption); }
+.task-flow-chips li.is-done { background: var(--success-soft); color: var(--success); }
+.task-flow-chip-dot { width: 8px; height: 8px; border-radius: 50%; box-shadow: inset 0 0 0 1.5px var(--border-strong); }
 .task-flow-body { padding: var(--s-5); border-top: 1px solid var(--divider); }
 .task-flow-body .textarea { min-height: 110px; resize: vertical; }
 .task-flow-actions { display: flex; flex-wrap: wrap; justify-content: flex-end; gap: var(--s-2); margin-top: var(--s-5); }
 .task-flow-error { display: flex; align-items: center; flex-wrap: wrap; gap: var(--s-3); margin-top: var(--s-3); }
-.task-flow-status { min-height: 1.5em; margin: var(--s-3) 0 0 42px; color: var(--text-3); font: var(--type-caption); }
+.task-flow-status { margin: 0; color: var(--text-3); font: var(--type-caption); }
 .task-hours-input { max-width: 180px; font-variant-numeric: tabular-nums; }
 .required-mark { color: var(--danger); }
 .task-evidence { margin-top: var(--s-5); }
@@ -125,17 +240,13 @@ button.task-flow-heading:focus-visible, .task-extra > summary:focus-visible, .ta
 .task-quality-option input { accent-color: var(--primary); }
 .task-complexity-input { max-width: 260px; }
 .task-return-form { margin-top: var(--s-5); padding: var(--s-4); border-radius: var(--r-md); background: var(--surface-inset); }
-.task-extra, .task-overview { margin-top: var(--s-3); overflow: hidden; border: 1px solid var(--border); border-radius: var(--r-lg); background: var(--surface-card); }
-.task-extra > summary, .task-overview > summary { display: flex; align-items: center; justify-content: space-between; gap: var(--s-3); min-height: 52px; padding: var(--s-3) var(--s-4); color: var(--text); font: var(--type-section); list-style: none; cursor: pointer; }
-.task-extra > summary::-webkit-details-marker, .task-overview > summary::-webkit-details-marker { display: none; }
-.task-extra > summary:hover, .task-overview > summary:hover { background: var(--hover); }
+.task-extra { margin-top: var(--s-3); overflow: hidden; border: 1px solid var(--border); border-radius: var(--r-lg); background: var(--surface-card); }
+.task-extra > summary { display: flex; align-items: center; justify-content: space-between; gap: var(--s-3); min-height: 52px; padding: var(--s-3) var(--s-4); color: var(--text); font: var(--type-section); list-style: none; cursor: pointer; }
+.task-extra > summary::-webkit-details-marker { display: none; }
+.task-extra > summary:hover { background: var(--hover); }
 .task-extra > summary > span:last-child { margin-left: auto; color: var(--text-3); font: var(--type-caption); text-align: right; }
-.task-overview > summary { justify-content: flex-start; }
-.task-overview > summary svg { color: var(--primary); }
 .task-extra-body { padding: var(--s-5); border-top: 1px solid var(--divider); }
 .task-extra-body .task-evidence { margin-top: 0; }
-.task-overview[open] > :not(summary) { margin-left: var(--s-5); margin-right: var(--s-5); }
-.task-overview[open] .timeline { padding-bottom: var(--s-5); }
 .task-return-history { display: grid; gap: var(--s-3); margin: 0; padding: 0 0 var(--s-5); list-style: none; }
 .task-return-history li { padding: var(--s-3); border-radius: var(--r-md); background: var(--surface-inset); font: var(--type-body-sm); }
 .task-return-history time { margin-left: var(--s-2); color: var(--text-3); font: var(--type-caption); }
@@ -214,9 +325,10 @@ button.task-flow-heading:focus-visible, .task-extra > summary:focus-visible, .ta
 .file a { min-width: 0; overflow: hidden; text-overflow: ellipsis; color: var(--text); }
 .file a:hover { text-decoration: underline; text-underline-offset: 3px; }
 .file .ext { width: 30px; height: 34px; flex: none; display: grid; place-items: center; border-radius: var(--r-xs); background: var(--surface-inset); color: var(--text-2); font: var(--fw-semibold) 9px var(--font-mono); letter-spacing: 0; }
-.file .ext[data-kind="doc"] { color: var(--info); background: var(--info-soft); }
-.file .ext[data-kind="sheet"] { color: var(--success); background: var(--success-soft); }
-.file .ext[data-kind="pdf"] { color: var(--danger); background: var(--danger-soft); }
+.side-files .ext { width: 28px; height: 22px; flex: none; display: grid; place-items: center; border-radius: var(--r-xs); background: var(--surface-inset); color: var(--text-2); font: var(--fw-semibold) 9px var(--font-mono); letter-spacing: 0; }
+:is(.file, .side-files) .ext[data-kind="doc"] { color: var(--info); background: var(--info-soft); }
+:is(.file, .side-files) .ext[data-kind="sheet"] { color: var(--success); background: var(--success-soft); }
+:is(.file, .side-files) .ext[data-kind="pdf"] { color: var(--danger); background: var(--danger-soft); }
 .file small { display: block; font-size: var(--fs-12); color: var(--text-3); }
 
 .check-item { display: flex; align-items: center; gap: var(--s-3); min-height: 38px; margin: 0 calc(var(--s-2) * -1); padding: 0 var(--s-2); border-radius: var(--r-sm); transition: background-color var(--t-fast); }
@@ -376,16 +488,14 @@ button.task-flow-heading:focus-visible, .task-extra > summary:focus-visible, .ta
 
 /* ---------- Responsive ---------- */
 @media (max-width: 1279px) {
-  .detail-main { padding: var(--s-5) var(--s-6) var(--s-4); }
-  .detail-side { padding-left: var(--s-6); padding-right: var(--s-6); }
+  .detail-main { padding: var(--s-5) var(--s-6) var(--s-8); }
 }
 @media (max-width: 1023px) {
   .login { grid-template-columns: minmax(0, 1fr); }
   .login-r { display: none; }
 }
 @media (max-width: 767px) {
-  .detail-main { padding: var(--s-4) var(--s-4) var(--s-3); }
-  .detail-side { padding: 0 var(--s-4) var(--s-8); }
+  .detail-main { padding: var(--s-4) var(--s-4) var(--s-8); }
   .task-flow-step { grid-template-columns: 26px minmax(0, 1fr); gap: var(--s-2); }
   .task-flow-node { width: 25px; height: 25px; }
   .task-flow-list::before { left: 12px; }
