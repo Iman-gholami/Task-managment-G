@@ -23,8 +23,10 @@ export function PeopleTable({ list, onRemove, onEdit }) {
   const { t: __uiTr, locale, role: roleText, team: teamText, province: provinceText } = useUiI18n();
   const router = useRouter();
   const { me } = useApp();
-  const canView = (p) => p.id === me.id || (canViewManagementAnalytics(me) && p.role !== "security_manager" && p.role !== "observer" && (me.role !== "soc_manager" || p.team.startsWith("SOC")));
-  const profile = (p) => p.role === "security_manager" ? `/performance/employees/${p.id}` : `/analytics/people/${encodeURIComponent(p.id)}`;
+  const canView = (p) => p.id === me.id || canViewManagementAnalytics(me);
+  // Analytics scopes SOC managers to SOC; preserve the legacy profile for others in Team.
+  const profile = (p) => p.role === "security_manager" || p.role === "observer" || (me.role === "soc_manager" && !p.team.startsWith("SOC"))
+    ? `/performance/employees/${p.id}` : `/analytics/people/${encodeURIComponent(p.id)}`;
   const hasActions = list.some((p) => canView(p) || (onEdit && canManageMember(me, p)));
   return (
     <div className="table-wrap">
