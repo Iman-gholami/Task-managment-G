@@ -14,12 +14,13 @@ import { EmptyState } from "@/components/ui/states";
 import { Avatar, Due, Priority, Status } from "@/components/ui/indicators";
 import { PRIO, STATUS, TODAY, addDays, dueLabel, isOpen, plural } from "@/lib/format";
 import { taskDate } from "@/lib/task-date";
+import { isTaskOverdue } from "@/lib/task-deadline";
 import { inTeamScope, isManager } from "@/lib/roles";
 
 export { inTeamScope };
 
 const ORDER = { status: Object.keys(STATUS), prio: Object.keys(PRIO) };
-const overdue = (t) => isOpen(t) && t.due !== "—" && t.due < TODAY;
+const overdue = (t) => isTaskOverdue(t, TODAY);
 
 // Status tabs: each is a predicate over tasks, with its own empty-state copy.
 const TABS = [
@@ -287,7 +288,7 @@ function Board({ list }) {
             <div className="board-col-head"><Status s={s} /><span className="board-count num">{col.length}</span></div>
             {col.length === 0 && <div className="board-empty">{"" + __taskTr("No tasks") + ""}</div>}
             {col.map((t) => (
-              <Link key={t.id} href={`/tasks/${t.id}`} className="board-card" data-s={t.status} data-overdue={isOpen(t) && t.due !== "—" && t.due < TODAY ? "" : undefined}>
+              <Link key={t.id} href={`/tasks/${t.id}`} className="board-card" data-s={t.status} data-overdue={overdue(t) ? "" : undefined}>
                 <div className="board-card-top">
                   <span className="mono muted">{t.id}</span>
                   {t.status === "blocked" && <Status s="blocked" />}
@@ -297,7 +298,7 @@ function Board({ list }) {
                 <div className="t">{t.title}</div>
                 <div className="meta">
                   <Priority p={t.prio} />
-                  {t.due !== "—" && isOpen(t) && <span className={`due ${t.due < TODAY ? "overdue" : "muted"}`}><Due task={t} /></span>}
+                  {t.due !== "—" && isOpen(t) && <span className={`due ${overdue(t) ? "overdue" : "muted"}`}><Due task={t} /></span>}
                 </div>
               </Link>
             ))}

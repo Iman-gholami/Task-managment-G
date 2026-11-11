@@ -13,7 +13,7 @@ const repo = await import("@/lib/server/repo");
 const { db } = await import("@/lib/server/db");
 const { hashPassword } = await import("@/lib/server/password");
 const { addDays } = await import("@/lib/analytics/calendar");
-const { dashboardStats, resolvePeriod } = await import("@/lib/server/stats");
+const { dashboardStats, resolvePeriod, teamStats } = await import("@/lib/server/stats");
 const admin = repo.listUsers().find((u) => u.role === "security_manager");
 const passwordHash = hashPassword("Dashboard-Fixture-2026!");
 const people = Array.from({ length:10 }, (_,i) => repo.createMember({ name:`Staff ${i}`, email:`staff${i}@perf.invalid`, role:i===1 ? "engineer" : "analyst", team:i===1 ? "Design & Automation" : "SOC · L1", passwordHash }));
@@ -56,4 +56,13 @@ test("individual dashboard figures and an empty SOC roster keep their existing m
   assert.deepEqual(empty.soc.iocSeries,Array(7).fill(0));
   assert.deepEqual(empty.soc.ticketSeries.slice(-2),[1,4]);
   assert.equal(empty.department.shiftCompliance,0);
+});
+
+test("team overdue totals omit manager review but retain unfinished analyst work", () => {
+  const review = repo.createTask({ title: "Waiting for manager", a: one.id, prio: "high", cx: 2, due: yesterday }, admin.id);
+  repo.updateTask(review.id, { status: "review" }, one.id);
+  const active = repo.createTask({ title: "Unfinished", a: one.id, prio: "high", cx: 2, due: yesterday }, admin.id);
+  repo.updateTask(active.id, { status: "progress" }, one.id);
+  const soc = teamStats(resolvePeriod({ period: "this" })).find((row) => row.team === "SOC");
+  assert.equal(soc.overdue, 1);
 });

@@ -1,5 +1,7 @@
 "use client";
 
+import { isTaskOverdue } from "@/lib/task-deadline";
+
 import Link from "next/link";
 import { useI18n } from "@/components/I18nProvider";
 import { useRouter } from "next/navigation";
@@ -135,7 +137,7 @@ export default function TaskTable({ list, groups, cols, kb = -1, sort, onSort, e
   const open = (e, t) => { if (!e.target.closest("a, button, [data-edit]")) router.push(`/tasks/${t.id}`); };
   // Rows that wait on someone get a coloured edge: review (a manager), returned (the assignee), blocked or late.
   const attention = (t) => {
-    if (t.status === "blocked" || (isOpen(t) && t.due !== "—" && t.due < TODAY)) return "danger";
+    if (t.status === "blocked" || isTaskOverdue(t, TODAY)) return "danger";
     if (t.status === "returned") return "warning";
     if (t.status === "review") return "review";
     return undefined;

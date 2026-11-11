@@ -9,6 +9,7 @@ import { buildAlerts, overallStatus } from "../lib/analytics/alerts.js";
 import { buildInsights } from "../lib/analytics/insights.js";
 import { mockFacts } from "../lib/analytics/mock.js";
 import { buildScoreLeaderboard, cohortFor, scoreLeaderboard, taskPoints } from "../lib/analytics/performance.js";
+import { isTaskOverdue } from "../lib/task-deadline.js";
 
 test("Jalali conversion matches Intl's persian calendar for every day of 2015–2035", () => {
   const fmt = new Intl.DateTimeFormat("en-u-ca-persian-nu-latn", { timeZone: "UTC", year: "numeric", month: "numeric", day: "numeric" });
@@ -137,6 +138,45 @@ test("statistics: completed, weighted units, hours, on-time, SOC closure and rou
   assert.deepEqual(s.activityRates.slice(0, 2), [1, 1]);
   assert.equal(s.tickets, 4);
   assert.equal(s.iocPerShift, 3);
+});
+
+
+test("on-time statistics use analyst handoff date rather than delayed manager approval", () => {
+  const f = fixture();
+  const base = f.tasks[0];
+  const completed = "2026-10-05";
+  const task = (id, due, submitted) => ({ ...base, id, due, submitted, completed, closed: completed });
+  f.tasks = [
+    task("early-handoff", "2026-10-02", "2026-09-30"),
+    task("on-deadline", "2026-10-02", "2026-10-02"),
+    task("late-handoff", "2026-10-02", "2026-10-04"),
+    task("legacy-without-handoff", "2026-10-06", null),
+    task("legacy-approved-late", "2026-10-03", null),
+  ];
+  const s = stats(f, ["a"], resolveRange({ p: "custom", from: "2026-10-01", to: "2026-10-06" }, f.today));
+  assert.equal(s.onTimeN, 5);
+  assert.equal(s.onTime, 3);
+  assert.equal(s.onTimeRate, 0.6);
+});
+
+test("manager-review tasks stay in review queues, not overdue analyst work", () => {
+  const f = fixture();
+  f.tasks = [
+    { ...f.tasks[4], id: "pending-manager", status: "review", due: "2026-09-30", prio: "critical", reviewSince: "2026-10-01" },
+    { ...f.tasks[4], id: "pending-analyst", status: "progress", due: "2026-10-01", prio: "high" },
+  ];
+  f.shifts = [];
+  f.tickets = [];
+  const current = openStats(f, null);
+  assert.equal(current.open, 2);
+  assert.equal(current.review, 1);
+  assert.equal(current.overdue, 1);
+  assert.equal(current.overdueHigh, 1);
+  assert.equal(isTaskOverdue(f.tasks[0], f.today), false);
+  assert.equal(isTaskOverdue(f.tasks[1], f.today), true);
+  const alerts = buildAlerts(f);
+  assert.deepEqual(alerts.find((a) => a.id === "overdue-high")?.items.map((i) => i.id), ["pending-analyst"]);
+  assert.deepEqual(alerts.find((a) => a.id === "review-waiting")?.items.map((i) => i.id), ["pending-manager"]);
 });
 
 test("teams count managers' work in totals but not in headcount; people rows exclude managers", () => {
