@@ -21,8 +21,7 @@ export async function POST(request) {
       String(body.targetId || ""),
       String(body.date || ""),
       String(body.targetDate || ""),
-      String(body.reason || ""),
-      body.allowMorningUpgrade === true
+      String(body.reason || "")
     );
     return Response.json({ request: change }, { status: 201 });
   } catch (e) {
