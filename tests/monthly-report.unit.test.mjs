@@ -37,16 +37,18 @@ saveAnalyzedTicket(l2.id,date,{ ticketNumber:"INC-001", verdict:"false_positive"
 saveAnalyzedTicket(l2.id,date,{ ticketNumber:"INC-002", verdict:"true_positive" });
 repo.setShiftCompleted(l2.id,true,date);
 
-test("monthly reports enforce manager scope and include detailed tasks and L2 tickets", () => {
+test("both managers can export each department while analysts and observers are denied", () => {
   const report = buildMonthlyReport(manager,{month});
-  assert.ok(report.people.some((p) => p.id === l2.id)); assert.ok(!report.people.some((p) => p.id === ti.id));
+  assert.ok(report.people.some((p) => p.id === l2.id)); assert.ok(report.people.some((p) => p.id === ti.id));
   const p = report.people.find((p) => p.id === l2.id);
   assert.equal(p.tasks[0].description,"Investigated suspicious activity"); assert.equal(p.tasks[0].workPerformed,"Reviewed events and evidence");
   assert.equal(p.tasks[0].hours,3.5); assert.equal(p.tasks[0].returnReasons[0].reason,"Please add the investigation evidence");
   assert.ok(p.tasks[0].history.some((h) => h.to_status === "done"));
   assert.deepEqual([p.stats.analyzed,p.stats.falsePositive,p.stats.truePositive],[2,1,1]);
-  assert.throws(() => buildMonthlyReport(manager,{month,person:ti.id}), (e) => e.status === 404);
-  assert.throws(() => buildMonthlyReport(manager,{month,team:"ti"}), (e) => e.status === 404);
+  assert.equal(buildMonthlyReport(manager,{month,person:ti.id}).people[0].tasks[0].title,"TI private task");
+  assert.ok(buildMonthlyReport(manager,{month,team:"ti"}).people.every((person) => person.group === "Threat Intelligence"));
+  assert.throws(() => buildMonthlyReport(manager,{month,person:"missing"}), (e) => e.status === 404);
+  assert.ok(!factsFor(manager,{}).people.some((person) => person.id === ti.id));
   assert.ok(buildMonthlyReport(admin,{month,team:"ti"}).people.every((p) => p.group === "Threat Intelligence"));
   assert.ok(buildMonthlyReport(admin,{month,team:"soc",level:"L2"}).people.every((p) => p.level === "L2"));
   assert.throws(() => buildMonthlyReport(observer,{month}), (e) => e.status === 403);
@@ -72,4 +74,58 @@ test("bundle contains a readable workbook and offline HTML, escaping user conten
   assert.match(renderMonthlyHtml(buildMonthlyReport(admin,{month,person:l2.id,locale:"en"})),/<html lang="en" dir="ltr">/);
   const zip = await JSZip.loadAsync(await createMonthlyBundle(report));
   assert.equal(Object.keys(zip.files).filter((n) => n.endsWith(".xlsx")).length,1); assert.equal(Object.keys(zip.files).filter((n) => n.endsWith(".html")).length,1);
+});
+
+test("monthly report separates automation SOC shift hours from completed task hours", async () => {
+  const { addDays, jMonthStart, jalaliMonthBounds, jalaliMonthKey } = await import("@/lib/analytics/calendar");
+  const reportMonth = jalaliMonthKey(addDays(jMonthStart(date), -1));
+  const from = jalaliMonthBounds(reportMonth).from;
+  const automation = add("Automation Analyst", "engineer", "Design & Automation", "automation@monthly.invalid");
+  for (let i = 0; i < 6; i++) {
+    const shiftDate = addDays(from, i);
+    repo.setShiftSchedule(automation.id, shiftDate, "night", admin.id);
+    repo.getShiftLog(automation.id, shiftDate);
+    repo.setShiftCompleted(automation.id, true, shiftDate);
+  }
+  const pending = addDays(from, 6), engineering = addDays(from, 7), leave = addDays(from, 8);
+  repo.setShiftSchedule(automation.id, pending, "evening", admin.id);
+  repo.setShiftSchedule(automation.id, engineering, "morning", admin.id);
+  repo.getShiftLog(automation.id, engineering);
+  repo.setShiftCompleted(automation.id, true, engineering);
+  repo.setDayStatus(automation.id, leave, "leave", admin.id);
+  for (let i = 0; i < 10; i++) {
+    const taskDate = addDays(from, i);
+    const item = repo.createTask({ title:`Automation task ${i+1}`, description:"Investigation work", a:automation.id, prio:"normal", cx:2, due:taskDate }, admin.id);
+    repo.updateTask(item.id, { status:"done", hours:10, quality:"good" }, admin.id);
+    db.prepare("UPDATE tasks SET created_at=?, started_at=?, completed_at=?, updated_at=? WHERE id=?")
+      .run(`${taskDate} 08:00:00`,`${taskDate} 09:00:00`,`${taskDate} 12:00:00`,`${taskDate} 12:00:00`,item.id);
+    db.prepare("UPDATE task_transitions SET at=? WHERE task_id=?").run(`${taskDate} 12:00:00`,item.id);
+  }
+  const report = buildMonthlyReport(admin, { month:reportMonth, team:"da", person:automation.id });
+  const socManagerReport = buildMonthlyReport(manager, { month:reportMonth, team:"da", person:automation.id });
+  const p = report.people[0];
+  assert.equal(p.stats.completed,10);
+  assert.equal(p.stats.hours,100);
+  assert.equal(p.stats.socShifts,7);
+  assert.equal(p.stats.socShiftHours,84.5);
+  assert.equal(p.stats.completedSocShifts,6);
+  assert.equal(p.stats.completedSocShiftHours,72);
+  assert.equal(p.stats.pendingSocShifts,1);
+  assert.equal(p.stats.pendingSocShiftHours,12.5);
+  assert.equal(p.stats.engineeringShifts,1);
+  assert.equal(p.stats.engineeringShiftHours,7.75);
+  assert.equal(socManagerReport.people[0].stats.completedSocShiftHours,72);
+  assert.equal(socManagerReport.people[0].stats.hours,100);
+  assert.equal(p.shifts.find((s) => s.date === engineering).workType,"engineering");
+  assert.equal(p.shifts.find((s) => s.date === leave).hours,0);
+  const workbook = await new ExcelJS.Workbook().xlsx.load(await createMonthlyWorkbook(report));
+  const sheet = workbook.getWorksheet("خلاصه افراد");
+  const headers = sheet.getRow(1).values;
+  const row = sheet.getRow(2).values;
+  for (const [label,value] of [["ساعت شیفت SOC (تکمیل‌شده)",72],["ساعت تسک‌های تکمیل‌شده",100]]) {
+    const col = headers.indexOf(label); assert.ok(col > 0, `${label} column is missing`); assert.equal(row[col],value);
+  }
+  const html = renderMonthlyHtml(report);
+  assert.match(html,/ساعت شیفت SOC/); assert.match(html,/>۷۲</); assert.match(html,/>۱۰۰</);
+  assert.match(html,/۷٫۷۵/);
 });
