@@ -283,12 +283,12 @@ test("evening swaps may explicitly extend a pre-existing morning shift, but neve
   repo.setShiftSchedule(target.id, date23, "morning", admin.id);
   repo.setShiftSchedule(target.id, date24, "evening", admin.id);
 
-  assert.throws(
-    () => repo.createShiftChangeRequest(requester.id, target.id, date23, date24),
-    /Confirm upgrading it to an evening shift/
-  );
   const pending = repo.createShiftChangeRequest(
-    requester.id, target.id, date23, date24, "Agreed extended shift", true
+    requester.id, target.id, date23, date24, "Agreed extended shift"
+  );
+  assert.throws(
+    () => repo.actOnShiftChange(pending.id, admin, "approve"),
+    /must accept the extended-shift exchange/
   );
   assert.equal(pending.requesterDestinationUpgrade, false);
   assert.equal(pending.targetDestinationUpgrade, true);
@@ -311,7 +311,8 @@ test("evening swaps may explicitly extend a pre-existing morning shift, but neve
   repo.setShiftSchedule(blockedRequester.id, lockedDate, "evening", admin.id);
   repo.setShiftSchedule(blockedTarget.id, lockedDate, "morning", admin.id);
   repo.setShiftSchedule(blockedTarget.id, lockedOther, "evening", admin.id);
-  const waiting = repo.createShiftChangeRequest(blockedRequester.id, blockedTarget.id, lockedDate, lockedOther, "", true);
+  const waiting = repo.createShiftChangeRequest(blockedRequester.id, blockedTarget.id, lockedDate, lockedOther);
+  repo.actOnShiftChange(waiting.id, blockedTarget, "accept");
   const log = repo.getShiftLog(blockedTarget.id, lockedDate);
   const item = log.activities[0];
   repo.updateActivity(blockedTarget.id, item.n, { done: true }, item.itemId, lockedDate);
@@ -329,7 +330,7 @@ test("evening swaps may explicitly extend a pre-existing morning shift, but neve
   repo.setShiftSchedule(nightTarget.id, nightDate, "morning", admin.id);
   repo.setShiftSchedule(nightTarget.id, nightOther, "night", admin.id);
   assert.throws(
-    () => repo.createShiftChangeRequest(nightRequester.id, nightTarget.id, nightDate, nightOther, "", true),
+    () => repo.createShiftChangeRequest(nightRequester.id, nightTarget.id, nightDate, nightOther),
     /already has a morning shift/
   );
 });
