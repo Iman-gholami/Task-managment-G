@@ -71,6 +71,13 @@ test("bundle contains a readable workbook and offline HTML, escaping user conten
   for (const word of ["Reviewed events and evidence","Please add the investigation evidence","INC-001","INC-002"]) assert.ok(text.includes(word));
   const html = renderMonthlyHtml(report);
   assert.match(html,/Reviewed events and evidence/); assert.match(html,/&lt;script&gt;alert/); assert.doesNotMatch(html,/<script>alert/); assert.doesNotMatch(html,/https?:\/\//);
+  assert.match(html, /نمای کلی گزارش/);
+  assert.match(html, /ساعت ثبت‌شده/);
+  assert.match(html, /data:font\/woff2;base64,/);
+  assert.match(html, /INC-001/);
+  assert.match(html, /نرخ FP/);
+  assert.match(html, /<details class="task"/);
+  assert.match(html, /<html lang="fa" dir="rtl">/);
   assert.match(renderMonthlyHtml(buildMonthlyReport(admin,{month,person:l2.id,locale:"en"})),/<html lang="en" dir="ltr">/);
   const zip = await JSZip.loadAsync(await createMonthlyBundle(report));
   assert.equal(Object.keys(zip.files).filter((n) => n.endsWith(".xlsx")).length,1); assert.equal(Object.keys(zip.files).filter((n) => n.endsWith(".html")).length,1);
@@ -128,4 +135,20 @@ test("monthly report separates automation SOC shift hours from completed task ho
   const html = renderMonthlyHtml(report);
   assert.match(html,/ساعت شیفت SOC/); assert.match(html,/>۷۲</); assert.match(html,/>۱۰۰</);
   assert.match(html,/۷٫۷۵/);
+});
+
+test("exports from a demo database are clearly labelled as fictional", async () => {
+  assert.equal(buildMonthlyReport(admin,{month}).sample, false);
+  db.prepare("INSERT INTO meta (key,value) VALUES ('monthly_report_demo','1')").run();
+  try {
+    const report = buildMonthlyReport(admin,{month,person:l2.id});
+    assert.equal(report.sample,true);
+    assert.match(renderMonthlyHtml(report), /نمونه آزمایشی • تمام اطلاعات ساختگی است/);
+    const workbook = await new ExcelJS.Workbook().xlsx.load(await createMonthlyWorkbook(report));
+    const guide = workbook.getWorksheet("راهنما");
+    assert.equal(guide.getCell("A2").value,"نمونه آزمایشی");
+    assert.match(guide.getCell("B2").value,/ساختگی/);
+  } finally {
+    db.prepare("DELETE FROM meta WHERE key='monthly_report_demo'").run();
+  }
 });

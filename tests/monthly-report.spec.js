@@ -33,6 +33,7 @@ test("automatic comparisons and monthly exports are scoped and usable", async ({
   await drawer.getByLabel("افراد").selectOption(analyst.id);
   const preview = await page.request.get(await drawer.getByRole("link",{name:"نمایش HTML"}).getAttribute("href"));
   expect(preview.status()).toBe(200); expect(preview.headers()["content-security-policy"]).toContain("default-src 'none'");
+  expect(preview.headers()["content-security-policy"]).toContain("font-src data:");
   const previewHtml = await preview.text(); expect(previewHtml).toContain("Monthly SOC investigation"); expect(previewHtml).not.toContain("Monthly TI Analyst");
   const [download] = await Promise.all([page.waitForEvent("download"), drawer.getByTestId("monthly-report-download").click()]);
   const zip = await JSZip.loadAsync(await fs.readFile(await download.path()));

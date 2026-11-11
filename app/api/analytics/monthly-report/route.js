@@ -11,7 +11,7 @@ export async function GET(request) {
     const report = buildMonthlyReport(user, { month:query.get("month"), team:query.get("team"), level:query.get("level"), province:query.get("province"), person:query.get("person"), locale:query.get("lang"), demo:query.get("demo") });
     if (format === "html") return new Response(renderMonthlyHtml(report), { headers: {
       "Content-Type": "text/html; charset=utf-8", "Cache-Control": "no-store", "X-Content-Type-Options": "nosniff",
-      "Content-Security-Policy": "default-src 'none'; style-src 'unsafe-inline'; img-src data:; frame-ancestors 'none'; sandbox",
+      "Content-Security-Policy": "default-src 'none'; style-src 'unsafe-inline'; font-src data:; img-src data:; frame-ancestors 'none'; sandbox",
       "Content-Disposition": `inline; filename="Sentinel_Monthly_${report.month}.html"`,
     } });
     return new Response(await createMonthlyBundle(report), { headers: {
