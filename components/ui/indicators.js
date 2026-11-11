@@ -5,6 +5,7 @@ import { useI18n as useTaskI18n } from "@/components/I18nProvider";
 import { useApp } from "@/components/AppProvider";
 import { CX, PRIO, QUAL, STATUS, TODAY, addDays, dueLabel, initials, isOpen } from "@/lib/format";
 import { taskDate } from "@/lib/task-date";
+import { isTaskPendingSubmission } from "@/lib/task-deadline";
 
 // Status, priority and complexity each use a different shape, so none depends on colour alone.
 
@@ -69,7 +70,7 @@ export function Who({ id, short, size }) {
 export function Due({ task }) {
   const { t: __taskTr, locale } = useTaskI18n();
   if (task.due === "—") return <span className="muted">{"" + __taskTr("No deadline") + ""}</span>;
-  const open = isOpen(task);
+  const open = isTaskPendingSubmission(task);
   const cls = open && task.due < TODAY ? "overdue" : open && task.due <= addDays(TODAY, 2) ? "soon" : "num";
   const days = Math.round((Date.parse(task.due + "T00:00:00Z") - Date.parse(TODAY + "T00:00:00Z")) / 864e5);
   const relative = open && days <= 7 ? (locale === "fa" ? days < 0 ? `${-days} روز از سررسید گذشته` : days === 0 ? "سررسید امروز" : days === 1 ? "سررسید فردا" : `${days} روز دیگر` : dueLabel(task.due, open)) : null;

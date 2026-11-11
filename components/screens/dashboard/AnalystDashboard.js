@@ -14,6 +14,7 @@ import { Metric, MetricGrid } from "@/components/ui/Metric";
 import { Meter } from "@/components/ui/charts";
 import { TODAY, addDays, isOpen, longDate, monthName, weekday } from "@/lib/format";
 import { dashboardDay, dashboardMonth } from "@/lib/i18n/presentation";
+import { isTaskOverdue, isTaskPendingSubmission } from "@/lib/task-deadline";
 import { shiftActivityText } from "@/lib/i18n/shift-content";
 
 /** Analyst / engineer: my queue first; SOC analysts also get today's Shift Log status. */
@@ -22,8 +23,8 @@ export default function AnalystDashboard() {
   const { t: __uiTr, locale, team: teamText, number } = useUiI18n();
   const { tasks, activities, tickets, me, stats, shiftDone, shiftChecklist, setCreateOpen } = useApp();
   const mine = tasks.filter((t) => t.a === me.id && isOpen(t)).sort((a, b) => (a.due > b.due ? 1 : -1));
-  const overdue = mine.filter((t) => t.due < TODAY).length;
-  const dueSoon = mine.filter((t) => t.due >= TODAY && t.due <= addDays(TODAY, 2)).length;
+  const overdue = mine.filter((t) => isTaskOverdue(t, TODAY)).length;
+  const dueSoon = mine.filter((t) => isTaskPendingSubmission(t) && t.due >= TODAY && t.due <= addDays(TODAY, 2)).length;
   const inReview = mine.filter((t) => t.status === "review").length;
   const done = activities.filter((a) => a.done).length;
   const remaining = activities.filter((a) => !a.done);

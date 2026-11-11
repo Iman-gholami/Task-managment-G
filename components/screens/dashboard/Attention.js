@@ -10,8 +10,9 @@ import Segmented from "@/components/ui/Segmented";
 import { Panel } from "@/components/ui/layout";
 import { Notice } from "@/components/ui/states";
 import { Who } from "@/components/ui/indicators";
-import { TODAY, dueLabel, isOpen, plural } from "@/lib/format";
+import { TODAY, dueLabel, plural } from "@/lib/format";
 import { deadlineReason } from "@/lib/i18n/presentation";
+import { isTaskOverdue } from "@/lib/task-deadline";
 
 // Reasons a task needs a manager, most urgent first. Only states the product records are used.
 const REASONS = {
@@ -39,7 +40,7 @@ export function useAttention(scope) {
     for (const t of tasks) {
       if (!scope(peopleMap[t.a] ?? { team: t.team })) continue;
       if (t.status === "blocked") add(t, "blocked");
-      if (isOpen(t) && t.due !== "—" && t.due < TODAY) add(t, "overdue");
+      if (isTaskOverdue(t, TODAY)) add(t, "overdue");
       if (t.status === "review" && t.a !== me.id) add(t, "review");
     }
     const rank = (e) => Math.min(...e.reasons.map((r) => REASONS[r].rank));
