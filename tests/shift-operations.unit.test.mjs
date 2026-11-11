@@ -317,7 +317,7 @@ test("evening swaps may explicitly extend a pre-existing morning shift, but neve
   const item = log.activities[0];
   repo.updateActivity(blockedTarget.id, item.n, { done: true }, item.itemId, lockedDate);
   assert.throws(() => repo.actOnShiftChange(waiting.id, admin, "approve"), /Shift Log has already started/);
-  assert.equal(repo.getShiftChangeRequest(waiting.id)?.status, "pending_target");
+  assert.equal(repo.getShiftChangeRequest(waiting.id)?.status, "pending_manager");
   assert.equal(repo.getShiftSchedule(blockedTarget.id, lockedDate)?.shiftType, "morning");
   assert.equal(repo.getShiftSchedule(blockedTarget.id, lockedOther)?.shiftType, "evening");
 
