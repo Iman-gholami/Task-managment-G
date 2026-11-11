@@ -100,6 +100,7 @@ export default function ShiftChanges() {
     targetId: targets[0]?.id ?? "",
     targetDate: "",
     reason: "",
+    allowMorningUpgrade: false,
   });
   const [busy, setBusy] = useState(false);
   const [filter, setFilter] = useState("open");
@@ -125,13 +126,32 @@ export default function ShiftChanges() {
       (row.userId === me.id && row.date === form.targetDate) ||
       (row.userId === form.targetId && row.date === form.date)
     ));
+  const destinationUpgrades = useMemo(() => {
+    if (!scheduleData || !form.date || !form.targetDate || form.date === form.targetDate) return [];
+    const mine = ownSchedules.find((row) => row.date === form.date);
+    const theirs = targetSchedules.find((row) => row.date === form.targetDate);
+    const existingOnTheirs = schedules.find((row) => row.userId === me.id && row.date === form.targetDate);
+    const existingOnMine = schedules.find((row) => row.userId === form.targetId && row.date === form.date);
+    const planned = [];
+    if (existingOnTheirs?.shiftType === "morning" && theirs?.shiftType === "evening") {
+      planned.push({ name: locale === "fa" ? "شما" : "You", date: form.targetDate });
+    }
+    if (existingOnMine?.shiftType === "morning" && mine?.shiftType === "evening") {
+      planned.push({ name: analysts.find((person) => person.id === form.targetId)?.name || form.targetId, date: form.date });
+    }
+    return planned;
+  }, [scheduleData, schedules, me.id, form.date, form.targetDate, form.targetId, ownSchedules, targetSchedules, analysts, locale]);
   const swapConflict = useMemo(() => {
     if (!scheduleData || !form.date || !form.targetDate || form.date === form.targetDate) return null;
+    const mine = ownSchedules.find((row) => row.date === form.date);
+    const theirs = targetSchedules.find((row) => row.date === form.targetDate);
+    const isAllowedDestination = (row, incoming) =>
+      !row || row.shiftType === "off" || (row.shiftType === "morning" && incoming === "evening");
     const mineOnDestination = schedules.find((row) => row.userId === me.id && row.date === form.targetDate);
-    if (mineOnDestination && mineOnDestination.shiftType !== "off") return { ...mineOnDestination, requester: true };
+    if (!isAllowedDestination(mineOnDestination, theirs?.shiftType)) return { ...mineOnDestination, requester: true };
     const theirsOnDestination = schedules.find((row) => row.userId === form.targetId && row.date === form.date);
-    return theirsOnDestination && theirsOnDestination.shiftType !== "off" ? { ...theirsOnDestination, requester: false } : null;
-  }, [scheduleData, schedules, me.id, form.date, form.targetDate, form.targetId]);
+    return !isAllowedDestination(theirsOnDestination, mine?.shiftType) ? { ...theirsOnDestination, requester: false } : null;
+  }, [scheduleData, schedules, me.id, form.date, form.targetDate, form.targetId, ownSchedules, targetSchedules]);
   const swapConflictMessage = swapConflict ? (() => {
     const person = swapConflict.requester ? (locale === "fa" ? "شما" : "you")
       : (analysts.find((a) => a.id === form.targetId)?.name || (locale === "fa" ? "کارشناس مقصد" : "the other analyst"));
@@ -152,7 +172,7 @@ export default function ShiftChanges() {
       const nextDate = ownValid ? current.date : (ownSchedules[0]?.date ?? "");
       const nextTargetDate = targetValid ? current.targetDate : (targetSchedules[0]?.date ?? "");
       if (nextDate === current.date && nextTargetDate === current.targetDate) return current;
-      return { ...current, date: nextDate, targetDate: nextTargetDate };
+      return { ...current, date: nextDate, targetDate: nextTargetDate, allowMorningUpgrade: false };
     });
   }, [scheduleData, ownSchedules, targetSchedules]);
 
@@ -168,17 +188,18 @@ export default function ShiftChanges() {
     const first = schedules
       .filter((row) => row.userId === targetId && isShiftType(row.shiftType) && row.date >= TODAY)
       .sort((a, b) => a.date.localeCompare(b.date))[0];
-    setForm((current) => ({ ...current, targetId, targetDate: first?.date ?? "" }));
+    setForm((current) => ({ ...current, targetId, targetDate: first?.date ?? "", allowMorningUpgrade: false }));
     setPicker(null);
   };
 
   const submit = async () => {
-    if (!form.date || !form.targetId || !form.targetDate || swapConflict || busy) return;
+    if (!form.date || !form.targetId || !form.targetDate || swapConflict ||
+      (destinationUpgrades.length && !form.allowMorningUpgrade) || busy) return;
     setBusy(true);
     try {
       await api("/api/shift/changes", { method: "POST", body: form });
       toast("درخواست تغییر شیفت ثبت شد");
-      setForm({ ...form, reason: "" });
+      setForm({ ...form, reason: "", allowMorningUpgrade: false });
       setFilter("open");
       setPicker(null);
       reload();
@@ -252,7 +273,7 @@ export default function ShiftChanges() {
               value={form.date}
               open={picker === "mine"}
               onToggle={() => setPicker((v) => v === "mine" ? null : "mine")}
-              onChange={(date) => { setForm((v) => ({ ...v, date })); setPicker(null); }}
+              onChange={(date) => { setForm((v) => ({ ...v, date, allowMorningUpgrade: false })); setPicker(null); }}
             />
 
             <label className="field">
@@ -268,7 +289,7 @@ export default function ShiftChanges() {
               value={form.targetDate}
               open={picker === "target"}
               onToggle={() => setPicker((v) => v === "target" ? null : "target")}
-              onChange={(targetDate) => { setForm((v) => ({ ...v, targetDate })); setPicker(null); }}
+              onChange={(targetDate) => { setForm((v) => ({ ...v, targetDate, allowMorningUpgrade: false })); setPicker(null); }}
             />
 
             <label className="field">
@@ -281,10 +302,19 @@ export default function ShiftChanges() {
               />
             </label>
 
+            {destinationUpgrades.length > 0 && !swapConflict && (
+              <label className={styles.upgradeConsent}>
+                <input type="checkbox" checked={!!form.allowMorningUpgrade}
+                  onChange={(e) => setForm((current) => ({ ...current, allowMorningUpgrade: e.target.checked }))} />
+                <span>{locale === "fa"
+                  ? `تأیید می‌کنم که با تأیید مدیر، ${destinationUpgrades.map((p) => `${p.name} در ${longFa(p.date, locale)}`).join(" و ")} از «شیفت صبح» به «شیفت تا ۸ شب» تغییر کند. این تبدیل جایگزین شیفت صبح است، نه یک شیفت اضافی؛ آمار ساعات و تعداد شیفت‌ها تغییر می‌کند.`
+                  : `I agree to extend the existing morning shift to until 8 p.m. for ${destinationUpgrades.map((p) => `${p.name} on ${longFa(p.date, locale)}`).join(" and ")} on manager approval. This replaces the morning shift and changes scheduled hours and shift counts.`}</span>
+              </label>
+            )}
             <button
               className="btn btn-primary"
               aria-busy={busy || undefined}
-              disabled={busy || !form.date || !form.targetId || !form.targetDate || !!swapConflict}
+              disabled={busy || !form.date || !form.targetId || !form.targetDate || !!swapConflict || (destinationUpgrades.length > 0 && !form.allowMorningUpgrade)}
               onClick={submit}
             >
               <Icon name="swap" />{"" + __shiftTr("ثبت درخواست") + ""}</button>
@@ -360,6 +390,20 @@ export default function ShiftChanges() {
                   <Icon name="left" size="sm" />
                   <ShiftInline date={r.targetDate} type={r.targetShift} />
                 </div>
+                {(r.requesterDestinationUpgrade || r.targetDestinationUpgrade) && (
+                  <div className={styles.upgradeSummary} role="note">
+                    <Icon name="info" size="sm" />
+                    <span>{locale === "fa"
+                      ? `این درخواست با تأیید مدیر، شیفت صبح ${[
+                          r.requesterDestinationUpgrade ? `${r.requesterName} در ${longFa(r.targetDate, locale)}` : null,
+                          r.targetDestinationUpgrade ? `${r.targetName} در ${longFa(r.date, locale)}` : null,
+                        ].filter(Boolean).join(" و ")} را به «تا ۸ شب» تبدیل می‌کند؛ شیفت صبح قبلی حفظ نمی‌شود.`
+                      : `On approval, the existing morning shift for ${[
+                          r.requesterDestinationUpgrade ? `${r.requesterName} on ${longFa(r.targetDate, locale)}` : null,
+                          r.targetDestinationUpgrade ? `${r.targetName} on ${longFa(r.date, locale)}` : null,
+                        ].filter(Boolean).join(" and ")} becomes an until-8 shift, replacing the morning assignment.`}</span>
+                  </div>
+                )}
 
                 {r.reason && <div className={styles.reason}>«{r.reason}»</div>}
               </div>
