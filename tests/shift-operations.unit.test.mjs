@@ -180,6 +180,39 @@ test("cross-day Saturday/Sunday swaps succeed without conflicts and never overwr
   assert.equal(repo.getShiftSchedule(a.id, sun)?.shiftType, "evening");
   assert.equal(repo.getShiftSchedule(b.id, sat)?.shiftType, "morning");
 
+  // Regression: two "until 8" shifts on adjacent days must be exchangeable,
+  // even when both analysts are recorded as off on the other person's shift day.
+  const restSat = plusDays(sat, 14);
+  const restSun = plusDays(restSat, 1);
+  repo.setShiftSchedule(a.id, restSat, "evening", admin.id);
+  repo.setDayStatus(a.id, restSun, "off", admin.id);
+  repo.setDayStatus(b.id, restSat, "off", admin.id);
+  repo.setShiftSchedule(b.id, restSun, "evening", admin.id);
+  const restingSwap = repo.createShiftChangeRequest(a.id, b.id, restSat, restSun, "Both until 8");
+  repo.actOnShiftChange(restingSwap.id, b, "accept");
+  assert.equal(repo.actOnShiftChange(restingSwap.id, admin, "approve").status, "approved");
+  assert.equal(repo.getShiftSchedule(a.id, restSun)?.shiftType, "evening");
+  assert.equal(repo.getShiftSchedule(b.id, restSat)?.shiftType, "evening");
+  assert.equal(repo.getShiftSchedule(a.id, restSat) ?? null, null);
+  assert.equal(repo.getShiftSchedule(b.id, restSun) ?? null, null);
+  assert.equal(repo.getDayStatus(a.id, restSat), "off", "requester keeps the off-day count");
+  assert.equal(repo.getDayStatus(b.id, restSun), "off", "target keeps the off-day count");
+  assert.equal(repo.getDayStatus(a.id, restSun), null);
+  assert.equal(repo.getDayStatus(b.id, restSat), null);
+
+  // With only one off-day marker, do not invent an absence for the other person.
+  const oneSat = plusDays(sat, 21);
+  const oneSun = plusDays(oneSat, 1);
+  repo.setShiftSchedule(a.id, oneSat, "evening", admin.id);
+  repo.setDayStatus(a.id, oneSun, "off", admin.id);
+  repo.setShiftSchedule(b.id, oneSun, "evening", admin.id);
+  const oneSwap = repo.createShiftChangeRequest(a.id, b.id, oneSat, oneSun);
+  repo.actOnShiftChange(oneSwap.id, admin, "approve");
+  assert.equal(repo.getShiftSchedule(a.id, oneSun)?.shiftType, "evening");
+  assert.equal(repo.getShiftSchedule(b.id, oneSat)?.shiftType, "evening");
+  assert.equal(repo.getDayStatus(a.id, oneSat), "off");
+  assert.equal(repo.getDayStatus(b.id, oneSun), null);
+
   const nextSat = plusDays(sat, 7);
   const nextSun = plusDays(sun, 7);
   repo.setShiftSchedule(a.id, nextSat, "morning", admin.id);
@@ -207,12 +240,25 @@ test("cross-day Saturday/Sunday swaps succeed without conflicts and never overwr
   );
   repo.removeShiftSchedule(b.id, nextSat);
 
-  // A collision introduced after the request is filed must also block manager approval.
+  // A newly introduced day off after submission must move at approval time too.
   const pending = repo.createShiftChangeRequest(a.id, b.id, nextSat, nextSun);
   repo.setDayStatus(b.id, nextSat, "off", admin.id);
-  assert.throws(() => repo.actOnShiftChange(pending.id, admin, "approve"), /other analyst is marked as off on/);
-  assert.equal(repo.getShiftChangeRequest(pending.id)?.status, "pending_target");
-  assert.equal(repo.getShiftSchedule(a.id, nextSat)?.shiftType, "morning");
-  assert.equal(repo.getShiftSchedule(b.id, nextSun)?.shiftType, "evening");
-  assert.equal(repo.getDayStatus(b.id, nextSat), "off");
+  assert.equal(repo.actOnShiftChange(pending.id, admin, "approve").status, "approved");
+  assert.equal(repo.getShiftSchedule(a.id, nextSun)?.shiftType, "evening");
+  assert.equal(repo.getShiftSchedule(b.id, nextSat)?.shiftType, "morning");
+  assert.equal(repo.getDayStatus(b.id, nextSun), "off");
+  assert.equal(repo.getDayStatus(b.id, nextSat), null);
+
+  // But a newly introduced leave must still block approval with no partial move.
+  const leaveSat = plusDays(sat, 28);
+  const leaveSun = plusDays(leaveSat, 1);
+  repo.setShiftSchedule(a.id, leaveSat, "evening", admin.id);
+  repo.setShiftSchedule(b.id, leaveSun, "evening", admin.id);
+  const blocked = repo.createShiftChangeRequest(a.id, b.id, leaveSat, leaveSun);
+  repo.setDayStatus(b.id, leaveSat, "leave", admin.id);
+  assert.throws(() => repo.actOnShiftChange(blocked.id, admin, "approve"), /other analyst is marked as leave on/);
+  assert.equal(repo.getShiftChangeRequest(blocked.id)?.status, "pending_target");
+  assert.equal(repo.getShiftSchedule(a.id, leaveSat)?.shiftType, "evening");
+  assert.equal(repo.getShiftSchedule(b.id, leaveSun)?.shiftType, "evening");
+  assert.equal(repo.getDayStatus(b.id, leaveSat), "leave");
 });
