@@ -158,6 +158,20 @@
   line-height: 1.7;
 }
 .swapConflict :global(svg.i) { flex: none; margin-top: 3px; }
+.swapNotice {
+  grid-column: 1 / -1;
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  padding: 10px 12px;
+  border: 1px solid var(--border);
+  border-radius: var(--r-md);
+  background: var(--surface-inset);
+  color: var(--text-2);
+  font: var(--type-body-sm);
+  line-height: 1.7;
+}
+.swapNotice :global(svg.i) { flex: none; margin-top: 3px; }
 
 
 /* ---------- Requests ---------- */

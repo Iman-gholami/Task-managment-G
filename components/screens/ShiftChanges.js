@@ -119,13 +119,18 @@ export default function ShiftChanges() {
     [schedules, form.targetId]
   );
 
-  // Swapping dates must not silently overwrite a second shift, day off or leave.
+  // Rest days move to the vacated dates; scheduled work and leave remain real conflicts.
+  const offDaysWillMove = !!scheduleData && !!form.date && !!form.targetDate && form.date !== form.targetDate &&
+    schedules.some((row) => row.shiftType === "off" && (
+      (row.userId === me.id && row.date === form.targetDate) ||
+      (row.userId === form.targetId && row.date === form.date)
+    ));
   const swapConflict = useMemo(() => {
     if (!scheduleData || !form.date || !form.targetDate || form.date === form.targetDate) return null;
     const mineOnDestination = schedules.find((row) => row.userId === me.id && row.date === form.targetDate);
-    if (mineOnDestination) return { ...mineOnDestination, requester: true };
+    if (mineOnDestination && mineOnDestination.shiftType !== "off") return { ...mineOnDestination, requester: true };
     const theirsOnDestination = schedules.find((row) => row.userId === form.targetId && row.date === form.date);
-    return theirsOnDestination ? { ...theirsOnDestination, requester: false } : null;
+    return theirsOnDestination && theirsOnDestination.shiftType !== "off" ? { ...theirsOnDestination, requester: false } : null;
   }, [scheduleData, schedules, me.id, form.date, form.targetDate, form.targetId]);
   const swapConflictMessage = swapConflict ? (() => {
     const person = swapConflict.requester ? (locale === "fa" ? "شما" : "you")
@@ -161,7 +166,7 @@ export default function ShiftChanges() {
 
   const changeTarget = (targetId) => {
     const first = schedules
-      .filter((row) => row.userId === targetId && row.date >= TODAY)
+      .filter((row) => row.userId === targetId && isShiftType(row.shiftType) && row.date >= TODAY)
       .sort((a, b) => a.date.localeCompare(b.date))[0];
     setForm((current) => ({ ...current, targetId, targetDate: first?.date ?? "" }));
     setPicker(null);
@@ -285,6 +290,12 @@ export default function ShiftChanges() {
               <Icon name="swap" />{"" + __shiftTr("ثبت درخواست") + ""}</button>
             {swapConflictMessage && <div className={styles.swapConflict} role="alert">
               <Icon name="alert" size="sm" /><span>{swapConflictMessage}</span>
+            </div>}
+            {offDaysWillMove && !swapConflict && <div className={styles.swapNotice} role="status">
+              <Icon name="info" size="sm" />
+              <span>{locale === "fa"
+                ? "پس از تأیید مدیر، «تعطیل شیفت» هر کارشناس از روزی که شیفت جدید می‌گیرد به روزی که شیفت خود را واگذار می‌کند منتقل می‌شود."
+                : "On manager approval, each existing day off will move from the new shift date to the date that analyst gives up."}</span>
             </div>}
           </div>
 
