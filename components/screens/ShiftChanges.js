@@ -106,7 +106,7 @@ export default function ShiftChanges() {
   const [picker, setPicker] = useState(null);
   const { data, loading, error, reload } = useFetch("/api/shift/changes");
   const scheduleUrl = me.keepsShiftLog ? `/api/shift/schedule?from=${TODAY}&to=${addDays(TODAY, 370)}` : null;
-  const { data: scheduleData, error: scheduleError } = useFetch(scheduleUrl);
+  const { data: scheduleData, error: scheduleError, reload: reloadSchedules } = useFetch(scheduleUrl);
   const requests = data?.requests ?? [];
   const schedules = scheduleData?.schedules ?? [];
 
@@ -118,6 +118,26 @@ export default function ShiftChanges() {
     () => schedules.filter((row) => row.userId === form.targetId && isShiftType(row.shiftType) && row.date >= TODAY).sort((a, b) => a.date.localeCompare(b.date)),
     [schedules, form.targetId]
   );
+
+  // Swapping dates must not silently overwrite a second shift, day off or leave.
+  const swapConflict = useMemo(() => {
+    if (!scheduleData || !form.date || !form.targetDate || form.date === form.targetDate) return null;
+    const mineOnDestination = schedules.find((row) => row.userId === me.id && row.date === form.targetDate);
+    if (mineOnDestination) return { ...mineOnDestination, requester: true };
+    const theirsOnDestination = schedules.find((row) => row.userId === form.targetId && row.date === form.date);
+    return theirsOnDestination ? { ...theirsOnDestination, requester: false } : null;
+  }, [scheduleData, schedules, me.id, form.date, form.targetDate, form.targetId]);
+  const swapConflictMessage = swapConflict ? (() => {
+    const person = swapConflict.requester ? (locale === "fa" ? "شما" : "you")
+      : (analysts.find((a) => a.id === form.targetId)?.name || (locale === "fa" ? "کارشناس مقصد" : "the other analyst"));
+    const type = locale === "fa"
+      ? ({ morning: "شیفت صبح", evening: "شیفت تا ۸ شب", night: "شیفت شب", off: "تعطیل شیفت", leave: "مرخصی" }[swapConflict.shiftType] || "وضعیت")
+      : ({ morning: "morning shift", evening: "shift until 8 p.m.", night: "night shift", off: "day off", leave: "leave" }[swapConflict.shiftType] || "assignment");
+    const date = longFa(swapConflict.date, locale);
+    return locale === "fa"
+      ? `برای ${person} در تاریخ ${date} از قبل «${type}» ثبت شده است. تاریخ دیگری انتخاب کنید یا از مدیر بخواهید برنامه شیفت را اصلاح کند.`
+      : `There is already a ${type} for ${person} on ${date}. Select another date or ask a manager to adjust the schedule.`;
+  })() : null;
 
   useEffect(() => {
     if (!scheduleData) return;
@@ -148,7 +168,7 @@ export default function ShiftChanges() {
   };
 
   const submit = async () => {
-    if (!form.date || !form.targetId || !form.targetDate || busy) return;
+    if (!form.date || !form.targetId || !form.targetDate || swapConflict || busy) return;
     setBusy(true);
     try {
       await api("/api/shift/changes", { method: "POST", body: form });
@@ -158,7 +178,12 @@ export default function ShiftChanges() {
       setPicker(null);
       reload();
     } catch (e) {
-      toast(e.message, "error");
+      if (/The (requester|other analyst) (already has|is marked as)/.test(e.message)) {
+        reloadSchedules();
+        toast(locale === "fa" ? "برنامه شیفت تغییر کرده است. تداخل روز مقصد را بررسی کنید و دوباره درخواست بدهید." : e.message, "error");
+      } else {
+        toast(e.message, "error");
+      }
     } finally {
       setBusy(false);
     }
@@ -254,10 +279,13 @@ export default function ShiftChanges() {
             <button
               className="btn btn-primary"
               aria-busy={busy || undefined}
-              disabled={busy || !form.date || !form.targetId || !form.targetDate}
+              disabled={busy || !form.date || !form.targetId || !form.targetDate || !!swapConflict}
               onClick={submit}
             >
               <Icon name="swap" />{"" + __shiftTr("ثبت درخواست") + ""}</button>
+            {swapConflictMessage && <div className={styles.swapConflict} role="alert">
+              <Icon name="alert" size="sm" /><span>{swapConflictMessage}</span>
+            </div>}
           </div>
 
           <div className="panel-foot">
