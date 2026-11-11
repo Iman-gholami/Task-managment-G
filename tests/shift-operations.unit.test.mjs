@@ -175,8 +175,8 @@ test("cross-day Saturday/Sunday swaps succeed without conflicts and never overwr
   repo.actOnShiftChange(swap.id, b, "accept");
   const approved = repo.actOnShiftChange(swap.id, admin, "approve");
   assert.equal(approved.status, "approved");
-  assert.equal(repo.getShiftSchedule(a.id, sat), null);
-  assert.equal(repo.getShiftSchedule(b.id, sun), null);
+  assert.equal(repo.getShiftSchedule(a.id, sat) ?? null, null);
+  assert.equal(repo.getShiftSchedule(b.id, sun) ?? null, null);
   assert.equal(repo.getShiftSchedule(a.id, sun)?.shiftType, "evening");
   assert.equal(repo.getShiftSchedule(b.id, sat)?.shiftType, "morning");
 
