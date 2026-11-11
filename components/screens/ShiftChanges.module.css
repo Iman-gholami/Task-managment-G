@@ -184,9 +184,8 @@
   color: var(--text);
   font: var(--type-body-sm);
   line-height: 1.9;
-  cursor: pointer;
 }
-.upgradeConsent input { flex: none; margin-top: 7px; accent-color: var(--primary); }
+.upgradeConsent :global(svg.i) { flex: none; margin-top: 4px; }
 .upgradeSummary {
   display: flex;
   align-items: flex-start;
