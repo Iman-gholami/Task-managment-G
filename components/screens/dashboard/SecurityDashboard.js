@@ -103,7 +103,7 @@ export default function SecurityDashboard() {
         <Panel
           title={__uiTr("People")}
           meta={__uiTr("Alphabetical · not a ranking")}
-          actions={<Link className="btn btn-ghost btn-sm" href="/performance/overview">{"" + __uiTr("Performance overview") + ""}<Icon name="arrowRight" /></Link>}
+          actions={<Link className="btn btn-ghost btn-sm" href="/analytics">{"" + __uiTr("Performance overview") + ""}<Icon name="arrowRight" /></Link>}
         >
           <PeopleTable list={members.filter((p) => p.role !== "security_manager")} />
         </Panel>

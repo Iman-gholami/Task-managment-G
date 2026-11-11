@@ -210,6 +210,7 @@ export function DataTable({ columns, rows, rowKey = (r, i) => r.id ?? i, onRowCl
   const sorted = useMemo(() => {
     if (!sort) return rows;
     const col = columns.find((c) => c.key === sort.key);
+    if (!col) return rows;
     const val = (r) => col.sortValue?.(r) ?? col.value(r);
     return [...rows].sort((a, b) => {
       const x = val(a), y = val(b);

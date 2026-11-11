@@ -97,6 +97,7 @@ const PeopleSearchTable = memo(function PeopleSearchTable({ m, setParam }) {
   const { t: __extraTr } = useExtraI18n();
   const { t: __analyticsTr, locale, team: teamText, role: roleText, province: provinceText, number } = useAnalyticsI18n();
   const [q, setQ] = useState("");
+  const [showAll, setShowAll] = useState(false);
   const deferredQ = useDeferredValue(q);
   const shown = useMemo(() => {
     const query = deferredQ.trim();
@@ -104,7 +105,7 @@ const PeopleSearchTable = memo(function PeopleSearchTable({ m, setParam }) {
   }, [deferredQ, m.rows]);
 
   const columns = [
-    { key: "name", label: __analyticsTr("کارشناس"), value: (r) => r.person.name, render: (r) => <span className="an-person">{r.person.name}<small>{[r.person.province ? provinceText(r.person.province) : __analyticsTr("استان تعیین‌نشده"), teamText(r.person.group), r.person.level, roleText(r.person.role), r.person.active ? null : __analyticsTr("غیرفعال")].filter(Boolean).join(" · ")}</small></span> },
+    { key: "name", label: __analyticsTr("کارشناس"), value: (r) => r.person.name, render: (r) => <button type="button" className="an-person an-person-button" onClick={() => setParam("person", r.person.id)}>{r.person.name}<small>{[r.person.province ? provinceText(r.person.province) : __analyticsTr("استان تعیین‌نشده"), teamText(r.person.group), r.person.level, roleText(r.person.role), r.person.active ? null : __analyticsTr("غیرفعال")].filter(Boolean).join(" · ")}</small></button> },
     { key: "c", label: __extraTr("تکمیل‌شده"), kind: "count", value: (r) => r.cur.completed },
     { key: "good", label: __extraTr("عالی/خوب"), kind: "count", value: (r) => r.cur.quality[0] + r.cur.quality[1] },
     { key: "needs", label: __extraTr("نیاز بهبود"), kind: "count", value: (r) => r.cur.quality[3] },
@@ -126,21 +127,25 @@ const PeopleSearchTable = memo(function PeopleSearchTable({ m, setParam }) {
       { key: "io", label: "IOC", kind: "count", value: (r) => (r.person.shift ? r.cur.iocs : null) },
       { key: "tk", label: __analyticsTr("تیکت"), kind: "count", value: (r) => (r.person.shift ? r.cur.tickets : null) },
     ] : []),
+    { key: "analyzed", label: locale === "fa" ? "تیکت تحلیل‌شده L2" : "L2 analyzed tickets", kind: "count", value: (r) => r.person.level === "L2" || r.cur.analyzed ? r.cur.analyzed : null },
+    { key: "fp", label: "FP", kind: "count", value: (r) => r.person.level === "L2" || r.cur.analyzed ? r.cur.falsePositive : null },
+    { key: "tp", label: "TP", kind: "count", value: (r) => r.person.level === "L2" || r.cur.analyzed ? r.cur.truePositive : null },
     { key: "sp", label: __extraTr("روند"), sort: false, value: () => null, render: (r) => <Sparkline values={r.spark} width={76} height={22} /> },
   ];
+  const compactKeys = new Set(["name", "c", "h", "o", "od", "s", "analyzed", "fp", "tp"]);
   return (
       <Panel
         title={__analyticsTr("همه کارشناسان")}
         meta={locale === "fa" ? `${number(shown.length)} نفر · الفبایی؛ مرتب‌سازی با کلیک روی سرستون` : `${number(shown.length)} people · alphabetical; select a column heading to sort`}
         actions={
-          <div className="search an-no-print" style={{ width: 220 }}>
+          <div className="row an-no-print"><button type="button" className="btn btn-ghost btn-sm" onClick={() => setShowAll(!showAll)} aria-pressed={showAll}>{showAll ? (locale === "fa" ? "نمای خلاصه" : "Compact view") : (locale === "fa" ? "همه ستون‌ها" : "All columns")}</button><div className="search" style={{ width: 220 }}>
             <Icon name="search" />
             <input type="search" className="input" placeholder={__analyticsTr("جست‌وجوی نام")} aria-label={__analyticsTr("جست‌وجوی کارشناس")} value={q} onChange={(e) => setQ(e.target.value)} />
-          </div>
+          </div></div>
         }
       >
         <DataTable
-          columns={columns}
+          columns={showAll ? columns : columns.filter((c) => compactKeys.has(c.key))}
           rows={shown}
           onRowClick={(r) => setParam("person", r.person.id)}
           caption="آمار کارشناسان"

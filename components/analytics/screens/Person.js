@@ -197,6 +197,7 @@ function ShiftSection({ id, cur, prev, medians }) {
         <Kpi label={__analyticsTr("انجام روتین")} icon="checkCircle" value={fmtPct(cur.routineRate)} delta={prev && cur.routineRate !== null && <Delta now={cur.routineRate} before={prev.routineRate} kind="rate" label={a.cmp?.short} />} foot={medians && isNum(medians.routineRate) ? `${a.locale === "fa" ? "میانه تیم" : "Team median"}: ${fmtPct(medians.routineRate)}` : null} />
         <Kpi label={__analyticsTr("IOC ثبت‌شده")} icon="shield" value={fmtInt(cur.iocs)} foot={`${fmtNum(cur.iocPerShift)} ${a.locale === "fa" ? "به ازای هر شیفت‌لاگ" : "per shift log"}`} />
         <Kpi label={__analyticsTr("تیکت")} icon="inbox" value={fmtInt(cur.tickets)} foot={`${fmtNum(cur.ticketsPerShift)} ${a.locale === "fa" ? "به ازای هر شیفت‌لاگ" : "per shift log"}`} />
+        {a.view.people.some((p) => p.id === id && p.level === "L2") && <Kpi label={a.locale === "fa" ? "تیکت تحلیل‌شده L2" : "L2 analyzed tickets"} icon="inbox" value={fmtInt(cur.analyzed)} foot={`FP ${fmtInt(cur.falsePositive)} · TP ${fmtInt(cur.truePositive)} · ${a.locale === "fa" ? "نرخ FP" : "FP rate"} ${fmtPct(cur.fpRate)}`} />}
         <Kpi label={__analyticsTr("گزارش ترافیک")} icon="report" value={fmtInt(cur.reports)} />
         <Kpi label={__analyticsTr("Issue گزارش‌شده")} icon="flag" value={fmtInt(cur.issues)} />
       </MetricGrid>
