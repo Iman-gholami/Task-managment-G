@@ -262,3 +262,75 @@ test("cross-day Saturday/Sunday swaps succeed without conflicts and never overwr
   assert.equal(repo.getShiftSchedule(b.id, leaveSun)?.shiftType, "evening");
   assert.equal(repo.getDayStatus(b.id, leaveSat), "leave");
 });
+
+test("evening swaps may explicitly extend a pre-existing morning shift, but never double book", () => {
+  const admin = repo.listUsers().find((person) => person.role === "security_manager");
+  const analyst = (name) => repo.createMember({
+    name, role: "analyst", team: "SOC · L1",
+    email: name.toLowerCase().replaceAll(" ", "-") + "@morning-upgrade.test",
+    passwordHash: hashPassword("Swap-Test-Password-2026!"),
+  });
+  const requester = analyst("Extended Shift Requester");
+  const target = analyst("Morning Overlap Target");
+  const plusDays = (iso, days) =>
+    new Date(Date.parse(iso + "T00:00:00Z") + days * 864e5).toISOString().slice(0, 10);
+  const date23 = plusDays(repo.today(), 42);
+  const date24 = plusDays(date23, 1);
+
+  // Matches the reported 23/24 Aban case: both exchanged shifts are evening,
+  // but the target is already assigned the morning of the requester's day.
+  repo.setShiftSchedule(requester.id, date23, "evening", admin.id);
+  repo.setShiftSchedule(target.id, date23, "morning", admin.id);
+  repo.setShiftSchedule(target.id, date24, "evening", admin.id);
+
+  const pending = repo.createShiftChangeRequest(
+    requester.id, target.id, date23, date24, "Agreed extended shift"
+  );
+  assert.throws(
+    () => repo.actOnShiftChange(pending.id, admin, "approve"),
+    /must accept the extended-shift exchange/
+  );
+  assert.equal(pending.requesterDestinationUpgrade, false);
+  assert.equal(pending.targetDestinationUpgrade, true);
+  repo.actOnShiftChange(pending.id, target, "accept");
+  const approved = repo.actOnShiftChange(pending.id, admin, "approve");
+  assert.equal(approved.status, "approved");
+  assert.equal(repo.getShiftSchedule(requester.id, date24)?.shiftType, "evening");
+  assert.equal(repo.getShiftSchedule(requester.id, date23) ?? null, null);
+  assert.equal(repo.getShiftSchedule(target.id, date23)?.shiftType, "evening");
+  assert.equal(repo.getShiftSchedule(target.id, date24) ?? null, null);
+  assert.equal(repo.getDayStatus(target.id, date23), null);
+  const scheduled = repo.listShiftSchedules(date23, date24);
+  assert.equal(scheduled.length, 2, "existing morning is upgraded, never duplicated");
+
+  // Existing Shift Log work remains immutable, including for a proposed upgrade.
+  const blockedRequester = analyst("Morning Upgrade Locked A");
+  const blockedTarget = analyst("Morning Upgrade Locked B");
+  const lockedDate = plusDays(date23, 7);
+  const lockedOther = plusDays(lockedDate, 1);
+  repo.setShiftSchedule(blockedRequester.id, lockedDate, "evening", admin.id);
+  repo.setShiftSchedule(blockedTarget.id, lockedDate, "morning", admin.id);
+  repo.setShiftSchedule(blockedTarget.id, lockedOther, "evening", admin.id);
+  const waiting = repo.createShiftChangeRequest(blockedRequester.id, blockedTarget.id, lockedDate, lockedOther);
+  repo.actOnShiftChange(waiting.id, blockedTarget, "accept");
+  const log = repo.getShiftLog(blockedTarget.id, lockedDate);
+  const item = log.activities[0];
+  repo.updateActivity(blockedTarget.id, item.n, { done: true }, item.itemId, lockedDate);
+  assert.throws(() => repo.actOnShiftChange(waiting.id, admin, "approve"), /Shift Log has already started/);
+  assert.equal(repo.getShiftChangeRequest(waiting.id)?.status, "pending_manager");
+  assert.equal(repo.getShiftSchedule(blockedTarget.id, lockedDate)?.shiftType, "morning");
+  assert.equal(repo.getShiftSchedule(blockedTarget.id, lockedOther)?.shiftType, "evening");
+
+  // Opting into an extension never allows a morning -> night overwrite.
+  const nightRequester = analyst("Night Upgrade Disallowed A");
+  const nightTarget = analyst("Night Upgrade Disallowed B");
+  const nightDate = plusDays(date23, 14);
+  const nightOther = plusDays(nightDate, 1);
+  repo.setShiftSchedule(nightRequester.id, nightDate, "night", admin.id);
+  repo.setShiftSchedule(nightTarget.id, nightDate, "morning", admin.id);
+  repo.setShiftSchedule(nightTarget.id, nightOther, "night", admin.id);
+  assert.throws(
+    () => repo.createShiftChangeRequest(nightRequester.id, nightTarget.id, nightDate, nightOther),
+    /already has a morning shift/
+  );
+});

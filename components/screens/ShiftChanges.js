@@ -125,13 +125,32 @@ export default function ShiftChanges() {
       (row.userId === me.id && row.date === form.targetDate) ||
       (row.userId === form.targetId && row.date === form.date)
     ));
+  const destinationUpgrades = useMemo(() => {
+    if (!scheduleData || !form.date || !form.targetDate || form.date === form.targetDate) return [];
+    const mine = ownSchedules.find((row) => row.date === form.date);
+    const theirs = targetSchedules.find((row) => row.date === form.targetDate);
+    const existingOnTheirs = schedules.find((row) => row.userId === me.id && row.date === form.targetDate);
+    const existingOnMine = schedules.find((row) => row.userId === form.targetId && row.date === form.date);
+    const planned = [];
+    if (existingOnTheirs?.shiftType === "morning" && theirs?.shiftType === "evening") {
+      planned.push({ name: locale === "fa" ? "شما" : "You", date: form.targetDate });
+    }
+    if (existingOnMine?.shiftType === "morning" && mine?.shiftType === "evening") {
+      planned.push({ name: analysts.find((person) => person.id === form.targetId)?.name || form.targetId, date: form.date });
+    }
+    return planned;
+  }, [scheduleData, schedules, me.id, form.date, form.targetDate, form.targetId, ownSchedules, targetSchedules, analysts, locale]);
   const swapConflict = useMemo(() => {
     if (!scheduleData || !form.date || !form.targetDate || form.date === form.targetDate) return null;
+    const mine = ownSchedules.find((row) => row.date === form.date);
+    const theirs = targetSchedules.find((row) => row.date === form.targetDate);
+    const isAllowedDestination = (row, incoming) =>
+      !row || row.shiftType === "off" || (row.shiftType === "morning" && incoming === "evening");
     const mineOnDestination = schedules.find((row) => row.userId === me.id && row.date === form.targetDate);
-    if (mineOnDestination && mineOnDestination.shiftType !== "off") return { ...mineOnDestination, requester: true };
+    if (!isAllowedDestination(mineOnDestination, theirs?.shiftType)) return { ...mineOnDestination, requester: true };
     const theirsOnDestination = schedules.find((row) => row.userId === form.targetId && row.date === form.date);
-    return theirsOnDestination && theirsOnDestination.shiftType !== "off" ? { ...theirsOnDestination, requester: false } : null;
-  }, [scheduleData, schedules, me.id, form.date, form.targetDate, form.targetId]);
+    return !isAllowedDestination(theirsOnDestination, mine?.shiftType) ? { ...theirsOnDestination, requester: false } : null;
+  }, [scheduleData, schedules, me.id, form.date, form.targetDate, form.targetId, ownSchedules, targetSchedules]);
   const swapConflictMessage = swapConflict ? (() => {
     const person = swapConflict.requester ? (locale === "fa" ? "شما" : "you")
       : (analysts.find((a) => a.id === form.targetId)?.name || (locale === "fa" ? "کارشناس مقصد" : "the other analyst"));
@@ -281,6 +300,14 @@ export default function ShiftChanges() {
               />
             </label>
 
+            {destinationUpgrades.length > 0 && !swapConflict && (
+              <div className={styles.upgradeConsent} role="status">
+                <Icon name="info" size="sm" />
+                <span>{locale === "fa"
+                  ? `پس از تأیید کارشناس مقابل و مدیر، شیفت صبح ${destinationUpgrades.map((p) => `${p.name} در ${longFa(p.date, locale)}`).join(" و ")} به «شیفت تا ۸ شب» تبدیل می‌شود؛ شیفت دوم ثبت نمی‌شود.`
+                  : `After the other analyst and manager approve, the existing morning shift for ${destinationUpgrades.map((p) => `${p.name} on ${longFa(p.date, locale)}`).join(" and ")} becomes an until-8 shift, not a second shift.`}</span>
+              </div>
+            )}
             <button
               className="btn btn-primary"
               aria-busy={busy || undefined}
@@ -360,6 +387,20 @@ export default function ShiftChanges() {
                   <Icon name="left" size="sm" />
                   <ShiftInline date={r.targetDate} type={r.targetShift} />
                 </div>
+                {(r.requesterDestinationUpgrade || r.targetDestinationUpgrade) && (
+                  <div className={styles.upgradeSummary} role="note">
+                    <Icon name="info" size="sm" />
+                    <span>{locale === "fa"
+                      ? `این درخواست با تأیید مدیر، شیفت صبح ${[
+                          r.requesterDestinationUpgrade ? `${r.requesterName} در ${longFa(r.targetDate, locale)}` : null,
+                          r.targetDestinationUpgrade ? `${r.targetName} در ${longFa(r.date, locale)}` : null,
+                        ].filter(Boolean).join(" و ")} را به «تا ۸ شب» تبدیل می‌کند؛ شیفت صبح قبلی حفظ نمی‌شود.`
+                      : `On approval, the existing morning shift for ${[
+                          r.requesterDestinationUpgrade ? `${r.requesterName} on ${longFa(r.targetDate, locale)}` : null,
+                          r.targetDestinationUpgrade ? `${r.targetName} on ${longFa(r.date, locale)}` : null,
+                        ].filter(Boolean).join(" and ")} becomes an until-8 shift, replacing the morning assignment.`}</span>
+                  </div>
+                )}
 
                 {r.reason && <div className={styles.reason}>«{r.reason}»</div>}
               </div>
@@ -374,7 +415,12 @@ export default function ShiftChanges() {
                 )}
                 {manager && OPEN.has(r.status) && <>
                   <button className="btn btn-secondary btn-sm" disabled={busy} onClick={() => act(r.id, "reject")}>{"" + __shiftTr("رد") + ""}</button>
-                  <button className="btn btn-primary btn-sm" disabled={busy} onClick={() => act(r.id, "approve")}>
+                  <button className="btn btn-primary btn-sm"
+                    disabled={busy || (r.status === "pending_target" && (r.requesterDestinationUpgrade || r.targetDestinationUpgrade))}
+                    title={r.status === "pending_target" && (r.requesterDestinationUpgrade || r.targetDestinationUpgrade)
+                      ? (locale === "fa" ? "ابتدا تأیید کارشناس مقصد لازم است" : "The other analyst must accept first")
+                      : undefined}
+                    onClick={() => act(r.id, "approve")}>
                     <Icon name="check" />
                     {__shiftTr(r.status === "pending_target" ? "تأیید و اعمال" : "اعمال")}
                   </button>
