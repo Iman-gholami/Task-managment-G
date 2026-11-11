@@ -100,7 +100,6 @@ export default function ShiftChanges() {
     targetId: targets[0]?.id ?? "",
     targetDate: "",
     reason: "",
-    allowMorningUpgrade: false,
   });
   const [busy, setBusy] = useState(false);
   const [filter, setFilter] = useState("open");
@@ -172,7 +171,7 @@ export default function ShiftChanges() {
       const nextDate = ownValid ? current.date : (ownSchedules[0]?.date ?? "");
       const nextTargetDate = targetValid ? current.targetDate : (targetSchedules[0]?.date ?? "");
       if (nextDate === current.date && nextTargetDate === current.targetDate) return current;
-      return { ...current, date: nextDate, targetDate: nextTargetDate, allowMorningUpgrade: false };
+      return { ...current, date: nextDate, targetDate: nextTargetDate };
     });
   }, [scheduleData, ownSchedules, targetSchedules]);
 
@@ -188,18 +187,17 @@ export default function ShiftChanges() {
     const first = schedules
       .filter((row) => row.userId === targetId && isShiftType(row.shiftType) && row.date >= TODAY)
       .sort((a, b) => a.date.localeCompare(b.date))[0];
-    setForm((current) => ({ ...current, targetId, targetDate: first?.date ?? "", allowMorningUpgrade: false }));
+    setForm((current) => ({ ...current, targetId, targetDate: first?.date ?? "" }));
     setPicker(null);
   };
 
   const submit = async () => {
-    if (!form.date || !form.targetId || !form.targetDate || swapConflict ||
-      (destinationUpgrades.length && !form.allowMorningUpgrade) || busy) return;
+    if (!form.date || !form.targetId || !form.targetDate || swapConflict || busy) return;
     setBusy(true);
     try {
       await api("/api/shift/changes", { method: "POST", body: form });
       toast("درخواست تغییر شیفت ثبت شد");
-      setForm({ ...form, reason: "", allowMorningUpgrade: false });
+      setForm({ ...form, reason: "" });
       setFilter("open");
       setPicker(null);
       reload();
@@ -273,7 +271,7 @@ export default function ShiftChanges() {
               value={form.date}
               open={picker === "mine"}
               onToggle={() => setPicker((v) => v === "mine" ? null : "mine")}
-              onChange={(date) => { setForm((v) => ({ ...v, date, allowMorningUpgrade: false })); setPicker(null); }}
+              onChange={(date) => { setForm((v) => ({ ...v, date })); setPicker(null); }}
             />
 
             <label className="field">
@@ -289,7 +287,7 @@ export default function ShiftChanges() {
               value={form.targetDate}
               open={picker === "target"}
               onToggle={() => setPicker((v) => v === "target" ? null : "target")}
-              onChange={(targetDate) => { setForm((v) => ({ ...v, targetDate, allowMorningUpgrade: false })); setPicker(null); }}
+              onChange={(targetDate) => { setForm((v) => ({ ...v, targetDate })); setPicker(null); }}
             />
 
             <label className="field">
@@ -303,18 +301,17 @@ export default function ShiftChanges() {
             </label>
 
             {destinationUpgrades.length > 0 && !swapConflict && (
-              <label className={styles.upgradeConsent}>
-                <input type="checkbox" checked={!!form.allowMorningUpgrade}
-                  onChange={(e) => setForm((current) => ({ ...current, allowMorningUpgrade: e.target.checked }))} />
+              <div className={styles.upgradeConsent} role="status">
+                <Icon name="info" size="sm" />
                 <span>{locale === "fa"
-                  ? `تأیید می‌کنم که با تأیید مدیر، ${destinationUpgrades.map((p) => `${p.name} در ${longFa(p.date, locale)}`).join(" و ")} از «شیفت صبح» به «شیفت تا ۸ شب» تغییر کند. این تبدیل جایگزین شیفت صبح است، نه یک شیفت اضافی؛ آمار ساعات و تعداد شیفت‌ها تغییر می‌کند.`
-                  : `I agree to extend the existing morning shift to until 8 p.m. for ${destinationUpgrades.map((p) => `${p.name} on ${longFa(p.date, locale)}`).join(" and ")} on manager approval. This replaces the morning shift and changes scheduled hours and shift counts.`}</span>
-              </label>
+                  ? `پس از تأیید کارشناس مقابل و مدیر، شیفت صبح ${destinationUpgrades.map((p) => `${p.name} در ${longFa(p.date, locale)}`).join(" و ")} به «شیفت تا ۸ شب» تبدیل می‌شود؛ شیفت دوم ثبت نمی‌شود.`
+                  : `After the other analyst and manager approve, the existing morning shift for ${destinationUpgrades.map((p) => `${p.name} on ${longFa(p.date, locale)}`).join(" and ")} becomes an until-8 shift, not a second shift.`}</span>
+              </div>
             )}
             <button
               className="btn btn-primary"
               aria-busy={busy || undefined}
-              disabled={busy || !form.date || !form.targetId || !form.targetDate || !!swapConflict || (destinationUpgrades.length > 0 && !form.allowMorningUpgrade)}
+              disabled={busy || !form.date || !form.targetId || !form.targetDate || !!swapConflict}
               onClick={submit}
             >
               <Icon name="swap" />{"" + __shiftTr("ثبت درخواست") + ""}</button>
@@ -418,7 +415,12 @@ export default function ShiftChanges() {
                 )}
                 {manager && OPEN.has(r.status) && <>
                   <button className="btn btn-secondary btn-sm" disabled={busy} onClick={() => act(r.id, "reject")}>{"" + __shiftTr("رد") + ""}</button>
-                  <button className="btn btn-primary btn-sm" disabled={busy} onClick={() => act(r.id, "approve")}>
+                  <button className="btn btn-primary btn-sm"
+                    disabled={busy || (r.status === "pending_target" && (r.requesterDestinationUpgrade || r.targetDestinationUpgrade))}
+                    title={r.status === "pending_target" && (r.requesterDestinationUpgrade || r.targetDestinationUpgrade)
+                      ? (locale === "fa" ? "ابتدا تأیید کارشناس مقصد لازم است" : "The other analyst must accept first")
+                      : undefined}
+                    onClick={() => act(r.id, "approve")}>
                     <Icon name="check" />
                     {__shiftTr(r.status === "pending_target" ? "تأیید و اعمال" : "اعمال")}
                   </button>
