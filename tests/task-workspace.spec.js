@@ -115,7 +115,7 @@ test("the task and selected attachments become visible together, and comments wo
     await analystPage.getByText("Conversation", { exact: true }).click();
     await analystPage.getByLabel("New comment").fill("Initial triage completed.");
     await analystPage.getByRole("button", { name: /^Comment/ }).click();
-    await expect(analystPage.getByText("Initial triage completed.")).toBeVisible();
+    await expect(analystPage.getByRole("region", { name: "Conversation" }).getByText("Initial triage completed.", { exact: true })).toBeVisible();
     await analystPage.getByRole("button", { name: "Start", exact: true }).click();
     await prepareReport(analystPage);
     await analystPage.getByRole("button", { name: "Complete task", exact: true }).click();
