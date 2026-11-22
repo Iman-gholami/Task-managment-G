@@ -35,9 +35,16 @@ test("automatic comparisons and monthly exports are scoped and usable", async ({
   expect(preview.status()).toBe(200); expect(preview.headers()["content-security-policy"]).toContain("default-src 'none'");
   expect(preview.headers()["content-security-policy"]).toContain("font-src data:");
   const previewHtml = await preview.text(); expect(previewHtml).toContain("Monthly SOC investigation"); expect(previewHtml).not.toContain("Monthly TI Analyst");
+  const comparisonPreview = await page.request.get(await drawer.getByRole("link",{name:"مقایسه افراد"}).getAttribute("href"));
+  expect(comparisonPreview.status()).toBe(200);
+  expect(comparisonPreview.headers()["content-security-policy"]).toContain("default-src 'none'");
+  const comparisonHtml = await comparisonPreview.text();
+  expect(comparisonHtml).toContain("Monthly SOC Analyst");
+  expect(comparisonHtml).not.toContain("Monthly TI Analyst");
+  expect(comparisonHtml).toContain("comparison-team");
   const [download] = await Promise.all([page.waitForEvent("download"), drawer.getByTestId("monthly-report-download").click()]);
   const zip = await JSZip.loadAsync(await fs.readFile(await download.path()));
-  expect(Object.keys(zip.files).filter((n) => n.endsWith(".html"))).toHaveLength(1);
+  expect(Object.keys(zip.files).filter((n) => n.endsWith(".html"))).toHaveLength(2);
   expect(Object.keys(zip.files).filter((n) => n.endsWith(".xlsx"))).toHaveLength(1);
   await page.request.post("/api/auth/login", { data:{email:"monthly-soc@local.invalid",password:PW} });
   const soc = await page.request.get(`/api/analytics/monthly-report?month=${currentMonth()}&format=html`), socHtml = await soc.text();

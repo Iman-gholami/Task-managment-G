@@ -19,7 +19,7 @@ const { db } = await import("@/lib/server/db");
 const { hashPassword } = await import("@/lib/server/password");
 const { saveAnalyzedTicket } = await import("@/lib/server/l2-analyzed-tickets");
 const { addDays, jMonthStart, jalaliMonthBounds, jalaliMonthKey } = await import("@/lib/analytics/calendar");
-const { buildMonthlyReport, createMonthlyWorkbook, renderMonthlyHtml } = await import("@/lib/server/monthly-report");
+const { buildMonthlyReport, createMonthlyWorkbook, renderMonthlyHtml, renderMonthlyComparisonHtml } = await import("@/lib/server/monthly-report");
 
 const admin = repo.listUsers().find((u) => u.role === "security_manager");
 db.prepare("INSERT INTO meta (key, value) VALUES ('monthly_report_demo', '1')").run();
@@ -76,7 +76,8 @@ assert.deepEqual([example.stats.completedSocShifts,example.stats.completedSocShi
 const l2Report = report.people.find((p) => p.id === l2.member.id);
 assert.deepEqual([l2Report.stats.analyzed,l2Report.stats.falsePositive,l2Report.stats.truePositive], [10,3,7]);
 assert.equal(report.sample, true);
-fs.writeFileSync(path.join(directory, "Sentinel_Demo.html"),renderMonthlyHtml(report));
+fs.writeFileSync(path.join(directory, "Sentinel_Demo.html"),renderMonthlyHtml(report,{comparisonHref:"Sentinel_Demo_Compare.html"}));
+fs.writeFileSync(path.join(directory, "Sentinel_Demo_Compare.html"),renderMonthlyComparisonHtml(report,{detailsHref:"Sentinel_Demo.html"}));
 fs.writeFileSync(path.join(directory, "Sentinel_Demo.xlsx"),await createMonthlyWorkbook(report));
 // A checkpoint makes the single .db portable; no WAL file is needed for transfer.
 db.exec("PRAGMA wal_checkpoint(TRUNCATE)");
