@@ -2,7 +2,7 @@
 
 import { useI18n as useShiftI18n } from "@/components/I18nProvider";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import Dialog from "@/components/ui/Dialog";
 import Icon from "@/components/ui/Icon";
 import { localDate } from "@/lib/analytics/calendar";
@@ -22,6 +22,7 @@ export default function ShiftExcelImport({ onClose, onImported }) {
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
   const [done, setDone] = useState(null);
+  const [conflictCheck, setConflictCheck] = useState({ key: "", pending: false, conflicts: [], error: "" });
 
   const checked = useMemo(() => new Set(enabled), [enabled]);
   const selected = useMemo(() => (preview?.days ?? []).filter((d) => checked.has(d.date)), [preview, checked]);
@@ -33,6 +34,47 @@ export default function ShiftExcelImport({ onClose, onImported }) {
     const ids = day.entries.map((x) => mapping[x.name]).filter(Boolean);
     return ids.length !== new Set(ids).size ? [day.date] : [];
   }), [selected, mapping]);
+  const preparedDays = useMemo(() => {
+    if (!selected.length || unresolved.length || collisions.length) return [];
+    return selected.map((day) => ({
+      date: day.date,
+      assignments: Object.fromEntries(SHIFT_TYPES.map((key) =>
+        [key, day.entries.filter((entry) => entry.shiftType === key).map((entry) => mapping[entry.name])])
+      ),
+      holidayNote: day.holidayNote,
+    }));
+  }, [selected, mapping, unresolved, collisions]);
+  const checkKey = preparedDays.length ? JSON.stringify(preparedDays) : "";
+  const currentCheck = checkKey && conflictCheck.key === checkKey ? conflictCheck : null;
+  const protectedConflicts = currentCheck?.conflicts ?? [];
+  const protectedDates = new Set(protectedConflicts.map((conflict) => conflict.date));
+  const checking = !!checkKey && (!currentCheck || currentCheck.pending);
+  const canSave = !busy && !!currentCheck && !currentCheck.pending && !currentCheck.error &&
+    protectedConflicts.length === 0 && preparedDays.length > 0;
+
+  useEffect(() => {
+    if (!checkKey) return;
+    const controller = new AbortController();
+    setConflictCheck({ key: checkKey, pending: true, conflicts: [], error: "" });
+    (async () => {
+      try {
+        const response = await fetch("/api/shift/schedule/import", {
+          method: "PATCH", headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ days: preparedDays }), signal: controller.signal,
+        });
+        const result = await response.json();
+        if (!response.ok) throw new Error(result.error || "Conflict check failed.");
+        if (!controller.signal.aborted) {
+          setConflictCheck({ key: checkKey, pending: false, conflicts: result.conflicts ?? [], error: "" });
+        }
+      } catch (cause) {
+        if (!controller.signal.aborted) {
+          setConflictCheck({ key: checkKey, pending: false, conflicts: [], error: cause.message });
+        }
+      }
+    })();
+    return () => controller.abort();
+  }, [checkKey, preparedDays]);
 
   const upload = async () => {
     if (files.length < 1 || busy) return;
@@ -51,23 +93,19 @@ export default function ShiftExcelImport({ onClose, onImported }) {
   };
 
   const save = async () => {
-    if (!selected.length || unresolved.length || collisions.length || busy) return;
+    if (!canSave) return;
     setBusy(true); setError("");
     try {
-      const days = selected.map((day) => ({
-        date: day.date,
-        assignments: Object.fromEntries(SHIFT_TYPES.map((key) =>
-          [key, day.entries.filter((entry) => entry.shiftType === key).map((entry) => mapping[entry.name])])
-        ),
-        holidayNote: day.holidayNote,
-      }));
       const response = await fetch("/api/shift/schedule/import", {
-        method: "PUT", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ days }),
+        method: "PUT", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ days: preparedDays }),
       });
       const result = await response.json();
+      if (result.conflicts?.length) {
+        setConflictCheck({ key: checkKey, pending: false, conflicts: result.conflicts, error: "" });
+      }
       if (!response.ok) throw new Error(result.error || "ثبت برنامه شیفت ناموفق بود.");
       setDone(result);
-      onImported(days[0].date, result);
+      onImported(preparedDays[0].date, result);
     } catch (e) { setError(e.message); }
     finally { setBusy(false); }
   };
@@ -93,11 +131,13 @@ export default function ShiftExcelImport({ onClose, onImported }) {
           <>
             <div className={styles.summary}>
               <b>{faNum(preview.days.length)}{" " + __shiftTr("روز شناسایی شد") + ""}</b>
-              <span>{faNum(selected.length)}{" " + __shiftTr("روز آماده ثبت") + ""}</span>
+              <span>{faNum(selected.length - protectedDates.size)}{" " + __shiftTr("روز آماده ثبت") + ""}</span>
               <span>{faNum(preview.days.filter((day) => day.issues.length).length)}{" " + __shiftTr("روز دارای تداخل") + ""}</span>
               <span>{faNum(preview.days.filter((day) => day.holidayNote !== null).length)}{" " + __shiftTr("تعطیلی مرکز") + ""}</span>
             </div>
-            <p className={styles.warning}>{"" + __shiftTr("ثبت، برنامه فعلی روزهای انتخاب‌شده را جایگزین می‌کند. روزهای دارای تداخل انتخاب نشده‌اند. اگر برای شیفتی فعالیت ثبت شده باشد، هیچ روزی از این نوبت وارد نمی‌شود.") + ""}</p>
+            <p className={styles.warning}>{locale === "fa"
+              ? "ورود اکسل، برنامه روزهای انتخاب‌شده را جایگزین می‌کند. شیفت‌های دارای گزارش فعالیت محافظت می‌شوند؛ در صورت تداخل، تاریخ‌های مربوط را از انتخاب خارج کنید."
+              : "Excel replaces the selected dates' rosters. Shifts with recorded activity are protected. Deselect conflicting dates to continue."}</p>
             <details className={styles.warningDetails}>
               <summary>{"" + __shiftTr("توضیحات و هشدارهای خواندن فایل (") + ""}{faNum(preview.warnings.length)})</summary>
               <ul>{preview.warnings.map((warning, i) => <li key={i}>{message(warning)}</li>)}</ul>
@@ -136,13 +176,48 @@ export default function ShiftExcelImport({ onClose, onImported }) {
             </div>
             {!!unresolved.length && <p className={styles.error}>{"" + __shiftTr("نام‌های تطبیق‌داده‌نشده در روزهای انتخابی:") + " "}{unresolved.join(locale === "fa" ? "، " : ", ")}</p>}
             {!!collisions.length && <p className={styles.error}>{"" + __shiftTr("یک کارشناس در چند وضعیت یک روز انتخاب شده:") + " "}{collisions.map(formatDate).join(locale === "fa" ? "، " : ", ")}</p>}
+            {checking && <p className={styles.checkState} role="status">{locale === "fa" ? "در حال بررسی تداخل با گزارش‌های ثبت‌شده..." : "Checking against existing shift activity..."}</p>}
+            {currentCheck?.error && <p className={styles.error} role="alert">{locale === "fa"
+              ? "بررسی تداخل انجام نشد؛ اتصال را بررسی کنید و دوباره تلاش کنید."
+              : "Could not check conflicts. Check your connection and try again."} <span dir="auto">{message(currentCheck.error)}</span></p>}
+            {!!protectedConflicts.length && (
+              <section className={styles.conflictPanel} aria-label={locale === "fa" ? "تداخل با فعالیت‌های ثبت‌شده" : "Conflicts with recorded activity"}>
+                <div className={styles.conflictHead}>
+                  <div>
+                    <b>{locale === "fa" ? `${faNum(protectedDates.size)} تاریخ دارای گزارش ثبت‌شده` : `${faNum(protectedDates.size)} dates have recorded activity`}</b>
+                    <p>{locale === "fa"
+                      ? "تغییر یا حذف شیفت این افراد مجاز نیست. با کنار گذاشتن این تاریخ‌ها، بقیه روزها وارد می‌شوند."
+                      : "These assignments cannot be changed or removed. Skip these dates to import the rest."}</p>
+                  </div>
+                  <button type="button" className="btn btn-secondary btn-sm"
+                    disabled={busy} onClick={() => { setEnabled((dates) => dates.filter((date) => !protectedDates.has(date))); setError(""); }}>
+                    {locale === "fa" ? "کنار گذاشتن تاریخ‌های متداخل" : "Skip conflicting dates"}
+                  </button>
+                </div>
+                <ul className={styles.conflictRows}>
+                  {protectedConflicts.map((conflict) => (
+                    <li key={conflict.date + ":" + conflict.userId}>
+                      <strong>{formatDate(conflict.date)}</strong>
+                      <span>{conflict.name}</span>
+                      <span>{locale === "fa" ? "فعلی: " : "Current: "}
+                        {__shiftTr(SHIFT_LABELS[conflict.currentType] ?? conflict.currentType)}
+                        {" · "}{locale === "fa" ? "در اکسل: " : "Excel: "}
+                        {conflict.requestedType
+                          ? __shiftTr(SHIFT_LABELS[conflict.requestedType] ?? conflict.requestedType)
+                          : locale === "fa" ? "حذف از برنامه" : "Remove from roster"}
+                      </span>
+                    </li>
+                  ))}
+                </ul>
+              </section>
+            )}
           </>
         )}
       </div>
       <div className={styles.foot}>
         {done && <span>{"" + __shiftTr("ثبت انجام شد:") + " "}{faNum(done.importedDays)}{" " + __shiftTr("روز") + ""}</span>}
         <button className="btn btn-ghost" type="button" onClick={onClose}>{"" + __shiftTr("بستن") + ""}</button>
-        <button className="btn btn-primary" type="button" onClick={save} disabled={busy || !preview || !selected.length || unresolved.length > 0 || collisions.length > 0}>
+        <button className="btn btn-primary" type="button" onClick={save} disabled={!canSave}>
           {busy && preview ? __shiftTr("در حال ذخیره...") : locale === "fa" ? `ثبت ${faNum(selected.length)} روز در تقویم` : `Import ${faNum(selected.length)} days to calendar`}
         </button>
       </div>

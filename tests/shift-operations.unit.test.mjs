@@ -17,11 +17,57 @@ test.after(() => {
 });
 
 const repo = await import("@/lib/server/repo");
-const { replaceDayShiftAssignments } = await import("@/lib/server/shift-batch");
+const { replaceDayShiftAssignments, previewShiftImportConflicts, importShiftDays, ShiftImportConflictError } = await import("@/lib/server/shift-batch");
 const { hashPassword } = await import("@/lib/server/password");
 const { isShiftAnalyst, routineStats } = await import("@/lib/server/stats");
 const { isShiftEligible, shiftChecklistTeam, canManageShift } = await import("../lib/roles.js");
 
+test("Excel preflight identifies protected dated shifts, preserves recorded work, and allows safe dates", () => {
+  const manager = repo.listUsers().find((person) => person.role === "security_manager");
+  const worker = repo.createMember({
+    name: "Protected Excel Analyst", role: "analyst", team: "SOC · L1",
+    email: "protected-excel@shift-import.test", passwordHash: hashPassword("Protected-Excel-Test-2026!"),
+  });
+  const plusDays = (iso, count) =>
+    new Date(Date.parse(iso + "T00:00:00Z") + count * 864e5).toISOString().slice(0, 10);
+  const recordedDate = plusDays(repo.today(), 80);
+  const safeDate = plusDays(recordedDate, 1);
+  const empty = () => ({ morning: [], evening: [], night: [], off: [], leave: [] });
+  repo.setShiftSchedule(worker.id, recordedDate, "night", manager.id);
+  const log = repo.getShiftLog(worker.id, recordedDate);
+  repo.updateActivity(worker.id, log.activities[0].n, { done: true }, log.activities[0].itemId, recordedDate);
+
+  const unchanged = [{ date: recordedDate, assignments: { ...empty(), night: [worker.id] } }];
+  assert.deepEqual(previewShiftImportConflicts(unchanged), [], "identical roster keeps a started night shift");
+  assert.equal(importShiftDays(unchanged, manager.id).importedDays, 1, "re-importing the same assignment is safe");
+  assert.equal(repo.findShiftLog(worker.id, recordedDate).activities[0].done, true);
+
+  const submitted = [
+    { date: safeDate, assignments: { ...empty(), morning: [worker.id] }, holidayNote: "Imported holiday" },
+    { date: recordedDate, assignments: empty(), holidayNote: "Should not be saved" },
+  ];
+  const conflicts = previewShiftImportConflicts(submitted);
+  assert.deepEqual(conflicts, [{
+    date: recordedDate, userId: worker.id, name: worker.name,
+    currentType: "night", requestedType: null,
+  }]);
+  assert.throws(() => importShiftDays(submitted, manager.id), (error) => {
+    assert.ok(error instanceof ShiftImportConflictError);
+    assert.deepEqual(error.conflicts, conflicts);
+    return true;
+  });
+  assert.equal(repo.getShiftSchedule(worker.id, recordedDate)?.shiftType, "night");
+  assert.equal(repo.findShiftLog(worker.id, recordedDate).activities[0].done, true);
+  assert.equal(repo.getShiftSchedule(worker.id, safeDate) ?? null, null, "even the preceding safe day rolls back");
+  assert.equal(repo.getCenterHoliday(safeDate), null, "holiday metadata rolls back too");
+
+  const changed = [{ date: recordedDate, assignments: { ...empty(), off: [worker.id] } }];
+  assert.equal(previewShiftImportConflicts(changed)[0].requestedType, "off");
+  const safe = importShiftDays([submitted[0]], manager.id);
+  assert.equal(safe.importedDays, 1);
+  assert.equal(repo.getShiftSchedule(worker.id, safeDate)?.shiftType, "morning");
+  assert.equal(repo.getCenterHoliday(safeDate)?.note, "Imported holiday");
+});
 test("design engineer can work shifts, days off and leave atomically", async () => {
   const admin = repo.listUsers().find((user) => user.role === "security_manager");
   assert.ok(admin);

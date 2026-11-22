@@ -24,6 +24,17 @@
 .dayCount { color: var(--text-3); flex: 1; }
 .holiday { color: var(--danger); font: var(--type-caption); }
 .issue { width: 100%; padding-inline-start: 30px; color: var(--danger); }
+.checkState { color: var(--text-2); background: var(--surface-inset); padding: 10px 12px; border-radius: var(--r-sm); font: var(--type-body-sm); margin: 0; }
+.conflictPanel { border: 1px solid var(--danger); background: var(--danger-soft); border-radius: var(--r-md); padding: 12px; display: grid; gap: 12px; }
+.conflictHead { display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 12px; }
+.conflictHead > div { flex: 1 1 240px; }
+.conflictHead b { color: var(--danger); font: var(--type-label); }
+.conflictHead p { margin: 5px 0 0; color: var(--text-2); font: var(--type-body-sm); line-height: 1.7; }
+.conflictRows { margin: 0; padding: 0; list-style: none; max-height: 174px; overflow-y: auto; border: 1px solid var(--divider); border-radius: var(--r-sm); }
+.conflictRows li { display: flex; gap: 10px; align-items: baseline; flex-wrap: wrap; padding: 8px 10px; background: var(--surface-card); font: var(--type-caption); }
+.conflictRows li + li { border-top: 1px solid var(--divider); }
+.conflictRows strong { min-width: 95px; font-weight: var(--fw-semibold); }
+.conflictRows span:last-child { color: var(--danger); margin-inline-start: auto; }
 .foot { display: flex; justify-content: flex-end; align-items: center; flex-wrap: wrap; gap: 10px; padding: 14px 18px; border-top: 1px solid var(--divider); }
 .foot > span { margin-inline-end: auto; color: var(--text-2); font: var(--type-caption); }
 @media(max-width:640px) { .peopleGrid { grid-template-columns: 1fr; } }
