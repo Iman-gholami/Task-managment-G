@@ -1,7 +1,6 @@
 # Sentinel Ops: Screen Specifications
 
-Each screen has a wireframe and a fixed spec block.
-Screens marked **▶** are implemented in the Next.js app, at the route shown (e.g. `http://localhost:3000/tasks/my`).
+This document preserves screen wireframes and design proposals. **▶** marks routes referenced by the original specifications. See the [feature index](../docs/README.md) for current routes, permissions, and behavior.
 Shared conventions (states, tokens, components) are in `DESIGN_SYSTEM.md`.
 
 **Global shell (all screens except Login)**
@@ -40,12 +39,12 @@ Shared conventions (states, tokens, components) are in `DESIGN_SYSTEM.md`.
 | **Primary user** | Everyone |
 | **Hierarchy** | Brand + theme swatches → "Welcome back" → credentials → Sign in → help |
 | **Layout** | Split ~48/52: brand, theme swatches and the form on the left; on the right a rounded hero panel (`--hero-*`, dark in every theme) with a slow radar sweep around the brand mark, three feature chips, and the product statement. Below 1024px only the left side shows |
-| **Primary action** | Sign in (or Continue with SSO, when SSO is configured it becomes primary) |
+| **Primary action** | Sign in with email and password |
 | **Secondary** | Contact administrator link |
 | **Components** | Input (40px, lg), Button (lg, 44px), Brand mark, Theme swatches (radio group) |
 | **Empty** | n/a |
 | **Loading** | The button shows an inline spinner and "Signing in…", and the fields become read-only |
-| **Error** | "Email or password is incorrect." inline above the button. Locked accounts see "Your account is locked. Contact your administrator." |
+| **Error** | Invalid credentials and temporary sign-in throttling are reported inline. |
 ```
 ┌─────────────────────────────┬──────────────────────────────┐
 │ [S] Sentinel Ops   (◉○○○)   │ ╭──────────────────────────╮ │
@@ -150,7 +149,9 @@ Same as My Tasks, with these differences: the **Assignee** column is added, the 
 - **Primary user**: SOC Manager. **Primary action**: Create Task. **Secondary**: bulk-select (checkbox column appears on hover) → change status, reassign.
 - **Empty**: "Your team has no open tasks."
 
-## 7. All Tasks  ▶ `/tasks/all`
+## 7. All Tasks · historical design
+
+`/tasks/all` now redirects to `/tasks/team`.
 Cross-team scope (SOC, Design & Automation, Threat Intelligence). Adds **Team** column and **Team** filter at ≥1600px.
 - **Primary user**: Security Manager. Read and edit access follows role permissions; rows the user can't edit show no hover affordance.
 
@@ -203,7 +204,7 @@ Cross-team scope (SOC, Design & Automation, Threat Intelligence). Adds **Team** 
 | **Activity rules** | **#1, #7** Done / Not done + note. **#2** Done + files/references + note (no IP/Domain counts). **#3, #5, #6** default button "✓ Completed · No Issue"; the ghost link "Report an issue" reveals Summary, Description, Attachment, and External ref inline (an amber left-rule callout). **#4** Done + a prominent .docx tile + note. **#8** IOC Count stepper (autofocus on check; `↑/↓`, typing), Shared via Bale switch, MISP event ref, note |
 | **Tickets** | A compact list with the columns Ticket Number* (mono), Related Reference (mono), Description, and Link. "+ Add Ticket" inserts an inline row with autofocus; `↵` saves and `Esc` cancels. The count "Tickets Created: N" is always derived from the records and can't be edited. |
 | **Summary** | `7/8 Activities · 6 IOCs added · 2 Tickets created · 1 Issue reported`, plus a remaining hint in amber text (no banner) |
-| **Complete with gaps** | Clicking Complete scrolls to the first incomplete item and briefly tints it. If the user continues, a small confirm lists the missing items and asks for an optional reason |
+| **Completion** | Checklist-based logs require all activities to be complete before submission. See [shift logs](../docs/features/shift-logs.md) for duty modes. |
 | **Empty** | Before the first action, the page shows all items unchecked and the header status reads "Not started". The Dashboard shows "No shift activity has been recorded for today." |
 | **Loading** | Header skeleton plus 8 skeleton activity rows |
 | **No checklist** | When the group has no checklist or it is turned off: "No checklist for SOC · L2 yet"; tickets and Complete still work |
@@ -230,8 +231,8 @@ Created Tickets  [Tickets Created: 2]                        [+ Add Ticket]
 
 ## 11. Shift Log: Completed Shift  ▶ `/shift` → finish all activities, then **Complete Shift**
 - **Purpose**: a read-only record for the analyst and their manager.
-- Same layout, with these differences: controls become static values, the status badge reads "Completed 14:52" in green, and the summary bar replaces Complete with **Reopen** (available to the owner within the same day, or to a manager at any time; reopening is logged).
-- Managers see **Return to analyst** with a comment.
+- Submitted logs are locked for the analyst. Managers can correct them through `/shift/manage` while they stay submitted.
+- Managers can authorize historical entry through the [backfill flow](../docs/features/shift-logs.md).
 - **Empty/Loading/Error**: standard.
 
 ## 12. Shift Log History  ▶ `/shift/history`
@@ -341,6 +342,8 @@ Task Performance [Tasks]
 | **Empty** | "No tickets were registered in this period." |
 
 ## 22. Administration  ▶ `/admin`
+
+The table below records the original proposal. The current page shows the user list and role matrix. Member changes are available under [Team](../docs/features/access.md).
 | | |
 |---|---|
 | **Purpose** | Configure the workspace |
@@ -348,7 +351,7 @@ Task Performance [Tasks]
 | **Activity Definitions** | Implemented as Shift Log checklists (§25): ordered items with a type (basic / files / monitor / report / MISP) and the shifts they apply to, per SOC layer. Changes never rewrite history; they reach today's logs only while those are still empty |
 | **Primary action** | Depends on the section (Invite User, Add Team…) |
 
-## 23. User / Role Management  ▶ `/admin`
+## 23. User / Role Management · historical design
 | | |
 |---|---|
 | **Purpose** | Manage people, roles, primary teams, and temporary assignments |

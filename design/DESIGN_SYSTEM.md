@@ -1,5 +1,7 @@
 # Sentinel Ops: Design System
 
+This document records UI conventions and design targets. For implementation entry points and verification, see the [architecture guide](../docs/architecture.md) and [development guide](../docs/development.md#testing).
+
 A calm, dense, data-first system for a security organization's internal work tool.
 Its look comes from hierarchy, layered surfaces and one signature gradient. Four themes share every rule;
 only the colours change.
@@ -172,12 +174,12 @@ Status, priority and complexity each use a different shape, so none depends on c
 | Inline editing | Status, priority, IOC count, checklist and tickets are edited in place and saved immediately. Assignees explicitly save total task hours, or include the entered total when they hand over their work. |
 | Task handoff | The assignee workspace uses a vertical sequence of expandable steps for work performed, outcome/evidence, total hours and handover. There is one report per task; drafts are saved explicitly or when continuing, and the three report fields are required at handover. Files are optional. Comments, checklist and task overview are compact expandable sections. The reviewer sees the report and evidence together and can approve with quality and complexity or return with a required, retained reason. Historical tasks without a structured report remain reviewable without invented content. |
 | Drop to attach | A task with no files shows one dashed drop zone: click to browse or drop a file onto it (it lights up while a file is over it). |
-| Confirmation | Toasts confirm; dialogs confirm destructive actions (remove member, delete task, delete comment, remove file). The task draft asks before discarding unsaved details. |
+| Confirmation | Use toasts for feedback and dialogs for decisions such as removing members, deleting tasks or comments, removing files, and discarding unsaved task drafts. |
 | Autosave | The Shift Log shows "Autosaved / Saving… / Not saved" as a live status. |
 | Deep links | KPI cards link to the relevant list (e.g. `/tasks/team?tab=review`). |
 
 ## 7. Accessibility
-- All text/background pairs meet WCAG AA (see §2); input borders and chart marks meet 3:1 against their surface.
+- Target WCAG AA text contrast and 3:1 for relevant control boundaries and chart marks. The palette script reports contrast for its configured token pairs (see §2).
 - Focus is always visible (`:focus-visible` 2px outline); never removed.
 - Landmarks: sidebar `nav`, breadcrumb `nav`, `main#main` with a skip link.
 - Every icon-only control has an accessible name and a tooltip; charts have text alternatives.

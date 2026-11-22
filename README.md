@@ -4,6 +4,21 @@ The Security Department's internal work tool: Task Management, SOC Shift Logs, a
 
 **Stack:** Next.js 16 (App Router) · React 19 · JavaScript · Node.js ≥ 22.13 · SQLite (Node's built-in `node:sqlite`, so no database server or native build is needed) · ECharts (analytics charts, bundled from npm). The fonts (Geist, Vazirmatn) are bundled, so the app makes no external requests and works on an offline or internal network.
 
+## Find a feature
+
+| Area | Start here |
+|---|---|
+| Sign-in, sessions, members, roles, and province | [Access and members](docs/features/access.md) |
+| Assignment, review, comments, and attachments | [Tasks](docs/features/tasks.md) |
+| Roster, shift exchanges, holidays, and Excel imports | [Shift scheduling](docs/features/shift-scheduling.md) |
+| Shift duties, checklist versions, tickets, corrections, and reviews | [Shift logs](docs/features/shift-logs.md) |
+| Dashboard, performance, reports, and Excel exports | [Performance and reports](docs/features/reporting.md) |
+| Persian analytics, filters, comparisons, and scoring | [Analytics](docs/features/analytics.md) |
+
+The feature guides began on an earlier revision. The session, task workspace, and font details below reflect this branch. Start with the [developer index](docs/README.md), [architecture](docs/architecture.md), or [development and operations](docs/development.md) for source navigation and test commands. The [Agent Codebase Guide](docs/AGENT_CODEBASE_GUIDE.md) and [Shift Exchange Runbook](docs/SHIFT_EXCHANGE_RUNBOOK.md) provide detailed implementation and verification references.
+
+## Feature details
+
 **Session security:** each sign-in expires after **12 hours** regardless of activity, or **8 hours without interaction**, whichever happens first. Visible app tabs report genuine user activity at most once per minute; background polling never renews idle sessions. The server enforces both limits. Upgrading from the former 7-day session format signs everyone out once; existing users and tasks are unaffected.
 
 **Everything is stored in the database:** sign-in with sessions, tasks with a review workflow and status history, checklist / comments / file attachments, the daily Shift Log (SOC analysts), performance figures, all five reports with Excel export, the analytics dashboard, account settings, and member management.
@@ -29,13 +44,13 @@ The Security Department's internal work tool: Task Management, SOC Shift Logs, a
 - **My Tasks**: work assigned to you.
 
 ### Shift logs
-Staff scheduled for SOC shifts can complete a Shift Log on the assigned day: SOC L1/L2/L3 analysts and engineers, plus Design & Automation analysts/engineers. Design & Automation members retain their organisational team and task permissions, but use the **SOC · L3 operational checklist** for shift logs. Staff without a scheduled shift cannot submit a Shift Log; managers view and correct logs through their management screens.
+Staff scheduled for SOC shifts can complete a Shift Log on the assigned day: SOC L1/L2/L3 analysts and engineers, plus Design & Automation analysts/engineers. Design & Automation members retain their organisational team and task permissions. Morning L2 logs use ticket analysis. Morning L3 and Design & Automation logs use engineering duties. Extended and overnight shifts use operational coverage. Staff without a scheduled shift cannot submit a Shift Log; managers view and correct logs through their management screens.
 
 The shift calendar presents all three work shifts together in the selected-day summary, while individual off/leave and monthly statistics live in collapsible sections. Managers can edit the roster through a separate editor, selecting staff across the three work shift tabs and saving the day once. Each person can hold only one shift per date; changing or removing a shift after its log has started is rejected transactionally.
 
 If the calendar cannot be loaded, the page reports the failure instead of presenting an empty roster. Editing that day's roster or center holiday is available again after the schedule is retrieved.
 
-**Center holiday (تعطیلی مرکز)** is a separate whole-center date marker, optionally with a reason. A manager can register or remove it in the selected day's summary. Marking a center holiday highlights the date red, but does not remove or block work shifts, individual absences, or existing shift logs. Managers can still staff the SOC on those dates and retain all previous shift records. Excel import accepts multiple monthly `.xlsx` files with date, until-20:00, normal attendance, off, leave and notes columns, previews user mappings/conflicts, then atomically replaces only approved dates; explicit «تعطیلی مرکز» notes mark dates red.
+**Center holiday (تعطیلی مرکز)** is a separate whole-center date marker, optionally with a reason. A manager can register or remove it in the selected day's summary. Marking a center holiday highlights the date red, but does not remove or block work shifts, individual absences, or existing shift logs. Managers can still staff the SOC on those dates and retain all previous shift records. Excel import accepts multiple monthly `.xlsx` files with date, until-20:00, normal attendance, off, leave and notes columns, previews user mappings and protected Shift Log conflicts, then atomically applies only approved date changes; explicit «تعطیلی مرکز» notes mark dates red.
 
 **Checklists are configurable per SOC layer** (Shift Schedule › **Log checklists**, `/shift/checklists`). SOC Managers and Security Managers create checklists, add, edit, reorder, deactivate or remove items (each with a type and the shifts it applies to), and choose which checklist each layer uses, or turn it off. Each analyst ticks their own items in their own daily log; nothing is shared between analysts or carried into the next shift.
 - Saving a checklist creates a new version. Logs that have started (or are submitted) keep the items they began with; today's logs that are still empty follow the latest version. Every version and every assignment change is kept with who and when.
@@ -46,16 +61,16 @@ If the calendar cannot be loaded, the page reports the failure instead of presen
 Figures are computed from the database for the selected period (this month, last month, quarter, or a custom range): completed tasks by completion date, hours, complexity and quality, and — for SOC analysts — shift logs, routine completion, IOC count, tickets, traffic reports and issues. Every report has **Export to Excel** (`.xlsx`). Analysts see their own data; team reports are for managers.
 
 ### Analytics (management dashboard)
-A Persian, right-to-left dashboard for managers at `/analytics`, on the Jalali calendar. It is **statistics first**: counts, hours and distributions. The only scored view is the manager-only same-level leaderboard at `/analytics/compare`; scores do not appear in People, profiles, My statistics or Excel. Tables elsewhere start in alphabetical order, and changes are shown without good/bad colouring. Registered L2 ticket analyses include FP/TP totals.
+Management analytics at `/analytics` supports Persian and English and uses Jalali periods. It is **statistics first**: counts, hours and distributions. The only scored view is the same-level management analytics leaderboard at `/analytics/compare`; scores do not appear in People, profiles, My statistics or Excel. Tables elsewhere start in alphabetical order, and changes are shown without good/bad colouring. Registered L2 ticket analyses include FP/TP totals.
 - **Screens:** Overview · People and teams · SOC operations · Comparison and trends. Team and individual comparison tables are shown automatically; selected-item and period comparisons remain available.
 - **Filters** (period presets or a custom Jalali range, comparison, team, level, time unit, role, priority, complexity, quality, shift type) live in the URL. They apply to every chart, table and export, and survive switching tabs.
 - **Comparisons are like for like:** the first 14 days of this month are compared with the first 14 days of the previous month, not the whole month.
 - **Weighted peer score (Compare only):** approved tasks score by final complexity `1/3/6/10` × quality `1.2/1/0.6/0.2`; legacy unrated Done tasks use factor `1`. A submission sent to Review after its deadline is multiplied by `0.9`; manager review delay is not a penalty. Complexity is confirmed by the manager at approval.
 - **Monthly Shift Log review:** SOC/Security Managers can record one quality review per SOC shift analyst per Jalali month when that month contains a Shift Log with checklist items, or an L2 log (which uses ticket analysis instead). L1/L2/L3 use a base of `3` × the same quality factor; daily shift metrics remain statistical and unscored.
 - **Exports:** a manager-only monthly ZIP contains a detailed Excel workbook and standalone HTML report for the whole department, a team or one person. It separates SOC rota hours, completed and missing shift logs, specialist shifts and recorded hours for completed tasks. Rota hours are not a time clock; task hours may cover work from earlier months and may overlap shift hours. The other analytics exports, CSV, PNG and print views remain available.
-- **Demo data:** the "داده نمایشی" button shows a fictional department for presentations and onboarding, clearly labelled. Managers only.
+- **Demo data:** the "داده نمایشی" button shows a fictional department for presentations and onboarding, clearly labelled. Available to viewers with management analytics access.
 - **Monthly report demo:** run `npm run demo:monthly-report` to create a new, isolated fictional database under `test-data/` and a sample HTML and Excel. The command prints its unique path, demo credentials and start command. It never uses or overwrites the current database; reports generated from this database are labelled as fictional. It does not populate the production database or the analytics demo toggle.
-- **Access:** analytics screens scope a Security Manager to the department and a SOC Manager to SOC. Both management roles can export detailed monthly reports for all teams; analysts and observers cannot create those reports. Everyone else sees only their own figures (sidebar: **My statistics**), with anonymous team medians when at least three colleagues have activity.
+- **Access:** analytics screens scope a Security Manager to the department and a SOC Manager to SOC. Both management roles can export detailed monthly reports for all teams; analysts and observers cannot create those reports. Observers can read department analytics and filter by province. Analysts and engineers see their own figures (sidebar: **My statistics**), with anonymous team medians when at least three colleagues have activity.
 - Definitions, alert rules and design decisions: [`design/ANALYTICS.md`](design/ANALYTICS.md). Thresholds: `lib/analytics/config.js`.
 
 Status changes are stored as structured history (`task_transitions`), and tasks have a `created_at`; both are backfilled from the activity log on first start. This history makes cycle time, return counts and the age of blocked or in-review work exact.
@@ -72,7 +87,7 @@ A fresh install contains **no sample data** — only one administrator account (
 | `ADMIN_PASSWORD` | Required when no active Security Manager exists |
 | `ADMIN_NAME` | `Administrator` |
 
-Set these before the first start (e.g. `ADMIN_EMAIL=you@company ADMIN_PASSWORD='…' npm start`). They bootstrap an administrator only if no active Security Manager exists; changing them later does not reset an existing account's password.
+Use Node.js 22.13 or newer. Choose a bootstrap password of at least eight characters. Set these before the first start (e.g. `ADMIN_EMAIL=you@company ADMIN_PASSWORD='…' npm start`). They bootstrap an administrator only if no active Security Manager exists; changing them later does not reset an existing account's password.
 
 **Upgrading from an earlier version:** the demo people (`…@corp.local`), their tasks, shift logs and tickets are removed automatically on the first start. Anything you created yourself is kept. If no Security Manager is left, the administrator account above is created.
 
@@ -89,16 +104,16 @@ Set these before the first start (e.g. `ADMIN_EMAIL=you@company ADMIN_PASSWORD='
 | `PORT` | `3000` | HTTP port |
 | `DATABASE_PATH` | `./data/sentinel.db` | SQLite file location. Back up this file and the `uploads/` folder next to it |
 | `ADMIN_EMAIL` / `ADMIN_PASSWORD` / `ADMIN_NAME` | see above | Built-in administrator (created only when no Security Manager exists) |
+| `COOKIE_SECURE` | `false` | Set to `true` when serving over HTTPS |
 
 For a separate preview database at `test-data/sentinel.db`, `scripts/configure-preview-admin.cjs --apply` can configure `admin@local` as a Security Manager. It reads the password from standard input, backs up the database before changing it, and refuses to modify an inactive account or one with another role. It does not act on the application's default database.
-| `COOKIE_SECURE` | `false` | Set to `true` when serving over HTTPS |
 
 ## Run on your server
 
 ```bash
 git clone -b main https://github.com/Iman-gholami/Task-managment-G.git
 cd Task-managment-G
-npm install
+npm ci
 
 # Production
 npm run build
@@ -107,6 +122,8 @@ npm start                 # http://<server-ip>:3000  (use PORT=8080 npm start to
 # or development (hot reload)
 npm run dev
 ```
+
+Geist and Vazirmatn are bundled locally on this branch. Prepare dependencies and the deployment artifact on a connected machine for an offline target. Keep the database and adjacent uploads on persistent writable storage.
 
 ## Tests
 
