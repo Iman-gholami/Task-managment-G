@@ -85,6 +85,12 @@ test("bundle contains a readable workbook and offline HTML, escaping user conten
   assert.match(comparison, /ساعت تسک‌های تکمیل‌شده/);
   assert.match(comparison, /تسک‌های انجام‌شده/);
   assert.match(comparison, /class="comparison-team"/);
+  assert.match(comparison, /class="chart-lanes"/);
+  assert.match(comparison, /role="meter"/);
+  assert.match(comparison, /class="log-ring"/);
+  assert.match(comparison, /class="outcome-grid"/);
+  assert.match(comparison, /@media\(max-width:730px\)/);
+  assert.match(comparison, /@media print/);
   assert.match(comparison, /&lt;script&gt;alert/);
   assert.doesNotMatch(comparison, /<script>alert/);
   assert.doesNotMatch(comparison, /https?:\/\//);
