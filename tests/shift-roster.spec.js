@@ -215,4 +215,49 @@ test("a manager sets all three shifts with one save, including a Design engineer
   expect(importedNight.find((r) => r.userId === ids["l2@shift-roster.test"]).shiftType).toBe("evening");
   expect(importedNight.find((r) => r.userId === ids["spare@shift-roster.test"]).shiftType).toBe("leave");
 
+  // Regression: a day with a recorded Shift Log must be identified before
+  // saving, with the date/person shown and a way to import unrelated days.
+  await page.request.post("/api/auth/login", { data: { email: "l2@shift-roster.test", password: USER_PASSWORD } });
+  const startedLog = await (await page.request.get("/api/shift")).json();
+  const firstActivity = startedLog.activities[0];
+  expect((await page.request.patch("/api/shift", {
+    data: { n: firstActivity.n, itemId: firstActivity.itemId, patch: { done: true } },
+  })).ok()).toBeTruthy();
+  await page.request.post("/api/auth/login", { data: ADMIN });
+
+  const safeImportDate = plus(9);
+  const empty = () => ({ morning: [], evening: [], night: [], off: [], leave: [] });
+  const attemptedDays = [
+    { date: safeImportDate, assignments: { ...empty(), morning: [ids["spare@shift-roster.test"]] } },
+    { date, assignments: empty() },
+  ];
+  const checkedConflicts = await page.request.patch("/api/shift/schedule/import", { data: { days: attemptedDays } });
+  expect(checkedConflicts.ok()).toBeTruthy();
+  expect((await checkedConflicts.json()).conflicts).toContainEqual(expect.objectContaining({
+    date, userId: ids["l2@shift-roster.test"], currentType: "night", requestedType: null,
+  }));
+  const forbiddenSave = await page.request.put("/api/shift/schedule/import", { data: { days: attemptedDays } });
+  expect(forbiddenSave.status()).toBe(409);
+  expect((await forbiddenSave.json()).conflicts.length).toBeGreaterThan(0);
+  expect((await fetchDay(safeImportDate)).schedules).toHaveLength(0);
+
+  await page.getByRole("button", { name: "ورود از اکسل" }).click();
+  const conflictingDialog = page.getByRole("dialog", { name: "ورود شیفت از اکسل" });
+  await conflictingDialog.locator('input[type="file"]').setInputFiles({
+    name: "roster-protected-date.xlsx", mimeType: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+    buffer: await makeFile([
+      [serial(date), serial(date), "", "", "", "", ""],
+      [serial(safeImportDate), serial(safeImportDate), "", "Rosta Spare Analyst", "", "", ""],
+    ]),
+  });
+  await conflictingDialog.getByRole("button", { name: "بررسی و پیش‌نمایش" }).click();
+  await expect(conflictingDialog.getByRole("region", { name: "تداخل با فعالیت‌های ثبت‌شده" })).toContainText("Rosta L2 Roster");
+  await expect(conflictingDialog.getByRole("button", { name: /ثبت.*روز در تقویم/ })).toBeDisabled();
+  await conflictingDialog.getByRole("button", { name: "کنار گذاشتن تاریخ‌های متداخل" }).click();
+  await expect(conflictingDialog.getByRole("button", { name: /ثبت.*روز در تقویم/ })).toBeEnabled();
+  await conflictingDialog.getByRole("button", { name: /ثبت.*روز در تقویم/ }).click();
+  await expect(conflictingDialog).toHaveCount(0);
+  expect((await fetchDay(date)).schedules.find((row) => row.userId === ids["l2@shift-roster.test"]).shiftType).toBe("night");
+  expect((await fetchDay(safeImportDate)).schedules.find((row) => row.userId === ids["spare@shift-roster.test"]).shiftType).toBe("morning");
+
 });

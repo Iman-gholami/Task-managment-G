@@ -47,7 +47,8 @@ test("an analyst can scan, highlight and select shifts with the keyboard", async
   const todayCell = calendar.getByRole("button", { name: dayLabel, exact: true });
   const morning = todayCell.locator('button[data-shift="morning"]');
   const night = todayCell.locator('button[data-shift="night"]');
-  await page.getByLabel("آمار و شیفت کارشناس").selectOption(ids[0]);
+  // Scope to the calendar control; a responsive copy may share the same label.
+  await calendar.getByLabel("آمار و شیفت کارشناس").selectOption(ids[0]);
   await expect(morning).toHaveAttribute("data-selected-person", "true");
   await expect(night).toHaveAttribute("data-dim", "true");
 
