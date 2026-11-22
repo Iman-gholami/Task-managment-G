@@ -81,7 +81,9 @@ export default function ShiftExcelImport({ onClose, onImported }) {
           <label htmlFor="shift-excel-files">{"" + __shiftTr("فایل‌های Excel (.xlsx)") + ""}</label>
           <input id="shift-excel-files" className="input" type="file" accept=".xlsx" multiple disabled={busy}
             onChange={(e) => { setFiles([...e.target.files]); setPreview(null); setEnabled([]); setDone(null); setError(""); }} />
-          <span>{"" + __shiftTr("می‌توانید چند ماه را هم‌زمان انتخاب کنید؛ ستون‌های «عادی»، «تا ۲۰»، «تعطیل شیفت» و «مرخصی» خوانده می‌شوند.") + ""}</span>
+          <span>{locale === "fa"
+            ? "قالب‌های قدیمی و جدید اکسل پشتیبانی می‌شوند؛ در قالب جدید، شیفت شب هم وارد می‌شود و «تعطیل شیفت» همان فرد به‌معنای نداشتن شیفت روز است."
+            : "Both Excel roster layouts are supported. In the newer layout, night shifts are imported and the same person's daytime-off marker is ignored."}</span>
           <button type="button" className="btn btn-secondary btn-sm" onClick={upload} disabled={busy || !files.length}>
             <Icon name="search" /> {__shiftTr(busy && !preview ? "در حال خواندن..." : "بررسی و پیش‌نمایش")}
           </button>

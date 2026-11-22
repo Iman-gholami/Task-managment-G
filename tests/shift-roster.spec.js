@@ -185,5 +185,34 @@ test("a manager sets all three shifts with one save, including a Design engineer
   expect((await fetchDay(badDate)).schedules).toHaveLength(0);
   expect((await fetchDay(secondDate)).schedules.find((r) => r.userId === ids["spare@shift-roster.test"]).shiftType).toBe("morning");
 
+  // The newer eight-column roster imports an explicit night shift without
+  // creating a conflicting off status for that same person's daytime rest.
+  const nightDate = plus(7);
+  const modernBook = new ExcelJS.Workbook();
+  const modernSheet = modernBook.addWorksheet("آذر 1405");
+  modernSheet.addRow([
+    "تاریخ", "روز", "شیفت روز (خروج 15:18)", "شیفت روز (حضور تا 20:00)",
+    "شیفت شب (20:00 الی 08:00)", "تعطیل شیفت", "مرخصی", "توضیحات",
+  ]);
+  modernSheet.addRow([
+    serial(nightDate), serial(nightDate), "Rosta L1 Roster", "Rosta L2 Roster",
+    "Rosta Design Engineer", "Rosta Design Engineer-Rosta Free Analyst", "Rosta Spare Analyst", "",
+  ]);
+  await page.getByRole("button", { name: "ورود از اکسل" }).click();
+  const modernDialog = page.getByRole("dialog", { name: "ورود شیفت از اکسل" });
+  await modernDialog.locator('input[type="file"]').setInputFiles({
+    name: "1405_09.xlsx", mimeType: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+    buffer: Buffer.from(await modernBook.xlsx.writeBuffer()),
+  });
+  await modernDialog.getByRole("button", { name: "بررسی و پیش‌نمایش" }).click();
+  await expect(modernDialog).toContainText("روز آماده ثبت");
+  await modernDialog.getByRole("button", { name: /ثبت.*روز در تقویم/ }).click();
+  await expect(modernDialog).toHaveCount(0);
+  const importedNight = (await fetchDay(nightDate)).schedules;
+  expect(importedNight.find((r) => r.userId === ids["design@shift-roster.test"]).shiftType).toBe("night");
+  expect(importedNight.find((r) => r.userId === ids["free@shift-roster.test"]).shiftType).toBe("off");
+  expect(importedNight.find((r) => r.userId === ids["l1@shift-roster.test"]).shiftType).toBe("morning");
+  expect(importedNight.find((r) => r.userId === ids["l2@shift-roster.test"]).shiftType).toBe("evening");
+  expect(importedNight.find((r) => r.userId === ids["spare@shift-roster.test"]).shiftType).toBe("leave");
 
 });
