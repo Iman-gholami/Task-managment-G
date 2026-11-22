@@ -18,7 +18,7 @@ const { jalaliMonthKey } = await import("@/lib/analytics/calendar");
 const { factsFor } = await import("@/lib/server/analytics");
 const { canReviewMonth, stats } = await import("@/lib/analytics/metrics");
 const { applyFilters, parseFilters } = await import("@/lib/analytics/filters");
-const { buildMonthlyReport, createMonthlyWorkbook, renderMonthlyHtml, createMonthlyBundle } = await import("@/lib/server/monthly-report");
+const { buildMonthlyReport, createMonthlyWorkbook, renderMonthlyHtml, renderMonthlyComparisonHtml, createMonthlyBundle } = await import("@/lib/server/monthly-report");
 const admin = repo.listUsers().find((u) => u.role === "security_manager");
 const passwordHash = hashPassword("Monthly-Fixture-2026!");
 const add = (name,role,team,email) => repo.createMember({ name,role,team,email,passwordHash });
@@ -79,8 +79,24 @@ test("bundle contains a readable workbook and offline HTML, escaping user conten
   assert.match(html, /<details class="task"/);
   assert.match(html, /<html lang="fa" dir="rtl">/);
   assert.match(renderMonthlyHtml(buildMonthlyReport(admin,{month,person:l2.id,locale:"en"})),/<html lang="en" dir="ltr">/);
+  const comparison = renderMonthlyComparisonHtml(report);
+  assert.match(comparison, /مقایسه فعالیت افراد/);
+  assert.match(comparison, /ساعت شیفت برنامه‌ریزی‌شده/);
+  assert.match(comparison, /ساعت تسک‌های تکمیل‌شده/);
+  assert.match(comparison, /تسک‌های انجام‌شده/);
+  assert.match(comparison, /class="comparison-team"/);
+  assert.match(comparison, /&lt;script&gt;alert/);
+  assert.doesNotMatch(comparison, /<script>alert/);
+  assert.doesNotMatch(comparison, /https?:\/\//);
+  assert.match(comparison, /<html lang="fa" dir="rtl">/);
+  assert.match(renderMonthlyComparisonHtml(buildMonthlyReport(admin,{month,person:l2.id,locale:"en"})),/<html lang="en" dir="ltr">/);
+  assert.doesNotMatch(renderMonthlyComparisonHtml({...report,people:[],teams:[]}), /NaN|Infinity/);
   const zip = await JSZip.loadAsync(await createMonthlyBundle(report));
-  assert.equal(Object.keys(zip.files).filter((n) => n.endsWith(".xlsx")).length,1); assert.equal(Object.keys(zip.files).filter((n) => n.endsWith(".html")).length,1);
+  assert.equal(Object.keys(zip.files).filter((n) => n.endsWith(".xlsx")).length,1);
+  assert.equal(Object.keys(zip.files).filter((n) => n.endsWith(".html")).length,2);
+  const comparisonName = `Sentinel_Monthly_${month}_Compare.html`, detailsName = `Sentinel_Monthly_${month}.html`;
+  assert.match(await zip.file(detailsName).async("string"), new RegExp(comparisonName));
+  assert.match(await zip.file(comparisonName).async("string"), new RegExp(detailsName.replace(".", "\\.")));
 });
 
 test("monthly report separates automation SOC shift hours from completed task hours", async () => {
@@ -144,6 +160,7 @@ test("exports from a demo database are clearly labelled as fictional", async () 
     const report = buildMonthlyReport(admin,{month,person:l2.id});
     assert.equal(report.sample,true);
     assert.match(renderMonthlyHtml(report), /نمونه آزمایشی • تمام اطلاعات ساختگی است/);
+    assert.match(renderMonthlyComparisonHtml(report), /نمونه آزمایشی — همه اطلاعات ساختگی است/);
     const workbook = await new ExcelJS.Workbook().xlsx.load(await createMonthlyWorkbook(report));
     const guide = workbook.getWorksheet("راهنما");
     assert.equal(guide.getCell("A2").value,"نمونه آزمایشی");
