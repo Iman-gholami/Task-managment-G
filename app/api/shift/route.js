@@ -5,8 +5,8 @@ import { findShiftLog, getShiftLog, getUser, setShiftCompleted, updateActivity }
 import { managerCompleteShiftLog, managerUpdateShiftActivity } from "@/lib/server/shift-log-admin";
 import { isShiftAnalyst } from "@/lib/server/stats";
 import { isIsoDate } from "@/lib/shifts";
-import { today } from "@/lib/server/repo";
 import { isBackfillAllowed } from "@/lib/server/shift-backfill";
+import { activeShiftLogDate, isRegularShiftLogDate } from "@/lib/server/shift-log-window";
 
 /** Maps a failed write to a response. A stale client gets the current log back so it can show the latest checklist. */
 function failure(e, currentLog) {
@@ -28,7 +28,7 @@ export async function GET(request) {
   if (denied) return denied;
   const url = new URL(request.url);
   const target = url.searchParams.get("user") || user.id;
-  const date = url.searchParams.get("date") || undefined;
+  const date = url.searchParams.get("date") || (target === user.id ? activeShiftLogDate(target) : undefined);
 
   if (target !== user.id) {
     if (!isManager(user)) return err(403, "You can only view your own shift log.");
@@ -37,14 +37,14 @@ export async function GET(request) {
 
   const owner = getUser(target);
   if (!owner || !isShiftAnalyst(owner)) return err(404, "Shift logs are kept by SOC analysts only.");
-  const log = target === user.id && !date ? getShiftLog(target) :
-    target === user.id && date && isBackfillAllowed(target, date) ? getShiftLog(target, date) : findShiftLog(target, date);
+  const log = target === user.id && (isRegularShiftLogDate(target, date) || isBackfillAllowed(target, date))
+    ? getShiftLog(target, date) : findShiftLog(target, date);
   if (!log) return err(404, "No shift log was recorded for this day.");
   return Response.json(log);
 }
 
 /**
- * Analysts may edit only today's own log until they submit it once.
+ * Analysts may edit their current-day log, or an unfinished night log until 08:00 the next day.
  * Managers may correct an existing managed analyst log for an explicit user/date, including after submission.
  * Completion is one-way: submitted logs are never reopened for analysts.
  */
@@ -84,8 +84,8 @@ export async function PATCH(request) {
   }
 
   if (!isShiftAnalyst(user)) return err(403, "Shift logs are kept by SOC analysts only.");
-  const date = body.date === undefined ? today() : String(body.date);
-  if (date !== today() && !isBackfillAllowed(user.id, date))
+  const date = body.date === undefined ? activeShiftLogDate(user.id) : String(body.date);
+  if (!isRegularShiftLogDate(user.id, date) && !isBackfillAllowed(user.id, date))
     return err(403, "A manager must authorize historical Shift Log entry for that date.");
   const log = getShiftLog(user.id, date);
   if (!log) return err(404, "No shift is scheduled for today.");

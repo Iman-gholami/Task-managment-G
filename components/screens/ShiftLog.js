@@ -40,29 +40,29 @@ function checklistLabel(checklist) {
  * L2 work is exclusively reviewed tickets on rostered shift days. Keep it in a
  * separate component: typing doesn't touch the global activities context.
  */
-export default function ShiftLog({ initialLog }) {
+export default function ShiftLog({ initialLog, managerBackfill = false }) {
   const { me } = useApp();
   return initialLog?.mode === "ticket_analysis"
-    ? <Layer2ShiftLog initialLog={initialLog} />
-    : <RoutineShiftLog initialLog={initialLog} />;
+    ? <Layer2ShiftLog initialLog={initialLog} managerBackfill={managerBackfill} />
+    : <RoutineShiftLog initialLog={initialLog} managerBackfill={managerBackfill} />;
 }
 
-function Layer2ShiftLog({ initialLog }) {
+function Layer2ShiftLog({ initialLog, managerBackfill }) {
   const { t: __shiftFaTr, locale } = useEngShiftI18n();
-  const { me, shiftDone, dispatch, toast } = useApp();
+  const { me, shiftDone, shiftDate, dispatch, toast } = useApp();
   const [tickets, setTickets] = useState(initialLog?.analyzedTickets ?? []);
   const [submitting, setSubmitting] = useState(false);
   const [submitted, setSubmitted] = useState(!!initialLog?.completedAt);
   // initialLog is the server snapshot of THIS scheduled day; no checklists or
   // created-ticket widgets are mounted for L2.
-  const completed = submitted || !!initialLog?.completedAt || (shiftDone && initialLog?.date === TODAY);
+  const completed = submitted || !!initialLog?.completedAt || (shiftDone && initialLog?.date === shiftDate);
   const submit = async () => {
     if (submitting || completed) return;
     setSubmitting(true);
     try {
-      await api("/api/shift", { method: "PATCH", body: { completed: true, ...(initialLog.date !== TODAY ? { date: initialLog.date } : {}) } });
+      await api("/api/shift", { method: "PATCH", body: { completed: true, date: initialLog.date } });
       setSubmitted(true);
-      if (initialLog.date === TODAY) dispatch({ type: "shift/complete", value: true });
+      if (initialLog.date === shiftDate) dispatch({ type: "shift/complete", value: true });
       toast(__shiftFaTr("Shift submitted"));
     } catch (error) { toast(error.message, "error"); }
     finally { setSubmitting(false); }
@@ -84,18 +84,18 @@ function Layer2ShiftLog({ initialLog }) {
           </dl>
         </div>
       </div>
-      {initialLog.date !== TODAY && <div className="panel" style={{ padding: "var(--s-3)", marginBottom: "var(--s-3)" }}>
+      {managerBackfill && <div className="panel" style={{ padding: "var(--s-3)", marginBottom: "var(--s-3)" }}>
         <span className="badge dot info">{__shiftFaTr("Manager-authorized backfill ·")} {locale === "fa" ? localDate(initialLog.date, locale) : fmtDate(initialLog.date)}</span>
         <p className="muted small">{"" + __shiftFaTr("Entries are saved to the original shift date and remain auditable.") + ""}</p>
       </div>}
       <L2AnalyzedTickets initialItems={tickets} readOnly={completed}
-        backfillDate={initialLog.date !== TODAY ? initialLog.date : null} onChange={setTickets} />
+        backfillDate={initialLog.date} onChange={setTickets} />
       <div className="summary" role="region" aria-label={__shiftFaTr("L2 shift summary")}>
         <span className="s"><b>{tickets.length}</b>{"" + __shiftFaTr("tickets analyzed") + ""}</span>
         <span className="remain">{"" + __shiftFaTr("Only rostered shift days have an editable L2 log.") + ""}</span>
         {completed ? <>
           <span className="muted small">{"" + __shiftFaTr("Submitted — manager correction only") + ""}</span>
-          {initialLog.date !== TODAY && <Link className="btn btn-secondary" href="/dashboard">{"" + __shiftFaTr("Back to dashboard") + ""}</Link>}
+          {managerBackfill && <Link className="btn btn-secondary" href="/dashboard">{"" + __shiftFaTr("Back to dashboard") + ""}</Link>}
         </> :
           <button type="button" className="btn btn-primary" onClick={submit} disabled={submitting}>
             {__shiftFaTr(submitting ? "Submitting…" : "Complete shift")}
@@ -105,11 +105,13 @@ function Layer2ShiftLog({ initialLog }) {
   );
 }
 
-function RoutineShiftLog({ initialLog }) {
+function RoutineShiftLog({ initialLog, managerBackfill }) {
   const { t: __shiftFaTr, locale, number, team: teamText } = useEngShiftI18n();
   const { dispatch, toast, me, activities, tickets, shiftDone, shiftDate, shiftChecklist, shiftTeam } = useApp();
   const logDate = initialLog?.date ?? shiftDate;
-  const backfill = logDate !== TODAY;
+  // An overnight log may belong to yesterday but still be the current shift.
+  // Keep non-primary dates isolated from the app-wide current Shift Log state.
+  const backfill = logDate !== shiftDate;
   const technical = initialLog?.mode === "engineering";
   // Historical backfill must NEVER replace today's global Shift Log state.
   // The app shell remains mounted when navigating between days.
@@ -146,7 +148,7 @@ function RoutineShiftLog({ initialLog }) {
     setSaved("saving");
     setPending((p) => p + 1);
     try {
-      await api("/api/shift", { method: "PATCH", body: { n, itemId: before.itemId ?? null, patch, ...(backfill ? { date: logDate } : {}) } });
+      await api("/api/shift", { method: "PATCH", body: { n, itemId: before.itemId ?? null, patch, date: logDate } });
       setSaved("saved");
     } catch (e) {
       if (e.data?.stale && e.data.log) {
@@ -172,7 +174,7 @@ function RoutineShiftLog({ initialLog }) {
   };
   const setCompleted = async () => {
     try {
-      await api("/api/shift", { method: "PATCH", body: { completed: true, ...(backfill ? { date: logDate } : {}) } });
+      await api("/api/shift", { method: "PATCH", body: { completed: true, date: logDate } });
       if (backfill) setHistoricalSubmitted(true);
       else dispatch({ type: "shift/complete", value: true });
       toast(__shiftFaTr("Shift submitted and locked"));
@@ -202,7 +204,13 @@ function RoutineShiftLog({ initialLog }) {
         actions={<Link className="btn btn-secondary" href="/shift/history"><Icon name="clock" />{__shiftFaTr("History")}</Link>}
       />
 
-      {backfill && <div className="panel" style={{ padding: "var(--s-3)", marginBottom: "var(--s-3)" }}>
+      {initialLog.shiftType === "night" && !managerBackfill && !readOnly && (
+        <p className="muted small" style={{ marginBottom: "var(--s-3)" }}>
+          {locale === "fa" ? "مهلت تکمیل شیفت‌لاگ شب: ساعت ۰۸:۰۰ صبح روز بعد (به وقت تهران)." : "Night Shift Log deadline: 08:00 the following morning (Tehran time)."}
+        </p>
+      )}
+
+      {managerBackfill && <div className="panel" style={{ padding: "var(--s-3)", marginBottom: "var(--s-3)" }}>
         <span className="badge dot info">{__shiftFaTr("Manager-authorized backfill ·")} {locale === "fa" ? localDate(logDate, locale) : fmtDate(logDate)}</span>
       </div>}
       <div className="panel" style={{ marginBottom: "var(--s-4)" }}>
@@ -283,7 +291,7 @@ function RoutineShiftLog({ initialLog }) {
         })}
       </Panel>
 
-      {!technical && <Tickets readOnly={readOnly} list={displayTickets} date={backfill ? logDate : null}
+      {!technical && <Tickets readOnly={readOnly} list={displayTickets} date={logDate}
         onUpdate={backfill ? setHistoricalTickets : null} />}
 
       <div className="summary" role="region" aria-label={__shiftFaTr("Shift summary")}>
@@ -299,7 +307,7 @@ function RoutineShiftLog({ initialLog }) {
         {readOnly
           ? <>
             <span className="muted small">{"" + __shiftFaTr("Submitted — manager correction only") + ""}</span>
-            {backfill && <Link className="btn btn-secondary" href="/dashboard">{"" + __shiftFaTr("Back to dashboard") + ""}</Link>}
+            {managerBackfill && <Link className="btn btn-secondary" href="/dashboard">{"" + __shiftFaTr("Back to dashboard") + ""}</Link>}
           </>
           : <button type="button" className="btn btn-primary" onClick={completeShift}>{"" + __shiftFaTr("Complete shift") + ""}</button>}
       </div>
@@ -465,17 +473,18 @@ export function ShiftHistory() {
                 <tbody>
                   {data.logs.map((entry) => {
                     const isToday = entry.date === TODAY && !entry.absence;
-                    const accessible = isToday || entry.backfill;
+                    const accessible = isToday || entry.activeNight || entry.backfill;
                     return (
                       <tr key={entry.date} className={accessible ? "is-link" : ""}
-                        onClick={() => accessible && router.push(isToday ? "/shift" : `/shift?date=${entry.date}`)}>
-                        <td className="title">{isToday ? <Link href="/shift">{__shiftFaTr("Today")}</Link> : entry.backfill
+                        onClick={() => accessible && router.push(`/shift?date=${entry.date}`)}>
+                        <td className="title">{isToday ? <Link href={`/shift?date=${entry.date}`}>{__shiftFaTr("Today")}</Link> : entry.backfill
                           ? <Link href={`/shift?date=${entry.date}`}>{dashboardDay(entry.date, locale)}{" " + __shiftFaTr("· Enter missed log") + ""}</Link>
+                          : entry.activeNight ? <Link href={`/shift?date=${entry.date}`}>{dashboardDay(entry.date, locale)}</Link>
                           : dashboardDay(entry.date, locale)}</td>
                         <td>{entry.absence ? "—" : __shiftFaTr(entry.shiftType === "night" ? "Night" : entry.shiftType === "evening" ? "Until 20:00" : "Morning")}</td>
                         <td>{entry.absence ? <span className="badge">{__shiftFaTr(entry.shiftType === "off" ? "Day off" : "Leave")}</span> :
                           entry.completed ? <Status s="done" label={__shiftFaTr("Completed")} /> :
-                          isToday ? <Status s="progress" label={__shiftFaTr("In progress")} /> : <Status s="returned" label={__shiftFaTr("Incomplete")} />}</td>
+                          (isToday || entry.activeNight) ? <Status s="progress" label={__shiftFaTr("In progress")} /> : <Status s="returned" label={__shiftFaTr("Incomplete")} />}</td>
                         <td className="r">{entry.absence ? "—" : entry.mode === "ticket_analysis" ? number(entry.analyzedTickets ?? 0) : "—"}</td>
                         <td className="r">{entry.absence ? "—" : entry.mode === "operational" ? `${number(entry.done)}/${number(entry.total)}` : "—"}</td>
                       </tr>
@@ -489,13 +498,15 @@ export function ShiftHistory() {
               <tbody>
                 {data.logs.map((r) => {
                   const today = r.date === TODAY && !r.absence;
+                  const accessible = today || r.activeNight || r.backfill;
                   return (
-                    <tr key={r.date} className={today || r.backfill ? "is-link" : ""}
-                      onClick={() => (today || r.backfill) && router.push(today ? "/shift" : `/shift?date=${r.date}`)}>
-                      <td className="title">{today ? <Link href="/shift">{__shiftFaTr("Today")}</Link> : r.backfill
+                    <tr key={r.date} className={accessible ? "is-link" : ""}
+                      onClick={() => accessible && router.push(`/shift?date=${r.date}`)}>
+                      <td className="title">{today ? <Link href={`/shift?date=${r.date}`}>{__shiftFaTr("Today")}</Link> : r.backfill
                         ? <Link href={`/shift?date=${r.date}`}>{dashboardDay(r.date, locale)}{" " + __shiftFaTr("· Enter missed log") + ""}</Link>
+                        : r.activeNight ? <Link href={`/shift?date=${r.date}`}>{dashboardDay(r.date, locale)}</Link>
                         : dashboardDay(r.date, locale)}</td>
-                      <td>{r.absence ? <span className="badge">{r.shiftType === "off" ? __shiftTr("تعطیل شیفت") : __shiftTr("مرخصی")}</span> : r.completed ? <Status s="done" label={__shiftFaTr("Completed")} /> : today ? <Status s="progress" label={__shiftFaTr("In progress")} /> : <Status s="returned" label={__shiftFaTr("Incomplete")} />}</td>
+                      <td>{r.absence ? <span className="badge">{r.shiftType === "off" ? __shiftTr("تعطیل شیفت") : __shiftTr("مرخصی")}</span> : r.completed ? <Status s="done" label={__shiftFaTr("Completed")} /> : (today || r.activeNight) ? <Status s="progress" label={__shiftFaTr("In progress")} /> : <Status s="returned" label={__shiftFaTr("Incomplete")} />}</td>
                       <td className="sec" dir="auto">{r.checklist ?? <span className="muted">{"" + __shiftFaTr("None") + ""}</span>}{r.checklistVersion ? <span className="muted"> · v{r.checklistVersion}</span> : null}</td>
                       <td>{r.absence ? <span className="muted">—</span> : <Meter value={r.done} max={r.total} label={locale === "fa" ? `فعالیت‌های انجام‌شده در ${dashboardDay(r.date, locale)}` : `Activities done on ${dashboardDay(r.date, locale)}`} tone="ok" readout={`${number(r.done)}/${number(r.total)}`} />}</td>
                       <td className="r">{number(r.iocs)}</td>
