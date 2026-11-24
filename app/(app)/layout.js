@@ -4,6 +4,7 @@ import AppShell from "@/components/shell/AppShell";
 import { getCurrentUser } from "@/lib/server/auth";
 import { listVisibleTasks } from "@/lib/server/access";
 import { getShiftLog, listUsers, shiftStatusToday, today } from "@/lib/server/repo";
+import { activeShiftLogDate } from "@/lib/server/shift-log-window";
 import { dashboardStats, isShiftAnalyst } from "@/lib/server/stats";
 
 const emptyShift = () => ({ date: today(), activities: [], tickets: [], completedAt: null });
@@ -17,7 +18,7 @@ export default async function AppLayout({ children }) {
     me: { ...me, keepsShiftLog },
     users: listUsers(),
     tasks,
-    shift: keepsShiftLog ? (getShiftLog(me.id) ?? emptyShift()) : emptyShift(),
+    shift: keepsShiftLog ? (getShiftLog(me.id, activeShiftLogDate(me.id)) ?? emptyShift()) : emptyShift(),
     shiftStatus: shiftStatusToday(),
     stats: dashboardStats(me),
   };

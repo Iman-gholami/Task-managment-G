@@ -2,6 +2,7 @@ import { isManager, requireUser } from "@/lib/server/auth";
 import { err } from "@/lib/server/access";
 import { getUser, listDayStatuses, listShiftLogs } from "@/lib/server/repo";
 import { listEnabledBackfillDates } from "@/lib/server/shift-backfill";
+import { continuingNightDate } from "@/lib/shift-log-window";
 import { isShiftAnalyst, resolvePeriod } from "@/lib/server/stats";
 
 export async function GET(request) {
@@ -23,6 +24,7 @@ export async function GET(request) {
     }));
   const eligible = listEnabledBackfillDates(target, period.from, period.to);
   const eligibleDates = new Set(eligible.map((item) => item.date));
+  const continuingNight = continuingNightDate();
   const existing = new Set(logs.map((item) => item.date));
   const historical = eligible.filter((item) => !existing.has(item.date)).map((item) => ({
     date: item.date, shiftType: item.shiftType, completed: false,
@@ -31,7 +33,8 @@ export async function GET(request) {
     backfill: true,
   }));
   return Response.json({
-    period, logs: [...logs.map((item) => ({ ...item, backfill: eligibleDates.has(item.date) })),
+    period, logs: [...logs.map((item) => ({ ...item, backfill: eligibleDates.has(item.date),
+      activeNight: item.shiftType === "night" && item.date === continuingNight })),
       ...absences, ...historical].sort((a, b) => b.date.localeCompare(a.date)),
   });
 }

@@ -4,8 +4,9 @@ import Link from "next/link";
 import { redirect } from "next/navigation";
 import ShiftLog from "@/components/screens/ShiftLog";
 import { getCurrentUser } from "@/lib/server/auth";
-import { getDayStatus, getShiftLog, getShiftSchedule, today } from "@/lib/server/repo";
+import { getDayStatus, getShiftLog, getShiftSchedule } from "@/lib/server/repo";
 import { isBackfillAllowed } from "@/lib/server/shift-backfill";
+import { activeShiftLogDate, isRegularShiftLogDate } from "@/lib/server/shift-log-window";
 import { isShiftAnalyst } from "@/lib/server/stats";
 
 export const metadata = { title: "Shift Log" };
@@ -15,10 +16,11 @@ export default async function Page({ searchParams }) {
   const user = await getCurrentUser();
   if (!isShiftAnalyst(user)) redirect("/dashboard");
   const params = await searchParams;
-  const date = params?.date ? String(params.date) : today();
-  if (date !== today() && !isBackfillAllowed(user.id, date)) redirect("/shift/history");
+  const date = params?.date ? String(params.date) : activeShiftLogDate(user.id);
+  const regular = isRegularShiftLogDate(user.id, date);
+  if (!regular && !isBackfillAllowed(user.id, date)) redirect("/shift/history");
   if (!getShiftSchedule(user.id, date)) {
-    const status = getDayStatus(user.id);
+    const status = getDayStatus(user.id, date);
     const name = status === "off" ? (locale === "fa" ? "تعطیل شیفت" : "a day off") : status === "leave" ? (locale === "fa" ? "مرخصی" : "leave") : null;
     return (
       <div className="page mid shift-page">
@@ -33,5 +35,5 @@ export default async function Page({ searchParams }) {
       </div>
     );
   }
-  return <ShiftLog key={date} initialLog={getShiftLog(user.id, date)} />;
+  return <ShiftLog key={date} initialLog={getShiftLog(user.id, date)} managerBackfill={!regular} />;
 }
