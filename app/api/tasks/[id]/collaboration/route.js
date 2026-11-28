@@ -24,15 +24,20 @@ export async function PATCH(request, { params }) {
     try {
       const previous = collaborationFor(id);
       const priorIds = new Set(previous?.members.filter((m) => !m.removed).map((m) => m.userId) ?? [task.a]);
-      configureCollaboration(id, task.a, collaboration.mode, collaboration.members, user.id, collaboration.leadResponsibility);
+      if (collaboration.leadId !== task.a) {
+        const nextOwner = getUser(collaboration.leadId);
+        db.prepare("UPDATE tasks SET assignee = ?, team = ?, updated_at = datetime('now') WHERE id = ?")
+          .run(nextOwner.id, nextOwner.team, id);
+      }
+      configureCollaboration(id, collaboration.leadId, collaboration.mode, collaboration.members, user.id, collaboration.leadResponsibility);
       if (!previous) {
         // Keep a previous individual draft when a manager first makes a task collaborative.
         const report = getTaskReport(id);
         if (report.revision || task.hours) db.prepare(`UPDATE task_collaborators SET work_performed = ?, outcome = ?, links = ?, hours = ?, revision = ?
           WHERE task_id = ? AND user_id = ?`).run(report.workPerformed, report.outcome, JSON.stringify(report.links), task.hours, report.revision, id, task.a);
       }
-      for (const member of collaboration.members.filter((m) => !priorIds.has(m.userId))) {
-        db.prepare("INSERT INTO task_assignment_notifications (task_id, recipient_id, actor_id) VALUES (?, ?, ?)").run(id, member.userId, user.id);
+      for (const id of [collaboration.leadId, ...collaboration.members.map((m) => m.userId)].filter((id) => !priorIds.has(id))) {
+        db.prepare("INSERT INTO task_assignment_notifications (task_id, recipient_id, actor_id) VALUES (?, ?, ?)").run(task.id, id, user.id);
       }
       addEvent(id, user.id, `updated ${collaboration.mode === "split" ? "divided" : "shared"} collaboration members`);
       db.exec("COMMIT");

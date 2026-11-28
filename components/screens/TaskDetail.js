@@ -252,7 +252,7 @@ export default function TaskDetail({
           }}><Icon name="x" />{__taskTr("Delete task")}</button>}
             {quiet.map(s => <button key={s} type="button" className={`btn btn-ghost btn-sm ${s === "cancelled" ? "danger" : ""}`} disabled={approving} onClick={e => doMove(e.currentTarget, s)}>{__taskTr(actionLabel(t.status, s))}</button>)}
             {manager && !closed && !editingDetails && <button type="button" className="btn btn-secondary btn-sm" disabled={approving} onClick={() => setEditingDetails(true)}><Icon name="edit" />{__taskTr("Edit")}</button>}
-            {(!isAssignee || t.status === "done") && !(t.status === "review" && !isAssignee) && [...main.slice(1), ...main.slice(0, 1)].map(s => <button key={s} type="button" className={`btn btn-sm ${s === main[0] && t.status !== "done" ? "btn-primary" : "btn-secondary"}`} disabled={approving} aria-busy={approving && s === "done"} onClick={e => doMove(e.currentTarget, s)}>
+            {(!isAssignee || t.status === "done") && !(t.status === "review" && !isAssignee) && [...main.slice(1), ...main.slice(0, 1)].filter(s => !t.collaborationMode || !["review", "done"].includes(s) || t.status === "review").map(s => <button key={s} type="button" className={`btn btn-sm ${s === main[0] && t.status !== "done" ? "btn-primary" : "btn-secondary"}`} disabled={approving} aria-busy={approving && s === "done"} onClick={e => doMove(e.currentTarget, s)}>
                 {approving && s === "done" ? __taskTr("Approving\u2026") : __taskTr(actionLabel(t.status, s) ?? STATUS[s])}
               </button>)}
           </div>
@@ -286,7 +286,7 @@ export default function TaskDetail({
                 <div className="task-brief-label"><Icon name="tasks" />{__taskTr("Task brief")}</div>
                 <h1 dir="auto">{t.title}</h1>
                 <p className="prose" dir="auto">{t.description || <span className="muted">{__taskTr("No description yet.")}</span>}</p>
-                <div className="task-brief-meta"><Status s={t.status} /><span>{__taskTr("Priority") + " "}<Priority p={t.prio} /></span><span>{__taskTr("Complexity") + " "}<Complexity c={t.cx} /></span><span>{__taskTr("Deadline") + " "}<Due task={t} /></span><span>{__taskTr("Assignee") + " "}<Who id={t.a} /></span></div>
+                <div className="task-brief-meta"><Status s={t.status} /><span>{__taskTr("Priority") + " "}<Priority p={t.prio} /></span><span>{__taskTr("Complexity") + " "}<Complexity c={t.cx} /></span><span>{__taskTr("Deadline") + " "}<Due task={t} /></span>{t.collaborationMode === "free" ? <span>{locale === "fa" ? "اعضای گروه" : "Team members"} · {number(t.participantIds?.length ?? 0)}</span> : <span>{__taskTr("Assignee") + " "}<Who id={t.a} /></span>}</div>
               </div>}
             {d && !t.collaborationMode && <TaskProgressPanel task={t} progress={reportProgress(t, d)} isAssignee={isAssignee} canReview={showReviewPanel} assigneeName={assigneeName} />}
           </div>
@@ -424,8 +424,8 @@ export default function TaskDetail({
             <SideCard icon="list" title={__taskTr("Details")} className="task-details-card">
               {!transitions.length && data && <p className="side-note">{t.status === "review" ? __taskTr("Waiting for a reviewer.") : closed ? __taskTr("This task is closed.") : __taskTr("No workflow actions are available to you.")}</p>}
               <dl className="kv">
-                <dt>{__taskTr("Status")}</dt><dd>{isAssignee ? <Status s={t.status} /> : <span className="cell-edit" role="button" tabIndex={0} aria-label={locale === "fa" ? `وضعیت: ${__taskTr(STATUS[t.status])}، تغییر وضعیت` : `Status: ${STATUS[t.status]}. Change status`} onClick={e => edit(e.currentTarget, "status", t)} onKeyDown={e => (e.key === "Enter" || e.key === " ") && (e.preventDefault(), edit(e.currentTarget, "status", t))}><Status s={t.status} /></span>}</dd>
-                <dt>{__taskTr("Assignee")}</dt><dd>{canDetail ? <span className="cell-edit" role="button" tabIndex={0} aria-label={__taskTr("Reassign")} onClick={e => openPopover(e.currentTarget, {
+                <dt>{__taskTr("Status")}</dt><dd>{isAssignee || t.collaborationMode && !manager ? <Status s={t.status} /> : <span className="cell-edit" role="button" tabIndex={0} aria-label={locale === "fa" ? `وضعیت: ${__taskTr(STATUS[t.status])}، تغییر وضعیت` : `Status: ${STATUS[t.status]}. Change status`} onClick={e => edit(e.currentTarget, "status", t)} onKeyDown={e => (e.key === "Enter" || e.key === " ") && (e.preventDefault(), edit(e.currentTarget, "status", t))}><Status s={t.status} /></span>}</dd>
+                {t.collaborationMode !== "free" && <><dt>{__taskTr("Assignee")}</dt><dd>{canDetail ? <span className="cell-edit" role="button" tabIndex={0} aria-label={__taskTr("Reassign")} onClick={e => openPopover(e.currentTarget, {
                   label: __taskTr("Reassign to"),
                   title: __taskTr("Reassign to"),
                   width: 340,
@@ -437,7 +437,8 @@ export default function TaskDetail({
                       });
                       close();
                     }} /></div>
-                })} onKeyDown={e => (e.key === "Enter" || e.key === " ") && (e.preventDefault(), e.currentTarget.click())}><Who id={t.a} /></span> : <Who id={t.a} />}</dd>
+                })} onKeyDown={e => (e.key === "Enter" || e.key === " ") && (e.preventDefault(), e.currentTarget.click())}><Who id={t.a} /></span> : <Who id={t.a} />}</dd></>}
+                {t.collaborationMode === "free" && <><dt>{locale === "fa" ? "تیم مشترک" : "Shared team"}</dt><dd>{number(t.participantIds?.length ?? 0)} {locale === "fa" ? "عضو برابر" : "equal members"}</dd></>}
                 <dt>{__taskTr("Priority")}</dt><dd><span className="cell-edit" role="button" tabIndex={0} aria-label={__taskTr("Change priority")} onClick={e => edit(e.currentTarget, "prio", t)} onKeyDown={e => (e.key === "Enter" || e.key === " ") && (e.preventDefault(), e.currentTarget.click())}><Priority p={t.prio} /></span></dd>
                 <dt>{__taskTr("Complexity")}</dt><dd>{canDetail ? <span className="cell-edit" role="button" tabIndex={0} aria-label={__taskTr("Change complexity")} onClick={e => openPopover(e.currentTarget, {
                   title: __taskTr("Complexity"),
@@ -449,7 +450,7 @@ export default function TaskDetail({
                 <dt>{__taskTr("Deadline")}</dt><dd>{canDetail ? <TaskDateInput id="task-detail-deadline" calendarLabel="Choose deadline" value={t.due === "—" ? "" : t.due} aria-label={__taskTr("Deadline (Solar Hijri)")} commitOnBlur onChange={due => { if (due !== (t.due === "—" ? "" : t.due)) updateTask(t, { due }); }} /> : <Due task={t} />}</dd>
                 <dt>{__taskTr("Actual hours")}</dt>
                 <dd>
-                  {canEdit && !closed && !isAssignee ? <span className="stepper">
+                  {canEdit && !closed && !isAssignee && !t.collaborationMode ? <span className="stepper">
                       <button type="button" aria-label={__taskTr("Decrease hours")} onClick={() => updateTask(t, {
                     hours: Math.max(0, t.hours - 0.5)
                   })}>−</button>
@@ -466,7 +467,7 @@ export default function TaskDetail({
                 </dd>
                 <dt>{__taskTr("Started")}</dt><dd className="num">{taskWhen(d?.startedAt, locale)}</dd>
                 <dt>{__taskTr("Created by")}</dt><dd>{d?.createdBy ? <Who id={d.createdBy} /> : <span className="muted">—</span>}</dd>
-                <dt>{__taskTr("Manager review")}</dt><dd>{manager && !closed && t.status !== "review" ? <label className="row" style={{
+                <dt>{__taskTr("Manager review")}</dt><dd>{manager && !closed && t.status !== "review" && !t.collaborationMode ? <label className="row" style={{
                   gap: 8
                 }}>
                       <input className="cb" type="checkbox" aria-label={__taskTr("Manager review required")} checked={t.reviewRequired} onChange={async e => {

@@ -111,3 +111,26 @@ the composer, comment editor and checklist field are kept, as today.
   a manager watching progress, the reviewer layout, a review-exempt lifecycle, and a narrow screen.
 - Existing suites keep passing. Specs that opened the removed "Task overview & activity" section now use
   the always-visible Details card directly.
+
+## PR #44 shared-task extension
+
+The original five-step rail still handles solo tasks. The collaborative panel reuses the same
+`TaskFlowStep` pattern, with each person's **own** Start → Work performed → Outcome & evidence →
+Time spent → Review & handover rail. Typing does not complete a step; saved data and per-person
+`hoursRecorded` control the checkmarks. A compact team progress strip counts submitted reports,
+and a disclosure row per person shows actual status, planned work (if supplied), progress and saved
+evidence. There are no four large permanently expanded duplicate cards.
+
+Two collaboration modes intentionally differ:
+
+- **Free:** The creator selects the whole team, minimum two, without choosing any primary assignee.
+  An optional work scope can be entered for each person. Every participant can start and submit
+  independently. Only when **all active members** have submitted does the combined report enter
+  manager review. If the manager returns it, all active reports reopen for individual corrections.
+  Internal DB ownership is not shown as a designated lead on the create form or task detail.
+- **Split:** A coordinating lead and every person's responsibility are explicit. Each participant
+  independently starts and submits a report; a manager can approve or request changes per part.
+
+The dashboard and personal task queue both count collaborative tasks where the user is a participant,
+even when the internal `tasks.assignee` is someone else. Review is mandatory for both modes. Existing
+free-mode API clients with `a` and collaborator list remain accepted during migration.

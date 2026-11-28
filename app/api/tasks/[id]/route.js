@@ -73,6 +73,8 @@ export async function PATCH(request, { params }) {
 
   if ("status" in body && body.status !== task.status) {
     if (!(body.status in STATUS)) return err(400, "Invalid status.");
+    if (task.collaborationMode && ["backlog", "todo", "progress", "returned"].includes(task.status) && ["review", "done"].includes(body.status))
+      return err(409, "Submit each collaborator's report before manager review.");
     if (task.collaborationMode === "split" && task.status === "review" && body.status === "done" &&
         getTaskDetails(id).collaboration?.members.some((m) => !m.removed && m.state !== "approved"))
       return err(409, "Approve each participant's work before closing the task.");
@@ -123,6 +125,7 @@ export async function PATCH(request, { params }) {
   // Managers may decide whether an open task requires review within their scope.
   if ("reviewRequired" in body) {
     if (typeof body.reviewRequired !== "boolean") return err(400, "Invalid review requirement.");
+    if (task.collaborationMode && body.reviewRequired === false) return err(409, "Collaborative reports require manager review.");
     if (!canReviewTask(user, task)) return err(403, "Only the responsible manager can change the review requirement.");
     if (!isOpenStatus(task.status) || task.status === "review") return err(409, "Review settings cannot change while the task is in review or closed.");
     if (body.reviewRequired !== task.reviewRequired) {

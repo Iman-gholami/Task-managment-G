@@ -29,10 +29,8 @@ function taskWith(mode, members = [{ userId: partner.id, responsibility: "Implem
   const task = repo.createTask({ title: `${mode} task`, description: "Shared effort", a: lead.id, prio: "normal", cx: 2, due: repo.today() }, admin.id);
   configureCollaboration(task.id, lead.id, mode, members, designManager.id);
   repo.updateTask(task.id, { status: "progress" }, lead.id);
-  if (mode === "split") {
-    changeContribution(repo.getTask(task.id), lead, { action: "start" });
-    changeContribution(repo.getTask(task.id), partner, { action: "start" });
-  }
+  changeContribution(repo.getTask(task.id), lead, { action: "start" });
+  changeContribution(repo.getTask(task.id), partner, { action: "start" });
   return repo.getTask(task.id);
 }
 const work = (revision, title = "Evidence") => ({ action: "save", revision, workPerformed: title, outcome: "Investigated", hours: 2.5, links: ["https://example.com/report"] });
@@ -56,15 +54,23 @@ test("each split collaborator starts independently, and cannot report before sta
   changeContribution(repo.getTask(task.id), lead, work(0));
 });
 
-test("free collaboration starts only by its lead, unlocking reports for every member", () => {
-  const task = repo.createTask({ title: "Lead start", a: lead.id, prio: "normal", cx: 2, due: repo.today() }, admin.id);
+test("free collaboration has equal independent starts and waits for everyone's handover", () => {
+  const task = repo.createTask({ title: "Equal starts", a: lead.id, prio: "normal", cx: 2, due: repo.today() }, admin.id);
   configureCollaboration(task.id, lead.id, "free", [{ userId: partner.id }], designManager.id);
-  assert.throws(() => changeContribution(task, partner, { action: "start" }), { status: 403 });
   assert.throws(() => changeContribution(task, partner, work(0)), { status: 409 });
-  changeContribution(task, lead, { action: "start" });
+  changeContribution(task, partner, { action: "start" });
   assert.equal(repo.getTask(task.id).status, "progress");
   assert.ok(repo.getTaskDetails(task.id).startedAt);
-  changeContribution(repo.getTask(task.id), partner, work(0));
+  const members = repo.getTaskDetails(task.id).collaboration.members;
+  assert.ok(members.find((m) => m.userId === partner.id).startedAt);
+  assert.equal(members.find((m) => m.userId === lead.id).startedAt, null);
+  changeContribution(repo.getTask(task.id), partner, { ...work(0), action: "submit" });
+  assert.equal(repo.getTask(task.id).status, "progress");
+  changeContribution(repo.getTask(task.id), lead, { action: "start" });
+  changeContribution(repo.getTask(task.id), lead, { ...work(0), action: "submit" });
+  assert.equal(repo.getTask(task.id).status, "review");
+  assert.ok(repo.getTaskDetails(task.id).collaboration.members.every((m) => m.state === "submitted"));
+  assert.throws(() => changeContribution(repo.getTask(task.id), partner, { action: "start" }), { status: 409 });
 });
 
 test("manager scope, collaborator membership and independent reports", () => {
@@ -118,11 +124,13 @@ test("split mode submits, reviews, returns and completes each member separately"
   assert.ok(repo.getTaskDetails(task.id).collaboration.members.every((m) => m.state === "working"));
 });
 
-test("free mode accepts every member's draft but only the lead hands over", () => {
+test("free mode aggregates every handover, returns all reports, and resubmits only after all are ready", () => {
   const task = taskWith("free");
   changeContribution(task, partner, work(0, "Partner draft"));
   assert.throws(() => changeContribution(task, partner, { ...work(1), action: "handover" }), { status: 403 });
-  changeContribution(task, lead, { ...work(0, "Lead draft"), action: "handover" });
+  changeContribution(task, lead, { ...work(0, "Lead draft"), action: "submit" });
+  assert.equal(repo.getTask(task.id).status, "progress", "The first member cannot hand over the whole shared task");
+  changeContribution(task, partner, { ...work(1, "Partner draft"), action: "submit" });
   assert.equal(repo.getTask(task.id).status, "review");
   assert.equal(repo.getTask(task.id).hours, 5);
   assert.match(repo.getTaskDetails(task.id).report.workPerformed, /Partner draft/);
@@ -130,7 +138,34 @@ test("free mode accepts every member's draft but only the lead hands over", () =
   const returned = repo.commitTaskUpdate(task.id, { status: "returned" }, designManager.id,
     { expectedStatus: "review", expectedAssignee: lead.id, returnReason: "Please add validation" });
   assert.equal(returned.status, "returned");
-  assert.equal(repo.getTaskDetails(task.id).collaboration.members.find((m) => m.userId === lead.id).state, "returned");
+  assert.ok(repo.getTaskDetails(task.id).collaboration.members.every((m) => m.state === "returned"));
   changeContribution(returned, lead, { ...work(1, "Lead fixed"), action: "save" });
   assert.equal(repo.getTask(task.id).status, "progress");
+  changeContribution(repo.getTask(task.id), lead, { ...work(2, "Lead fixed"), action: "submit" });
+  assert.equal(repo.getTask(task.id).status, "progress");
+  changeContribution(repo.getTask(task.id), partner, { ...work(2, "Partner confirmed"), action: "submit" });
+  assert.equal(repo.getTask(task.id).status, "review");
+});
+
+test("free mode full-member selection validates equal participants without a required lead", () => {
+  const options = { mode: "free", allMembers: true, members: [{ userId: partner.id }, { userId: lead.id }] };
+  const validated = validateCollaborationInput({ a: lead.id }, options, repo.getUser, canAssignTask, designManager);
+  assert.equal(validated.leadId, lead.id);
+  assert.deepEqual(validated.members.map((m) => m.userId), [partner.id]);
+  assert.throws(() => validateCollaborationInput({ a: lead.id }, { ...options, members: [{ userId: partner.id }] }, repo.getUser, canAssignTask, designManager), { status: 400 });
+  assert.throws(() => validateCollaborationInput({ a: lead.id }, { ...options, members: [{ userId: partner.id }, { userId: stranger.id }] }, repo.getUser, canAssignTask, designManager), { status: 403 });
+});
+
+test("a step-by-step report distinguishes an unentered time from a recorded zero", () => {
+  const task = repo.createTask({ title: "Stepwise time", a: lead.id, prio: "normal", cx: 2, due: repo.today() }, admin.id);
+  configureCollaboration(task.id, lead.id, "free", [{ userId: partner.id }], designManager.id);
+  changeContribution(task, partner, { action: "start" });
+  changeContribution(repo.getTask(task.id), partner, { ...work(0), hours: null });
+  let current = repo.getTaskDetails(task.id).collaboration.members.find((m) => m.userId === partner.id);
+  assert.equal(current.hoursRecorded, false);
+  assert.equal(current.hours, 0);
+  changeContribution(repo.getTask(task.id), partner, { ...work(1), hours: 0 });
+  current = repo.getTaskDetails(task.id).collaboration.members.find((m) => m.userId === partner.id);
+  assert.equal(current.hoursRecorded, true);
+  assert.equal(current.hours, 0);
 });

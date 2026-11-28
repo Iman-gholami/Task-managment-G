@@ -22,7 +22,7 @@ export default function AnalystDashboard() {
   const { t: __sharedTr } = useSharedI18n();
   const { t: __uiTr, locale, team: teamText, number } = useUiI18n();
   const { tasks, activities, tickets, me, stats, shiftDone, shiftChecklist, setCreateOpen } = useApp();
-  const mine = tasks.filter((t) => t.a === me.id && isOpen(t)).sort((a, b) => (a.due > b.due ? 1 : -1));
+  const mine = tasks.filter((t) => (t.a === me.id || t.participantIds?.includes(me.id)) && isOpen(t)).sort((a, b) => (a.due > b.due ? 1 : -1));
   const overdue = mine.filter((t) => isTaskOverdue(t, TODAY)).length;
   const dueSoon = mine.filter((t) => isTaskPendingSubmission(t) && t.due >= TODAY && t.due <= addDays(TODAY, 2)).length;
   const inReview = mine.filter((t) => t.status === "review").length;

@@ -48,6 +48,53 @@ test("a Design manager reviews both collaborative contributions while members se
   expect((await approved.json()).task.hours).toBe(5);
 });
 
+test("free collaboration has no designated lead; each member starts and submits before team review", async ({ request }) => {
+  await login(request, ADMIN);
+  const createMember = async (suffix) => {
+    const response = await request.post("/api/members", { data: {
+      name: `Free ${suffix}`, role: "engineer", team: "Design & Automation",
+      email: `shared-free-${suffix}@example.invalid`, password: PASSWORD
+    } });
+    expect(response.status()).toBe(201);
+    return (await response.json()).user;
+  };
+  const first = await createMember("first");
+  const second = await createMember("second");
+  // The request intentionally has no `a`: the client selects the entire equal team.
+  const created = await request.post("/api/tasks", { data: {
+    title: "Equal team report", collaboration: {
+      mode: "free", allMembers: true, members: [
+        { userId: first.id, responsibility: "Coordinate initial findings" },
+        { userId: second.id, responsibility: "Verify evidence" }
+      ]
+    }
+  } });
+  expect(created.status()).toBe(201);
+  const task = (await created.json()).task;
+  expect(task.participantIds).toEqual(expect.arrayContaining([first.id, second.id]));
+  const endpoint = `/api/tasks/${task.id}/collaboration`;
+
+  await login(request, { email: second.email, password: PASSWORD });
+  const before = await request.get(`/api/tasks/${task.id}`);
+  expect((await before.json()).details.collaboration.members.find((member) => member.userId === second.id).startedAt).toBeNull();
+  expect((await request.patch(endpoint, { data: { action: "start" } })).status()).toBe(200);
+  const report = { action: "submit", revision: 0, workPerformed: "Verified evidence", outcome: "Looks good", hours: 0, links: [] };
+  const early = await request.patch(endpoint, { data: report });
+  expect(early.status()).toBe(200);
+  expect((await early.json()).task.status).toBe("progress");
+
+  await login(request, { email: first.email, password: PASSWORD });
+  const firstView = await request.get(`/api/tasks/${task.id}`);
+  expect((await firstView.json()).details.collaboration.members.find((member) => member.userId === first.id).startedAt).toBeNull();
+  expect((await request.patch(endpoint, { data: { action: "start" } })).status()).toBe(200);
+  const final = await request.patch(endpoint, { data: { ...report, workPerformed: "Initial findings", hours: 1.5 } });
+  expect(final.status()).toBe(200);
+  expect((await final.json()).task.status).toBe("review");
+  const completed = (await final.json()).details.collaboration.members;
+  expect(completed.find((member) => member.userId === first.id).responsibility).toBe("Coordinate initial findings");
+  expect(completed.find((member) => member.userId === second.id).responsibility).toBe("Verify evidence");
+});
+
 test("collaborators can start from their own task page in split and free modes", async ({ page }) => {
   await login(page.request, ADMIN);
   const createPerson = async (suffix) => {
@@ -74,28 +121,29 @@ test("collaborators can start from their own task page in split and free modes",
   await login(page.request, { email: peer.email, password: PASSWORD });
   await page.goto(`/tasks/${split.id}`);
   const shared = page.getByTestId("task-collaboration");
-  await expect(shared.getByRole("button", { name: "Start my part" })).toBeVisible();
-  await expect(shared.getByText("Not started")).toHaveCount(2);
-  await shared.getByRole("button", { name: "Start my part" }).click();
-  await expect(shared.getByRole("heading", { name: "My contribution" })).toBeVisible();
-  await expect(shared.getByText("Not started")).toHaveCount(1);
+  await expect(shared.getByRole("button", { name: /Start my work|شروع کار من/ })).toBeVisible();
+  await shared.getByRole("button", { name: /Start my work|شروع کار من/ }).click();
+  await expect(shared.locator("#collab-work")).toBeVisible();
   await expect.poll(async () => (await (await page.request.get(`/api/tasks/${split.id}`)).json()).task.status).toBe("progress");
   await page.reload();
-  await expect(shared.getByRole("heading", { name: "My contribution" })).toBeVisible();
+  await expect(shared.locator("#collab-work")).toBeVisible();
 
   await page.goto(`/tasks/${free.id}`);
-  await expect(shared.getByRole("button", { name: "Start shared task" })).toHaveCount(0);
-  await expect(shared.getByRole("heading", { name: "My contribution" })).toHaveCount(0);
+  await expect(shared.getByRole("button", { name: /Start my work|شروع کار من/ })).toBeVisible();
+  await shared.getByRole("button", { name: /Start my work|شروع کار من/ }).click();
+  await expect(shared.locator("#collab-work")).toBeVisible();
+  await page.reload();
+  await expect(shared.locator("#collab-work")).toBeVisible();
   await login(page.request, { email: lead.email, password: PASSWORD });
   await page.goto(`/tasks/${split.id}`);
-  await expect(shared.getByRole("button", { name: "Start my part" })).toBeVisible();
-  await shared.getByRole("button", { name: "Start my part" }).click();
-  await expect(shared.getByRole("heading", { name: "My contribution" })).toBeVisible();
+  await expect(shared.getByRole("button", { name: /Start my work|شروع کار من/ })).toBeVisible();
+  await shared.getByRole("button", { name: /Start my work|شروع کار من/ }).click();
+  await expect(shared.locator("#collab-work")).toBeVisible();
 
   await page.goto(`/tasks/${free.id}`);
-  await shared.getByRole("button", { name: "Start shared task" }).click();
-  await expect(shared.getByRole("heading", { name: "My contribution" })).toBeVisible();
+  await shared.getByRole("button", { name: /Start my work|شروع کار من/ }).click();
+  await expect(shared.locator("#collab-work")).toBeVisible();
   await login(page.request, { email: peer.email, password: PASSWORD });
   await page.goto(`/tasks/${free.id}`);
-  await expect(shared.getByRole("heading", { name: "My contribution" })).toBeVisible();
+  await expect(shared.locator("#collab-work")).toBeVisible();
 });

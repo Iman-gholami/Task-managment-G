@@ -37,7 +37,9 @@ export async function POST(request) {
     return Response.json({ error: "Files must be at most 20 MB each and 40 MB in total." }, { status: 413 });
   const title = String(body.title ?? "").trim();
   if (!title) return Response.json({ error: "Title is required." }, { status: 400 });
-  const assignee = getUser(body.a);
+  const equalTeam = body.collaboration?.mode === "free" && body.collaboration?.allMembers === true;
+  const requestedAssignee = equalTeam ? body.collaboration.members?.[0]?.userId : body.a;
+  const assignee = typeof requestedAssignee === "string" ? getUser(requestedAssignee) : null;
   if (!assignee || !assignee.active) return Response.json({ error: "Assignee not found." }, { status: 400 });
   if (!canAssignTask(user, assignee)) return Response.json({ error: "You can't assign a task to this member." }, { status: 403 });
   let collaboration = null;
@@ -46,8 +48,8 @@ export async function POST(request) {
     try { collaboration = validateCollaborationInput({ a: assignee.id }, body.collaboration, getUser, canAssignTask, user); }
     catch (error) { return Response.json({ error: error.message }, { status: error.status || 400 }); }
   }
-  if (collaboration?.mode === "split" && body.reviewRequired === false)
-    return Response.json({ error: "Divided responsibilities require manager review." }, { status: 400 });
+  if (collaboration && body.reviewRequired === false)
+    return Response.json({ error: "Collaborative tasks require manager review." }, { status: 400 });
 
   if (body.reviewRequired === false && !isTaskManager(user))
     return Response.json({ error: "Only managers can create tasks without review." }, { status: 403 });
@@ -70,7 +72,7 @@ export async function POST(request) {
         due: DATE.test(body.due ?? "") ? body.due : "—",
       }, user.id);
       if (collaboration) {
-        configureCollaboration(task.id, task.a, collaboration.mode, collaboration.members, user.id, collaboration.leadResponsibility);
+        configureCollaboration(task.id, collaboration.leadId, collaboration.mode, collaboration.members, user.id, collaboration.leadResponsibility);
         for (const member of collaboration.members) {
           db.prepare("INSERT INTO task_assignment_notifications (task_id, recipient_id, actor_id) VALUES (?, ?, ?)").run(task.id, member.userId, user.id);
         }
