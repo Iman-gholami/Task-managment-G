@@ -1,5 +1,7 @@
 # Shift Log checklists
 
+This design records the original checklist rollout. For current eligibility, duty selection and fallback behavior, see the [shift log implementation guide](../docs/features/shift-logs.md). Checklist definitions, version snapshots, and per-person completion are still described below.
+
 Configurable checklists for the SOC Shift Log. Each SOC layer (SOC · L1, L2, L3) uses one checklist; SOC Managers and
 Security Managers define the checklists and choose which layer uses which. Analysts tick their own items in today's
 Shift Log, exactly as before.
@@ -52,9 +54,7 @@ MISP reference, counted in reports) and **File upload** (`files`).
    refused (`409 { conflict: true }`) instead of overwriting their work.
 6. **Removing and deactivating.** *Inactive* items stay in the checklist but are left out of new logs. *Removed* items
    disappear from the checklist (kept in the database and the version snapshots). Neither touches existing logs.
-7. **Groups.** A group with no checklist, or with its checklist turned off, gets logs with no items; analysts see a clear
-   empty state and can still record tickets and submit. A checklist in use must keep at least one active item, a
-   checklist with no active items cannot be turned on for a group, and only a checklist no group uses can be archived.
+7. **Groups.** For duties that use the direct group assignment, a missing or disabled checklist produces a log without items. Engineering mornings and operational coverage have built-in fallbacks, and L2 mornings use ticket analysis. A checklist in use must keep at least one active item, a checklist with no active items cannot be turned on for a group, and only a checklist no group uses can be archived.
 8. **Permissions** are enforced in the API (`requireChecklistManager`): only SOC Managers and Security Managers can read
    or change checklist definitions and assignments. Analysts receive their checklist only through their own Shift Log.
    Manager corrections to a log (`/shift/manage`) are stamped with `correctedBy` / `correctedAt`; ticking an item records
@@ -106,9 +106,7 @@ Analysts keep using `PATCH /api/shift` (`{ n, itemId, patch }`); `itemId` is opt
 
 ## Decisions and assumptions
 
-- **Groups are the SOC layers.** Only SOC · L1/L2/L3 analysts keep a Shift Log in this product, so those are the
-  assignable groups. "Shift group" differences (morning / until 20:00 / night) are expressed per item, as the original
-  routine already did.
+- **Groups are the SOC layers.** Assignments are configured for SOC L1–L3. Current eligibility also includes rostered analysts and engineers in Design & Automation. Shift type and team determine which duties apply.
 - **L2 and L3 keep the standard routine after the upgrade**, because that is what they used. The request described the
   routine as Layer 1's; moving L2 or L3 to their own checklist is a manager action, not something the migration guesses.
 - **Changes reach unstarted logs the same day** (rule 3) rather than "from the next day" as an earlier spec said: a
