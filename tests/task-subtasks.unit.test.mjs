@@ -56,6 +56,12 @@ test("subtasks are ordinary individually reportable tasks, not checklist items",
 });
 
 test("subtasks can be created only for open root tasks", () => {
+  const started = repo.createTask({ title: "In-progress parent", a: member.id, prio: "normal", cx: 2 }, admin.id);
+  repo.updateTask(started.id, { status: "progress" }, member.id);
+  const addedLater = repo.createSubtask(started.id, { title: "Extra validation", a: member.id, prio: "normal", cx: 2 }, admin.id);
+  assert.equal(addedLater.parentTaskId, started.id, "manager can delegate more work after the parent starts");
+  assert.equal(addedLater.status, "todo", "a later subtask starts its own journey");
+
   const done = repo.createTask({ title: "Completed parent", a: member.id, prio: "normal", cx: 2 }, admin.id);
   repo.updateTask(done.id, { status: "done" }, admin.id);
   assert.throws(() => repo.createSubtask(done.id, { title: "Too late", a: member.id, prio: "normal", cx: 2 }, admin.id), { status: 409 });

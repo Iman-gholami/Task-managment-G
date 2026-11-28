@@ -310,7 +310,7 @@ export default function TaskWorkPanel({
   const fileCount = details.attachments.length;
   const open = key => working ? () => setStage(key) : undefined;
   const startButton = canStart && <button type="button" className="btn btn-primary" disabled={disabled} onClick={event => onMove(event.currentTarget, "progress")}>{__taskTr(actionLabel(task.status, "progress"))}<Icon name="arrowRight" size="sm" /></button>;
-  if (task.status === "review") return <section className="task-flow-section" aria-label={__taskTr("Your work")}>
+  if (task.status === "review") return <section id="task-work" className="task-flow-section" aria-label={__taskTr("Your work")}>
       <div className="task-flow-intro"><div><span className="eyebrow">{__taskTr("YOUR WORK")}</span><h2>{__taskTr("Waiting for review")}</h2><p>{__taskTr("Your report has been sent to a manager.")}</p></div></div>
       <ul className="task-flow-chips" aria-label={__taskTr("Report steps")}>
         {progress.steps.map(step => <li key={step.key} className={step.done ? "is-done" : ""}>{step.done ? <Icon name="check" size="sm" /> : <span className="task-flow-chip-dot" aria-hidden="true" />}{__taskTr(step.label)}{!step.done && <span className="sr-only">{" " + __taskTr("\xB7 not recorded")}</span>}</li>)}
@@ -321,7 +321,7 @@ export default function TaskWorkPanel({
   const notStarted = !isDone("start");
   const heading = working ? "Your task journey" : task.status === "returned" ? "Changes requested" : task.status === "blocked" ? "Work is blocked" : "Ready to start";
   const intro = working ? "Complete each step. Save a draft whenever you need to pause." : task.status === "returned" ? "Read the feedback, then resume work to update your report." : task.status === "blocked" ? "Unblock the task to continue your report." : "Review the brief, then start the task.";
-  return <section className="task-flow-section" aria-label={__taskTr("Your work")}>
+  return <section id="task-work" className="task-flow-section" aria-label={__taskTr("Your work")}>
       <div className="task-flow-intro">
         <div><span className="eyebrow">{__taskTr("YOUR WORK")}</span><h2>{__taskTr(heading)}</h2><p>{__taskTr(intro)}</p></div>
         {working && <p className="task-flow-status" role="status">{__taskTr(message) || (dirty ? __taskTr("Unsaved changes") : saved.current.revision ? __taskTr("All changes saved") : __taskTr("No draft saved yet"))}</p>}

@@ -17,6 +17,11 @@ test("subtasks use normal task reports and promotion retains their ID, work and 
   } });
   expect(parentResponse.status()).toBe(201);
   const parent = (await parentResponse.json()).task;
+  // A manager can still delegate an additional work package after the parent has started.
+  await login(request, { email: engineer.email, password: PASSWORD });
+  const parentStarted = await request.patch(`/api/tasks/${parent.id}`, { data: { status: "progress" } });
+  expect(parentStarted.status()).toBe(200);
+  await login(request, ADMIN);
   const endpoint = `/api/tasks/${parent.id}/subtasks`;
   const created = await request.post(endpoint, { data: {
     title: "Configure alert rules", description: "Tune severity thresholds", a: engineer.id,
@@ -102,9 +107,20 @@ test("manager sees a connected work breakdown and opens an accessible creation d
   await page.goto(`/tasks/${parent.id}`);
   const panel = page.getByTestId("task-subtasks");
   await expect(panel.getByRole("link", { name: /Independent work package/ })).toBeVisible();
+  await expect(panel.getByRole("heading", { name: /Track assignments|پیگیری بخش‌ها/ })).toBeVisible();
+  await panel.getByRole("button", { name: /Active|در جریان/ }).click();
+  await expect(panel.getByRole("link", { name: /Independent work package/ })).toBeVisible();
   await panel.getByRole("button", { name: /Add subtask|افزودن زیرتسک/ }).click();
   await expect(page.getByRole("dialog", { name: /Create subtask|ایجاد زیرتسک/ })).toBeVisible();
+  await expect(page.getByRole("dialog").getByText(/What the assignee will see|آنچه کارشناس دریافت می‌کند/)).toBeVisible();
   await page.getByRole("dialog").getByLabel(/Subtask title|عنوان زیرتسک/).fill("Validate on staging");
   await page.getByRole("dialog").getByRole("button", { name: /Create subtask|ایجاد زیرتسک/ }).click();
   await expect(panel.getByRole("link", { name: /Validate on staging/ })).toBeVisible();
+
+  // The assignee receives context and a real path to their existing start/report flow.
+  await login(page.request, { email: owner.email, password: PASSWORD });
+  await page.goto(`/tasks/${(await childResponse.json()).task.id}`);
+  await expect(page.getByRole("complementary", { name: /Your work package|راهنمای زیرتسک شما/ })).toBeVisible();
+  await expect(page.getByRole("link", { name: /Go to start step|رفتن به مرحلهٔ شروع/ })).toHaveAttribute("href", "#task-work");
+  await expect(page.locator("#task-work")).toBeVisible();
 });

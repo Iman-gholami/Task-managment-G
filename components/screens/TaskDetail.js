@@ -7,7 +7,7 @@ import AssigneePicker from "@/components/ui/AssigneePicker";
 import TaskDateInput from "@/components/ui/TaskDateInput";
 import TaskWorkPanel, { TaskReportSummary } from "@/components/screens/TaskWorkPanel";
 import TaskCollaboration from "@/components/screens/TaskCollaboration";
-import TaskSubtasks from "@/components/screens/TaskSubtasks";
+import TaskSubtasks, { SubtaskOriginBanner } from "@/components/screens/TaskSubtasks";
 import TaskReviewPanel from "@/components/screens/TaskReviewPanel";
 import { SideCard, TaskLifecycle, TaskProgressPanel } from "@/components/screens/TaskJourney";
 import { useEffect, useRef, useState } from "react";
@@ -260,11 +260,7 @@ export default function TaskDetail({
           </div>
         </div>
 
-        {t.originParentTaskId && <div className="task-origin-strip">
-          <Icon name={t.parentTaskId ? "list" : "arrowUp"} />
-          <span>{locale === "fa" ? t.parentTaskId ? "این کار، زیرتسک است" : "از زیرتسک به تسک مستقل تبدیل شده" : t.parentTaskId ? "This is a subtask" : "Promoted from a subtask"}</span>
-          {visibleParent && <Link href={`/tasks/${visibleParent.id}`}>{visibleParent.title} · {visibleParent.id}<Icon name="arrowRight" /></Link>}
-        </div>}
+        {t.originParentTaskId && <SubtaskOriginBanner task={t} parent={visibleParent} isAssignee={isAssignee} />}
 
         {t.status === "done" && <section className="task-outcome" role="status" aria-label={reviewed ? __taskTr("Task approval") : __taskTr("Task completion")}>
             <div className="task-outcome-header">
