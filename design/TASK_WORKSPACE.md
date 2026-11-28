@@ -136,3 +136,30 @@ Two collaboration modes intentionally differ:
 The dashboard and personal task queue both count collaborative tasks where the user is a participant,
 even when the internal `tasks.assignee` is someone else. Review is mandatory for both modes. Existing
 free-mode API clients with `a` and collaborator list remain accepted during migration.
+
+## Subtasks and independent promotion (post-PR #44)
+
+The main task workspace now has a **Work breakdown / زیرتسک‌ها** panel ahead of the work report.
+Its connected branch rows encode a real parent/child relationship (not ordered execution), with
+an owner, status, deadline, and a four-segment lifecycle hint. The top progress bar is the
+ratio of **currently linked** children in `done` state; promoted children form a separate
+compact provenance list and do not inflate that percentage. The parent remains free to
+continue through its own workflow and does not inherit child hours automatically.
+
+- A scoped task reviewer/manager can add a child only when the parent is open and is **not**
+  currently in review. Creation is a concise modal: title, optional description, owner and
+  Jalali deadline; priority/complexity inherit the parent's values and can be adjusted from
+  the child's own detail page. Each child has a fresh task ID, own status, activity, report,
+  evidence, hour total, review and assignment notification.
+- A child assignee sees it as a normal assigned task. The child is labelled as a subtask,
+  but that assignment alone does not grant access to confidential parent/sibling details.
+- **Promote to independent task / تبدیل به تسک مستقل** is available to an eligible manager
+  on a child row and asks for confirmation. The operation clears only the live parent link,
+  preserves the same task ID and all previously saved information, records audit on both
+  tasks and keeps the old parent visible as provenance when permitted. A repeat operation
+  returns conflict rather than creating a duplicate task. No task-hours migration happens.
+- Only one nesting level is allowed. A promoted root can later have children of its own.
+  Deleted children follow existing soft-delete policy and no longer count in the branch.
+
+Tests: `tests/task-subtasks.unit.test.mjs` for persisted lifecycle and audit integrity;
+`tests/task-subtasks.spec.js` for endpoint authorization, creation/promotion, and UI entry.

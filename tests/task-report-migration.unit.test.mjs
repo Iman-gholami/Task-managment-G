@@ -37,6 +37,8 @@ test("migration leaves previous tasks, hours and comments intact without inventi
   const details = repo.getTaskDetails("T-9001");
   assert.equal(task.status, "review");
   assert.equal(task.hours, 7.5);
+  assert.equal(task.parentTaskId, null, "legacy tasks remain independent after the subtask migration");
+  assert.equal(task.originParentTaskId, null);
   assert.equal(details.comments[0].body, "Existing investigation notes");
   assert.deepEqual(details.report, { workPerformed: "", outcome: "", hoursRecorded: false, links: [], revision: 0 });
   assert.deepEqual(details.reviewReturns, []);

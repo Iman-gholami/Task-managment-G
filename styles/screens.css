@@ -19,6 +19,12 @@
 .detail-bar .back { display: inline-flex; align-items: center; gap: 4px; font-size: var(--fs-13); color: var(--text-3); }
 .detail-bar .back:hover { color: var(--text); }
 .detail-bar .actions { margin-left: auto; display: flex; flex-wrap: wrap; justify-content: flex-end; gap: var(--s-2); }
+.task-origin-strip { display: flex; align-items: center; gap: var(--s-2); flex-wrap: wrap; margin: calc(-1 * var(--s-2)) 0 var(--s-4); padding: var(--s-2) var(--s-3); border: 1px solid var(--border); border-radius: var(--r-md); background: var(--surface-inset); color: var(--text-2); font: var(--type-body-sm); }
+.task-origin-strip > svg { width: 16px; height: 16px; color: var(--link); }
+.task-origin-strip a { display: inline-flex; align-items: center; gap: var(--s-1); color: var(--link); font: var(--type-card-title); overflow-wrap: anywhere; }
+.task-origin-strip a svg { width: 14px; height: 14px; }
+.task-origin-strip a:focus-visible { outline: 2px solid var(--link); outline-offset: 3px; }
+.task-child-tag { display: inline-flex; margin-inline-start: var(--s-2); padding: 2px var(--s-2); border: 1px solid var(--divider); border-radius: var(--r-sm); color: var(--text-2); background: var(--surface-inset); white-space: nowrap; font: var(--type-caption); }
 .task-outcome { margin-bottom: var(--s-4); padding: var(--s-5); border: 1px solid var(--border); border-radius: var(--r-lg); background: var(--surface-card); box-shadow: inset 3px 0 0 var(--success), var(--shadow-card); }
 .task-outcome-header { display: flex; align-items: flex-start; gap: var(--s-4); }
 .task-outcome-mark { width: 42px; height: 42px; flex: none; display: grid; place-items: center; border: 1.5px solid var(--success); border-radius: var(--r-full); color: var(--success); }

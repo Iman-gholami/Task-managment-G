@@ -7,6 +7,7 @@ import AssigneePicker from "@/components/ui/AssigneePicker";
 import TaskDateInput from "@/components/ui/TaskDateInput";
 import TaskWorkPanel, { TaskReportSummary } from "@/components/screens/TaskWorkPanel";
 import TaskCollaboration from "@/components/screens/TaskCollaboration";
+import TaskSubtasks from "@/components/screens/TaskSubtasks";
 import TaskReviewPanel from "@/components/screens/TaskReviewPanel";
 import { SideCard, TaskLifecycle, TaskProgressPanel } from "@/components/screens/TaskJourney";
 import { useEffect, useRef, useState } from "react";
@@ -64,6 +65,7 @@ export default function TaskDetail({
     isApproving
   } = useTaskActions();
   const t = tasks.find(x => x.id === id);
+  const visibleParent = tasks.find(x => x.id === t?.parentTaskId || x.id === t?.originParentTaskId);
   const {
     data,
     loading,
@@ -258,6 +260,12 @@ export default function TaskDetail({
           </div>
         </div>
 
+        {t.originParentTaskId && <div className="task-origin-strip">
+          <Icon name={t.parentTaskId ? "list" : "arrowUp"} />
+          <span>{locale === "fa" ? t.parentTaskId ? "این کار، زیرتسک است" : "از زیرتسک به تسک مستقل تبدیل شده" : t.parentTaskId ? "This is a subtask" : "Promoted from a subtask"}</span>
+          {visibleParent && <Link href={`/tasks/${visibleParent.id}`}>{visibleParent.title} · {visibleParent.id}<Icon name="arrowRight" /></Link>}
+        </div>}
+
         {t.status === "done" && <section className="task-outcome" role="status" aria-label={reviewed ? __taskTr("Task approval") : __taskTr("Task completion")}>
             <div className="task-outcome-header">
               <span className="task-outcome-mark"><Icon name="check" /></span>
@@ -295,6 +303,7 @@ export default function TaskDetail({
 
         <div className="task-layout">
           <div className="task-layout-main">
+            {!t.parentTaskId && <TaskSubtasks key={id} task={t} />}
             {t.collaborationMode && d?.collaboration && <TaskCollaboration key={`${id}:${me.id}`} task={t} details={d} setData={setData} />}
             {!t.collaborationMode && isAssignee && d && t.status !== "done" && <TaskWorkPanel key={id} task={t} details={d} transitions={transitions} onMove={doMove} setData={setData} commentDraftRef={commentDraftRef} editingCommentRef={editingCommentRef} posting={posting} uploading={uploading} attachments={evidenceInFlow ? evidence : null} onShowComments={showComments} />}
             {showReviewPanel && d && <TaskReviewPanel key={id} task={t} details={d} setData={setData} onApprove={(task, quality, cx) => approve(task, quality, cx, result => setData(current => current ? {

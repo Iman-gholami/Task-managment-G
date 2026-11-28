@@ -123,6 +123,10 @@ test("task activity translates known events without changing names or filenames"
   assert.equal(taskActivityText("attached Work.txt", "fa"), "فایل Work.txt را پیوست کرد");
   assert.equal(taskActivityText("reassigned to Simple", "fa"), "به Simple واگذار شد");
   assert.equal(taskActivityText("deadline → 2026-03-21", "fa"), "سررسید ← ۱۴۰۵/۰۱/۰۱");
+  assert.equal(taskActivityText("created as a subtask of T-1001", "fa"), "به‌عنوان زیرتسک T-1001 ایجاد شد");
+  assert.equal(taskActivityText("created subtask T-1002", "fa"), "زیرتسک T-1002 را ایجاد کرد");
+  assert.equal(taskActivityText("promoted from subtask of T-1001 to an independent task", "fa"), "از زیرتسک T-1001 به تسک مستقل تبدیل شد");
+  assert.equal(taskActivityText("promoted subtask T-1002 to an independent task", "fa"), "زیرتسک T-1002 را به تسک مستقل تبدیل کرد");
   assert.equal(taskActivityText("approved it · quality: Excellent · complexity: Medium → Complex", "en"), "approved it · quality: Excellent · complexity: Medium → Complex");
   assert.equal(taskActivityText("custom historical message", "fa"), "custom historical message");
 });
