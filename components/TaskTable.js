@@ -120,7 +120,7 @@ export default function TaskTable({ list, groups, cols, kb = -1, sort, onSort, e
   const cell = (t, c) => {
     const cls = PRIMARY.has(c) ? "" : "opt";
     switch (c) {
-      case "title": return <td key={c} className="title" data-col={c} title={t.title}><span className="id">{t.id}</span><Link href={`/tasks/${t.id}`}>{t.title}</Link></td>;
+      case "title": return <td key={c} className="title" data-col={c} title={t.title}><span className="id">{t.id}</span><Link href={`/tasks/${t.id}`}>{t.title}</Link>{t.parentTaskId && <span className="task-child-tag">{locale === "fa" ? "زیرتسک" : "Subtask"} · {t.parentTaskId}</span>}</td>;
       case "a": return <td key={c} data-col={c}>{t.collaborationMode === "free" ? <span className="badge"><Icon name="team" size="sm" />{locale === "fa" ? "گروه " : "Team · "}{number(t.participantIds?.length || 0)}</span> : <Who id={t.a} />}</td>;
       case "team": return <td key={c} className={cls} data-col={c}>{teamText(t.team)}</td>;
       case "status": return <td key={c} data-col={c}>{editable("status", t, <Status s={t.status} />)}</td>;
