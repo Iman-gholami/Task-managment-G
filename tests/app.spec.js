@@ -140,7 +140,7 @@ test.describe("shift logs for rostered staff", () => {
     expect((await page.request.patch("/api/shift", { data: { n: 1, patch: { done: true } } })).status()).toBe(403);
   });
 
-  test("security manager has scheduling; Design engineers see shift tools", async ({ page }) => {
+  test("security manager has scheduling; Design engineers get Shift Log only with qualifying duty", async ({ page }) => {
     await signIn(page, "admin");
     await page.goto("/dashboard", { waitUntil: "domcontentloaded" });
     await expect(page.locator(".sidebar")).toContainText("Shift Schedule");
@@ -150,8 +150,9 @@ test.describe("shift logs for rostered staff", () => {
     await signIn(page, "mina");
     await page.goto("/dashboard", { waitUntil: "domcontentloaded" });
     await expect(page.locator(".sidebar")).toContainText("Shift Schedule");
-    await expect(page.locator(".sidebar")).toContainText("Shift Log");
-    // A Design engineer can be scheduled, but must not record tickets without today's assignment.
+    await expect(page.locator(".sidebar")).not.toContainText("Shift Log");
+    // A Design engineer can be scheduled, but only an evening/night assignment
+    // activates the operational log. Without today's assignment tickets stay closed.
     expect((await page.request.post("/api/shift/tickets", { data: { no: "X-1" } })).status()).toBe(404);
   });
 

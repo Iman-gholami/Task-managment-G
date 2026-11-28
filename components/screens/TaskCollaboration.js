@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useId, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useApp, api } from "@/components/AppProvider";
 import { useI18n } from "@/components/I18nProvider";
@@ -21,6 +21,7 @@ const stateLabels = {
 /** Also used in the Create Task modal: team selection is separate from work submissions. */
 export function CollaborationSettings({ primaryId, mode, members, leadResponsibility = "", onChange, people, locale = "fa", disabled = false, allowSolo = true }) {
   const fa = locale === "fa";
+  const descriptionId = useId();
   const selected = new Set(members.map((m) => m.userId));
   const choices = [
     { id: "solo", icon: "user", title: fa ? "انفرادی" : "Individual", subtitle: fa ? "یک مسئول و یک گزارش" : "One assignee, one report" },
@@ -29,8 +30,8 @@ export function CollaborationSettings({ primaryId, mode, members, leadResponsibi
   ];
   return <section className={styles.settings} aria-label={fa ? "نوع همکاری" : "Collaboration mode"}>
     <div className={styles.modeChoices}>{choices.filter((item) => allowSolo || item.id !== "solo").map((item) => <label key={item.id} className={`${styles.mode} ${mode === item.id ? styles.selected : ""}`}>
-      <input type="radio" name="task-collaboration-mode" checked={mode === item.id} disabled={disabled} onChange={() => onChange({ mode: item.id, members: item.id === "solo" ? [] : item.id === "split" ? members.filter((m) => m.userId !== primaryId) : [...members, ...(mode === "split" && primaryId && !selected.has(primaryId) ? [{ userId: primaryId, responsibility: "", due: null }] : [])], leadResponsibility })} />
-      <Icon name={item.icon} /><strong>{item.title}</strong><small>{item.subtitle}</small>
+      <input type="radio" name="task-collaboration-mode" aria-label={item.title} aria-describedby={`${descriptionId}-${item.id}`} checked={mode === item.id} disabled={disabled} onChange={() => onChange({ mode: item.id, members: item.id === "solo" ? [] : item.id === "split" ? members.filter((m) => m.userId !== primaryId) : [...members, ...(mode === "split" && primaryId && !selected.has(primaryId) ? [{ userId: primaryId, responsibility: "", due: null }] : [])], leadResponsibility })} />
+      <Icon name={item.icon} /><strong>{item.title}</strong><small id={`${descriptionId}-${item.id}`}>{item.subtitle}</small>
     </label>)}</div>
     {mode !== "solo" && <div className={styles.memberPicker}>
       <div className={styles.sectionHeading}><strong>{mode === "free" ? (fa ? "اعضای گروه" : "Team members") : (fa ? "همکاران" : "Collaborators")}</strong><small>{mode === "free" ? (fa ? "حداقل ۲ نفر؛ هیچ مسئول اصلی تعیین نمی‌شود." : "At least 2 people; no designated lead.") : (fa ? "مسئول اصلی را در بخش واگذاری مشخص کنید." : "Choose a lead in assignment settings.")}</small></div>
