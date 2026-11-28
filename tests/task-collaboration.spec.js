@@ -1,0 +1,161 @@
+const { test, expect } = require("@playwright/test");
+
+const ADMIN = { email: "test-admin@local.invalid", password: "E2E-Only-Admin-2026!" };
+const PASSWORD = "Shared-Task-2026!";
+const login = async (request, credentials) => expect((await request.post("/api/auth/login", { data: credentials })).ok()).toBeTruthy();
+
+test("a Design manager reviews both collaborative contributions while members see each other", async ({ request }) => {
+  await login(request, ADMIN);
+  const add = async (name, role, team, suffix) => {
+    const response = await request.post("/api/members", { data: { name, role, team, password: PASSWORD, email: `shared-${suffix}@example.invalid` } });
+    expect(response.status()).toBe(201);
+    return (await response.json()).user;
+  };
+  const lead = await add("Collab Lead", "engineer", "Design & Automation", "lead");
+  const peer = await add("Collab Peer", "engineer", "Design & Automation", "peer");
+  const reviewer = await add("Collab Manager", "automation_manager", "Design & Automation", "manager");
+  const outsider = await add("Collab SOC Manager", "soc_manager", "SOC", "soc");
+  const taskResponse = await request.post("/api/tasks", { data: {
+    title: "Collaborative rollout", a: lead.id,
+    collaboration: { mode: "split", leadResponsibility: "Build rollout", members: [{ userId: peer.id, responsibility: "Test and document" }] },
+  } });
+  expect(taskResponse.status()).toBe(201);
+  const task = (await taskResponse.json()).task;
+  const endpoint = `/api/tasks/${task.id}/collaboration`;
+  await login(request, { email: outsider.email, password: PASSWORD });
+  expect((await request.get(`/api/tasks/${task.id}`)).status()).toBe(404);
+  await login(request, { email: lead.email, password: PASSWORD });
+  expect((await request.patch(endpoint, { data: { action: "start" } })).status()).toBe(200);
+  await login(request, { email: peer.email, password: PASSWORD });
+  expect((await request.get(`/api/tasks/${task.id}`)).status()).toBe(200);
+  expect((await request.patch(endpoint, { data: { action: "start" } })).status()).toBe(200);
+  const report = { action: "submit", revision: 0, workPerformed: "Verified design", outcome: "Passed", hours: 2, links: ["https://example.org/test-results"] };
+  const peerResponse = await request.patch(endpoint, { data: report });
+  expect(peerResponse.status()).toBe(200);
+  expect((await peerResponse.json()).details.collaboration.members.find((m) => m.userId === peer.id).links).toEqual(["https://example.org/test-results"]);
+  await login(request, { email: lead.email, password: PASSWORD });
+  const shared = await request.get(`/api/tasks/${task.id}`);
+  expect((await shared.json()).details.collaboration.members.find((m) => m.userId === peer.id).links).toEqual(["https://example.org/test-results"]);
+  expect((await request.patch(endpoint, { data: { ...report, workPerformed: "Lead completed rollout", hours: 3 } })).status()).toBe(200);
+  await login(request, { email: reviewer.email, password: PASSWORD });
+  const review = await request.get(`/api/tasks/${task.id}`);
+  expect(review.status()).toBe(200);
+  expect((await review.json()).task.status).toBe("review");
+  expect((await request.patch(endpoint, { data: { action: "approve", userId: peer.id } })).status()).toBe(200);
+  expect((await request.patch(endpoint, { data: { action: "approve", userId: lead.id } })).status()).toBe(200);
+  const approved = await request.patch(`/api/tasks/${task.id}`, { data: { status: "done", quality: "good" } });
+  expect(approved.status()).toBe(200);
+  expect((await approved.json()).task.hours).toBe(5);
+});
+
+test("free collaboration has no designated lead; each member starts and submits before team review", async ({ request }) => {
+  await login(request, ADMIN);
+  const createMember = async (suffix) => {
+    const response = await request.post("/api/members", { data: {
+      name: `Free ${suffix}`, role: "engineer", team: "Design & Automation",
+      email: `shared-free-${suffix}@example.invalid`, password: PASSWORD
+    } });
+    expect(response.status()).toBe(201);
+    return (await response.json()).user;
+  };
+  const first = await createMember("first");
+  const second = await createMember("second");
+  // The request intentionally has no `a`: the client selects the entire equal team.
+  const created = await request.post("/api/tasks", { data: {
+    title: "Equal team report", collaboration: {
+      mode: "free", allMembers: true, members: [
+        { userId: first.id, responsibility: "Coordinate initial findings" },
+        { userId: second.id, responsibility: "Verify evidence" }
+      ]
+    }
+  } });
+  expect(created.status()).toBe(201);
+  const task = (await created.json()).task;
+  expect(task.participantIds).toEqual(expect.arrayContaining([first.id, second.id]));
+  const endpoint = `/api/tasks/${task.id}/collaboration`;
+
+  await login(request, { email: second.email, password: PASSWORD });
+  const before = await request.get(`/api/tasks/${task.id}`);
+  expect((await before.json()).details.collaboration.members.find((member) => member.userId === second.id).startedAt).toBeNull();
+  expect((await request.patch(endpoint, { data: { action: "start" } })).status()).toBe(200);
+  const report = { action: "submit", revision: 0, workPerformed: "Verified evidence", outcome: "Looks good", hours: 0, links: [] };
+  const early = await request.patch(endpoint, { data: report });
+  expect(early.status()).toBe(200);
+  expect((await early.json()).task.status).toBe("progress");
+
+  await login(request, { email: first.email, password: PASSWORD });
+  const firstView = await request.get(`/api/tasks/${task.id}`);
+  expect((await firstView.json()).details.collaboration.members.find((member) => member.userId === first.id).startedAt).toBeNull();
+  expect((await request.patch(endpoint, { data: { action: "start" } })).status()).toBe(200);
+  const final = await request.patch(endpoint, { data: { ...report, workPerformed: "Initial findings", hours: 1.5 } });
+  expect(final.status()).toBe(200);
+  expect((await final.json()).task.status).toBe("review");
+  const completed = (await final.json()).details.collaboration.members;
+  expect(completed.find((member) => member.userId === first.id).responsibility).toBe("Coordinate initial findings");
+  expect(completed.find((member) => member.userId === second.id).responsibility).toBe("Verify evidence");
+});
+
+test("collaborators can start from their own task page in split and free modes", async ({ page }) => {
+  await login(page.request, ADMIN);
+  const createPerson = async (suffix) => {
+    const response = await page.request.post("/api/members", { data: {
+      name: `Start ${suffix}`, role: "engineer", team: "Design & Automation",
+      password: PASSWORD, email: `shared-start-${suffix}@example.invalid`,
+    } });
+    expect(response.status()).toBe(201);
+    return (await response.json()).user;
+  };
+  const lead = await createPerson("lead");
+  const peer = await createPerson("peer");
+  const createTask = async (mode, suffix) => {
+    const response = await page.request.post("/api/tasks", { data: {
+      title: `Collaborative start ${suffix}`, a: lead.id,
+      collaboration: { mode, leadResponsibility: "Lead's part", members: [{ userId: peer.id, responsibility: "Peer's part" }] },
+    } });
+    expect(response.status()).toBe(201);
+    return (await response.json()).task;
+  };
+  const split = await createTask("split", "split");
+  const free = await createTask("free", "free");
+
+  await login(page.request, { email: peer.email, password: PASSWORD });
+  await page.goto(`/tasks/${split.id}`);
+  const shared = page.getByTestId("task-collaboration");
+  await expect(shared.getByRole("button", { name: /Start my work|شروع کار من/ })).toBeVisible();
+  await shared.getByRole("button", { name: /Start my work|شروع کار من/ }).click();
+  await expect(shared.locator("#collab-work")).toBeVisible();
+  const roster = shared.locator("details[data-tone]");
+  await expect(roster).toHaveCount(2);
+  const ownRow = roster.filter({ hasText: peer.name });
+  await expect(ownRow).toHaveAttribute("data-tone", "working");
+  const checkpoints = ownRow.locator('[role="img"] > span');
+  await expect(checkpoints).toHaveCount(5);
+  await expect(checkpoints.nth(0)).toHaveAttribute("data-complete", "true");
+  await expect(checkpoints.nth(1)).toHaveAttribute("data-complete", "false");
+  await ownRow.locator("summary").click();
+  await expect(ownRow).toHaveAttribute("open", "");
+  await ownRow.locator("summary").click();
+  await expect(ownRow).not.toHaveAttribute("open", "");
+  await expect.poll(async () => (await (await page.request.get(`/api/tasks/${split.id}`)).json()).task.status).toBe("progress");
+  await page.reload();
+  await expect(shared.locator("#collab-work")).toBeVisible();
+
+  await page.goto(`/tasks/${free.id}`);
+  await expect(shared.getByRole("button", { name: /Start my work|شروع کار من/ })).toBeVisible();
+  await shared.getByRole("button", { name: /Start my work|شروع کار من/ }).click();
+  await expect(shared.locator("#collab-work")).toBeVisible();
+  await page.reload();
+  await expect(shared.locator("#collab-work")).toBeVisible();
+  await login(page.request, { email: lead.email, password: PASSWORD });
+  await page.goto(`/tasks/${split.id}`);
+  await expect(shared.getByRole("button", { name: /Start my work|شروع کار من/ })).toBeVisible();
+  await shared.getByRole("button", { name: /Start my work|شروع کار من/ }).click();
+  await expect(shared.locator("#collab-work")).toBeVisible();
+
+  await page.goto(`/tasks/${free.id}`);
+  await shared.getByRole("button", { name: /Start my work|شروع کار من/ }).click();
+  await expect(shared.locator("#collab-work")).toBeVisible();
+  await login(page.request, { email: peer.email, password: PASSWORD });
+  await page.goto(`/tasks/${free.id}`);
+  await expect(shared.locator("#collab-work")).toBeVisible();
+});

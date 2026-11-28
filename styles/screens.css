@@ -732,3 +732,4 @@ button.task-flow-heading:hover .task-flow-edit { background: var(--hover); color
   [dir="rtl"] .task-list .dt.cards tbody tr[data-attn]:not(.group-row) { box-shadow: inset -3px 0 0 var(--attn); }
   .task-list .dt.cards tbody tr[data-attn] td:first-child { box-shadow: none; }
 }
+.task-evidence-link { display: block; overflow-wrap: anywhere; padding-block: .2rem; color: var(--primary, #5b6cf0); text-decoration: underline; text-underline-offset: 3px; }

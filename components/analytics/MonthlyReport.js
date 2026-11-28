@@ -9,6 +9,8 @@ import Icon from "@/components/ui/Icon";
 import { addDays, jalaliMonthBounds, jalaliMonthKey, jMonthStart } from "@/lib/analytics/calendar";
 import { GROUPS, GROUP_BY_KEY, LEVELS, teamParts } from "@/lib/analytics/labels";
 import { isManager } from "@/lib/roles";
+import { ALL_REPORT_SECTIONS, REPORT_SECTIONS } from "@/lib/monthly-report-sections";
+import styles from "./MonthlyReportOptions.module.css";
 
 const normalizeMonth = (value) => value.trim().replace(/[۰-۹٠-٩]/g, (ch) => String(ch.charCodeAt(0) - (ch.charCodeAt(0) >= 1776 ? 1776 : 1632))).replaceAll("/", "-");
 
@@ -29,6 +31,7 @@ function MonthlyReportDrawer({ analytics, personId, onClose }) {
   const [team, setTeam] = useState(() => analytics.filters.team || (analytics.filters.level ? "soc" : ""));
   const [level, setLevel] = useState(() => analytics.filters.level);
   const [person, setPerson] = useState(() => analytics.view.people.some((p) => p.id === personId) ? personId : "");
+  const [sections, setSections] = useState(() => [...ALL_REPORT_SECTIONS]);
   const [busy, setBusy] = useState(false), [error, setError] = useState("");
   const month = normalizeMonth(monthText), bounds = useMemo(() => jalaliMonthBounds(month), [month]);
   const valid = !!bounds && bounds.from <= analytics.today;
@@ -40,9 +43,18 @@ function MonthlyReportDrawer({ analytics, personId, onClose }) {
   if (team === "soc" && level) query.set("level", level);
   if (analytics.filters.province) query.set("province", analytics.filters.province);
   if (person) query.set("person", person);
+  query.set("sections", sections.join(","));
+  const selectable = sections.length > 0;
+  const toggleSection = (id) => setSections((previous) => {
+    const next = previous.includes(id) ? previous.filter((s) => s !== id) : [...previous, id];
+    // Shift logs are associated with scheduled dates; enabling logs also enables the rota.
+    if (id === "shiftLogs" && next.includes("shiftLogs") && !next.includes("shiftSchedules")) next.push("shiftSchedules");
+    if (id === "evidence" && next.includes("evidence") && !next.includes("completed") && !next.includes("open")) next.push("completed", "open");
+    return ALL_REPORT_SECTIONS.filter((s) => next.includes(s));
+  });
   const url = (format) => `/api/analytics/monthly-report?${query}&format=${format}`;
   async function download() {
-    if (!valid || busy) return;
+    if (!valid || !selectable || busy) return;
     setBusy(true); setError("");
     try {
       const response = await fetch(url("zip"), { cache: "no-store" });
@@ -53,12 +65,22 @@ function MonthlyReportDrawer({ analytics, personId, onClose }) {
     finally { setBusy(false); }
   }
   return <Drawer title={fa ? "گزارش ماهانه" : "Monthly report"} subtitle={fa ? "ماه، تیم و در صورت نیاز یک نفر را انتخاب کنید؛ Excel و دو صفحه HTML از همان داده ساخته می‌شوند." : "Choose a month, team and optionally one person. Excel and both HTML pages share the same data."} onClose={onClose}
-    footer={<>{valid && <a className="btn btn-ghost" href={url("html")} target="_blank" rel="noopener noreferrer">{fa ? "نمایش HTML" : "Preview HTML"}</a>}{valid && <a className="btn btn-ghost" href={url("compare")} target="_blank" rel="noopener noreferrer">{fa ? "مقایسه افراد" : "Compare people"}</a>}<span className="spacer" /><button type="button" className="btn btn-primary" disabled={!valid || busy} onClick={download} aria-busy={busy} data-testid="monthly-report-download"><Icon name="download" />{busy ? (fa ? "در حال ساخت…" : "Preparing…") : (fa ? "دانلود Excel و دو HTML" : "Download Excel and two HTML pages")}</button></>}>
+    footer={<>{valid && selectable && <a className="btn btn-ghost" href={url("html")} target="_blank" rel="noopener noreferrer">{fa ? "نمایش HTML" : "Preview HTML"}</a>}{valid && selectable && <a className="btn btn-ghost" href={url("compare")} target="_blank" rel="noopener noreferrer">{fa ? "مقایسه افراد" : "Compare people"}</a>}<span className="spacer" /><button type="button" className="btn btn-primary" disabled={!valid || !selectable || busy} onClick={download} aria-busy={busy} data-testid="monthly-report-download"><Icon name="download" />{busy ? (fa ? "در حال ساخت…" : "Preparing…") : (fa ? "دانلود Excel و دو HTML" : "Download Excel and two HTML pages")}</button></>}>
     <div className="stack">
       <div className="field"><label htmlFor="monthly-report-month">{fa ? "ماه شمسی" : "Jalali month"}</label><input id="monthly-report-month" className="input" dir="ltr" inputMode="numeric" value={monthText} onChange={(event) => { setMonthText(event.target.value); setError(""); }} placeholder="1405-07" aria-invalid={!valid} aria-describedby="monthly-report-month-help" data-testid="monthly-report-month" /><small id="monthly-report-month-help" className={valid ? "muted" : "danger"}>{valid ? (fa ? "قالب: سال-ماه، برای نمونه ۱۴۰۵-۰۷" : "Format: year-month, for example 1405-07") : (fa ? "ماه معتبر وارد کنید؛ ماه آینده قابل انتخاب نیست." : "Enter a valid month that is not in the future.")}</small></div>
       <div className="field"><label htmlFor="monthly-report-team">{fa ? "تیم" : "Team"}</label><select id="monthly-report-team" className="input" value={team} onChange={(event) => { setTeam(event.target.value); setLevel(""); setPerson(""); }}><option value="">{fa ? "همه تیم‌ها" : "All teams"}</option>{groups.map((group) => <option key={group.key} value={group.key}>{teamText(group.name)}</option>)}</select></div>
       {team === "soc" && <div className="field"><label htmlFor="monthly-report-level">{fa ? "لایه SOC" : "SOC level"}</label><select id="monthly-report-level" className="input" value={level} onChange={(event) => { setLevel(event.target.value); setPerson(""); }}><option value="">{fa ? "همه لایه‌ها" : "All levels"}</option>{LEVELS.map((item) => <option key={item} value={item}>{item}</option>)}</select></div>}
       <div className="field"><label htmlFor="monthly-report-person">{fa ? "افراد" : "People"}</label><select id="monthly-report-person" className="input" value={person} onChange={(event) => setPerson(event.target.value)}><option value="">{fa ? "همه افراد در دامنه انتخاب‌شده" : "Everyone in the selected scope"}</option>{people.map((p) => <option key={p.id} value={p.id}>{p.name} — {p.team}</option>)}</select></div>
+      <fieldset className={styles.filterPanel}>
+        <legend>{fa ? "محتوای گزارش" : "Report content"}</legend>
+        <div className={styles.filterTop}><div><strong>{fa ? "چه چیزهایی در خروجی باشد؟" : "What should be included?"}</strong><p>{fa ? "بخش‌های موردنیاز را انتخاب کن. جدول‌ها و نمودارها فقط با همان اطلاعات ساخته می‌شوند." : "Choose the sections for the exported tables and charts."}</p></div><button type="button" className="btn btn-ghost btn-sm" onClick={() => setSections(sections.length === ALL_REPORT_SECTIONS.length ? [] : [...ALL_REPORT_SECTIONS])}>{sections.length === ALL_REPORT_SECTIONS.length ? (fa ? "برداشتن همه" : "Clear all") : (fa ? "انتخاب همه" : "Select all")}</button></div>
+        {[["tasks", fa ? "تسک‌ها" : "Tasks"], ["shifts", fa ? "شیفت و فعالیت" : "Shifts & work"], ["details", fa ? "مستندات و ارزیابی" : "Evidence & review"]].map(([group, title]) => <div className={styles.group} key={group}><span className={styles.groupTitle}>{title}</span><div className={styles.options}>{REPORT_SECTIONS.filter((item) => item.group === group).map((item) => <label key={item.id} className={`${styles.choice} ${sections.includes(item.id) ? styles.checked : ""}`}>
+          <input type="checkbox" checked={sections.includes(item.id)} disabled={(item.id === "shiftSchedules" && sections.includes("shiftLogs")) || ((item.id === "completed" || item.id === "open") && sections.includes("evidence") && sections.filter((s) => s === "completed" || s === "open").length === 1 && sections.includes(item.id))} onChange={() => toggleSection(item.id)} />
+          <span className={styles.check}><Icon name="check" /></span><span>{fa ? item.fa : item.en}</span>
+        </label>)}</div>{group === "shifts" && sections.includes("shiftLogs") && <p className={styles.helper}>{fa ? "شیفت‌لاگ‌ها همراه برنامه شیفت نمایش داده می‌شوند." : "Shift logs include their corresponding schedule."}</p>}{group === "details" && sections.includes("evidence") && <p className={styles.helper}>{fa ? "مستندات به تسک‌های انتخاب‌شده متصل هستند." : "Task evidence follows the selected task statuses."}</p>}</div>)}
+        {!selectable && <p className={styles.warning} role="alert">{fa ? "برای تهیه گزارش دست‌کم یک بخش را انتخاب کنید." : "Select at least one report section."}</p>}
+        <div className={styles.summary}><Icon name="checkCircle" /><span>{fa ? `${sections.length} بخش از ${ALL_REPORT_SECTIONS.length} بخش انتخاب شده است` : `${sections.length} of ${ALL_REPORT_SECTIONS.length} sections selected`}</span></div>
+      </fieldset>
       <div className="an-note" role="note"><Icon name="info" /><span>{fa ? "فایل ZIP شامل Excel، گزارش تفصیلی HTML و صفحه مقایسه نموداری افراد است. ساعت شیفت طبق برنامه محاسبه می‌شود؛ ساعت تسک‌ها جداست و ممکن است با شیفت هم‌پوشانی داشته باشد." : "The ZIP contains Excel, the detailed HTML report, and an HTML people comparison page. Scheduled shift hours and task hours are separate and may overlap."}{analytics.filters.province && (fa ? ` فیلتر استان صفحه نیز اعمال می‌شود: ${analytics.filters.province}.` : ` The page's province filter also applies: ${analytics.filters.province}.`)}</span></div>
       {error && <div className="an-inline-error" role="alert">{error}</div>}
     </div>

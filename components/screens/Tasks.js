@@ -15,7 +15,7 @@ import { Avatar, Due, Priority, Status } from "@/components/ui/indicators";
 import { PRIO, STATUS, TODAY, addDays, dueLabel, isOpen, plural } from "@/lib/format";
 import { taskDate } from "@/lib/task-date";
 import { isTaskOverdue } from "@/lib/task-deadline";
-import { inTeamScope, isManager } from "@/lib/roles";
+import { inTeamScope, isTaskManager } from "@/lib/roles";
 
 export { inTeamScope };
 
@@ -43,7 +43,7 @@ export default function Tasks({ scope }) {
   const router = useRouter();
   const params = useSearchParams();
   const edit = useInlineEdit();
-  const manager = isManager(me);
+  const manager = isTaskManager(me);
   const [tab, setTab] = useState(() => (TABS.some(([k]) => k === params.get("tab")) ? params.get("tab") : "open"));
   const [q, setQ] = useState("");
   const [assignee, setAssignee] = useState("");
@@ -55,7 +55,7 @@ export default function Tasks({ scope }) {
   const [kbOn, setKbOn] = useState(false); // the row cursor appears once J/K is used
 
   const base = useMemo(() => tasks.filter((t) =>
-    scope === "my" ? t.a === me.id
+    scope === "my" ? t.a === me.id || t.participantIds?.includes(me.id)
       : scope === "assigned" ? t.createdBy === me.id && t.a !== me.id
       : inTeamScope(me, peopleMap[t.a])
   ), [tasks, scope, me, peopleMap]);
@@ -65,7 +65,7 @@ export default function Tasks({ scope }) {
   const list = useMemo(() => {
     let l = inTab;
     if (q) l = l.filter((t) => (t.title + t.id).toLowerCase().includes(q.toLowerCase()));
-    if (assignee) l = l.filter((t) => t.a === assignee);
+    if (assignee) l = l.filter((t) => t.collaborationMode === "free" ? t.participantIds?.includes(assignee) : t.a === assignee);
     if (prio) l = l.filter((t) => t.prio === prio);
     const val = (t) => (ORDER[sort.k] ? ORDER[sort.k].indexOf(t[sort.k]) : sort.k === "a" ? peopleMap[t.a]?.name : t[sort.k] ?? "");
     return [...l].sort((a, b) => (val(a) > val(b) ? 1 : val(a) < val(b) ? -1 : 0) * sort.dir);
@@ -79,7 +79,7 @@ export default function Tasks({ scope }) {
 
   const isGrouped = grouped && scope !== "my";
   const cols = isGrouped || scope === "my" ? ["title", "status", "prio", "cx", "due", "hours", "quality", "upd"] : ["title", "a", "status", "prio", "cx", "due", "hours", "quality"];
-  const people = [...new Set(base.map((t) => t.a))].map((id) => peopleMap[id]).filter(Boolean).sort((a, b) => a.name.localeCompare(b.name));
+  const people = [...new Set(base.flatMap((t) => t.collaborationMode === "free" ? t.participantIds || [] : [t.a]))].map((id) => peopleMap[id]).filter(Boolean).sort((a, b) => a.name.localeCompare(b.name));
   const activeFilters = [q, assignee, prio].filter(Boolean).length;
   const resetFilters = () => { setQ(""); setAssignee(""); setPrio(""); };
   const showKb = view === "table" && !isGrouped;
@@ -293,7 +293,7 @@ function Board({ list }) {
                   <span className="mono muted">{t.id}</span>
                   {t.status === "blocked" && <Status s="blocked" />}
                   {t.status === "backlog" && <span className="badge">{"" + __taskTr("Backlog") + ""}</span>}
-                  <Avatar id={t.a} size="sm" label />
+                  {t.collaborationMode === "free" ? <span className="badge"><Icon name="team" size="sm" />{locale === "fa" ? "گروه" : "Team"}</span> : <Avatar id={t.a} size="sm" label />}
                 </div>
                 <div className="t">{t.title}</div>
                 <div className="meta">

@@ -59,12 +59,13 @@ export function TaskReportSummary({
     t: __taskTr, locale, number
   } = useI18n();
   const report = details.report;
-  const hasReport = report.workPerformed || report.outcome || report.hoursRecorded;
+  const hasReport = report.workPerformed || report.outcome || report.hoursRecorded || report.links?.length;
   return <div className="task-report-summary">
       {!hasReport && <p className="muted small">{__taskTr(emptyText ?? "No structured report was recorded for this task. See the conversation and attachments for earlier work.")}</p>}
       <dl className="task-report-facts">
         <div><dt>{__taskTr("Work performed")}</dt><dd dir="auto">{report.workPerformed || __taskTr("Not recorded")}</dd></div>
         <div><dt>{__taskTr("Outcome")}</dt><dd dir="auto">{report.outcome || __taskTr("Not recorded")}</dd></div>
+        {!!report.links?.length && <div><dt>{locale === "fa" ? "لینک‌های مستندات" : "Evidence links"}</dt><dd>{report.links.map((url) => <a key={url} href={url} rel="noopener noreferrer" target="_blank" dir="ltr" className="task-evidence-link">{url}</a>)}</dd></div>}
         <div><dt>{__taskTr("Total time")}</dt><dd>{report.hoursRecorded ? `${number(task.hours)} ${__taskTr("hrs")}` : task.hours ? locale === "fa" ? `${number(task.hours)} ساعت (مجموع قبلی)` : `${task.hours} hrs (existing total)` : __taskTr("Not recorded")}</dd></div>
       </dl>
       {attachments}
@@ -94,6 +95,7 @@ export default function TaskWorkPanel({
   const initialHours = initial.hoursRecorded || task.hours ? String(task.hours) : "";
   const [work, setWork] = useState(initial.workPerformed);
   const [outcome, setOutcome] = useState(initial.outcome);
+  const [links, setLinks] = useState((initial.links || []).join("\n"));
   const [hours, setHours] = useState(initialHours);
   const [stage, setStage] = useState("work");
   const [error, setError] = useState("");
@@ -106,6 +108,7 @@ export default function TaskWorkPanel({
   const saved = useRef({
     work: initial.workPerformed,
     outcome: initial.outcome,
+    links: (initial.links || []).join("\n"),
     hours: initialHours,
     revision: initial.revision
   });
@@ -117,7 +120,7 @@ export default function TaskWorkPanel({
   const parsedHours = parseTaskHours(hours);
   const editable = ["progress", "blocked", "returned"].includes(task.status);
   const working = task.status === "progress";
-  const dirty = work !== saved.current.work || outcome !== saved.current.outcome || hours !== saved.current.hours;
+  const dirty = work !== saved.current.work || outcome !== saved.current.outcome || hours !== saved.current.hours || links !== saved.current.links;
   const latestReturn = details.currentReturn;
   const showReturn = latestReturn && ["returned", "progress", "blocked"].includes(task.status);
   useEffect(() => {
@@ -160,12 +163,14 @@ export default function TaskWorkPanel({
     saved.current = {
       work: report.workPerformed,
       outcome: report.outcome,
+      links: (report.links || []).join("\n"),
       hours: nextHours,
       revision: report.revision
     };
     if (!preserveDraft) {
       setWork(report.workPerformed);
       setOutcome(report.outcome);
+      setLinks((report.links || []).join("\n"));
       setHours(nextHours);
     }
   };
@@ -174,6 +179,7 @@ export default function TaskWorkPanel({
       report: {
         workPerformed: work,
         outcome,
+        links: links.split(/\r?\n/).map((line) => line.trim()).filter(Boolean),
         revision: saved.current.revision,
         clearHours: !hours.trim()
       }
@@ -183,6 +189,12 @@ export default function TaskWorkPanel({
     return body;
   };
   const validateHours = () => {
+    const rows = links.split(/\r?\n/).map((line) => line.trim()).filter(Boolean);
+    if (rows.length > 10 || rows.some((row) => { try { const url = new URL(row); return !["http:", "https:"].includes(url.protocol) || !url.hostname || !!url.username || !!url.password || row.length > 2048; } catch { return true; } })) {
+      setStage("outcome");
+      setError(locale === "fa" ? "حداکثر ۱۰ لینک معتبر با http یا https وارد کنید." : "Enter up to 10 valid http(s) links, one per line.");
+      return false;
+    }
     if (hours.trim() && parsedHours === null) {
       setStage("hours");
       setInvalidField("hours");
@@ -193,6 +205,7 @@ export default function TaskWorkPanel({
     return true;
   };
   const validateHandover = () => {
+    if (!validateHours()) return false;
     if (!work.trim()) {
       setStage("work");
       setInvalidField("work");
@@ -261,7 +274,7 @@ export default function TaskWorkPanel({
       const result = await api(`/api/tasks/${task.id}`);
       const desired = pending.current;
       const report = result.details.report;
-      const matches = desired && report.workPerformed === desired.body.report.workPerformed.trim() && report.outcome === desired.body.report.outcome.trim() && (desired.body.report.clearHours ? !report.hoursRecorded : report.hoursRecorded && result.task.hours === desired.body.hours) && (!desired.body.status || result.task.status === desired.body.status);
+      const matches = desired && report.workPerformed === desired.body.report.workPerformed.trim() && report.outcome === desired.body.report.outcome.trim() && JSON.stringify(report.links || []) === JSON.stringify((desired.body.report.links || []).map((s) => new URL(s).href).filter((s, i, arr) => arr.indexOf(s) === i)) && (desired.body.report.clearHours ? !report.hoursRecorded : report.hoursRecorded && result.task.hours === desired.body.hours) && (!desired.body.status || result.task.status === desired.body.status);
       sync(result, !matches);
       setUncertain(false);
       pending.current = null;
@@ -341,6 +354,9 @@ export default function TaskWorkPanel({
             setMessage("");
           }} />
           </Field>
+          <Field label={locale === "fa" ? "لینک مستندات و نتایج (اختیاری)" : "Evidence links (optional)"} htmlFor="task-report-links" hint={locale === "fa" ? "هر لینک را در یک خط بنویسید؛ مانند لینک تیکت، داشبورد یا مستندات داخلی." : "One link per line: tickets, dashboards or documentation."}>
+            <textarea id="task-report-links" className="textarea" dir="ltr" rows={3} value={links} disabled={disabled} placeholder="https://…" onChange={(event) => { setLinks(event.target.value); setError(""); setMessage(""); }} />
+          </Field>
           {attachments}
           <div className="task-flow-actions"><button type="button" className="btn btn-secondary" disabled={disabled} onClick={() => setStage("work")}>{__taskTr("Back")}</button><button type="button" className="btn btn-primary" disabled={disabled} onClick={() => saveDraft("hours")}>{__taskTr("Continue")}<Icon name="arrowRight" size="sm" /></button></div>
         </TaskFlowStep>
@@ -360,7 +376,7 @@ export default function TaskWorkPanel({
         <TaskFlowStep number={5} title={task.reviewRequired ? __taskTr("Review & submit") : __taskTr("Review & complete")} note={task.reviewRequired ? "Check, then send to your manager" : "Check, then complete"} state={stepState("handover")} onOpen={working ? () => {
         if (validateHandover()) setStage("handover");
       } : undefined}>
-          <dl className="task-report-facts"><div><dt>{__taskTr("Work performed")}</dt><dd dir="auto">{work}</dd></div><div><dt>{__taskTr("Outcome")}</dt><dd dir="auto">{outcome}</dd></div><div><dt>{__taskTr("Total time")}</dt><dd>{parsedHours}{" " + __taskTr("hrs")}</dd></div><div><dt>{__taskTr("Attachments")}</dt><dd>{details.attachments.length}</dd></div><div><dt>{__taskTr("Checklist")}</dt><dd>{details.checklist.filter(item => item.done).length} / {details.checklist.length}</dd></div></dl>
+          <dl className="task-report-facts"><div><dt>{__taskTr("Work performed")}</dt><dd dir="auto">{work}</dd></div><div><dt>{__taskTr("Outcome")}</dt><dd dir="auto">{outcome}</dd></div><div><dt>{locale === "fa" ? "لینک‌ها" : "Links"}</dt><dd>{links.split(/\r?\n/).filter((s) => s.trim()).length}</dd></div><div><dt>{__taskTr("Total time")}</dt><dd>{parsedHours}{" " + __taskTr("hrs")}</dd></div><div><dt>{__taskTr("Attachments")}</dt><dd>{details.attachments.length}</dd></div><div><dt>{__taskTr("Checklist")}</dt><dd>{details.checklist.filter(item => item.done).length} / {details.checklist.length}</dd></div></dl>
           {draftComment && <div className="handoff-warning"><Icon name="alert" /><div><strong>{__taskTr("Unposted comment")}</strong><p>{__taskTr("Your comment has not been posted and will not be included.")}</p><button type="button" className="btn btn-ghost btn-sm" onClick={onShowComments}>{__taskTr("Back to comment")}</button></div></div>}
           <div className="task-flow-actions"><button type="button" className="btn btn-secondary" disabled={disabled} onClick={() => setStage("hours")}>{__taskTr("Back")}</button><button type="button" className="btn btn-primary" disabled={disabled} aria-busy={busy} onClick={() => {
             if (validateHandover()) commit(payload(finalStatus));

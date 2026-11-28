@@ -30,6 +30,7 @@ legacy.exec(`
 legacy.close();
 process.env.DATABASE_PATH = databasePath;
 const repo = await import("@/lib/server/repo");
+const { normalizeTaskLinks } = await import("@/lib/task-links");
 
 test("migration leaves previous tasks, hours and comments intact without inventing a report", () => {
   const task = repo.getTask("T-9001");
@@ -37,7 +38,7 @@ test("migration leaves previous tasks, hours and comments intact without inventi
   assert.equal(task.status, "review");
   assert.equal(task.hours, 7.5);
   assert.equal(details.comments[0].body, "Existing investigation notes");
-  assert.deepEqual(details.report, { workPerformed: "", outcome: "", hoursRecorded: false, revision: 0 });
+  assert.deepEqual(details.report, { workPerformed: "", outcome: "", hoursRecorded: false, links: [], revision: 0 });
   assert.deepEqual(details.reviewReturns, []);
 });
 
@@ -60,6 +61,18 @@ test("report and return evidence are committed together and stale writes change 
   assert.equal(repo.getTask("T-9001").hours, 8);
   assert.equal(repo.getTaskDetails("T-9001").report.outcome, "Completed");
   assert.ok(!repo.getTaskDetails("T-9001").events.some((event) => event.text === "should not be recorded"));
+});
+
+test("report evidence accepts safe links and rejects malicious or overlong URLs", () => {
+  assert.deepEqual(normalizeTaskLinks([" https://example.org/evidence ", "https://example.org/evidence"]), ["https://example.org/evidence"]);
+  for (const links of [["javascript:alert(1)"], ["file:///etc/passwd"], ["https://a:b@example.org"], ["not a link"], ["https://example.org/".repeat(140)]]) {
+    assert.equal(normalizeTaskLinks(links), null);
+  }
+  const safe = ["https://example.org/evidence?x=1&y=2"];
+  assert.ok(repo.commitTaskUpdate("T-9001", {}, "admin", { expectedStatus: "returned", expectedAssignee: "admin", report: {
+    workPerformed: "Investigation", outcome: "Recorded", hoursRecorded: true, links: safe,
+  } }));
+  assert.deepEqual(repo.getTaskReport("T-9001").links, safe);
 });
 
 test.after(() => { globalThis.__sentinelDb?.close(); fs.rmSync(directory, { recursive: true, force: true }); });

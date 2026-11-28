@@ -105,6 +105,54 @@ test("bundle contains a readable workbook and offline HTML, escaping user conten
   assert.match(await zip.file(comparisonName).async("string"), new RegExp(detailsName.replace(".", "\\.")));
 });
 
+test("report section checkboxes limit Excel sheets and both HTML views", async () => {
+  const completed = buildMonthlyReport(admin, { month, person: l2.id, sections: "completed" });
+  assert.deepEqual(completed.sections, ["completed"]);
+  assert.equal(completed.people[0].tasks.length, 1);
+  assert.equal(completed.people[0].shifts.length, 0);
+  assert.equal(completed.people[0].analyzedTickets.length, 0);
+  const workbook = await new ExcelJS.Workbook().xlsx.load(await createMonthlyWorkbook(completed));
+  assert.ok(workbook.getWorksheet("جزئیات تسک‌ها"));
+  for (const name of ["جزئیات شیفت", "تیکت‌ها", "ارزیابی شیفت"]) assert.equal(workbook.getWorksheet(name), undefined);
+  const details = renderMonthlyHtml(completed), comparison = renderMonthlyComparisonHtml(completed);
+  assert.match(details, /Reviewed events and evidence/);
+  assert.doesNotMatch(details, /INC-001|<details class="data-section">/);
+  assert.doesNotMatch(comparison, /class="log-ring"|<span>ساعت شیفت برنامه‌ریزی‌شده<\/span>/);
+  assert.match(comparison, /ساعت تسک‌های تکمیل‌شده/);
+
+  const schedule = buildMonthlyReport(admin, { month, person: l2.id, sections: "shiftSchedules" });
+  const shiftBook = await new ExcelJS.Workbook().xlsx.load(await createMonthlyWorkbook(schedule));
+  assert.ok(shiftBook.getWorksheet("جزئیات شیفت"));
+  assert.equal(shiftBook.getWorksheet("جزئیات تسک‌ها"), undefined);
+  assert.ok(!shiftBook.getWorksheet("جزئیات شیفت").getRow(1).values.includes("شیفت‌لاگ"));
+  assert.doesNotMatch(renderMonthlyHtml(schedule), /Reviewed events and evidence/);
+  assert.doesNotMatch(renderMonthlyComparisonHtml(schedule), /class="log-ring"|<span>ساعت تسک‌های تکمیل‌شده<\/span>/);
+
+  const tickets = buildMonthlyReport(admin, { month, person: l2.id, sections: "tickets" });
+  const ticketBook = await new ExcelJS.Workbook().xlsx.load(await createMonthlyWorkbook(tickets));
+  assert.ok(ticketBook.getWorksheet("تیکت‌ها"));
+  assert.equal(ticketBook.getWorksheet("جزئیات تسک‌ها"), undefined);
+  assert.match(renderMonthlyHtml(tickets), /INC-001/);
+  assert.doesNotMatch(renderMonthlyComparisonHtml(tickets), /class="chart-panel"|class="log-ring"/);
+  assert.throws(() => buildMonthlyReport(admin, { month, sections: "" }), { status: 400 });
+  assert.throws(() => buildMonthlyReport(admin, { month, sections: "shiftLogs" }), { status: 400 });
+  assert.throws(() => buildMonthlyReport(admin, { month, sections: "evidence" }), { status: 400 });
+  assert.throws(() => buildMonthlyReport(admin, { month, sections: "completed,unknown" }), { status: 400 });
+});
+
+test("report links are preserved as safe clickable evidence", async () => {
+  db.prepare("UPDATE task_work_reports SET links = ? WHERE task_id = ?").run(JSON.stringify(["https://example.com/evidence?a=1&b=2"]), task.id);
+  try {
+    const report = buildMonthlyReport(admin, { month, person: l2.id, sections: "completed" });
+    assert.deepEqual(report.people[0].tasks[0].links, ["https://example.com/evidence?a=1&b=2"]);
+    const html = renderMonthlyHtml(report);
+    assert.match(html, /href="https:\/\/example.com\/evidence\?a=1&amp;b=2"/);
+    const workbook = await new ExcelJS.Workbook().xlsx.load(await createMonthlyWorkbook(report));
+    const text = workbook.getWorksheet("جزئیات تسک‌ها").getRow(2).values.join(" ");
+    assert.match(text, /https:\/\/example.com\/evidence/);
+  } finally { db.prepare("UPDATE task_work_reports SET links = '[]' WHERE task_id = ?").run(task.id); }
+});
+
 test("monthly report separates automation SOC shift hours from completed task hours", async () => {
   const { addDays, jMonthStart, jalaliMonthBounds, jalaliMonthKey } = await import("@/lib/analytics/calendar");
   const reportMonth = jalaliMonthKey(addDays(jMonthStart(date), -1));
@@ -113,14 +161,12 @@ test("monthly report separates automation SOC shift hours from completed task ho
   for (let i = 0; i < 6; i++) {
     const shiftDate = addDays(from, i);
     repo.setShiftSchedule(automation.id, shiftDate, "night", admin.id);
-    repo.getShiftLog(automation.id, shiftDate);
-    repo.setShiftCompleted(automation.id, true, shiftDate);
+    assert.equal(repo.getShiftLog(automation.id, shiftDate), null);
   }
   const pending = addDays(from, 6), engineering = addDays(from, 7), leave = addDays(from, 8);
   repo.setShiftSchedule(automation.id, pending, "evening", admin.id);
   repo.setShiftSchedule(automation.id, engineering, "morning", admin.id);
-  repo.getShiftLog(automation.id, engineering);
-  repo.setShiftCompleted(automation.id, true, engineering);
+  assert.equal(repo.getShiftLog(automation.id, engineering), null);
   repo.setDayStatus(automation.id, leave, "leave", admin.id);
   for (let i = 0; i < 10; i++) {
     const taskDate = addDays(from, i);
@@ -135,15 +181,15 @@ test("monthly report separates automation SOC shift hours from completed task ho
   const p = report.people[0];
   assert.equal(p.stats.completed,10);
   assert.equal(p.stats.hours,100);
-  assert.equal(p.stats.socShifts,7);
-  assert.equal(p.stats.socShiftHours,84.5);
-  assert.equal(p.stats.completedSocShifts,6);
-  assert.equal(p.stats.completedSocShiftHours,72);
+  assert.equal(p.stats.socShifts,1);
+  assert.equal(p.stats.socShiftHours,12.5);
+  assert.equal(p.stats.completedSocShifts,0);
+  assert.equal(p.stats.completedSocShiftHours,0);
   assert.equal(p.stats.pendingSocShifts,1);
   assert.equal(p.stats.pendingSocShiftHours,12.5);
-  assert.equal(p.stats.engineeringShifts,1);
-  assert.equal(p.stats.engineeringShiftHours,7.75);
-  assert.equal(socManagerReport.people[0].stats.completedSocShiftHours,72);
+  assert.equal(p.stats.engineeringShifts,7);
+  assert.equal(p.stats.engineeringShiftHours,79.75);
+  assert.equal(socManagerReport.people[0].stats.completedSocShiftHours,0);
   assert.equal(socManagerReport.people[0].stats.hours,100);
   assert.equal(p.shifts.find((s) => s.date === engineering).workType,"engineering");
   assert.equal(p.shifts.find((s) => s.date === leave).hours,0);
@@ -151,11 +197,11 @@ test("monthly report separates automation SOC shift hours from completed task ho
   const sheet = workbook.getWorksheet("خلاصه افراد");
   const headers = sheet.getRow(1).values;
   const row = sheet.getRow(2).values;
-  for (const [label,value] of [["ساعت شیفت SOC (تکمیل‌شده)",72],["ساعت تسک‌های تکمیل‌شده",100]]) {
+  for (const [label,value] of [["ساعت شیفت SOC (تکمیل‌شده)",0],["ساعت تسک‌های تکمیل‌شده",100]]) {
     const col = headers.indexOf(label); assert.ok(col > 0, `${label} column is missing`); assert.equal(row[col],value);
   }
   const html = renderMonthlyHtml(report);
-  assert.match(html,/ساعت شیفت SOC/); assert.match(html,/>۷۲</); assert.match(html,/>۱۰۰</);
+  assert.match(html,/ساعت شیفت SOC/); assert.match(html,/>۰</); assert.match(html,/>۱۰۰</);
   assert.match(html,/۷٫۷۵/);
 });
 

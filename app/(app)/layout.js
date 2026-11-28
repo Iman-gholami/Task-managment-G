@@ -6,13 +6,16 @@ import { listVisibleTasks } from "@/lib/server/access";
 import { getShiftLog, listUsers, shiftStatusToday, today } from "@/lib/server/repo";
 import { activeShiftLogDate } from "@/lib/server/shift-log-window";
 import { dashboardStats, isShiftAnalyst } from "@/lib/server/stats";
+import { requiresShiftLog } from "@/lib/roles";
+import { getShiftSchedule } from "@/lib/server/repo";
 
 const emptyShift = () => ({ date: today(), activities: [], tickets: [], completedAt: null });
 
 export default async function AppLayout({ children }) {
   const me = await getCurrentUser();
   if (!me) redirect("/login");
-  const keepsShiftLog = isShiftAnalyst(me);
+  const keepsShiftLog = isShiftAnalyst(me) &&
+    (me.team !== "Design & Automation" || requiresShiftLog(me, getShiftSchedule(me.id, activeShiftLogDate(me.id))?.shiftType));
   const tasks = listVisibleTasks(me);
   const initial = {
     me: { ...me, keepsShiftLog },
