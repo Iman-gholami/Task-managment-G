@@ -6,6 +6,7 @@ import { useRouter } from "next/navigation";
 import AssigneePicker from "@/components/ui/AssigneePicker";
 import TaskDateInput from "@/components/ui/TaskDateInput";
 import TaskWorkPanel, { TaskReportSummary } from "@/components/screens/TaskWorkPanel";
+import TaskCollaboration from "@/components/screens/TaskCollaboration";
 import TaskReviewPanel from "@/components/screens/TaskReviewPanel";
 import { SideCard, TaskLifecycle, TaskProgressPanel } from "@/components/screens/TaskJourney";
 import { useEffect, useRef, useState } from "react";
@@ -22,7 +23,7 @@ import { STATUS } from "@/lib/format";
 import { taskWhen } from "@/lib/task-date";
 import { taskActivityText } from "@/lib/i18n/task-activity";
 import { cxItems, peopleItems } from "@/components/ui/menus";
-import { canAssignTask, canDeleteOwnTask, isManager } from "@/lib/roles";
+import { canAssignTask, canDeleteOwnTask, canReviewTask } from "@/lib/roles";
 import { actionLabel, allowedTransitions } from "@/lib/workflow";
 import { reportProgress } from "@/lib/task-journey";
 const size = n => n > 1048576 ? `${(n / 1048576).toFixed(1)} MB` : `${Math.max(1, Math.round(n / 1024))} KB`;
@@ -99,8 +100,8 @@ export default function TaskDetail({
           {id}{" " + __taskTr("doesn't exist, or it was removed. Check the ID or find the task from your task lists.") + " "}</EmptyState>
       </div>;
   }
-  const canEdit = t.a === me.id || isManager(me);
-  const manager = isManager(me);
+  const canEdit = t.a === me.id || t.participantIds?.includes(me.id) || canReviewTask(me, t);
+  const manager = canReviewTask(me, t);
   const isAssignee = t.a === me.id;
   const assignableMembers = members.filter(person => person.active !== false && canAssignTask(me, person));
   const closed = t.status === "done" || t.status === "cancelled";
@@ -175,14 +176,16 @@ export default function TaskDetail({
   });
   const canDetail = manager && !closed;
   const doneCount = d?.checklist.filter(c => c.done).length ?? 0;
-  const main = transitions.filter(s => !QUIET.includes(s));
+  const contributionsApproved = !t.collaborationMode || t.collaborationMode === "free" ||
+    (d?.collaboration?.members.filter((m) => !m.removed).every((m) => m.state === "approved") ?? false);
+  const main = transitions.filter(s => !QUIET.includes(s) && (s !== "done" || contributionsApproved));
   const quiet = transitions.filter(s => QUIET.includes(s));
   const approving = isApproving(t.id);
   const reviewer = d?.approvedBy ? peopleMap[d.approvedBy] : null;
   const reviewed = t.reviewRequired && (!!t.quality || !!d?.approvedBy);
-  const showReviewPanel = !isAssignee && t.status === "review" && transitions.includes("done");
+  const showReviewPanel = !isAssignee && t.status === "review" && transitions.includes("done") && contributionsApproved;
   const evidenceInFlow = isAssignee && ["progress", "review"].includes(t.status) || showReviewPanel;
-  const showReportCard = t.status === "done" || t.status === "cancelled" || !isAssignee && !showReviewPanel;
+  const showReportCard = !t.collaborationMode && (t.status === "done" || t.status === "cancelled" || !isAssignee && !showReviewPanel);
   const assigneeName = peopleMap[t.a]?.name ?? "The assignee";
   const journey = {
     task: t,
@@ -285,14 +288,15 @@ export default function TaskDetail({
                 <p className="prose" dir="auto">{t.description || <span className="muted">{__taskTr("No description yet.")}</span>}</p>
                 <div className="task-brief-meta"><Status s={t.status} /><span>{__taskTr("Priority") + " "}<Priority p={t.prio} /></span><span>{__taskTr("Complexity") + " "}<Complexity c={t.cx} /></span><span>{__taskTr("Deadline") + " "}<Due task={t} /></span><span>{__taskTr("Assignee") + " "}<Who id={t.a} /></span></div>
               </div>}
-            {d && <TaskProgressPanel task={t} progress={reportProgress(t, d)} isAssignee={isAssignee} canReview={showReviewPanel} assigneeName={assigneeName} />}
+            {d && !t.collaborationMode && <TaskProgressPanel task={t} progress={reportProgress(t, d)} isAssignee={isAssignee} canReview={showReviewPanel} assigneeName={assigneeName} />}
           </div>
           <TaskLifecycle {...journey} />
         </section>
 
         <div className="task-layout">
           <div className="task-layout-main">
-            {isAssignee && d && t.status !== "done" && <TaskWorkPanel key={id} task={t} details={d} transitions={transitions} onMove={doMove} setData={setData} commentDraftRef={commentDraftRef} editingCommentRef={editingCommentRef} posting={posting} uploading={uploading} attachments={evidenceInFlow ? evidence : null} onShowComments={showComments} />}
+            {t.collaborationMode && d?.collaboration && <TaskCollaboration key={`${id}:${me.id}`} task={t} details={d} setData={setData} />}
+            {!t.collaborationMode && isAssignee && d && t.status !== "done" && <TaskWorkPanel key={id} task={t} details={d} transitions={transitions} onMove={doMove} setData={setData} commentDraftRef={commentDraftRef} editingCommentRef={editingCommentRef} posting={posting} uploading={uploading} attachments={evidenceInFlow ? evidence : null} onShowComments={showComments} />}
             {showReviewPanel && d && <TaskReviewPanel key={id} task={t} details={d} setData={setData} onApprove={(task, quality, cx) => approve(task, quality, cx, result => setData(current => current ? {
             ...current,
             details: result.details,

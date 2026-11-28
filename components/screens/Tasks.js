@@ -15,7 +15,7 @@ import { Avatar, Due, Priority, Status } from "@/components/ui/indicators";
 import { PRIO, STATUS, TODAY, addDays, dueLabel, isOpen, plural } from "@/lib/format";
 import { taskDate } from "@/lib/task-date";
 import { isTaskOverdue } from "@/lib/task-deadline";
-import { inTeamScope, isManager } from "@/lib/roles";
+import { inTeamScope, isTaskManager } from "@/lib/roles";
 
 export { inTeamScope };
 
@@ -43,7 +43,7 @@ export default function Tasks({ scope }) {
   const router = useRouter();
   const params = useSearchParams();
   const edit = useInlineEdit();
-  const manager = isManager(me);
+  const manager = isTaskManager(me);
   const [tab, setTab] = useState(() => (TABS.some(([k]) => k === params.get("tab")) ? params.get("tab") : "open"));
   const [q, setQ] = useState("");
   const [assignee, setAssignee] = useState("");
@@ -55,7 +55,7 @@ export default function Tasks({ scope }) {
   const [kbOn, setKbOn] = useState(false); // the row cursor appears once J/K is used
 
   const base = useMemo(() => tasks.filter((t) =>
-    scope === "my" ? t.a === me.id
+    scope === "my" ? t.a === me.id || t.participantIds?.includes(me.id)
       : scope === "assigned" ? t.createdBy === me.id && t.a !== me.id
       : inTeamScope(me, peopleMap[t.a])
   ), [tasks, scope, me, peopleMap]);

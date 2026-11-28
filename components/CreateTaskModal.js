@@ -8,10 +8,11 @@ import Icon from "@/components/ui/Icon";
 import Dialog from "@/components/ui/Dialog";
 import { Field, FormAlert } from "@/components/ui/Field";
 import AssigneePicker from "@/components/ui/AssigneePicker";
+import { CollaborationSettings } from "@/components/screens/TaskCollaboration";
 import TaskDateInput from "@/components/ui/TaskDateInput";
 import { taskDate } from "@/lib/task-date";
 import { CX, PRIO, TODAY } from "@/lib/format";
-import { canAssignTask, isManager } from "@/lib/roles";
+import { canAssignTask, isTaskManager } from "@/lib/roles";
 import { MAX_UPLOAD, MAX_TASK_FILES, MAX_TASK_UPLOAD_TOTAL } from "@/lib/task-upload";
 import styles from "./CreateTaskModal.module.css";
 
@@ -27,9 +28,10 @@ export default function CreateTaskModal() {
 function CreateTaskDialog({ onClose }) {
   const { t: __taskTr, locale, number } = useTaskI18n();
   const { addTask, toast, me, users, peopleMap } = useApp();
-  const manager = isManager(me);
+  const manager = isTaskManager(me);
   const [busy, setBusy] = useState(false);
   const [form, setForm] = useState({ ...blank, a: manager ? "" : me.id });
+  const [collaboration, setCollaboration] = useState({ mode: "solo", members: [], leadResponsibility: "" });
   const [files, setFiles] = useState([]);
   const [error, setError] = useState(null);
   const [dateErrors, setDateErrors] = useState({ start: "", due: "" });
@@ -48,7 +50,7 @@ function CreateTaskDialog({ onClose }) {
   const previewRef = useRef(null);
   const set = (patch) => setForm((f) => ({ ...f, ...patch }));
   const dirty = !!(textDirty || dateErrors.start || dateErrors.due || form.due || form.start !== TODAY ||
-    form.prio !== blank.prio || form.cx !== blank.cx || !form.reviewRequired || (manager && form.a) || files.length);
+    form.prio !== blank.prio || form.cx !== blank.cx || !form.reviewRequired || (manager && form.a) || files.length || collaboration.mode !== "solo");
 
   useEffect(() => { titleRef.current?.focus(); }, []);
   useEffect(() => { if (confirmDiscard) keepRef.current?.focus(); }, [confirmDiscard]);
@@ -96,6 +98,8 @@ function CreateTaskDialog({ onClose }) {
   const validate = (title) => {
     if (!title.trim()) { setError("title"); titleRef.current?.focus(); return false; }
     if (!form.a) { setError("assignee"); document.getElementById("task-assignee")?.focus(); return false; }
+    if (collaboration.mode !== "solo" && !collaboration.members.length) { setSubmitError(locale === "fa" ? "برای تسک مشترک دست‌کم یک همکار انتخاب کنید." : "Select at least one collaborator."); return false; }
+    if (collaboration.mode === "split" && (!collaboration.leadResponsibility.trim() || collaboration.members.some((m) => !m.responsibility.trim()))) { setSubmitError(locale === "fa" ? "مسئولیت هر نفر، از جمله مسئول اصلی، را مشخص کنید." : "Describe every participant's responsibility, including the lead."); return false; }
     if (dateErrors.start || dateErrors.due) { document.getElementById(dateErrors.start ? "task-start" : "task-deadline")?.focus(); return false; }
     if (form.due && form.due < (form.start || TODAY)) { setSubmitError("The deadline cannot be before the start date."); document.getElementById("task-deadline")?.focus(); return false; }
     setSubmitError("");
@@ -117,6 +121,7 @@ function CreateTaskDialog({ onClose }) {
         title: form.title.trim(), description: form.description.trim(), a: form.a,
         prio: form.prio, cx: form.cx, reviewRequired: manager ? form.reviewRequired : true,
         start: form.start, due: form.due,
+        ...(collaboration.mode !== "solo" ? { collaboration } : {}),
       };
       const body = new FormData();
       body.append("task", JSON.stringify(payload));
@@ -177,8 +182,9 @@ function CreateTaskDialog({ onClose }) {
             <div className={styles.sectionTitle}><strong>{"" + __taskTr("Assignment") + ""}</strong><span>{"" + __taskTr("Who and when") + ""}</span></div>
             <Field label={__taskTr("Assignee")} htmlFor="task-assignee" error={error === "assignee" ? "Choose who this task is for." : undefined}>
               <AssigneePicker id="task-assignee" value={form.a} people={people} disabled={!manager} overlayOptions
-                onSelect={(id) => { set({ a: id }); setError(null); }} onClear={() => { if (form.a) set({ a: "" }); if (error) setError(null); }} />
+                onSelect={(id) => { set({ a: id }); setCollaboration((prev) => ({ ...prev, members: prev.members.filter((m) => m.userId !== id) })); setError(null); }} onClear={() => { if (form.a) set({ a: "" }); if (error) setError(null); }} />
             </Field>
+            {manager && <CollaborationSettings primaryId={form.a} people={people} locale={locale} mode={collaboration.mode} members={collaboration.members} leadResponsibility={collaboration.leadResponsibility} onChange={(next) => { setCollaboration(next); if (next.mode === "split") set({ reviewRequired: true }); }} />}
             <div className={styles.settingsGrid}>
               <Field label={__taskTr("Priority")} htmlFor="task-priority"><select id="task-priority" className="input" value={form.prio} onChange={(e) => set({ prio: e.target.value })}>{Object.entries(PRIO).map(([value, label]) => <option key={value} value={value}>{__taskTr(label)}</option>)}</select></Field>
               <Field label={__taskTr("Complexity")} htmlFor="task-complexity"><select id="task-complexity" className="input" value={form.cx} onChange={(e) => set({ cx: Number(e.target.value) })}>{CX.slice(1).map((label, i) => <option key={label} value={i + 1}>{__taskTr(label)}</option>)}</select></Field>
@@ -186,7 +192,7 @@ function CreateTaskDialog({ onClose }) {
               <Field label={__taskTr("Deadline (Solar Hijri)")} htmlFor="task-deadline"><TaskDateInput id="task-deadline" calendarLabel="Choose deadline" min={form.start || TODAY} value={form.due} onValidityChange={(due) => setDateErrors((current) => ({ ...current, due }))} onChange={(due) => set({ due })} /></Field>
             </div>
             <label className={styles.review}>
-              <input type="checkbox" className="cb" checked={manager ? form.reviewRequired : true} disabled={!manager}
+              <input type="checkbox" className="cb" checked={manager ? form.reviewRequired : true} disabled={!manager || collaboration.mode === "split"}
                 onChange={(e) => set({ reviewRequired: e.target.checked })} aria-label={__taskTr("Manager review required")} />
               <span><b>{"" + __taskTr("Manager review required") + ""}</b><small>{manager ? __taskTr("Turn off to let the assignee complete the task without review.") : __taskTr("A manager will review this task before completion.")}</small></span>
             </label>
@@ -206,6 +212,8 @@ function CreateTaskDialog({ onClose }) {
             </div>
             <dl className={styles.previewFacts}>
               <div><dt>{"" + __taskTr("Assignee") + ""}</dt><dd dir="auto">{peopleMap[form.a]?.name ?? "—"}</dd></div>
+              <div><dt>{locale === "fa" ? "نوع همکاری" : "Collaboration"}</dt><dd>{collaboration.mode === "split" ? (locale === "fa" ? "تقسیم مسئولیت" : "Divided responsibilities") : collaboration.mode === "free" ? (locale === "fa" ? "همکاری آزاد" : "Shared work") : (locale === "fa" ? "انفرادی" : "Individual")}</dd></div>
+              {collaboration.mode !== "solo" && <div><dt>{locale === "fa" ? "همکاران" : "Collaborators"}</dt><dd>{collaboration.members.map((m) => peopleMap[m.userId]?.name || m.userId).join("، ")}</dd></div>}
               <div><dt>{"" + __taskTr("Priority") + ""}</dt><dd>{__taskTr(PRIO[form.prio])}</dd></div>
               <div><dt>{"" + __taskTr("Complexity") + ""}</dt><dd>{__taskTr(CX[form.cx])}</dd></div>
               <div><dt>{"" + __taskTr("Start date") + ""}</dt><dd>{form.start ? taskDate(form.start, locale) : __taskTr("Not set")}</dd></div>

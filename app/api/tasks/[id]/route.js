@@ -1,9 +1,10 @@
-import { isManager, requireUser } from "@/lib/server/auth";
+import { requireUser } from "@/lib/server/auth";
 import { err, viewableTask } from "@/lib/server/access";
 import { commitTaskUpdate, deleteOwnTask, getTaskDetails, getTaskReport, getUser } from "@/lib/server/repo";
 import { actionLabel, allowedTransitions, canTransition } from "@/lib/workflow";
 import { CX, PRIO, QUAL, STATUS } from "@/lib/format";
-import { canAssignTask, canDeleteOwnTask } from "@/lib/roles";
+import { canAssignTask, canDeleteOwnTask, canReviewTask } from "@/lib/roles";
+import { normalizeTaskLinks } from "@/lib/task-links";
 
 export async function GET(request, { params }) {
   const [user, denied] = await requireUser();
@@ -32,6 +33,7 @@ export async function PATCH(request, { params }) {
   let returnReason = null;
 
   if ("report" in body) {
+    if (task.collaborationMode) return err(409, "Use your individual collaboration report.");
     if (task.a !== user.id) return err(403, "Only the assignee can edit the work report.");
     if (!["progress", "blocked", "returned"].includes(task.status)) return err(409, "The work report can only be edited while working on the task.");
     const input = body.report;
@@ -40,13 +42,16 @@ export async function PATCH(request, { params }) {
         ("clearHours" in input && typeof input.clearHours !== "boolean") ||
         !Number.isSafeInteger(input.revision) || input.revision < 0) return err(400, "Invalid work report.");
     if (input.workPerformed.length > 10000 || input.outcome.length > 10000) return err(400, "Each report field must be at most 10000 characters.");
+    const links = normalizeTaskLinks(input.links ?? previousReport.links);
+    if (!links) return err(400, "Enter up to 10 valid http(s) evidence links.");
     if (input.revision !== previousReport.revision) return err(409, "The report changed. Check the current task before saving again.");
     expectedRevision = input.revision;
     if (input.clearHours && "hours" in body) return err(400, "Clear hours or enter a total, not both.");
-    report = { workPerformed: input.workPerformed.trim(), outcome: input.outcome.trim(), hoursRecorded: input.clearHours ? false : previousReport.hoursRecorded };
+    report = { workPerformed: input.workPerformed.trim(), outcome: input.outcome.trim(), links, hoursRecorded: input.clearHours ? false : previousReport.hoursRecorded };
   }
 
   if ("hours" in body) {
+    if (task.collaborationMode) return err(409, "Hours are recorded separately by each collaborator.");
     if ((typeof body.hours !== "number" && typeof body.hours !== "string") || String(body.hours).trim() === "") return err(400, "Enter total hours from 0 to 1000.");
     const h = Number(body.hours);
     if (!Number.isFinite(h) || h < 0 || h > 1000) return err(400, "Invalid hours.");
@@ -68,6 +73,9 @@ export async function PATCH(request, { params }) {
 
   if ("status" in body && body.status !== task.status) {
     if (!(body.status in STATUS)) return err(400, "Invalid status.");
+    if (task.collaborationMode === "split" && task.status === "review" && body.status === "done" &&
+        getTaskDetails(id).collaboration?.members.some((m) => !m.removed && m.state !== "approved"))
+      return err(409, "Approve each participant's work before closing the task.");
     if (!canTransition(user, task, body.status)) {
       return err(409, task.status === "done" ? "This task is already approved. A manager can reopen it." : `You can't move this task from ${STATUS[task.status]} to ${STATUS[body.status]}.`);
     }
@@ -115,7 +123,7 @@ export async function PATCH(request, { params }) {
   // Managers may decide whether an open task requires review within their scope.
   if ("reviewRequired" in body) {
     if (typeof body.reviewRequired !== "boolean") return err(400, "Invalid review requirement.");
-    if (!isManager(user)) return err(403, "Only managers can change the review requirement.");
+    if (!canReviewTask(user, task)) return err(403, "Only the responsible manager can change the review requirement.");
     if (!isOpenStatus(task.status) || task.status === "review") return err(409, "Review settings cannot change while the task is in review or closed.");
     if (body.reviewRequired !== task.reviewRequired) {
       patch.reviewRequired = body.reviewRequired ? 1 : 0;
@@ -125,7 +133,7 @@ export async function PATCH(request, { params }) {
   // Details (title, description, deadline, complexity, assignee) are edited by managers.
   const detailKeys = ["title", "description", "due", "cx", "a"].filter((k) => k in body);
   if (detailKeys.length) {
-    if (!isManager(user)) return err(403, "Only a manager can change task details.");
+    if (!canReviewTask(user, task)) return err(403, "Only the responsible manager can change task details.");
     if (!isOpenStatus(task.status)) return err(409, "Closed tasks can't be changed.");
   }
   for (const k of ["title", "description"]) {
@@ -145,6 +153,7 @@ export async function PATCH(request, { params }) {
     patch.cx = body.cx;
   }
   if ("a" in body && body.a !== task.a) {
+    if (task.collaborationMode) return err(409, "Change the collaboration team before reassigning its lead.");
     const assignee = getUser(body.a);
     if (!assignee || !assignee.active) return err(400, "Assignee not found.");
     if (!canAssignTask(user, assignee)) return err(403, "You can't assign a task to this member.");

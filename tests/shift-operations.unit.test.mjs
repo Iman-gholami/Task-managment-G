@@ -109,17 +109,10 @@ test("design engineer can work shifts, days off and leave atomically", async () 
   assert.equal(updated.length, 3);
   assert.equal(repo.getShiftSchedule(design.id, date).shiftType, "night");
   assert.equal(repo.getShiftSchedule(l1.id, date).shiftType, "evening");
-  assert.equal(repo.getShiftLog(design.id, date).shiftType, "night");
+  assert.equal(repo.getShiftLog(design.id, date), null, "Design night duty no longer requires a shift log");
 
-  const first = repo.getShiftLog(design.id, date).activities[0];
-  repo.updateActivity(design.id, first.n, { done: true }, first.itemId);
-  assert.throws(() => replaceDayShiftAssignments(date, {
-    morning: [l1.id, design.id], evening: [], night: [],
-  }, admin.id), /already has activity/);
-  assert.equal(repo.getShiftSchedule(design.id, date).shiftType, "night", "transaction rolled back");
-  assert.equal(repo.getShiftSchedule(l1.id, date).shiftType, "evening", "other assignment not partially saved");
-  assert.equal(repo.getShiftSchedule(l2.id, date).shiftType, "night", "deletion not partially applied");
-  assert.equal(repo.getShiftLog(design.id, date).activities[0].done, true, "recorded log retained");
+  // An untouched evening draft may be discarded during the shift replacement.
+  assert.equal(repo.findShiftLog(design.id, date) ?? null, null);
 
   // Off-duty and leave are explicit calendar entries, never counted as worked shifts.
   const future = new Date(Date.parse(date + "T00:00:00Z") + 864e5).toISOString().slice(0, 10);
@@ -150,12 +143,12 @@ test("design engineer can work shifts, days off and leave atomically", async () 
   assert.equal(repo.getDayStatus(l1.id, future), "leave");
   assert.equal(repo.getDayStatus(l2.id, future), "leave");
 
-  // A committed work log cannot silently turn into a day off or leave.
-  assert.throws(() => replaceDayShiftAssignments(date, {
+  // An engineer's unlogged night duty can be corrected to an absence.
+  replaceDayShiftAssignments(date, {
     morning: [], evening: [], night: [], off: [design.id], leave: [],
-  }, admin.id), /already has activity/);
-  assert.equal(repo.getShiftSchedule(design.id, date).shiftType, "night");
-  assert.equal(repo.getDayStatus(design.id, date), null);
+  }, admin.id);
+  assert.equal(repo.getShiftSchedule(design.id, date) ?? null, null);
+  assert.equal(repo.getDayStatus(design.id, date), "off");
 
   const offStats = routineStats(design.id, { from: future, to: future });
   assert.equal(offStats.offDays, 0);
@@ -185,15 +178,17 @@ test("design engineer can work shifts, days off and leave atomically", async () 
   assert.equal(repo.getCenterHoliday(later).note, "تعطیلی مرکز");
   assert.equal(repo.getShiftSchedule(l1.id, later).shiftType, "morning");
   assert.equal(repo.getShiftSchedule(design.id, next).shiftType, "evening");
+  const nextLog = repo.getShiftLog(design.id, next);
+  repo.updateActivity(design.id, nextLog.activities[0].n, { done: true }, nextLog.activities[0].itemId, next);
   assert.throws(() => importShiftDays([
     { date: later, assignments: { ...empty(), morning: [design.id] }, holidayNote: null },
-    { date, assignments: empty(), holidayNote: "تعطیلی دیگر" },
+    { date: next, assignments: empty(), holidayNote: "تعطیلی دیگر" },
   ], admin.id), /already has activity/);
   assert.equal(repo.getShiftSchedule(l1.id, later).shiftType, "morning", "whole Excel batch rolled back");
-  assert.equal(repo.getCenterHoliday(date), null);
-  updateCenterHoliday(date, true, "", admin.id);
-  assert.equal(repo.getShiftSchedule(design.id, date).shiftType, "night");
-  assert.equal(repo.findShiftLog(design.id, date).activities[0].done, true);
+  assert.equal(repo.getCenterHoliday(next), null);
+  updateCenterHoliday(next, true, "", admin.id);
+  assert.equal(repo.getShiftSchedule(design.id, next).shiftType, "evening");
+  assert.equal(repo.findShiftLog(design.id, next).activities[0].done, true);
 
 });
 

@@ -1,10 +1,11 @@
 import { requireUser } from "@/lib/server/auth";
 import { listVisibleTasks } from "@/lib/server/access";
 import { db } from "@/lib/server/db";
-import { canAssignTask, isManager } from "@/lib/roles";
+import { canAssignTask, isTaskManager } from "@/lib/roles";
 import { addAttachment, addEvent, createTask, getUser } from "@/lib/server/repo";
 import { removeUpload, saveUpload } from "@/lib/server/uploads";
 import { MAX_UPLOAD, MAX_TASK_FILES, MAX_TASK_UPLOAD_TOTAL } from "@/lib/task-upload";
+import { configureCollaboration, validateCollaborationInput } from "@/lib/server/task-collaboration";
 
 const PRIOS = ["low", "normal", "high", "critical"];
 const DATE = /^\d{4}-\d{2}-\d{2}$/;
@@ -39,8 +40,16 @@ export async function POST(request) {
   const assignee = getUser(body.a);
   if (!assignee || !assignee.active) return Response.json({ error: "Assignee not found." }, { status: 400 });
   if (!canAssignTask(user, assignee)) return Response.json({ error: "You can't assign a task to this member." }, { status: 403 });
+  let collaboration = null;
+  if (body.collaboration) {
+    if (!isTaskManager(user)) return Response.json({ error: "Only a manager can create collaborative tasks." }, { status: 403 });
+    try { collaboration = validateCollaborationInput({ a: assignee.id }, body.collaboration, getUser, canAssignTask, user); }
+    catch (error) { return Response.json({ error: error.message }, { status: error.status || 400 }); }
+  }
+  if (collaboration?.mode === "split" && body.reviewRequired === false)
+    return Response.json({ error: "Divided responsibilities require manager review." }, { status: 400 });
 
-  if (body.reviewRequired === false && !isManager(user))
+  if (body.reviewRequired === false && !isTaskManager(user))
     return Response.json({ error: "Only managers can create tasks without review." }, { status: 403 });
   const start = DATE.test(body.start ?? "") ? body.start : null;
   const prepared = [];
@@ -60,6 +69,13 @@ export async function POST(request) {
         reviewRequired: body.reviewRequired !== false,
         due: DATE.test(body.due ?? "") ? body.due : "—",
       }, user.id);
+      if (collaboration) {
+        configureCollaboration(task.id, task.a, collaboration.mode, collaboration.members, user.id, collaboration.leadResponsibility);
+        for (const member of collaboration.members) {
+          db.prepare("INSERT INTO task_assignment_notifications (task_id, recipient_id, actor_id) VALUES (?, ?, ?)").run(task.id, member.userId, user.id);
+        }
+        task = { ...task, collaborationMode: collaboration.mode, participantIds: [task.a, ...collaboration.members.map((m) => m.userId)] };
+      }
       if (start) db.prepare("UPDATE tasks SET started_at = ? WHERE id = ?").run(`${start} 00:00:00`, task.id);
       addEvent(task.id, user.id, "created the task");
       for (const file of prepared) {

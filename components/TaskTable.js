@@ -12,7 +12,7 @@ import { Complexity, Due, Priority, Quality, Status, Who } from "@/components/ui
 import { EmptyState } from "@/components/ui/states";
 import { prioItems } from "@/components/ui/menus";
 import { CX, PRIO, QUAL, STATUS, TODAY, isOpen } from "@/lib/format";
-import { isManager } from "@/lib/roles";
+import { canReviewTask } from "@/lib/roles";
 import { actionLabel, allowedTransitions } from "@/lib/workflow";
 
 // Fixed widths keep columns aligned across several tables on one page (e.g. grouped by assignee).
@@ -76,7 +76,7 @@ export function useTaskActions() {
   const edit = (anchor, field, task) => {
     if (field === "prio") {
       if (["done", "cancelled"].includes(task.status)) return toast("Closed tasks can't be changed.", "info");
-      if (task.a !== me.id && !isManager(me)) return toast("You can only edit your own tasks.", "info");
+      if (task.a !== me.id && !canReviewTask(me, task)) return toast("You can only edit your own tasks.", "info");
       return openPopover(anchor, { title: t("Priority"), items: prioItems(), onPick: async (v) => { if (await updateTask(task, { prio: v })) toast(locale === "fa" ? `اولویت ${task.id} به ${t(PRIO[v])} تغییر کرد` : `${task.id} priority set to ${PRIO[v]}`); } });
     }
     const next = allowedTransitions(me, task);

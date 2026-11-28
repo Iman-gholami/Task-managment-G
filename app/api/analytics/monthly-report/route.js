@@ -8,7 +8,7 @@ export async function GET(request) {
   const query = new URL(request.url).searchParams, format = query.get("format") || "zip";
   if (!["zip", "html", "compare"].includes(format)) return err(400, "Unsupported report format.");
   try {
-    const report = buildMonthlyReport(user, { month:query.get("month"), team:query.get("team"), level:query.get("level"), province:query.get("province"), person:query.get("person"), locale:query.get("lang"), demo:query.get("demo") });
+    const report = buildMonthlyReport(user, { month:query.get("month"), team:query.get("team"), level:query.get("level"), province:query.get("province"), person:query.get("person"), locale:query.get("lang"), demo:query.get("demo"), sections:query.get("sections") });
     if (format !== "zip") return new Response(format === "compare" ? renderMonthlyComparisonHtml(report) : renderMonthlyHtml(report), { headers: {
       "Content-Type": "text/html; charset=utf-8", "Cache-Control": "no-store", "X-Content-Type-Options": "nosniff",
       "Content-Security-Policy": "default-src 'none'; style-src 'unsafe-inline'; font-src data:; img-src data:; frame-ancestors 'none'; sandbox",

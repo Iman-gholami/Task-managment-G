@@ -18,7 +18,7 @@ import { applyTheme, currentTheme, syncThemeColor } from "@/components/theme";
 import { LanguageSwitcher, useI18n } from "@/components/I18nProvider";
 
 // What each role can do, as enforced by the API (lib/roles.js, lib/workflow.js, app/api/*).
-const ROLES = ["analyst", "engineer", "soc_manager", "security_manager", "observer"];
+const ROLES = ["analyst", "engineer", "soc_manager", "automation_manager", "security_manager", "observer"];
 const NO = null;
 const PERMISSIONS = [
   ["Create tasks", "For themselves", "For themselves", "For anyone", "For anyone", NO],

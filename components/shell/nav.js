@@ -1,6 +1,6 @@
 // Navigation model for the app shell: sidebar groups, breadcrumbs and command-menu pages.
 import { REPORTS } from "@/lib/reports";
-import { isManager, canViewManagementAnalytics } from "@/lib/roles";
+import { isManager, isShiftEligible, isTaskManager, canViewManagementAnalytics } from "@/lib/roles";
 
 const REPORT_NAMES = Object.fromEntries(REPORTS.map(([k, n]) => [k, n]));
 export const TASK_VIEWS = { my: "My tasks", assigned: "Assigned by me", team: "Team tasks" };
@@ -17,8 +17,8 @@ export function navFor(me, counts = {}) {
       ] },
     ];
   }
-  const taskViews = (manager ? ["assigned", "team", "my"] : ["my", "team"]).map((k) => ({ href: `/tasks/${k}`, label: TASK_VIEWS[k], count: counts[k] }));
-  const shiftPlanning = me.keepsShiftLog || manager;
+  const taskViews = (isTaskManager(me) ? ["assigned", "team", "my"] : ["my", "team"]).map((k) => ({ href: `/tasks/${k}`, label: TASK_VIEWS[k], count: counts[k] }));
+  const shiftPlanning = isShiftEligible(me) || manager;
   return [
     {
       id: "work",

@@ -45,8 +45,8 @@ test("morning work depends on layer; evening and night use common SOC duties", (
   const l3Day = check(l3, repo.today(), "morning", "engineering", engTitles);
   assert.equal(l3Day.checklist.name, ENGINEERING_CHECKLIST.name);
   assert.ok(l3Day.activities.every((x) => x.itemId < 0 && !x.legacyN));
-  const designDay = check(design, repo.today(), "morning", "engineering", engTitles);
-  assert.equal(designDay.team, "SOC · L3");
+  repo.setShiftSchedule(design.id, repo.today(), "morning", manager.id);
+  assert.equal(repo.getShiftLog(design.id, repo.today()), null, "Design & Automation daytime shifts do not need a log");
   const evening = check(l2, tomorrow, "evening", "operational", [
     "Review Logged Incidents in Splunk Incident Review",
     "Upload Malicious IP and Domain Files to the Website",
@@ -62,14 +62,11 @@ test("morning work depends on layer; evening and night use common SOC duties", (
   assert.equal(repo.updateActivity(l2.id, 1, { done: true }, evening.activities[0].itemId, tomorrow)[0].done, true);
   assert.throws(() => repo.updateActivity(l2.id, 1, { done: true }, undefined, repo.today()), /ticket analysis only/);
   const l3Cover = check(l3, tomorrow, "evening", "operational", evening.activities.map((x) => x.title));
-  const designCover = check(design, tomorrow, "night", "operational", [
-    "Review Logged Incidents in Splunk Incident Review",
-    "Review Scanner and Sensor Dashboards",
-    "Monitor Website Status in Grafana",
-    "Monitor Security Center Website",
-    "Monitor Security News",
-  ]);
+  const designCover = check(design, tomorrow, "evening", "operational", evening.activities.map((x) => x.title));
   assert.equal(designCover.checklist.name, "Standard SOC routine");
+  const dayAfter = new Date(Date.parse(tomorrow + "T00:00:00Z") + 864e5).toISOString().slice(0, 10);
+  repo.setShiftSchedule(design.id, dayAfter, "night", manager.id);
+  assert.equal(repo.getShiftLog(design.id, dayAfter), null, "Only the until-20:00 shift requires a Design & Automation log");
   assert.equal(l3Cover.activities.length, 8);
   assert.equal(repo.getShiftLog(l3.id, repo.today()).mode, "engineering");
   assert.equal(repo.getShiftLog(l3.id, tomorrow).mode, "operational");
@@ -82,4 +79,22 @@ test("policy prioritizes duty type, not employee department", () => {
   assert.equal(shiftLogMode({ team: "Design & Automation" }, "morning"), "engineering");
   for (const team of ["SOC · L1", "SOC · L2", "SOC · L3", "Design & Automation", "Threat Intelligence"])
     for (const shift of ["evening", "night"]) assert.equal(shiftLogMode({ team }, shift), "operational");
+});
+
+test("analytics excludes nonrequired Design shifts from missing-log alerts while retaining scheduled hours", async () => {
+  const date = new Date(Date.parse(repo.today() + "T00:00:00Z") - 2 * 864e5).toISOString().slice(0, 10);
+  const design = newMember("design-metrics", "Design & Automation", "engineer");
+  const soc = newMember("soc-metrics", "SOC · L1");
+  repo.setShiftSchedule(design.id, date, "night", manager.id);
+  repo.setShiftSchedule(soc.id, date, "night", manager.id);
+  const { factsFor } = await import("@/lib/server/analytics");
+  const { stats } = await import("@/lib/analytics/metrics");
+  const facts = factsFor(manager, { wf: date, wt: repo.today() });
+  const range = { from: date, end: repo.today() };
+  const designStats = stats(facts, [design.id], range);
+  const socStats = stats(facts, [soc.id], range);
+  assert.equal(designStats.shifts, 1);
+  assert.equal(designStats.shiftHours, 12);
+  assert.equal(designStats.missed, 0);
+  assert.equal(socStats.missed, 1);
 });
