@@ -118,8 +118,10 @@ The original five-step rail still handles solo tasks. The collaborative panel re
 `TaskFlowStep` pattern, with each person's **own** Start → Work performed → Outcome & evidence →
 Time spent → Review & handover rail. Typing does not complete a step; saved data and per-person
 `hoursRecorded` control the checkmarks. A compact team progress strip counts submitted reports,
-and a disclosure row per person shows actual status, planned work (if supplied), progress and saved
-evidence. There are no four large permanently expanded duplicate cards.
+and a disclosure row per person shows actual status, planned work (if supplied), and five separate
+checkpoint segments (filled only for that person's saved stages). The row keeps identity, status
+and an explicit progress count scannable; expansion reveals the full brief, report, hours, links
+and any authorized manager actions. There are no permanently expanded duplicate member cards.
 
 Two collaboration modes intentionally differ:
 

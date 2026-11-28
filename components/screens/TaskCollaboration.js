@@ -47,10 +47,15 @@ export function CollaborationSettings({ primaryId, mode, members, leadResponsibi
 }
 
 const memberStarted = (member) => !!(member?.startedAt || member?.revision);
-const memberProgress = (member) => [
+const memberSteps = (member) => [
   memberStarted(member), !!member.workPerformed, !!member.outcome,
   !!member.hoursRecorded, ["submitted", "approved"].includes(member.state)
-].filter(Boolean).length;
+];
+const memberProgress = (member) => memberSteps(member).filter(Boolean).length;
+const memberTone = (member) => member.state === "returned" ? "returned"
+  : member.state === "approved" ? "approved"
+    : member.state === "submitted" ? "submitted"
+      : memberStarted(member) ? "working" : "pending";
 const memberStatus = (member, fa) => member.removed ? (fa ? "خارج‌شده" : "Removed")
   : stateLabels[member.state === "working" && !memberStarted(member) ? "pending" : member.state]?.[fa ? 0 : 1];
 
@@ -278,18 +283,31 @@ export default function TaskCollaboration({ task, details, setData }) {
     </div>}
 
     <section className={styles.teamSection} aria-label={fa ? "اعضای تیم و گزارش‌ها" : "Team members and reports"}>
-      <div className={styles.sectionHeading}><h3>{fa ? "اعضا و سهم هر نفر" : "Members & contributions"}</h3><span>{number(active.length)} {fa ? "نفر" : "members"}</span></div>
-      <div className={styles.entries}>{active.map((member) => <details className={styles.member + (member.userId === me.id ? " " + styles.mine : "")} key={member.userId}>
+      <div className={styles.sectionHeading}>
+        <div><h3>{fa ? "اعضا و سهم هر نفر" : "Members & contributions"}</h3><p>{fa ? "گزارش هر نفر را باز کنید و جزئیات کارش را ببینید." : "Open a member to see their work and evidence."}</p></div>
+        <span className={styles.teamCount}><Icon name="team" size="sm" />{number(active.length)} {fa ? "عضو" : "members"}</span>
+      </div>
+      <div className={styles.entries}>{active.map((member) => <details className={styles.member + (member.userId === me.id ? " " + styles.mine : "")} key={member.userId} data-tone={memberTone(member)}>
         <summary className={styles.memberHeader}>
-          <span className={styles.avatar} aria-hidden="true">{member.name?.trim()?.[0] || "?"}</span>
-          <span className={styles.memberName}><strong>{member.name} {member.userId === me.id && <small>({fa ? "من" : "me"})</small>}{mode === "split" && member.isLead && <small> · {fa ? "مسئول هماهنگ‌کننده" : "Coordinator"}</small>}</strong>
-            {member.responsibility && <small dir="auto">{member.responsibility}</small>}
-            <span className={styles.memberMeter} aria-label={fa ? "مراحل ثبت‌شده: " + number(memberProgress(member)) + " از ۵" : memberProgress(member) + " of 5 report steps"}><span style={{ width: memberProgress(member) * 20 + "%" }} /></span>
+          <span className={styles.memberIdentity}>
+            <span className={styles.avatar} aria-hidden="true">{member.name?.trim()?.[0] || "?"}</span>
+            <span className={styles.memberName}>
+              <span className={styles.memberTitle}><strong dir="auto">{member.name}</strong>{member.userId === me.id && <small className={styles.youBadge}>{fa ? "شما" : "You"}</small>}</span>
+              {mode === "split" && member.isLead && <small className={styles.coordinator}><Icon name="team" size="sm" />{fa ? "هماهنگ‌کننده" : "Coordinator"}</small>}
+              {member.responsibility && <span className={styles.memberScope} dir="auto">{member.responsibility}</span>}
+            </span>
           </span>
-          <span className={styles.state + " " + (styles[member.state] || "")}>{memberStatus(member, fa)}</span>
-          <Icon name="down" size="sm" />
+          <span className={styles.memberSteps}>
+            <span className={styles.progressLabel}><strong>{number(memberProgress(member))} <span>/ {number(5)}</span></strong>{fa ? " مرحله ثبت‌شده" : " steps recorded"}</span>
+            <span className={styles.memberRail} role="img" aria-label={fa ? number(memberProgress(member)) + " مرحله از ۵ مرحله گزارش ثبت شده است" : memberProgress(member) + " of 5 report steps recorded"}>
+              {memberSteps(member).map((done, index) => <span key={index} data-complete={done ? "true" : "false"} className={done ? styles.railDone : ""} aria-hidden="true" />)}
+            </span>
+          </span>
+          <span className={styles.memberState}><Icon name={member.state === "returned" ? "alert" : ["submitted", "approved"].includes(member.state) ? "checkCircle" : "clock"} size="sm" />{memberStatus(member, fa)}</span>
+          <span className={styles.memberToggle} aria-hidden="true"><Icon name="down" size="sm" /></span>
         </summary>
         <div className={styles.memberBody}>
+          {member.responsibility && <div className={styles.memberBrief}><span>{fa ? "سهم کار" : "Assigned scope"}</span><p dir="auto">{member.responsibility}</p></div>}
           {mode === "split" && member.due && <p className={styles.muted}>{fa ? "مهلت: " : "Due: "}{taskDate(member.due, locale)}</p>}
           {member.workPerformed || member.outcome || member.hoursRecorded || member.links.length ? <dl className={styles.memberReport}>
             <div><dt>{fa ? "اقدامات" : "Work"}</dt><dd dir="auto">{member.workPerformed || "—"}</dd></div>

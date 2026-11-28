@@ -1,26 +1,55 @@
-.wrapper { display: grid; gap: var(--s-5); padding: var(--s-5); border: 1px solid var(--border); border-radius: var(--r-xl); background: var(--surface-card); min-width: 0; }
+.wrapper { display: grid; gap: var(--s-5); padding: var(--s-5); border: 1px solid var(--border); border-radius: var(--r-xl); background: var(--surface-card); min-width: 0; container-type: inline-size; }
 .header { display: flex; justify-content: space-between; align-items: flex-start; gap: var(--s-3); }
 .header h2 { margin: 3px 0 5px; font: var(--type-page-title); color: var(--text); }
 .header p, .muted { margin: 0; color: var(--text-2); font: var(--type-body-sm); }
 .startBox { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: var(--s-3); padding: var(--s-3) var(--s-4); border: 1px solid var(--link); border-radius: var(--r-lg); background: var(--info-soft); }
 .startBox p { margin: 0; flex: 1 1 230px; color: var(--text); font: var(--type-body-sm); }
 .eyebrow { font: var(--type-overline); color: var(--link); letter-spacing: .05em; }
-.entries { display: grid; gap: var(--s-2); }
-.member { overflow: hidden; background: var(--surface-inset); border: 1px solid var(--divider); border-radius: var(--r-lg); min-width: 0; }
-.mine { border-color: var(--link); }
-.memberHeader { display: flex; align-items: center; gap: var(--s-3); padding: var(--s-3); cursor: pointer; list-style: none; }
+.entries { display: grid; gap: var(--s-3); }
+.member { position: relative; overflow: hidden; background: var(--surface-inset); border: 1px solid var(--divider); border-radius: var(--r-lg); min-width: 0; box-shadow: inset 0 1px 0 var(--edge); }
+.member::before { content: ""; position: absolute; inset-block: var(--s-3); inset-inline-start: 0; width: 3px; border-radius: var(--r-full); background: var(--divider); }
+.member[data-tone="working"]::before { background: var(--link); }
+.member[data-tone="submitted"]::before { background: var(--info); }
+.member[data-tone="approved"]::before { background: var(--success); }
+.member[data-tone="returned"]::before { background: var(--warning); }
+.mine { border-color: var(--border-strong); }
+.memberHeader { display: grid; grid-template-columns: minmax(0, 1fr) minmax(145px, 192px) max-content 30px; align-items: center; gap: var(--s-3); min-height: 84px; padding: var(--s-3) var(--s-4); cursor: pointer; list-style: none; }
 .memberHeader::-webkit-details-marker { display: none; }
-.memberHeader:hover { background: var(--surface-card); }
+.memberHeader:hover { background: var(--hover); }
 .memberHeader:focus-visible { outline: 2px solid var(--link); outline-offset: -2px; }
-.memberHeader > svg { color: var(--text-3); transition: transform .16s ease; }
-.member[open] .memberHeader > svg { transform: rotate(180deg); }
-.avatar { display: grid; place-items: center; flex: none; width: 34px; height: 34px; border-radius: var(--r-md); background: var(--surface-card); border: 1px solid var(--divider); color: var(--text); font-weight: 600; }
-.memberName { display: grid; gap: 5px; flex: 1; min-width: 0; }
-.memberName strong { font: var(--type-card-title); overflow-wrap: anywhere; }
-.memberName small { color: var(--text-2); font: var(--type-caption); font-weight: 400; }
-.memberMeter { width: min(180px, 100%); height: 4px; border-radius: var(--r-full); background: var(--divider); overflow: hidden; }
-.memberMeter > span { display: block; height: 100%; border-radius: inherit; background: var(--link); transition: width .2s ease; }
-.memberBody { display: grid; gap: var(--s-3); padding: var(--s-3) var(--s-4) var(--s-4); border-top: 1px solid var(--divider); }
+.memberIdentity { display: flex; align-items: center; gap: var(--s-3); min-width: 0; }
+.avatar { display: grid; place-items: center; flex: none; width: 44px; height: 44px; border-radius: var(--r-lg); background: var(--grad-signal-soft); border: 1px solid var(--border); color: var(--text); font: var(--type-section); box-shadow: inset 0 1px 0 var(--edge); }
+.memberName { display: grid; gap: var(--s-1); min-width: 0; }
+.memberTitle { display: flex; align-items: center; flex-wrap: wrap; gap: var(--s-2); min-width: 0; }
+.memberTitle strong { font: var(--type-section); color: var(--text); overflow-wrap: anywhere; }
+.memberName small { font: var(--type-caption); color: var(--text-2); }
+.youBadge { padding: 1px 6px; border-radius: var(--r-full); background: var(--info-soft); color: var(--info) !important; }
+.coordinator { display: inline-flex; align-items: center; gap: 4px; color: var(--text-2); }
+.coordinator svg { color: var(--link); }
+.memberScope { display: -webkit-box; overflow: hidden; -webkit-line-clamp: 1; -webkit-box-orient: vertical; max-width: 100%; color: var(--text-2); font: var(--type-body-sm); overflow-wrap: anywhere; }
+.memberSteps { display: grid; gap: var(--s-2); min-width: 0; }
+.progressLabel { display: flex; align-items: baseline; gap: 4px; white-space: nowrap; font: var(--type-caption); color: var(--text-2); }
+.progressLabel strong { font: var(--type-card-title); color: var(--text); font-variant-numeric: tabular-nums; }
+.progressLabel strong span { color: var(--text-3); }
+.memberRail { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 4px; width: 100%; }
+.memberRail > span { height: 7px; border: 1px solid var(--divider); border-radius: var(--r-sm); background: var(--surface-card); }
+.memberRail > .railDone { background: var(--grad-signal); border-color: transparent; }
+.member[data-tone="submitted"] .memberRail > .railDone, .member[data-tone="approved"] .memberRail > .railDone { background: var(--success); }
+.member[data-tone="returned"] .memberRail > .railDone { background: var(--warning); }
+.memberState { display: inline-flex; justify-content: center; align-items: center; gap: 6px; padding: 6px 10px; border: 1px solid var(--divider); border-radius: var(--r-full); background: var(--surface-card); color: var(--text-2); white-space: nowrap; font: var(--type-caption); }
+.memberState svg { flex: none; }
+.member[data-tone="working"] .memberState { color: var(--link); background: var(--primary-soft); border-color: transparent; }
+.member[data-tone="submitted"] .memberState { color: var(--info); background: var(--info-soft); border-color: transparent; }
+.member[data-tone="approved"] .memberState { color: var(--success); background: var(--success-soft); border-color: transparent; }
+.member[data-tone="returned"] .memberState { color: var(--warning); background: var(--warning-soft); border-color: transparent; }
+.memberToggle { display: grid; place-items: center; width: 28px; height: 28px; border: 1px solid var(--divider); border-radius: var(--r-md); color: var(--text-2); background: var(--surface-card); }
+.memberToggle svg { transition: transform .16s ease; }
+.member[open] .memberToggle { background: var(--primary-soft); color: var(--link); border-color: var(--link); }
+.member[open] .memberToggle svg { transform: rotate(180deg); }
+.memberBody { display: grid; gap: var(--s-3); padding: var(--s-4); border-top: 1px solid var(--divider); background: var(--surface-card); }
+.memberBrief { display: grid; gap: var(--s-1); padding: var(--s-3); border-radius: var(--r-md); background: var(--surface-inset); }
+.memberBrief > span { color: var(--text-3); font: var(--type-caption); }
+.memberBrief p { margin: 0; color: var(--text); font: var(--type-body-sm); white-space: pre-wrap; overflow-wrap: anywhere; }
 .state { white-space: nowrap; padding: 4px 9px; border-radius: var(--r-full); color: var(--text-2); background: var(--surface-card); font: var(--type-caption); border: 1px solid var(--divider); }
 .approved { color: var(--success); background: var(--success-soft); border-color: transparent; }
 .submitted { color: var(--info); background: var(--info-soft); border-color: transparent; }
@@ -82,9 +111,11 @@
 .returnNote p { margin: 0; }
 .draftStatus { margin: 0; text-align: end; color: var(--text-2); font: var(--type-caption); }
 .teamSection { display: grid; gap: var(--s-3); }
-.teamSection .sectionHeading { align-items: baseline; }
+.teamSection .sectionHeading { align-items: center; }
+.teamSection .sectionHeading > div { display: grid; gap: var(--s-1); }
 .teamSection .sectionHeading h3 { margin: 0; font: var(--type-section); }
-.teamSection .sectionHeading > span { color: var(--text-3); font: var(--type-caption); }
+.teamSection .sectionHeading p { margin: 0; color: var(--text-2); font: var(--type-caption); }
+.teamCount { display: inline-flex; align-items: center; gap: var(--s-1); padding: 5px var(--s-2); border: 1px solid var(--divider); border-radius: var(--r-full); background: var(--surface-inset); color: var(--text-2); font: var(--type-caption); white-space: nowrap; }
 .memberReport { display: grid; gap: var(--s-3); margin: 0; }
 .memberReport > div { display: grid; grid-template-columns: minmax(75px, 110px) minmax(0, 1fr); gap: var(--s-2); }
 .memberReport dt { color: var(--text-3); font: var(--type-caption); }
@@ -93,4 +124,7 @@
 .error { display: grid; gap: var(--s-2); justify-items: start; }
 @media (max-width: 680px) { .wrapper { padding: var(--s-3); } .header { flex-wrap: wrap; } .teamPulse { flex-wrap: wrap; } .teamPulse p { flex-basis: 100%; } .myWorkspace { padding: var(--s-3); } .personalHeader { flex-wrap: wrap; } .fields { grid-template-columns: 1fr; } .modeChoices { grid-template-columns: 1fr; } .mode { grid-template-columns: 20px 1fr; } .mode small { grid-column: 2; } .report { padding-inline-start: 0; } .state { white-space: normal; text-align: center; } .memberReport > div { grid-template-columns: 1fr; } }
 @container (max-width: 430px) { .modeChoices { grid-template-columns: 1fr; } .mode { grid-template-columns: 20px 1fr; } .mode small { grid-column: 2; } }
-@media (prefers-reduced-motion: no-preference) { .mode, .member { transition: border-color .15s ease, background-color .15s ease; } }
+@container (max-width: 600px) { .memberHeader { grid-template-columns: minmax(0, 1fr) auto 30px; row-gap: var(--s-3); } .memberIdentity { grid-column: 1; grid-row: 1; } .memberState { grid-column: 2; grid-row: 1; } .memberToggle { grid-column: 3; grid-row: 1; } .memberSteps { grid-column: 1 / -1; grid-row: 2; padding-inline-start: 56px; } .memberRail { max-width: none; } }
+@container (max-width: 420px) { .memberHeader { grid-template-columns: minmax(0, 1fr) 30px; } .memberState { grid-column: 1; grid-row: 2; justify-self: start; margin-inline-start: 56px; } .memberToggle { grid-column: 2; grid-row: 1; } .memberSteps { grid-row: 3; } .teamSection .sectionHeading { align-items: flex-start; } .avatar { width: 40px; height: 40px; } }
+@media (prefers-reduced-motion: no-preference) { .mode, .member { transition: border-color .16s ease, background-color .16s ease, box-shadow .16s ease; } .member:hover { box-shadow: var(--shadow-card); } }
+@media (prefers-reduced-motion: reduce) { .memberToggle svg, .memberRail > span { transition: none; } }

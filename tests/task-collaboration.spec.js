@@ -124,6 +124,18 @@ test("collaborators can start from their own task page in split and free modes",
   await expect(shared.getByRole("button", { name: /Start my work|شروع کار من/ })).toBeVisible();
   await shared.getByRole("button", { name: /Start my work|شروع کار من/ }).click();
   await expect(shared.locator("#collab-work")).toBeVisible();
+  const roster = shared.locator("details[data-tone]");
+  await expect(roster).toHaveCount(2);
+  const ownRow = roster.filter({ hasText: peer.name });
+  await expect(ownRow).toHaveAttribute("data-tone", "working");
+  const checkpoints = ownRow.locator('[role="img"] > span');
+  await expect(checkpoints).toHaveCount(5);
+  await expect(checkpoints.nth(0)).toHaveAttribute("data-complete", "true");
+  await expect(checkpoints.nth(1)).toHaveAttribute("data-complete", "false");
+  await ownRow.locator("summary").click();
+  await expect(ownRow).toHaveAttribute("open", "");
+  await ownRow.locator("summary").click();
+  await expect(ownRow).not.toHaveAttribute("open", "");
   await expect.poll(async () => (await (await page.request.get(`/api/tasks/${split.id}`)).json()).task.status).toBe("progress");
   await page.reload();
   await expect(shared.locator("#collab-work")).toBeVisible();
