@@ -29,9 +29,43 @@ function taskWith(mode, members = [{ userId: partner.id, responsibility: "Implem
   const task = repo.createTask({ title: `${mode} task`, description: "Shared effort", a: lead.id, prio: "normal", cx: 2, due: repo.today() }, admin.id);
   configureCollaboration(task.id, lead.id, mode, members, designManager.id);
   repo.updateTask(task.id, { status: "progress" }, lead.id);
+  if (mode === "split") {
+    changeContribution(repo.getTask(task.id), lead, { action: "start" });
+    changeContribution(repo.getTask(task.id), partner, { action: "start" });
+  }
   return repo.getTask(task.id);
 }
 const work = (revision, title = "Evidence") => ({ action: "save", revision, workPerformed: title, outcome: "Investigated", hours: 2.5, links: ["https://example.com/report"] });
+
+test("each split collaborator starts independently, and cannot report before starting", () => {
+  const task = repo.createTask({ title: "Independent starts", a: lead.id, prio: "normal", cx: 2, due: repo.today() }, admin.id);
+  configureCollaboration(task.id, lead.id, "split", [{ userId: partner.id, responsibility: "Implementation" }], designManager.id);
+  const initial = repo.getTask(task.id);
+  assert.equal(initial.status, "todo");
+  assert.throws(() => changeContribution(initial, partner, work(0)), { status: 409 });
+  assert.throws(() => changeContribution(initial, stranger, { action: "start" }), { status: 404 });
+  changeContribution(initial, partner, { action: "start" });
+  assert.equal(repo.getTask(task.id).status, "progress");
+  const members = repo.getTaskDetails(task.id).collaboration.members;
+  assert.ok(members.find((m) => m.userId === partner.id).startedAt);
+  assert.equal(members.find((m) => m.userId === lead.id).startedAt, null);
+  assert.throws(() => changeContribution(initial, partner, { action: "start" }), { status: 409 });
+  changeContribution(repo.getTask(task.id), partner, work(0));
+  assert.throws(() => changeContribution(repo.getTask(task.id), lead, work(0)), { status: 409 });
+  changeContribution(repo.getTask(task.id), lead, { action: "start" });
+  changeContribution(repo.getTask(task.id), lead, work(0));
+});
+
+test("free collaboration starts only by its lead, unlocking reports for every member", () => {
+  const task = repo.createTask({ title: "Lead start", a: lead.id, prio: "normal", cx: 2, due: repo.today() }, admin.id);
+  configureCollaboration(task.id, lead.id, "free", [{ userId: partner.id }], designManager.id);
+  assert.throws(() => changeContribution(task, partner, { action: "start" }), { status: 403 });
+  assert.throws(() => changeContribution(task, partner, work(0)), { status: 409 });
+  changeContribution(task, lead, { action: "start" });
+  assert.equal(repo.getTask(task.id).status, "progress");
+  assert.ok(repo.getTaskDetails(task.id).startedAt);
+  changeContribution(repo.getTask(task.id), partner, work(0));
+});
 
 test("manager scope, collaborator membership and independent reports", () => {
   assert.ok(canAssignTask(designManager, lead));

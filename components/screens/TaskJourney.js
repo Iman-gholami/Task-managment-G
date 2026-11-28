@@ -79,6 +79,8 @@ function stageNote(stage, {
     state
   } = stage;
   if (key === "assigned") {
+    if (state === "current" && task.collaborationMode === "split")
+      return locale === "fa" ? "هر همکار می‌تواند سهم خود را مستقل شروع کند" : "Each collaborator can start their own part";
     if (state === "current") return isAssignee ? tr("Waiting for you to start") : locale === "fa" ? `منتظر شروع کار توسط ${firstName(assigneeName)}` : `Waiting for ${firstName(assigneeName)} to start`;
     return creatorName ? locale === "fa" ? `توسط ${creatorName}` : `by ${creatorName}` : tr("Assigned");
   }

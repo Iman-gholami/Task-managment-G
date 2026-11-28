@@ -9,6 +9,7 @@ import { taskDate } from "@/lib/task-date";
 import styles from "./TaskCollaboration.module.css";
 
 const stateLabels = {
+  pending: ["شروع‌نشده", "Not started"],
   working: ["در حال انجام", "Working"], submitted: ["تحویل داده‌شده", "Submitted"],
   approved: ["تأییدشده", "Approved"], returned: ["نیازمند اصلاح", "Changes requested"],
 };
@@ -60,7 +61,10 @@ export default function TaskCollaboration({ task, details, setData }) {
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
   const available = useMemo(() => users.filter((p) => p.active !== false && canAssignTask(me, p)), [users, me]);
-  const canWrite = current && !["submitted", "approved"].includes(current.state) && ["progress", "returned"].includes(task.status);
+  const hasStarted = (member) => mode === "free" ? !["backlog", "todo"].includes(task.status) : !!member.startedAt || member.revision > 0;
+  const canStart = current && me.role !== "observer" && (mode === "free" ? current.isLead && ["backlog", "todo"].includes(task.status)
+    : !hasStarted(current) && current.state === "working" && ["backlog", "todo", "progress", "returned"].includes(task.status));
+  const canWrite = current && hasStarted(current) && !["submitted", "approved"].includes(current.state) && ["progress", "returned"].includes(task.status);
   const canConfigure = manager && ["backlog", "todo", "progress", "returned"].includes(task.status);
   const memberCount = members.filter((m) => !m.removed).length;
   const save = async (body) => {
@@ -70,7 +74,7 @@ export default function TaskCollaboration({ task, details, setData }) {
       const result = await api(`/api/tasks/${task.id}/collaboration`, { method: "PATCH", body });
       dispatch({ type: "task/update", id: task.id, patch: result.task });
       setData((previous) => ({ ...previous, details: result.details, transitions: result.transitions }));
-      toast(fa ? "تغییرات ثبت شد" : "Changes saved");
+      toast(body.action === "start" ? (fa ? "کار شروع شد" : "Work started") : (fa ? "تغییرات ثبت شد" : "Changes saved"));
       return true;
     } catch (failure) { setError(failure.message || (fa ? "ذخیره انجام نشد." : "Could not save.")); return false; }
     finally { setBusy(false); }
@@ -94,10 +98,20 @@ export default function TaskCollaboration({ task, details, setData }) {
         <p>{fa ? `${memberCount} نفر روی این تسک همکاری می‌کنند. تمام گزارش‌ها و فعالیت‌ها برای اعضا قابل مشاهده است.` : `${memberCount} people are collaborating; reports are shared with all members.`}</p></div>
       {canConfigure && <button type="button" className="btn btn-secondary btn-sm" onClick={() => setEditing((v) => !v)}><Icon name="edit" />{fa ? "مدیریت همکاران" : "Manage members"}</button>}
     </header>
+    {canStart && <div className={styles.startBox}>
+      <p>{mode === "split"
+        ? (fa ? "سهم خودت را مستقل از دیگر همکاران شروع کن؛ سپس گزارش فعالیتت فعال می‌شود." : "Start your part independently of your teammates to unlock your report.")
+        : (fa ? "با شروع کار توسط مسئول اصلی، گزارش فعالیت برای همهٔ همکاران فعال می‌شود." : "Once the lead starts, everyone can record their work.")}</p>
+      <button type="button" className="btn btn-primary" disabled={busy} onClick={() => save({ action: "start" })}>
+        {mode === "split" ? (fa ? "شروع بخش من" : "Start my part") : (fa ? "شروع تسک مشترک" : "Start shared task")}
+      </button>
+    </div>}
+    {mode === "free" && current && !current.isLead && ["backlog", "todo"].includes(task.status) &&
+      <p className={styles.muted}>{fa ? "منتظر شروع تسک توسط مسئول اصلی هستید." : "Waiting for the lead to start the shared task."}</p>}
     {editing && <div className={styles.editBox}><CollaborationSettings primaryId={task.a} people={available} locale={locale} mode={configuration.mode} members={configuration.members} leadResponsibility={configuration.leadResponsibility} onChange={setConfiguration} disabled={busy} allowSolo={false} /><div className={styles.actions}><button type="button" className="btn btn-ghost" onClick={() => setEditing(false)}>{fa ? "انصراف" : "Cancel"}</button><button type="button" className="btn btn-primary" disabled={busy} onClick={handleConfiguration}>{fa ? "ذخیره تیم" : "Save members"}</button></div></div>}
     <div className={styles.entries}>{members.map((m) => <article className={`${styles.member} ${m.userId === me.id ? styles.mine : ""}`} key={m.userId}>
       <div className={styles.memberHeader}><span className={styles.avatar}>{m.name?.trim()?.[0] || "?"}</span><div><strong>{m.name}{m.isLead ? (fa ? " · مسئول اصلی" : " · Lead") : ""}</strong>{mode === "split" && !!m.responsibility && <small dir="auto">{m.responsibility}</small>}</div>
-        <span className={`${styles.state} ${styles[m.state] ?? ""}`}>{m.removed ? (fa ? "خارج‌شده" : "Removed") : stateLabels[m.state]?.[fa ? 0 : 1]}</span></div>
+        <span className={`${styles.state} ${styles[m.state] ?? ""}`}>{m.removed ? (fa ? "خارج‌شده" : "Removed") : stateLabels[m.state === "working" && !hasStarted(m) ? "pending" : m.state]?.[fa ? 0 : 1]}</span></div>
       {m.due && <small className={styles.due}>{fa ? "مهلت" : "Due"}: {taskDate(m.due, locale)}</small>}
       {m.workPerformed || m.outcome || m.hours || m.links.length ? <div className={styles.report}>
         {m.workPerformed && <p dir="auto"><b>{fa ? "اقدامات: " : "Work: "}</b>{m.workPerformed}</p>}

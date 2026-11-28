@@ -2,6 +2,8 @@
 .header { display: flex; justify-content: space-between; align-items: flex-start; gap: var(--s-3); }
 .header h2 { margin: 3px 0 5px; font: var(--type-page-title); color: var(--text); }
 .header p, .muted { margin: 0; color: var(--text-2); font: var(--type-body-sm); }
+.startBox { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: var(--s-3); padding: var(--s-3) var(--s-4); border: 1px solid var(--link); border-radius: var(--r-lg); background: var(--info-soft); }
+.startBox p { margin: 0; flex: 1 1 230px; color: var(--text); font: var(--type-body-sm); }
 .eyebrow { font: var(--type-overline); color: var(--link); letter-spacing: .05em; }
 .entries { display: grid; gap: var(--s-3); }
 .member { position: relative; display: grid; gap: var(--s-2); padding: var(--s-4); background: var(--surface-inset); border: 1px solid var(--divider); border-radius: var(--r-lg); min-width: 0; }
